@@ -24,7 +24,7 @@
     "provision:operator": "tsx src/provision-operator.ts",
     "status": "tsx src/status.ts",
     "reset:test": "tsx src/reset-test.ts",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@fitos/auth": "0.0.0",
