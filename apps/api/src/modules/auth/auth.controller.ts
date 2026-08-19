@@ -1,10 +1,10 @@
-import { Controller, Get, Headers, HttpCode, Inject, Post, Req, Res } from "@nestjs/common";
+import { Controller, Get, HttpCode, Post, Req, Res } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { z } from "zod";
-import { AuthService } from "../../common/auth/auth.service.js";
+import type { AuthService } from "../../common/auth/auth.service.js";
 import { Public } from "../../common/auth/public.decorator.js";
-import { RateLimitService } from "../../common/auth/rate-limit.service.js";
+import type { RateLimitService } from "../../common/auth/rate-limit.service.js";
 import type { FitosRequest } from "../../common/request-context/request-context.js";
 import { DomainError } from "../../common/errors/domain-error.js";
 

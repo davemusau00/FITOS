@@ -50,7 +50,7 @@ export class CoreService {
   }
 
   async updateOrganization(actor: RequestActor, requestId: string, input: UpdateOrganizationRequest): Promise<TenantSummary> {
-    const before = await this.getOrganization(actor);
+    await this.getOrganization(actor);
     const updated = await this.repository.updateTenant(scopeOf(actor), input);
     await this.audit(actor, requestId, "tenant.updated", "tenant", updated.id, null, { changed: Object.keys(input) });
     await this.publish(eventOf(actor, "tenant.updated", { tenantId: updated.id }));

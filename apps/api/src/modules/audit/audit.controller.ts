@@ -3,7 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 import type { RequestActor } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor } from "../../common/request-context/actor.decorator.js";
-import { CoreService } from "../core/core.service.js";
+import type { CoreService } from "../core/core.service.js";
 
 @ApiTags("audit")
 @Controller("audit-events")

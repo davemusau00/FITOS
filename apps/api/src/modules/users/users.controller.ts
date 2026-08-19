@@ -4,8 +4,8 @@ import { z } from "zod";
 import type { InviteStaffRequest, RequestActor } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
-import { IdempotencyService } from "../../common/idempotency/idempotency.service.js";
-import { CoreService } from "../core/core.service.js";
+import type { IdempotencyService } from "../../common/idempotency/idempotency.service.js";
+import type { CoreService } from "../core/core.service.js";
 
 const inviteSchema = z
   .object({

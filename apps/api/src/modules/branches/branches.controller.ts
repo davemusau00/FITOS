@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { CreateBranchRequest, RequestActor, UpdateBranchRequest } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
-import { CoreService } from "../core/core.service.js";
+import type { CoreService } from "../core/core.service.js";
 
 const branchSchema = z
   .object({

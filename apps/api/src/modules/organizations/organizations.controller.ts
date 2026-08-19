@@ -3,7 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
-import { CoreService } from "../core/core.service.js";
+import type { CoreService } from "../core/core.service.js";
 import type { RequestActor, UpdateOrganizationRequest } from "@fitos/contracts";
 
 const updateOrganizationSchema = z

@@ -1,4 +1,5 @@
-import { Inject, Injectable, Module, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, Module } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ScryptPasswordHasher } from "@fitos/auth";
 import { ApiExceptionFilter } from "./common/errors/http-exception.filter.js";
