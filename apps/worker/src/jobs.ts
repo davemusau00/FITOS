@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import type Redis from "ioredis";
+import { Redis } from "ioredis";
 import { z } from "zod";
 
 const tenantEventBase = z.object({

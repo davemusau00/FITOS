@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { Worker } from "bullmq";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { z } from "zod";
 import { WORKER_QUEUE, workerJobSchema } from "./jobs.js";
 import { processOperationsJob } from "./processors/operations.processor.js";
