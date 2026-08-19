@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import IORedis from "ioredis";
+import type Redis from "ioredis";
 import { z } from "zod";
 
 const tenantEventBase = z.object({
@@ -39,7 +39,7 @@ export type WorkerJobType = WorkerJob["type"];
 
 export const WORKER_QUEUE = "fitos:operations";
 
-export function createOperationsQueue(connection: IORedis) {
+export function createOperationsQueue(connection: Redis) {
   return new Queue<WorkerJob>(WORKER_QUEUE, {
     connection,
     defaultJobOptions: {

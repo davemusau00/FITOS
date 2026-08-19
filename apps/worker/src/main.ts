@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { Worker } from "bullmq";
-import IORedis from "ioredis";
+import Redis from "ioredis";
 import { z } from "zod";
 import { WORKER_QUEUE, workerJobSchema } from "./jobs.js";
 import { processOperationsJob } from "./processors/operations.processor.js";
@@ -12,7 +12,7 @@ const config = z
   })
   .parse(process.env);
 
-const connection = new IORedis(config.REDIS_URL, { maxRetriesPerRequest: null });
+const connection = new Redis(config.REDIS_URL, { maxRetriesPerRequest: null });
 const worker = new Worker(
   WORKER_QUEUE,
   async (job) => processOperationsJob(workerJobSchema.parse(job.data)),

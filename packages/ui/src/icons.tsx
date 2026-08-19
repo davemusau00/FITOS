@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import type { ReactElement, SVGProps } from "react";
 
 export type IconName =
   | "arrow-left"
@@ -30,7 +30,7 @@ export type IconName =
 
 type IconProps = SVGProps<SVGSVGElement> & { name: IconName; size?: number };
 
-const paths: Record<IconName, JSX.Element> = {
+const paths: Record<IconName, ReactElement> = {
   "arrow-left": <path d="m19 12-7 7-7-7m7 7V5" />,
   building: <><path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16" /><path d="M14 9h4a2 2 0 0 1 2 2v10M8 7h2m-2 4h2m-2 4h2m6 2h2" /></>,
   calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></>,
