@@ -29,9 +29,10 @@ export class ApiExceptionFilter implements ExceptionFilter {
       status = exception.status;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
+      const responseMessage = exception.getResponse();
       error = new DomainError(
         status === 401 ? "UNAUTHENTICATED" : status === 403 ? "FORBIDDEN" : "UNEXPECTED_ERROR",
-        typeof exception.getResponse() === "string" ? exception.getResponse() : "Request failed.",
+        typeof responseMessage === "string" ? responseMessage : "Request failed.",
         status
       );
     } else if (exception instanceof Error) {

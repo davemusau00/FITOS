@@ -127,7 +127,7 @@ export class InMemoryFitosRepository implements FitosRepository {
         id: randomUUID(),
         tenantId,
         key,
-        name: key[0].toUpperCase() + key.slice(1),
+        name: key.charAt(0).toUpperCase() + key.slice(1),
         permissions: [...permissions]
       };
       this.roles.set(role.id, role);
