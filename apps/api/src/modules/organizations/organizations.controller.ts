@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Patch } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Patch } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
-import type { CoreService } from "../core/core.service.js";
+import { CoreService } from "../core/core.service.js";
 import type { RequestActor, UpdateOrganizationRequest } from "@fitos/contracts";
 
 const updateOrganizationSchema = z
@@ -22,7 +22,7 @@ const updateOrganizationSchema = z
 @ApiTags("organization")
 @Controller("organization")
 export class OrganizationsController {
-  constructor(private readonly core: CoreService) {}
+  constructor(@Inject(CoreService) private readonly core: CoreService) {}
 
   @Get()
   @RequirePermission("tenant:read")

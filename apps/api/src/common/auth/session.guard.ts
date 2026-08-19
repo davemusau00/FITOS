@@ -1,6 +1,6 @@
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import { Inject, Injectable } from "@nestjs/common";
-import type { Reflector } from "@nestjs/core";
+import { Reflector } from "@nestjs/core";
 import { hashSessionToken, parseCookieHeader, verifyCsrfToken } from "@fitos/auth";
 import type { RequestActor } from "@fitos/contracts";
 import { DomainError } from "../errors/domain-error.js";
@@ -14,7 +14,7 @@ const unsafeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 @Injectable()
 export class SessionGuard implements CanActivate {
   constructor(
-    private readonly reflector: Reflector,
+    @Inject(Reflector) private readonly reflector: Reflector,
     @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
   ) {}
 

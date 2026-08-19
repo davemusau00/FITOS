@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Patch, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type { CreateBranchRequest, RequestActor, UpdateBranchRequest } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
-import type { CoreService } from "../core/core.service.js";
+import { CoreService } from "../core/core.service.js";
 
 const branchSchema = z
   .object({
@@ -32,7 +32,7 @@ const branchIdSchema = z.string().uuid();
 @ApiTags("branches")
 @Controller("branches")
 export class BranchesController {
-  constructor(private readonly core: CoreService) {}
+  constructor(@Inject(CoreService) private readonly core: CoreService) {}
 
   @Get()
   @RequirePermission("branch:read")

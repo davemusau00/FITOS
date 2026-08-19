@@ -7,6 +7,7 @@ import type { FitosRequest } from "../request-context/request-context.js";
 @Injectable()
 export class RequestLoggingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    if (process.env.NODE_ENV === "test") return next.handle();
     const request = context.switchToHttp().getRequest<FitosRequest>();
     const response = context.switchToHttp().getResponse<{ statusCode: number }>();
     const startedAt = performance.now();

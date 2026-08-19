@@ -649,15 +649,13 @@ export class DrizzleFitosRepository implements FitosRepository {
       if (existing) {
         await this.db.delete(idempotencyKeys).where(eq(idempotencyKeys.id, existing.id));
       }
-      await this.db
-        .insert(idempotencyKeys)
-        .values({
-          tenantId: record.tenantId,
-          operation: record.operation,
-          key: record.key,
-          requestFingerprint: record.fingerprint,
-          expiresAt: new Date(record.expiresAt)
-        });
+      await this.db.insert(idempotencyKeys).values({
+        tenantId: record.tenantId,
+        operation: record.operation,
+        key: record.key,
+        requestFingerprint: record.fingerprint,
+        expiresAt: new Date(record.expiresAt)
+      });
       return { kind: "acquired" };
     }
     if (existing.requestFingerprint !== record.fingerprint) return { kind: "key_reused" };

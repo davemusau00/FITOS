@@ -16,7 +16,7 @@ services:
     build:
       context: .
       dockerfile: infra/docker/api.Dockerfile
-    env_file: .env.production
+    env_file: ${FITOS_ENV_FILE:-.env.production}
     environment:
       FITOS_REPOSITORY: drizzle
     expose: ["3000"]
@@ -37,7 +37,7 @@ services:
     build:
       context: .
       dockerfile: infra/docker/worker.Dockerfile
-    env_file: .env.production
+    env_file: ${FITOS_ENV_FILE:-.env.production}
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,7 +48,7 @@ services:
 
   postgres:
     ports: []
-    env_file: .env.production
+    env_file: ${FITOS_ENV_FILE:-.env.production}
     networks: [data]
 
   redis:

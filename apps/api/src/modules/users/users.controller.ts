@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Inject, Param, Patch, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type { InviteStaffRequest, RequestActor } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
-import type { IdempotencyService } from "../../common/idempotency/idempotency.service.js";
-import type { CoreService } from "../core/core.service.js";
+import { IdempotencyService } from "../../common/idempotency/idempotency.service.js";
+import { CoreService } from "../core/core.service.js";
 
 const inviteSchema = z
   .object({
@@ -24,8 +24,8 @@ const uuid = z.string().uuid();
 @Controller("users")
 export class UsersController {
   constructor(
-    private readonly core: CoreService,
-    private readonly idempotency: IdempotencyService
+    @Inject(CoreService) private readonly core: CoreService,
+    @Inject(IdempotencyService) private readonly idempotency: IdempotencyService
   ) {}
 
   @Get()

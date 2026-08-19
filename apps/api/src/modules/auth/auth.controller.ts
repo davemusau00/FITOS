@@ -1,10 +1,10 @@
-import { Controller, Get, HttpCode, Post, Req, Res } from "@nestjs/common";
+import { Controller, Get, HttpCode, Inject, Post, Req, Res } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { z } from "zod";
-import type { AuthService } from "../../common/auth/auth.service.js";
+import { AuthService } from "../../common/auth/auth.service.js";
 import { Public } from "../../common/auth/public.decorator.js";
-import type { RateLimitService } from "../../common/auth/rate-limit.service.js";
+import { RateLimitService } from "../../common/auth/rate-limit.service.js";
 import type { FitosRequest } from "../../common/request-context/request-context.js";
 import { DomainError } from "../../common/errors/domain-error.js";
 
@@ -25,8 +25,8 @@ const cookieOptions = () => ({
 @Controller("auth")
 export class AuthController {
   constructor(
-    private readonly auth: AuthService,
-    private readonly rateLimit: RateLimitService
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(RateLimitService) private readonly rateLimit: RateLimitService
   ) {}
 
   @Public()

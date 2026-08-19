@@ -70,14 +70,12 @@ try {
         .returning();
       if (!role) throw new Error(`Role creation failed for ${roleKey}.`);
       roleByKey.set(roleKey, role.id);
-      await tx
-        .insert(rolePermissions)
-        .values(
-          DEFAULT_ROLE_PERMISSIONS[roleKey].map((permissionKey) => ({
-            roleId: role.id,
-            permissionKey
-          }))
-        );
+      await tx.insert(rolePermissions).values(
+        DEFAULT_ROLE_PERMISSIONS[roleKey].map((permissionKey) => ({
+          roleId: role.id,
+          permissionKey
+        }))
+      );
     }
     const [user] = await tx
       .insert(users)
