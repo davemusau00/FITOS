@@ -1,4 +1,10 @@
-import { Catch, type ArgumentsHost, type ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
+import {
+  Catch,
+  type ArgumentsHost,
+  type ExceptionFilter,
+  HttpException,
+  HttpStatus
+} from "@nestjs/common";
 import type { ApiErrorResponse } from "@fitos/contracts";
 import type { Response } from "express";
 import { ZodError } from "zod";
@@ -36,7 +42,10 @@ export class ApiExceptionFilter implements ExceptionFilter {
         status
       );
     } else if (exception instanceof Error) {
-      process.stderr.write(JSON.stringify({ event: "api.unhandled_error", requestId, message: exception.message }) + "\n");
+      process.stderr.write(
+        JSON.stringify({ event: "api.unhandled_error", requestId, message: exception.message }) +
+          "\n"
+      );
     }
 
     const body: ApiErrorResponse = {

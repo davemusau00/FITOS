@@ -31,12 +31,17 @@ export class AuthController {
 
   @Public()
   @Post("login")
-  async login(@Req() request: FitosRequest, @Res({ passthrough: true }) response: Response): Promise<unknown> {
+  async login(
+    @Req() request: FitosRequest,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<unknown> {
     const body = loginSchema.parse(request.body);
     this.rateLimit.consume(`login:${request.ip ?? "unknown"}`, 10, 15 * 60 * 1_000);
     const result = await this.auth.login(body, {
       ...(request.ip ? { ipHash: request.ip } : {}),
-      ...(request.header("user-agent") ? { userAgentSummary: request.header("user-agent")!.slice(0, 255) } : {})
+      ...(request.header("user-agent")
+        ? { userAgentSummary: request.header("user-agent")!.slice(0, 255) }
+        : {})
     });
     response.cookie("fitos_session", result.sessionToken, cookieOptions());
     response.cookie("fitos_csrf", result.csrfToken, {
@@ -51,13 +56,17 @@ export class AuthController {
 
   @Get("me")
   async me(@Req() request: FitosRequest): Promise<unknown> {
-    if (!request.session) throw new DomainError("UNAUTHENTICATED", "Your session has expired.", 401);
+    if (!request.session)
+      throw new DomainError("UNAUTHENTICATED", "Your session has expired.", 401);
     return this.auth.me(request.session);
   }
 
   @Post("logout")
   @HttpCode(204)
-  async logout(@Req() request: FitosRequest, @Res({ passthrough: true }) response: Response): Promise<void> {
+  async logout(
+    @Req() request: FitosRequest,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<void> {
     if (request.sessionToken) await this.auth.logout(request.sessionToken);
     response.clearCookie("fitos_session", { path: "/" });
     response.clearCookie("fitos_csrf", { path: "/" });

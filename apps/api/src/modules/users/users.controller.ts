@@ -15,7 +15,9 @@ const inviteSchema = z
     branchIds: z.array(z.string().uuid()).min(1).max(100)
   })
   .strict();
-const accessSchema = z.object({ roleId: z.string().uuid(), branchIds: z.array(z.string().uuid()).min(1).max(100) }).strict();
+const accessSchema = z
+  .object({ roleId: z.string().uuid(), branchIds: z.array(z.string().uuid()).min(1).max(100) })
+  .strict();
 const uuid = z.string().uuid();
 
 @ApiTags("staff access")
@@ -47,20 +49,33 @@ export class UsersController {
       key: idempotencyKey,
       body: input,
       status: 201,
-      action: () => this.core.inviteStaff(actor, requestId, { ...input, displayName: input.displayName ?? input.email })
+      action: () =>
+        this.core.inviteStaff(actor, requestId, {
+          ...input,
+          displayName: input.displayName ?? input.email
+        })
     });
   }
 
   @Patch(":userId/access")
   @RequirePermission("staff:manage")
-  updateAccess(@Actor() actor: RequestActor, @RequestId() requestId: string, @Param("userId") userId: string, @Body() body: unknown) {
+  updateAccess(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("userId") userId: string,
+    @Body() body: unknown
+  ) {
     const access = accessSchema.parse(body);
     return this.core.updateStaffAccess(actor, requestId, uuid.parse(userId), access);
   }
 
   @Post(":userId/deactivate")
   @RequirePermission("staff:manage")
-  deactivate(@Actor() actor: RequestActor, @RequestId() requestId: string, @Param("userId") userId: string) {
+  deactivate(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("userId") userId: string
+  ) {
     return this.core.deactivateStaff(actor, requestId, uuid.parse(userId));
   }
 }

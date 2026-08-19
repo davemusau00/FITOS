@@ -31,15 +31,25 @@ async function ensureDemoTenant(input: {
   displayName: string;
   passwordHash: string;
 }) {
-  const existing = await database.db.query.tenants.findFirst({ where: eq(tenants.slug, input.slug) });
+  const existing = await database.db.query.tenants.findFirst({
+    where: eq(tenants.slug, input.slug)
+  });
   if (existing) return;
 
   await database.db.transaction(async (tx) => {
-    const [tenant] = await tx.insert(tenants).values({ name: input.name, slug: input.slug }).returning();
+    const [tenant] = await tx
+      .insert(tenants)
+      .values({ name: input.name, slug: input.slug })
+      .returning();
     if (!tenant) throw new Error("Unable to create demo tenant.");
     const [branch] = await tx
       .insert(branches)
-      .values({ tenantId: tenant.id, name: input.branchName, slug: input.branchSlug, city: "Nairobi" })
+      .values({
+        tenantId: tenant.id,
+        name: input.branchName,
+        slug: input.branchSlug,
+        city: "Nairobi"
+      })
       .returning();
     if (!branch) throw new Error("Unable to create demo branch.");
 
@@ -47,7 +57,12 @@ async function ensureDemoTenant(input: {
     for (const roleKey of Object.keys(roleNames) as RoleKey[]) {
       const [role] = await tx
         .insert(roles)
-        .values({ tenantId: tenant.id, name: roleNames[roleKey], systemKey: roleKey, isSystem: true })
+        .values({
+          tenantId: tenant.id,
+          name: roleNames[roleKey],
+          systemKey: roleKey,
+          isSystem: true
+        })
         .returning();
       if (!role) throw new Error(`Unable to create ${roleKey} role.`);
       roleByKey.set(roleKey, role.id);
@@ -61,7 +76,11 @@ async function ensureDemoTenant(input: {
 
     const [user] = await tx
       .insert(users)
-      .values({ email: input.email, displayName: input.displayName, passwordHash: input.passwordHash })
+      .values({
+        email: input.email,
+        displayName: input.displayName,
+        passwordHash: input.passwordHash
+      })
       .returning();
     const ownerRoleId = roleByKey.get("owner");
     if (!user || !ownerRoleId) throw new Error("Unable to create demo owner.");

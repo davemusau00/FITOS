@@ -51,7 +51,9 @@
     --radius-card: 0.875rem;
     --radius-panel: 1.25rem;
     --shadow-panel: 0 18px 48px rgb(0 0 0 / 22%);
-    --font-sans: "PP Neue Machina", "Space Grotesk", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-sans:
+      "PP Neue Machina", "Space Grotesk", Inter, ui-sans-serif, system-ui, -apple-system,
+      BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     --transition-fast: 140ms ease;
     --transition-standard: 200ms ease;
@@ -59,115 +61,513 @@
 }
 
 @layer fitos.reset {
-  *, *::before, *::after { box-sizing: border-box; }
-  html { color-scheme: dark; }
-  body { margin: 0; min-width: 20rem; background: var(--color-surface-canvas); color: var(--color-text-primary); font-family: var(--font-sans); }
-  button, input, select, textarea { font: inherit; }
-  button, select { cursor: pointer; }
-  button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: not-allowed; }
-  a { color: inherit; }
-  :focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 1ms !important; } }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: dark;
+  }
+  body {
+    margin: 0;
+    min-width: 20rem;
+    background: var(--color-surface-canvas);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  button,
+  select {
+    cursor: pointer;
+  }
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+  a {
+    color: inherit;
+  }
+  :focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 1ms !important;
+    }
+  }
 }
 
 @layer fitos.components {
   .fitos-button {
-    align-items: center; appearance: none; border: 1px solid transparent; border-radius: var(--radius-control); display: inline-flex;
-    font-size: 0.875rem; font-weight: 750; gap: var(--space-2); justify-content: center; line-height: 1.25; min-height: 2.75rem;
-    padding: 0.625rem 1rem; text-decoration: none; transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+    align-items: center;
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    display: inline-flex;
+    font-size: 0.875rem;
+    font-weight: 750;
+    gap: var(--space-2);
+    justify-content: center;
+    line-height: 1.25;
+    min-height: 2.75rem;
+    padding: 0.625rem 1rem;
+    text-decoration: none;
+    transition:
+      background-color var(--transition-fast),
+      border-color var(--transition-fast),
+      color var(--transition-fast),
+      transform var(--transition-fast);
   }
-  .fitos-button:hover:not(:disabled) { transform: translateY(-1px); }
-  .fitos-button:active:not(:disabled) { transform: translateY(0); }
-  .fitos-button--primary { background: var(--color-action-primary); color: var(--color-action-primary-text); }
-  .fitos-button--primary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-action-primary) 87%, var(--fitos-pure)); }
-  .fitos-button--secondary { background: var(--color-action-secondary); border-color: var(--color-border-strong); color: var(--color-text-primary); }
-  .fitos-button--secondary:hover:not(:disabled) { background: var(--color-action-secondary-hover); }
-  .fitos-button--ghost { background: transparent; color: var(--color-text-secondary); }
-  .fitos-button--ghost:hover:not(:disabled) { background: var(--surface-3); color: var(--color-text-primary); }
-  .fitos-button--danger { background: color-mix(in srgb, var(--danger) 17%, transparent); border-color: color-mix(in srgb, var(--danger) 48%, transparent); color: var(--danger); }
-  .fitos-button:disabled { opacity: 0.55; }
-  .fitos-button--small { font-size: 0.8125rem; min-height: 2.25rem; padding: 0.4rem 0.7rem; }
-  .fitos-button--full { width: 100%; }
-  .fitos-icon-button { min-width: 2.75rem; padding: 0.625rem; }
-  .fitos-spinner { animation: fitos-spin 800ms linear infinite; height: 1rem; width: 1rem; }
-  @keyframes fitos-spin { to { transform: rotate(360deg); } }
+  .fitos-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .fitos-button:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .fitos-button--primary {
+    background: var(--color-action-primary);
+    color: var(--color-action-primary-text);
+  }
+  .fitos-button--primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-action-primary) 87%, var(--fitos-pure));
+  }
+  .fitos-button--secondary {
+    background: var(--color-action-secondary);
+    border-color: var(--color-border-strong);
+    color: var(--color-text-primary);
+  }
+  .fitos-button--secondary:hover:not(:disabled) {
+    background: var(--color-action-secondary-hover);
+  }
+  .fitos-button--ghost {
+    background: transparent;
+    color: var(--color-text-secondary);
+  }
+  .fitos-button--ghost:hover:not(:disabled) {
+    background: var(--surface-3);
+    color: var(--color-text-primary);
+  }
+  .fitos-button--danger {
+    background: color-mix(in srgb, var(--danger) 17%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 48%, transparent);
+    color: var(--danger);
+  }
+  .fitos-button:disabled {
+    opacity: 0.55;
+  }
+  .fitos-button--small {
+    font-size: 0.8125rem;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.7rem;
+  }
+  .fitos-button--full {
+    width: 100%;
+  }
+  .fitos-icon-button {
+    min-width: 2.75rem;
+    padding: 0.625rem;
+  }
+  .fitos-spinner {
+    animation: fitos-spin 800ms linear infinite;
+    height: 1rem;
+    width: 1rem;
+  }
+  @keyframes fitos-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 
-  .fitos-control-group { display: grid; gap: var(--space-2); }
-  .fitos-label { color: var(--color-text-secondary); font-size: 0.8125rem; font-weight: 700; line-height: 1.25; }
-  .fitos-optional { color: var(--color-text-muted); font-weight: 500; }
-  .fitos-help { color: var(--color-text-muted); font-size: 0.75rem; line-height: 1.4; margin: 0; }
-  .fitos-field-error { color: var(--danger); font-size: 0.8125rem; line-height: 1.4; margin: 0; }
+  .fitos-control-group {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .fitos-label {
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .fitos-optional {
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+  .fitos-help {
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    margin: 0;
+  }
+  .fitos-field-error {
+    color: var(--danger);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    margin: 0;
+  }
   .fitos-control {
-    background: var(--color-surface-sunken); border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); color: var(--color-text-primary);
-    min-height: 2.75rem; padding: 0.625rem 0.75rem; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); width: 100%;
+    background: var(--color-surface-sunken);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    color: var(--color-text-primary);
+    min-height: 2.75rem;
+    padding: 0.625rem 0.75rem;
+    transition:
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
+    width: 100%;
   }
-  .fitos-control:hover:not(:disabled) { border-color: color-mix(in srgb, var(--color-border-strong) 65%, var(--fitos-pure)); }
-  .fitos-control::placeholder { color: var(--color-text-muted); }
-  .fitos-control[aria-invalid="true"] { border-color: var(--danger); }
-  textarea.fitos-control { min-height: 6.5rem; resize: vertical; }
-  .fitos-checkbox { accent-color: var(--fitos-energy); block-size: 1.125rem; inline-size: 1.125rem; margin: 0; }
-  .fitos-checkbox-row { align-items: center; color: var(--color-text-secondary); display: inline-flex; font-size: 0.875rem; gap: var(--space-2); }
+  .fitos-control:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--color-border-strong) 65%, var(--fitos-pure));
+  }
+  .fitos-control::placeholder {
+    color: var(--color-text-muted);
+  }
+  .fitos-control[aria-invalid="true"] {
+    border-color: var(--danger);
+  }
+  textarea.fitos-control {
+    min-height: 6.5rem;
+    resize: vertical;
+  }
+  .fitos-checkbox {
+    accent-color: var(--fitos-energy);
+    block-size: 1.125rem;
+    inline-size: 1.125rem;
+    margin: 0;
+  }
+  .fitos-checkbox-row {
+    align-items: center;
+    color: var(--color-text-secondary);
+    display: inline-flex;
+    font-size: 0.875rem;
+    gap: var(--space-2);
+  }
 
-  .fitos-alert { align-items: flex-start; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-card); display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4); }
-  .fitos-alert--info { background: color-mix(in srgb, var(--info) 11%, var(--surface-1)); border-color: color-mix(in srgb, var(--info) 30%, transparent); }
-  .fitos-alert--success { background: color-mix(in srgb, var(--success) 10%, var(--surface-1)); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
-  .fitos-alert--warning { background: color-mix(in srgb, var(--warning) 10%, var(--surface-1)); border-color: color-mix(in srgb, var(--warning) 30%, transparent); }
-  .fitos-alert--danger { background: color-mix(in srgb, var(--danger) 10%, var(--surface-1)); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
-  .fitos-alert__content { display: grid; gap: var(--space-1); }
-  .fitos-alert__title { font-size: 0.875rem; font-weight: 800; }
-  .fitos-alert__message { color: var(--color-text-secondary); font-size: 0.8125rem; line-height: 1.5; margin: 0; }
+  .fitos-alert {
+    align-items: flex-start;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-card);
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .fitos-alert--info {
+    background: color-mix(in srgb, var(--info) 11%, var(--surface-1));
+    border-color: color-mix(in srgb, var(--info) 30%, transparent);
+  }
+  .fitos-alert--success {
+    background: color-mix(in srgb, var(--success) 10%, var(--surface-1));
+    border-color: color-mix(in srgb, var(--success) 30%, transparent);
+  }
+  .fitos-alert--warning {
+    background: color-mix(in srgb, var(--warning) 10%, var(--surface-1));
+    border-color: color-mix(in srgb, var(--warning) 30%, transparent);
+  }
+  .fitos-alert--danger {
+    background: color-mix(in srgb, var(--danger) 10%, var(--surface-1));
+    border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  }
+  .fitos-alert__content {
+    display: grid;
+    gap: var(--space-1);
+  }
+  .fitos-alert__title {
+    font-size: 0.875rem;
+    font-weight: 800;
+  }
+  .fitos-alert__message {
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin: 0;
+  }
 
-  .fitos-badge { align-items: center; border: 1px solid transparent; border-radius: 999px; display: inline-flex; font-size: 0.75rem; font-weight: 750; gap: 0.35rem; line-height: 1; padding: 0.35rem 0.55rem; white-space: nowrap; }
-  .fitos-badge::before { background: currentColor; border-radius: 50%; content: ""; height: 0.375rem; width: 0.375rem; }
-  .fitos-badge--neutral { background: var(--surface-3); color: var(--color-text-secondary); }
-  .fitos-badge--success { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
-  .fitos-badge--warning { background: color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
-  .fitos-badge--danger { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
-  .fitos-badge--info { background: color-mix(in srgb, var(--info) 14%, transparent); color: var(--info); }
+  .fitos-badge {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.75rem;
+    font-weight: 750;
+    gap: 0.35rem;
+    line-height: 1;
+    padding: 0.35rem 0.55rem;
+    white-space: nowrap;
+  }
+  .fitos-badge::before {
+    background: currentColor;
+    border-radius: 50%;
+    content: "";
+    height: 0.375rem;
+    width: 0.375rem;
+  }
+  .fitos-badge--neutral {
+    background: var(--surface-3);
+    color: var(--color-text-secondary);
+  }
+  .fitos-badge--success {
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    color: var(--success);
+  }
+  .fitos-badge--warning {
+    background: color-mix(in srgb, var(--warning) 14%, transparent);
+    color: var(--warning);
+  }
+  .fitos-badge--danger {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    color: var(--danger);
+  }
+  .fitos-badge--info {
+    background: color-mix(in srgb, var(--info) 14%, transparent);
+    color: var(--info);
+  }
 
-  .fitos-page-header { align-items: flex-start; display: flex; gap: var(--space-4); justify-content: space-between; margin-bottom: var(--space-6); }
-  .fitos-page-header__eyebrow { color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; margin: 0 0 var(--space-1); text-transform: uppercase; }
-  .fitos-page-header h1 { font-size: clamp(1.75rem, 4vw, 2.375rem); letter-spacing: -0.035em; line-height: 1.05; margin: 0; }
-  .fitos-page-header__description { color: var(--color-text-secondary); line-height: 1.5; margin: var(--space-2) 0 0; max-width: 44rem; }
-  .fitos-page-header__actions { align-items: center; display: flex; flex: none; flex-wrap: wrap; gap: var(--space-2); }
+  .fitos-page-header {
+    align-items: flex-start;
+    display: flex;
+    gap: var(--space-4);
+    justify-content: space-between;
+    margin-bottom: var(--space-6);
+  }
+  .fitos-page-header__eyebrow {
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin: 0 0 var(--space-1);
+    text-transform: uppercase;
+  }
+  .fitos-page-header h1 {
+    font-size: clamp(1.75rem, 4vw, 2.375rem);
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+    margin: 0;
+  }
+  .fitos-page-header__description {
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: var(--space-2) 0 0;
+    max-width: 44rem;
+  }
+  .fitos-page-header__actions {
+    align-items: center;
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
 
-  .fitos-empty-state { align-items: center; background: var(--color-surface-raised); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-panel); display: flex; flex-direction: column; justify-content: center; min-height: 16rem; padding: var(--space-6); text-align: center; }
-  .fitos-empty-state__icon { align-items: center; background: color-mix(in srgb, var(--fitos-energy) 10%, transparent); border-radius: 50%; color: var(--fitos-energy); display: flex; height: 3rem; justify-content: center; width: 3rem; }
-  .fitos-empty-state h2 { font-size: 1.125rem; margin: var(--space-4) 0 var(--space-2); }
-  .fitos-empty-state p { color: var(--color-text-secondary); line-height: 1.5; margin: 0; max-width: 30rem; }
-  .fitos-empty-state__action { margin-top: var(--space-4); }
+  .fitos-empty-state {
+    align-items: center;
+    background: var(--color-surface-raised);
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius-panel);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 16rem;
+    padding: var(--space-6);
+    text-align: center;
+  }
+  .fitos-empty-state__icon {
+    align-items: center;
+    background: color-mix(in srgb, var(--fitos-energy) 10%, transparent);
+    border-radius: 50%;
+    color: var(--fitos-energy);
+    display: flex;
+    height: 3rem;
+    justify-content: center;
+    width: 3rem;
+  }
+  .fitos-empty-state h2 {
+    font-size: 1.125rem;
+    margin: var(--space-4) 0 var(--space-2);
+  }
+  .fitos-empty-state p {
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+    max-width: 30rem;
+  }
+  .fitos-empty-state__action {
+    margin-top: var(--space-4);
+  }
 
-  .fitos-skeleton { animation: fitos-pulse 1.2s ease-in-out infinite alternate; background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2)); border-radius: var(--radius-control); display: block; }
-  @keyframes fitos-pulse { to { opacity: 0.55; } }
+  .fitos-skeleton {
+    animation: fitos-pulse 1.2s ease-in-out infinite alternate;
+    background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
+    border-radius: var(--radius-control);
+    display: block;
+  }
+  @keyframes fitos-pulse {
+    to {
+      opacity: 0.55;
+    }
+  }
 
-  .fitos-search { position: relative; }
-  .fitos-search__icon { color: var(--color-text-muted); left: 0.75rem; pointer-events: none; position: absolute; top: 50%; transform: translateY(-50%); }
-  .fitos-search .fitos-control { padding-left: 2.5rem; }
+  .fitos-search {
+    position: relative;
+  }
+  .fitos-search__icon {
+    color: var(--color-text-muted);
+    left: 0.75rem;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .fitos-search .fitos-control {
+    padding-left: 2.5rem;
+  }
 
-  .fitos-data-table-wrap { background: var(--color-surface-raised); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-card); overflow: auto; }
-  .fitos-data-table { border-collapse: collapse; min-width: 40rem; width: 100%; }
-  .fitos-data-table th { background: var(--surface-1); border-bottom: 1px solid var(--color-border-strong); color: var(--color-text-muted); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.075em; padding: 0.875rem 1rem; position: sticky; text-align: left; text-transform: uppercase; top: 0; z-index: 1; }
-  .fitos-data-table td { border-bottom: 1px solid var(--color-border-subtle); color: var(--color-text-secondary); font-size: 0.875rem; padding: 1rem; vertical-align: middle; }
-  .fitos-data-table tr:last-child td { border-bottom: 0; }
-  .fitos-data-table tbody tr { transition: background var(--transition-fast); }
-  .fitos-data-table tbody tr:hover { background: color-mix(in srgb, var(--surface-3) 57%, transparent); }
-  .fitos-data-table__row-button { background: none; border: 0; color: inherit; cursor: pointer; display: contents; font: inherit; padding: 0; text-align: inherit; }
-  .fitos-data-table__primary { color: var(--color-text-primary); font-weight: 750; }
-  .fitos-data-table__muted { color: var(--color-text-muted); font-size: 0.8125rem; }
+  .fitos-data-table-wrap {
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-card);
+    overflow: auto;
+  }
+  .fitos-data-table {
+    border-collapse: collapse;
+    min-width: 40rem;
+    width: 100%;
+  }
+  .fitos-data-table th {
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--color-border-strong);
+    color: var(--color-text-muted);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.075em;
+    padding: 0.875rem 1rem;
+    position: sticky;
+    text-align: left;
+    text-transform: uppercase;
+    top: 0;
+    z-index: 1;
+  }
+  .fitos-data-table td {
+    border-bottom: 1px solid var(--color-border-subtle);
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    padding: 1rem;
+    vertical-align: middle;
+  }
+  .fitos-data-table tr:last-child td {
+    border-bottom: 0;
+  }
+  .fitos-data-table tbody tr {
+    transition: background var(--transition-fast);
+  }
+  .fitos-data-table tbody tr:hover {
+    background: color-mix(in srgb, var(--surface-3) 57%, transparent);
+  }
+  .fitos-data-table__row-button {
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: contents;
+    font: inherit;
+    padding: 0;
+    text-align: inherit;
+  }
+  .fitos-data-table__primary {
+    color: var(--color-text-primary);
+    font-weight: 750;
+  }
+  .fitos-data-table__muted {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+  }
 
-  .fitos-overlay { align-items: center; background: rgb(0 0 0 / 64%); display: flex; inset: 0; justify-content: center; padding: var(--space-4); position: fixed; z-index: 50; }
-  .fitos-modal { background: var(--surface-1); border: 1px solid var(--color-border-strong); border-radius: var(--radius-panel); box-shadow: var(--shadow-panel); max-height: calc(100dvh - 2rem); max-width: 34rem; overflow: auto; width: 100%; }
-  .fitos-modal__header { align-items: flex-start; border-bottom: 1px solid var(--color-border-subtle); display: flex; gap: var(--space-3); justify-content: space-between; padding: var(--space-5); }
-  .fitos-modal__header h2 { font-size: 1.25rem; letter-spacing: -0.02em; margin: 0; }
-  .fitos-modal__description { color: var(--color-text-secondary); line-height: 1.45; margin: var(--space-2) 0 0; }
-  .fitos-modal__body { padding: var(--space-5); }
-  .fitos-modal__footer { align-items: center; border-top: 1px solid var(--color-border-subtle); display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; padding: var(--space-4) var(--space-5); }
-  .fitos-drawer-overlay { justify-content: flex-end; padding: 0; }
-  .fitos-drawer { background: var(--surface-1); border-left: 1px solid var(--color-border-strong); box-shadow: var(--shadow-panel); height: 100dvh; max-width: 26rem; overflow: auto; width: min(90vw, 26rem); }
+  .fitos-overlay {
+    align-items: center;
+    background: rgb(0 0 0 / 64%);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: var(--space-4);
+    position: fixed;
+    z-index: 50;
+  }
+  .fitos-modal {
+    background: var(--surface-1);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-panel);
+    max-height: calc(100dvh - 2rem);
+    max-width: 34rem;
+    overflow: auto;
+    width: 100%;
+  }
+  .fitos-modal__header {
+    align-items: flex-start;
+    border-bottom: 1px solid var(--color-border-subtle);
+    display: flex;
+    gap: var(--space-3);
+    justify-content: space-between;
+    padding: var(--space-5);
+  }
+  .fitos-modal__header h2 {
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .fitos-modal__description {
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+    margin: var(--space-2) 0 0;
+  }
+  .fitos-modal__body {
+    padding: var(--space-5);
+  }
+  .fitos-modal__footer {
+    align-items: center;
+    border-top: 1px solid var(--color-border-subtle);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    justify-content: flex-end;
+    padding: var(--space-4) var(--space-5);
+  }
+  .fitos-drawer-overlay {
+    justify-content: flex-end;
+    padding: 0;
+  }
+  .fitos-drawer {
+    background: var(--surface-1);
+    border-left: 1px solid var(--color-border-strong);
+    box-shadow: var(--shadow-panel);
+    height: 100dvh;
+    max-width: 26rem;
+    overflow: auto;
+    width: min(90vw, 26rem);
+  }
 
   @media (max-width: 639px) {
-    .fitos-page-header { align-items: stretch; flex-direction: column; }
-    .fitos-page-header__actions > * { flex: 1; }
-    .fitos-data-table { min-width: 34rem; }
+    .fitos-page-header {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .fitos-page-header__actions > * {
+      flex: 1;
+    }
+    .fitos-data-table {
+      min-width: 34rem;
+    }
   }
 }

@@ -36,7 +36,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       queryClient.clear();
     }
   };
-  return <AuthContext.Provider value={{ ...value, auth: isUnauthenticated ? null : auth }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ ...value, auth: isUnauthenticated ? null : auth }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {

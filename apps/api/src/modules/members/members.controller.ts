@@ -1,7 +1,12 @@
 import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
-import type { CreateMemberRequest, MemberListFilters, RequestActor, UpdateMemberRequest } from "@fitos/contracts";
+import type {
+  CreateMemberRequest,
+  MemberListFilters,
+  RequestActor,
+  UpdateMemberRequest
+} from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
 import type { IdempotencyService } from "../../common/idempotency/idempotency.service.js";
@@ -18,7 +23,9 @@ const contactSchema = z
   })
   .strict();
 const updateContactSchema = contactSchema.partial();
-const createMemberSchema = z.object({ contact: contactSchema, homeBranchId: z.string().uuid() }).strict();
+const createMemberSchema = z
+  .object({ contact: contactSchema, homeBranchId: z.string().uuid() })
+  .strict();
 const updateMemberSchema = z
   .object({
     contact: updateContactSchema.optional(),
@@ -79,8 +86,18 @@ export class MembersController {
 
   @Patch(":memberId")
   @RequirePermission("member:update")
-  update(@Actor() actor: RequestActor, @RequestId() requestId: string, @Param("memberId") memberId: string, @Body() body: unknown) {
-    return this.core.updateMember(actor, requestId, uuid.parse(memberId), updateMemberSchema.parse(body) satisfies UpdateMemberRequest);
+  update(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("memberId") memberId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.updateMember(
+      actor,
+      requestId,
+      uuid.parse(memberId),
+      updateMemberSchema.parse(body) satisfies UpdateMemberRequest
+    );
   }
 
   @Get(":memberId/timeline")

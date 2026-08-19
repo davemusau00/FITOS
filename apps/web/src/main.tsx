@@ -9,7 +9,10 @@ import { AppRouter } from "./app/router";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: (count, error) => !(error instanceof Error && "status" in error) && count < 2, refetchOnWindowFocus: false },
+    queries: {
+      retry: (count, error) => !(error instanceof Error && "status" in error) && count < 2,
+      refetchOnWindowFocus: false
+    },
     mutations: { retry: false }
   }
 });
@@ -18,7 +21,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter><AppRouter /></BrowserRouter>
+        <BrowserRouter>
+          <AppRouter />
+        </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>

@@ -28,7 +28,9 @@ export const verifyCsrfToken = (token: string, sessionToken: string): boolean =>
     .digest("base64url");
   const receivedBytes = Buffer.from(received);
   const expectedBytes = Buffer.from(expected);
-  return receivedBytes.length === expectedBytes.length && timingSafeEqual(receivedBytes, expectedBytes);
+  return (
+    receivedBytes.length === expectedBytes.length && timingSafeEqual(receivedBytes, expectedBytes)
+  );
 };
 
 export function parseCookieHeader(header: string | undefined): Record<string, string> {

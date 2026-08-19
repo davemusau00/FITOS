@@ -27,7 +27,9 @@ class DevelopmentSeedService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     if (process.env.NODE_ENV === "production" || !this.repository.seedDevelopmentData) return;
-    const hash = await new ScryptPasswordHasher().hash(process.env.FITOS_SEED_PASSWORD ?? "ChangeMe123!");
+    const hash = await new ScryptPasswordHasher().hash(
+      process.env.FITOS_SEED_PASSWORD ?? "ChangeMe123!"
+    );
     await this.repository.seedDevelopmentData(hash);
   }
 }

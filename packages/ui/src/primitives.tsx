@@ -20,18 +20,39 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { children, className, disabled, fullWidth, icon, loading, size = "medium", type = "button", variant = "primary", ...props },
+  {
+    children,
+    className,
+    disabled,
+    fullWidth,
+    icon,
+    loading,
+    size = "medium",
+    type = "button",
+    variant = "primary",
+    ...props
+  },
   ref
 ) {
   return (
     <button
-      className={cn("fitos-button", `fitos-button--${variant}`, size === "small" && "fitos-button--small", fullWidth && "fitos-button--full", className)}
+      className={cn(
+        "fitos-button",
+        `fitos-button--${variant}`,
+        size === "small" && "fitos-button--small",
+        fullWidth && "fitos-button--full",
+        className
+      )}
       disabled={disabled || loading}
       ref={ref}
       type={type}
       {...props}
     >
-      {loading ? <Icon aria-label="Loading" className="fitos-spinner" name="spark" size={16} /> : icon ? <Icon name={icon} size={16} /> : null}
+      {loading ? (
+        <Icon aria-label="Loading" className="fitos-spinner" name="spark" size={16} />
+      ) : icon ? (
+        <Icon name={icon} size={16} />
+      ) : null}
       {children}
     </button>
   );
@@ -44,39 +65,48 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   ref
 ) {
   return (
-    <Button aria-label={label} className={cn("fitos-icon-button", className)} icon={icon} ref={ref} {...props}>
+    <Button
+      aria-label={label}
+      className={cn("fitos-icon-button", className)}
+      icon={icon}
+      ref={ref}
+      {...props}
+    >
       <span className="fitos-sr-only">{label}</span>
     </Button>
   );
 });
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
-  { className, ...props },
-  ref
-) {
-  return <input className={cn("fitos-control", className)} ref={ref} {...props} />;
-});
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function Input({ className, ...props }, ref) {
+    return <input className={cn("fitos-control", className)} ref={ref} {...props} />;
+  }
+);
 
-export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function TextArea(
-  { className, ...props },
-  ref
-) {
+export const TextArea = forwardRef<
+  HTMLTextAreaElement,
+  TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function TextArea({ className, ...props }, ref) {
   return <textarea className={cn("fitos-control", className)} ref={ref} {...props} />;
 });
 
-export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select(
-  { className, children, ...props },
-  ref
-) {
-  return <select className={cn("fitos-control", className)} ref={ref} {...props}>{children}</select>;
-});
+export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
+  function Select({ className, children, ...props }, ref) {
+    return (
+      <select className={cn("fitos-control", className)} ref={ref} {...props}>
+        {children}
+      </select>
+    );
+  }
+);
 
-export const Checkbox = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Checkbox(
-  { className, type: _type, ...props },
-  ref
-) {
-  return <input className={cn("fitos-checkbox", className)} ref={ref} type="checkbox" {...props} />;
-});
+export const Checkbox = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function Checkbox({ className, type: _type, ...props }, ref) {
+    return (
+      <input className={cn("fitos-checkbox", className)} ref={ref} type="checkbox" {...props} />
+    );
+  }
+);
 
 export type FormFieldProps = PropsWithChildren<{
   label: string;
@@ -95,20 +125,40 @@ export function FormField({ children, error, hint, htmlFor, label, optional }: F
         {label} {optional ? <span className="fitos-optional">(optional)</span> : null}
       </label>
       {children}
-      {error ? <FieldError>{error}</FieldError> : hint ? <p className="fitos-help">{hint}</p> : null}
+      {error ? (
+        <FieldError>{error}</FieldError>
+      ) : hint ? (
+        <p className="fitos-help">{hint}</p>
+      ) : null}
     </div>
   );
 }
 
 export function FieldError({ children }: PropsWithChildren) {
-  return <p className="fitos-field-error" role="alert">{children}</p>;
+  return (
+    <p className="fitos-field-error" role="alert">
+      {children}
+    </p>
+  );
 }
 
 export type AlertTone = "info" | "success" | "warning" | "danger";
-export function Alert({ children, title, tone = "info" }: PropsWithChildren<{ title?: string; tone?: AlertTone }>) {
-  const icon: Record<AlertTone, IconName> = { danger: "warning", info: "spark", success: "check", warning: "warning" };
+export function Alert({
+  children,
+  title,
+  tone = "info"
+}: PropsWithChildren<{ title?: string; tone?: AlertTone }>) {
+  const icon: Record<AlertTone, IconName> = {
+    danger: "warning",
+    info: "spark",
+    success: "check",
+    warning: "warning"
+  };
   return (
-    <div className={cn("fitos-alert", `fitos-alert--${tone}`)} role={tone === "danger" ? "alert" : "status"}>
+    <div
+      className={cn("fitos-alert", `fitos-alert--${tone}`)}
+      role={tone === "danger" ? "alert" : "status"}
+    >
       <Icon name={icon[tone]} size={19} />
       <div className="fitos-alert__content">
         {title ? <strong className="fitos-alert__title">{title}</strong> : null}

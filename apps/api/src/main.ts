@@ -26,19 +26,34 @@ async function bootstrap(): Promise<void> {
     (config.SESSION_SECRET === "local-development-only-change-me" ||
       config.CSRF_SECRET === "local-development-only-change-me")
   ) {
-    throw new Error("Production SESSION_SECRET and CSRF_SECRET must be unique values of at least 32 characters.");
+    throw new Error(
+      "Production SESSION_SECRET and CSRF_SECRET must be unique values of at least 32 characters."
+    );
   }
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const express = app.getHttpAdapter().getInstance() as Express;
   express.set("trust proxy", 1);
   app.use(requestIdMiddleware);
   app.useGlobalPipes(new ValidationPipe({ transform: false, whitelist: false }));
-  app.enableCors({ origin: config.WEB_PUBLIC_URL, credentials: true, methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Idempotency-Key", "X-CSRF-Token", "X-Request-Id"] });
+  app.enableCors({
+    origin: config.WEB_PUBLIC_URL,
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Idempotency-Key", "X-CSRF-Token", "X-Request-Id"]
+  });
   app.setGlobalPrefix("api/v1");
-  const swagger = new DocumentBuilder().setTitle("FITOS API").setDescription("Tenant-safe Fitness Operating System API").setVersion("1.0").addCookieAuth("fitos_session").build();
+  const swagger = new DocumentBuilder()
+    .setTitle("FITOS API")
+    .setDescription("Tenant-safe Fitness Operating System API")
+    .setVersion("1.0")
+    .addCookieAuth("fitos_session")
+    .build();
   SwaggerModule.setup("api/docs", app, SwaggerModule.createDocument(app, swagger));
   await app.listen(config.API_PORT, "0.0.0.0");
-  process.stdout.write(JSON.stringify({ event: "api.ready", port: config.API_PORT, environment: config.NODE_ENV }) + "\n");
+  process.stdout.write(
+    JSON.stringify({ event: "api.ready", port: config.API_PORT, environment: config.NODE_ENV }) +
+      "\n"
+  );
 }
 
 void bootstrap();

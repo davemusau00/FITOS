@@ -45,12 +45,30 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const csrf = cookie("fitos_csrf");
     if (csrf) headers.set("X-CSRF-Token", csrf);
   }
-  const response = await fetch(`${apiBase}${path}`, { ...init, method, headers, credentials: "include" });
+  const response = await fetch(`${apiBase}${path}`, {
+    ...init,
+    method,
+    headers,
+    credentials: "include"
+  });
   if (response.status === 204) return undefined as T;
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = payload as { error?: { code?: string; message?: string; fields?: Record<string, string[]>; requestId?: string } } | null;
-    throw new ApiClientError(error?.error?.message ?? "The request failed.", response.status, error?.error?.code ?? "UNEXPECTED_ERROR", error?.error?.fields, error?.error?.requestId);
+    const error = payload as {
+      error?: {
+        code?: string;
+        message?: string;
+        fields?: Record<string, string[]>;
+        requestId?: string;
+      };
+    } | null;
+    throw new ApiClientError(
+      error?.error?.message ?? "The request failed.",
+      response.status,
+      error?.error?.code ?? "UNEXPECTED_ERROR",
+      error?.error?.fields,
+      error?.error?.requestId
+    );
   }
   return payload as T;
 }
@@ -59,22 +77,57 @@ const json = (payload: unknown) => JSON.stringify(payload);
 const idempotency = () => crypto.randomUUID();
 
 export const api = {
-  login: (payload: { email: string; password: string }) => request<AuthMeResponse>("/auth/login", { method: "POST", body: json(payload) }),
+  login: (payload: { email: string; password: string }) =>
+    request<AuthMeResponse>("/auth/login", { method: "POST", body: json(payload) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   me: () => request<AuthMeResponse>("/auth/me"),
   organization: () => request<TenantSummary>("/organization"),
-  updateOrganization: (payload: UpdateOrganizationRequest) => request<TenantSummary>("/organization", { method: "PATCH", body: json(payload) }),
+  updateOrganization: (payload: UpdateOrganizationRequest) =>
+    request<TenantSummary>("/organization", { method: "PATCH", body: json(payload) }),
   branches: () => request<BranchResponse[]>("/branches"),
   branch: (id: string) => request<BranchResponse>(`/branches/${id}`),
-  createBranch: (payload: CreateBranchRequest) => request<BranchResponse>("/branches", { method: "POST", body: json(payload), headers: { "Idempotency-Key": idempotency() } }),
-  updateBranch: (id: string, payload: UpdateBranchRequest) => request<BranchResponse>(`/branches/${id}`, { method: "PATCH", body: json(payload) }),
-  members: (params: URLSearchParams) => request<CursorPage<MemberListItem>>(`/members?${params.toString()}`),
+  createBranch: (payload: CreateBranchRequest) =>
+    request<BranchResponse>("/branches", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateBranch: (id: string, payload: UpdateBranchRequest) =>
+    request<BranchResponse>(`/branches/${id}`, { method: "PATCH", body: json(payload) }),
+  members: (params: URLSearchParams) =>
+    request<CursorPage<MemberListItem>>(`/members?${params.toString()}`),
   member: (id: string) => request<MemberResponse>(`/members/${id}`),
-  createMember: (payload: CreateMemberRequest) => request<MemberResponse>("/members", { method: "POST", body: json(payload), headers: { "Idempotency-Key": idempotency() } }),
-  updateMember: (id: string, payload: UpdateMemberRequest) => request<MemberResponse>(`/members/${id}`, { method: "PATCH", body: json(payload) }),
-  memberTimeline: (id: string) => request<Array<{ id: string; action: string; createdAt: string; afterSummary: Record<string, unknown> | null }>>(`/members/${id}/timeline`),
+  createMember: (payload: CreateMemberRequest) =>
+    request<MemberResponse>("/members", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateMember: (id: string, payload: UpdateMemberRequest) =>
+    request<MemberResponse>(`/members/${id}`, { method: "PATCH", body: json(payload) }),
+  memberTimeline: (id: string) =>
+    request<
+      Array<{
+        id: string;
+        action: string;
+        createdAt: string;
+        afterSummary: Record<string, unknown> | null;
+      }>
+    >(`/members/${id}/timeline`),
   staff: () => request<StaffUserResponse[]>("/users"),
-  inviteStaff: (payload: { email: string; displayName?: string; roleId: string; branchIds: string[] }) => request<StaffUserResponse>("/users/invitations", { method: "POST", body: json(payload), headers: { "Idempotency-Key": idempotency() } }),
-  updateStaff: (userId: string, payload: { roleId: string; branchIds: string[] }) => request<StaffUserResponse>(`/users/${userId}/access`, { method: "PATCH", body: json(payload) }),
-  deactivateStaff: (userId: string) => request<StaffUserResponse>(`/users/${userId}/deactivate`, { method: "POST" })
+  inviteStaff: (payload: {
+    email: string;
+    displayName?: string;
+    roleId: string;
+    branchIds: string[];
+  }) =>
+    request<StaffUserResponse>("/users/invitations", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateStaff: (userId: string, payload: { roleId: string; branchIds: string[] }) =>
+    request<StaffUserResponse>(`/users/${userId}/access`, { method: "PATCH", body: json(payload) }),
+  deactivateStaff: (userId: string) =>
+    request<StaffUserResponse>(`/users/${userId}/deactivate`, { method: "POST" })
 };

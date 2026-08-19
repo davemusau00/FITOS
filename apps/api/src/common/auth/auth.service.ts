@@ -1,9 +1,18 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { createCsrfToken, createOpaqueSessionToken, hashSessionToken, ScryptPasswordHasher } from "@fitos/auth";
+import {
+  createCsrfToken,
+  createOpaqueSessionToken,
+  hashSessionToken,
+  ScryptPasswordHasher
+} from "@fitos/auth";
 import type { AuthMeResponse, LoginRequest, RequestActor } from "@fitos/contracts";
 import { DomainError } from "../errors/domain-error.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
-import type { FitosRepository, ResolvedSession, TenantScope } from "../../ports/fitos-repository.js";
+import type {
+  FitosRepository,
+  ResolvedSession,
+  TenantScope
+} from "../../ports/fitos-repository.js";
 
 export interface LoginResult {
   auth: AuthMeResponse;
@@ -17,9 +26,14 @@ export class AuthService {
 
   constructor(@Inject(FitosRepositoryToken) private readonly repository: FitosRepository) {}
 
-  async login(input: LoginRequest, metadata: { ipHash?: string; userAgentSummary?: string }): Promise<LoginResult> {
+  async login(
+    input: LoginRequest,
+    metadata: { ipHash?: string; userAgentSummary?: string }
+  ): Promise<LoginResult> {
     const identity = await this.repository.findLoginIdentity(input.email);
-    const verified = identity ? await this.passwordHasher.verify(input.password, identity.passwordHash) : false;
+    const verified = identity
+      ? await this.passwordHasher.verify(input.password, identity.passwordHash)
+      : false;
     if (!identity || !verified) {
       throw new DomainError("UNAUTHENTICATED", "Email or password is incorrect.", 401);
     }
@@ -43,7 +57,9 @@ export class AuthService {
       auth: {
         user: { ...identity.user, lastLoginAt: now.toISOString() },
         tenant: identity.tenant,
-        branches: (await this.repository.listBranches(this.scopeFromIdentity(identity))).filter((branch) => identity.branchIds.includes(branch.id)),
+        branches: (await this.repository.listBranches(this.scopeFromIdentity(identity))).filter(
+          (branch) => identity.branchIds.includes(branch.id)
+        ),
         permissions: identity.role.permissions,
         selectedBranchId: identity.branchIds[0] ?? null
       }
@@ -71,7 +87,12 @@ export class AuthService {
   }
 
   static scope(actor: RequestActor): TenantScope {
-    return { tenantId: actor.tenantId, tenantUserId: actor.tenantUserId, userId: actor.userId, branchIds: actor.branchIds };
+    return {
+      tenantId: actor.tenantId,
+      tenantUserId: actor.tenantUserId,
+      userId: actor.userId,
+      branchIds: actor.branchIds
+    };
   }
 
   private scopeFromIdentity(identity: {

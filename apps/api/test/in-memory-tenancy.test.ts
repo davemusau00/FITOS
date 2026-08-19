@@ -18,12 +18,28 @@ describe("tenant isolation", () => {
     expect(gym).not.toBeNull();
     expect(pilates).not.toBeNull();
     if (!gym || !pilates) throw new Error("Seed identities missing.");
-    const gymScope = { tenantId: gym.tenant.id, tenantUserId: gym.tenantUserId, userId: gym.user.id, branchIds: gym.branchIds };
-    const pilatesScope = { tenantId: pilates.tenant.id, tenantUserId: pilates.tenantUserId, userId: pilates.user.id, branchIds: pilates.branchIds };
-    const member = await repository.createMember(gymScope, memberInput(gym.branchIds[0]!), "+254712345678");
+    const gymScope = {
+      tenantId: gym.tenant.id,
+      tenantUserId: gym.tenantUserId,
+      userId: gym.user.id,
+      branchIds: gym.branchIds
+    };
+    const pilatesScope = {
+      tenantId: pilates.tenant.id,
+      tenantUserId: pilates.tenantUserId,
+      userId: pilates.user.id,
+      branchIds: pilates.branchIds
+    };
+    const member = await repository.createMember(
+      gymScope,
+      memberInput(gym.branchIds[0]!),
+      "+254712345678"
+    );
 
     await expect(repository.findMemberById(pilatesScope, member.id)).resolves.toBeNull();
-    await expect(repository.searchMembers(pilatesScope, { query: "Amina" })).resolves.toMatchObject({ data: [] });
+    await expect(repository.searchMembers(pilatesScope, { query: "Amina" })).resolves.toMatchObject(
+      { data: [] }
+    );
   });
 
   it("binds an opaque session to one tenant user and permits revocation", async () => {
@@ -33,10 +49,17 @@ describe("tenant isolation", () => {
     const identity = await repository.findLoginIdentity("owner@gym.fitos.test");
     if (!identity) throw new Error("Seed identity missing.");
     const tokenHash = hashSessionToken("opaque-test-token");
-    await repository.createSession({ userId: identity.user.id, tenantUserId: identity.tenantUserId, tokenHash, expiresAt: new Date(Date.now() + 60_000).toISOString() });
+    await repository.createSession({
+      userId: identity.user.id,
+      tenantUserId: identity.tenantUserId,
+      tokenHash,
+      expiresAt: new Date(Date.now() + 60_000).toISOString()
+    });
     const resolved = await repository.resolveSession(tokenHash, new Date().toISOString());
     expect(resolved?.tenant.id).toBe(identity.tenant.id);
     await repository.revokeSession(tokenHash, new Date().toISOString());
-    await expect(repository.resolveSession(tokenHash, new Date().toISOString())).resolves.toBeNull();
+    await expect(
+      repository.resolveSession(tokenHash, new Date().toISOString())
+    ).resolves.toBeNull();
   });
 });

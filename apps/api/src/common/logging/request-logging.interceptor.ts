@@ -1,6 +1,6 @@
 import type { CallHandler, ExecutionContext, NestInterceptor } from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
-import type { Observable} from "rxjs";
+import type { Observable } from "rxjs";
 import { tap } from "rxjs";
 import type { FitosRequest } from "../request-context/request-context.js";
 

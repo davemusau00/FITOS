@@ -1,4 +1,4 @@
-import type { CanActivate, ExecutionContext} from "@nestjs/common";
+import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Reflector } from "@nestjs/core";
 import { hashSessionToken, parseCookieHeader, verifyCsrfToken } from "@fitos/auth";
@@ -33,7 +33,12 @@ export class SessionGuard implements CanActivate {
     if (unsafeMethods.has(request.method)) {
       const csrfCookie = cookies.fitos_csrf;
       const csrfHeader = request.header("x-csrf-token");
-      if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader || !verifyCsrfToken(csrfCookie, token)) {
+      if (
+        !csrfCookie ||
+        !csrfHeader ||
+        csrfCookie !== csrfHeader ||
+        !verifyCsrfToken(csrfCookie, token)
+      ) {
         throw new DomainError("FORBIDDEN", "The request could not be verified.", 403);
       }
       const origin = request.header("origin");
@@ -43,7 +48,10 @@ export class SessionGuard implements CanActivate {
       }
     }
 
-    const session = await this.repository.resolveSession(hashSessionToken(token), new Date().toISOString());
+    const session = await this.repository.resolveSession(
+      hashSessionToken(token),
+      new Date().toISOString()
+    );
     if (!session) throw new DomainError("UNAUTHENTICATED", "Your session has expired.", 401);
 
     const actor: RequestActor = {

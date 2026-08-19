@@ -101,19 +101,39 @@ export interface FitosRepository {
   listBranches(scope: TenantScope): Promise<BranchResponse[]>;
   findBranchById(scope: TenantScope, branchId: string): Promise<BranchResponse | null>;
   createBranch(scope: TenantScope, input: CreateBranchRequest): Promise<BranchResponse>;
-  updateBranch(scope: TenantScope, branchId: string, input: UpdateBranchRequest): Promise<BranchResponse | null>;
+  updateBranch(
+    scope: TenantScope,
+    branchId: string,
+    input: UpdateBranchRequest
+  ): Promise<BranchResponse | null>;
 
-  createMember(scope: TenantScope, input: CreateMemberRequest, normalizedPhone: string | null): Promise<MemberResponse>;
+  createMember(
+    scope: TenantScope,
+    input: CreateMemberRequest,
+    normalizedPhone: string | null
+  ): Promise<MemberResponse>;
   findMemberById(scope: TenantScope, memberId: string): Promise<MemberResponse | null>;
-  searchMembers(scope: TenantScope, filters: MemberListFilters): Promise<CursorPage<MemberListItem>>;
-  updateMember(scope: TenantScope, memberId: string, input: UpdateMemberRequest, normalizedPhone?: string | null): Promise<MemberResponse | null>;
+  searchMembers(
+    scope: TenantScope,
+    filters: MemberListFilters
+  ): Promise<CursorPage<MemberListItem>>;
+  updateMember(
+    scope: TenantScope,
+    memberId: string,
+    input: UpdateMemberRequest,
+    normalizedPhone?: string | null
+  ): Promise<MemberResponse | null>;
 
   listStaff(scope: TenantScope): Promise<StaffUserResponse[]>;
   findStaffByUserId(scope: TenantScope, userId: string): Promise<StaffUserResponse | null>;
   findStaffByEmail(scope: TenantScope, email: string): Promise<StaffUserResponse | null>;
   findRoleById(scope: TenantScope, roleId: string): Promise<RoleResponse | null>;
   inviteStaff(scope: TenantScope, input: InviteStaffInput): Promise<StaffUserResponse>;
-  updateStaffAccess(scope: TenantScope, userId: string, input: StaffAccessInput): Promise<StaffUserResponse | null>;
+  updateStaffAccess(
+    scope: TenantScope,
+    userId: string,
+    input: StaffAccessInput
+  ): Promise<StaffUserResponse | null>;
   deactivateStaff(scope: TenantScope, userId: string): Promise<StaffUserResponse | null>;
   countActiveOwners(scope: TenantScope): Promise<number>;
 
@@ -122,8 +142,15 @@ export interface FitosRepository {
   publishEvent(event: DomainEvent): Promise<void>;
 
   acquireIdempotency(record: IdempotencyRecord): Promise<IdempotencyAcquireResult>;
-  completeIdempotency(input: Pick<IdempotencyRecord, "tenantId" | "operation" | "key"> & { responseStatus: number; responseBody: unknown }): Promise<void>;
-  abandonIdempotency(input: Pick<IdempotencyRecord, "tenantId" | "operation" | "key">): Promise<void>;
+  completeIdempotency(
+    input: Pick<IdempotencyRecord, "tenantId" | "operation" | "key"> & {
+      responseStatus: number;
+      responseBody: unknown;
+    }
+  ): Promise<void>;
+  abandonIdempotency(
+    input: Pick<IdempotencyRecord, "tenantId" | "operation" | "key">
+  ): Promise<void>;
 
   seedDevelopmentData?(passwordHash: string): Promise<void>;
 }

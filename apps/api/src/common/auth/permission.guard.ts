@@ -1,4 +1,4 @@
-import type { CanActivate, ExecutionContext} from "@nestjs/common";
+import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
 import type { Reflector } from "@nestjs/core";
 import type { PermissionKey } from "@fitos/contracts";

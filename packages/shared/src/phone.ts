@@ -4,7 +4,10 @@
  * E.164 when they are already explicit. A full libphonenumber adapter can
  * replace this at the integration boundary without changing API contracts.
  */
-export function normalizePhone(input: string | null | undefined, defaultCountryCode = "KE"): string | null {
+export function normalizePhone(
+  input: string | null | undefined,
+  defaultCountryCode = "KE"
+): string | null {
   if (!input) {
     return null;
   }

@@ -56,7 +56,10 @@ export type RoleKey = (typeof ROLE_KEYS)[number];
 export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
   owner: PERMISSION_KEYS,
   manager: PERMISSION_KEYS.filter(
-    (permission) => permission !== "role:manage" && permission !== "payment:refund" && permission !== "tenant:settings"
+    (permission) =>
+      permission !== "role:manage" &&
+      permission !== "payment:refund" &&
+      permission !== "tenant:settings"
   ),
   reception: [
     "branch:read",
@@ -75,5 +78,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]>
     "schedule:read"
   ],
   trainer: ["branch:read", "member:read", "schedule:read", "attendance:read"],
-  finance: ["branch:read", "payment:read", "payment:record", "payment:match", "payment:refund", "payment:export", "report:finance", "report:export"]
+  finance: [
+    "branch:read",
+    "payment:read",
+    "payment:record",
+    "payment:match",
+    "payment:refund",
+    "payment:export",
+    "report:finance",
+    "report:export"
+  ]
 };

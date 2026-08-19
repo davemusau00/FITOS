@@ -16,7 +16,13 @@ const branchSchema = z
     addressLine1: z.string().trim().max(255).nullable().optional(),
     addressLine2: z.string().trim().max(255).nullable().optional(),
     city: z.string().trim().max(120).nullable().optional(),
-    countryCode: z.string().trim().regex(/^[A-Za-z]{2}$/).transform((value) => value.toUpperCase()).nullable().optional(),
+    countryCode: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z]{2}$/)
+      .transform((value) => value.toUpperCase())
+      .nullable()
+      .optional(),
     isActive: z.boolean().optional()
   })
   .strict();
@@ -37,7 +43,11 @@ export class BranchesController {
   @Post()
   @RequirePermission("branch:create")
   create(@Actor() actor: RequestActor, @RequestId() requestId: string, @Body() body: unknown) {
-    return this.core.createBranch(actor, requestId, createBranchSchema.parse(body) satisfies CreateBranchRequest);
+    return this.core.createBranch(
+      actor,
+      requestId,
+      createBranchSchema.parse(body) satisfies CreateBranchRequest
+    );
   }
 
   @Get(":branchId")
@@ -48,13 +58,29 @@ export class BranchesController {
 
   @Patch(":branchId")
   @RequirePermission("branch:update")
-  update(@Actor() actor: RequestActor, @RequestId() requestId: string, @Param("branchId") branchId: string, @Body() body: unknown) {
-    return this.core.updateBranch(actor, requestId, branchIdSchema.parse(branchId), branchSchema.parse(body) satisfies UpdateBranchRequest);
+  update(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("branchId") branchId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.updateBranch(
+      actor,
+      requestId,
+      branchIdSchema.parse(branchId),
+      branchSchema.parse(body) satisfies UpdateBranchRequest
+    );
   }
 
   @Post(":branchId/deactivate")
   @RequirePermission("branch:deactivate")
-  deactivate(@Actor() actor: RequestActor, @RequestId() requestId: string, @Param("branchId") branchId: string) {
-    return this.core.updateBranch(actor, requestId, branchIdSchema.parse(branchId), { isActive: false });
+  deactivate(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("branchId") branchId: string
+  ) {
+    return this.core.updateBranch(actor, requestId, branchIdSchema.parse(branchId), {
+      isActive: false
+    });
   }
 }

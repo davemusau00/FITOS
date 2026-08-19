@@ -10,7 +10,12 @@ const updateOrganizationSchema = z
   .object({
     name: z.string().trim().min(2).max(160).optional(),
     timezone: z.string().trim().min(3).max(80).optional(),
-    currency: z.string().trim().regex(/^[A-Za-z]{3}$/).transform((value) => value.toUpperCase()).optional()
+    currency: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z]{3}$/)
+      .transform((value) => value.toUpperCase())
+      .optional()
   })
   .strict();
 
@@ -28,6 +33,10 @@ export class OrganizationsController {
   @Patch()
   @RequirePermission("tenant:settings")
   update(@Actor() actor: RequestActor, @RequestId() requestId: string, @Body() body: unknown) {
-    return this.core.updateOrganization(actor, requestId, updateOrganizationSchema.parse(body) satisfies UpdateOrganizationRequest);
+    return this.core.updateOrganization(
+      actor,
+      requestId,
+      updateOrganizationSchema.parse(body) satisfies UpdateOrganizationRequest
+    );
   }
 }

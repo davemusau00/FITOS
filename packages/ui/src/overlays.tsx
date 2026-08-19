@@ -10,7 +10,11 @@ type OverlayProps = PropsWithChildren<{
   footer?: ReactNode;
 }>;
 
-function useDismissibleOverlay(isOpen: boolean, onClose: () => void, initialFocus?: React.RefObject<HTMLElement | null>) {
+function useDismissibleOverlay(
+  isOpen: boolean,
+  onClose: () => void,
+  initialFocus?: React.RefObject<HTMLElement | null>
+) {
   useEffect(() => {
     if (!isOpen) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -34,11 +38,29 @@ export function Modal({ children, description, footer, isOpen, onClose, title }:
   useDismissibleOverlay(isOpen, onClose, closeRef);
   if (!isOpen) return null;
   return createPortal(
-    <div aria-labelledby={titleId} aria-modal="true" className="fitos-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} role="dialog">
+    <div
+      aria-labelledby={titleId}
+      aria-modal="true"
+      className="fitos-overlay"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      role="dialog"
+    >
       <section className="fitos-modal">
         <header className="fitos-modal__header">
-          <div><h2 id={titleId}>{title}</h2>{description ? <p className="fitos-modal__description">{description}</p> : null}</div>
-          <IconButton icon="close" label="Close dialog" onClick={onClose} ref={closeRef} size="small" variant="ghost" />
+          <div>
+            <h2 id={titleId}>{title}</h2>
+            {description ? <p className="fitos-modal__description">{description}</p> : null}
+          </div>
+          <IconButton
+            icon="close"
+            label="Close dialog"
+            onClick={onClose}
+            ref={closeRef}
+            size="small"
+            variant="ghost"
+          />
         </header>
         <div className="fitos-modal__body">{children}</div>
         {footer ? <footer className="fitos-modal__footer">{footer}</footer> : null}
@@ -48,8 +70,35 @@ export function Modal({ children, description, footer, isOpen, onClose, title }:
   );
 }
 
-export function AlertDialog({ confirmLabel = "Confirm", children, description, isOpen, onClose, onConfirm, title }: OverlayProps & { confirmLabel?: string; onConfirm: () => void }) {
-  return <Modal description={description} footer={<><button className="fitos-button fitos-button--ghost" onClick={onClose} type="button">Cancel</button><button className="fitos-button fitos-button--danger" onClick={onConfirm} type="button">{confirmLabel}</button></>} isOpen={isOpen} onClose={onClose} title={title}>{children}</Modal>;
+export function AlertDialog({
+  confirmLabel = "Confirm",
+  children,
+  description,
+  isOpen,
+  onClose,
+  onConfirm,
+  title
+}: OverlayProps & { confirmLabel?: string; onConfirm: () => void }) {
+  return (
+    <Modal
+      description={description}
+      footer={
+        <>
+          <button className="fitos-button fitos-button--ghost" onClick={onClose} type="button">
+            Cancel
+          </button>
+          <button className="fitos-button fitos-button--danger" onClick={onConfirm} type="button">
+            {confirmLabel}
+          </button>
+        </>
+      }
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+    >
+      {children}
+    </Modal>
+  );
 }
 
 export function Drawer({ children, description, footer, isOpen, onClose, title }: OverlayProps) {
@@ -58,11 +107,29 @@ export function Drawer({ children, description, footer, isOpen, onClose, title }
   useDismissibleOverlay(isOpen, onClose, closeRef);
   if (!isOpen) return null;
   return createPortal(
-    <div aria-labelledby={titleId} aria-modal="true" className="fitos-overlay fitos-drawer-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} role="dialog">
+    <div
+      aria-labelledby={titleId}
+      aria-modal="true"
+      className="fitos-overlay fitos-drawer-overlay"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      role="dialog"
+    >
       <aside className="fitos-drawer">
         <header className="fitos-modal__header">
-          <div><h2 id={titleId}>{title}</h2>{description ? <p className="fitos-modal__description">{description}</p> : null}</div>
-          <IconButton icon="close" label="Close panel" onClick={onClose} ref={closeRef} size="small" variant="ghost" />
+          <div>
+            <h2 id={titleId}>{title}</h2>
+            {description ? <p className="fitos-modal__description">{description}</p> : null}
+          </div>
+          <IconButton
+            icon="close"
+            label="Close panel"
+            onClick={onClose}
+            ref={closeRef}
+            size="small"
+            variant="ghost"
+          />
         </header>
         <div className="fitos-modal__body">{children}</div>
         {footer ? <footer className="fitos-modal__footer">{footer}</footer> : null}

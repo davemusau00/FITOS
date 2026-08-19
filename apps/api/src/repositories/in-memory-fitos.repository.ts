@@ -38,7 +38,13 @@ type StoredTenant = TenantSummary;
 type StoredBranch = BranchResponse & { tenantId: string };
 type StoredUser = UserSummary & { passwordHash: string };
 type StoredRole = RoleResponse & { tenantId: string };
-type StoredTenantUser = { id: string; tenantId: string; userId: string; roleId: string; status: "active" | "invited" | "deactivated" };
+type StoredTenantUser = {
+  id: string;
+  tenantId: string;
+  userId: string;
+  roleId: string;
+  status: "active" | "invited" | "deactivated";
+};
 type StoredSession = CreateSessionInput & { id: string; revokedAt: string | null };
 type StoredContact = MemberResponse["contact"] & { tenantId: string };
 type StoredMember = Omit<MemberResponse, "contact"> & { contactId: string };
@@ -157,7 +163,9 @@ export class InMemoryFitosRepository implements FitosRepository {
 
   async findLoginIdentity(email: string): Promise<LoginIdentity | null> {
     const normalized = normalizeEmail(email);
-    const user = [...this.users.values()].find((candidate) => candidate.email === normalized && candidate.status === "active");
+    const user = [...this.users.values()].find(
+      (candidate) => candidate.email === normalized && candidate.status === "active"
+    );
     if (!user) return null;
     const tenantUser = [...this.tenantUsers.values()].find(
       (candidate) => candidate.userId === user.id && candidate.status === "active"
@@ -187,7 +195,8 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (!session || session.revokedAt || session.expiresAt <= currentTime) return null;
     const tenantUser = this.tenantUsers.get(session.tenantUserId);
     const user = this.users.get(session.userId);
-    if (!tenantUser || !user || tenantUser.status !== "active" || user.status !== "active") return null;
+    if (!tenantUser || !user || tenantUser.status !== "active" || user.status !== "active")
+      return null;
     const tenant = this.tenants.get(tenantUser.tenantId);
     const role = this.roles.get(tenantUser.roleId);
     if (!tenant || !role || tenant.status !== "active") return null;
@@ -232,13 +241,18 @@ export class InMemoryFitosRepository implements FitosRepository {
 
   async findBranchById(scope: TenantScope, branchId: string): Promise<BranchResponse | null> {
     const branch = this.branches.get(branchId);
-    if (!branch || branch.tenantId !== scope.tenantId || !scope.branchIds.includes(branchId)) return null;
+    if (!branch || branch.tenantId !== scope.tenantId || !scope.branchIds.includes(branchId))
+      return null;
     return this.toBranchResponse(branch);
   }
 
   async createBranch(scope: TenantScope, input: CreateBranchRequest): Promise<BranchResponse> {
     const slug = input.slug ? toSlug(input.slug) : toSlug(input.name);
-    if ([...this.branches.values()].some((branch) => branch.tenantId === scope.tenantId && branch.slug === slug)) {
+    if (
+      [...this.branches.values()].some(
+        (branch) => branch.tenantId === scope.tenantId && branch.slug === slug
+      )
+    ) {
       throw new Error("Branch slug already exists.");
     }
     const timestamp = now();
@@ -263,11 +277,24 @@ export class InMemoryFitosRepository implements FitosRepository {
     return this.toBranchResponse(branch);
   }
 
-  async updateBranch(scope: TenantScope, branchId: string, input: UpdateBranchRequest): Promise<BranchResponse | null> {
+  async updateBranch(
+    scope: TenantScope,
+    branchId: string,
+    input: UpdateBranchRequest
+  ): Promise<BranchResponse | null> {
     const branch = this.branches.get(branchId);
-    if (!branch || branch.tenantId !== scope.tenantId || !scope.branchIds.includes(branchId)) return null;
+    if (!branch || branch.tenantId !== scope.tenantId || !scope.branchIds.includes(branchId))
+      return null;
     const slug = input.slug ? toSlug(input.slug) : undefined;
-    if (slug && [...this.branches.values()].some((candidate) => candidate.id !== branchId && candidate.tenantId === scope.tenantId && candidate.slug === slug)) {
+    if (
+      slug &&
+      [...this.branches.values()].some(
+        (candidate) =>
+          candidate.id !== branchId &&
+          candidate.tenantId === scope.tenantId &&
+          candidate.slug === slug
+      )
+    ) {
       throw new Error("Branch slug already exists.");
     }
     Object.assign(branch, {
@@ -286,7 +313,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     return this.toBranchResponse(branch);
   }
 
-  async createMember(scope: TenantScope, input: CreateMemberRequest, normalizedPhone: string | null): Promise<MemberResponse> {
+  async createMember(
+    scope: TenantScope,
+    input: CreateMemberRequest,
+    normalizedPhone: string | null
+  ): Promise<MemberResponse> {
     if (!scope.branchIds.includes(input.homeBranchId)) throw new Error("Branch unavailable.");
     const timestamp = now();
     const contact: StoredContact = {
@@ -316,13 +347,22 @@ export class InMemoryFitosRepository implements FitosRepository {
 
   async findMemberById(scope: TenantScope, memberId: string): Promise<MemberResponse | null> {
     const member = this.members.get(memberId);
-    if (!member || member.tenantId !== scope.tenantId || (member.homeBranchId && !scope.branchIds.includes(member.homeBranchId))) return null;
+    if (
+      !member ||
+      member.tenantId !== scope.tenantId ||
+      (member.homeBranchId && !scope.branchIds.includes(member.homeBranchId))
+    )
+      return null;
     const contact = this.contacts.get(member.contactId);
     return contact ? this.toMemberResponse(member, contact) : null;
   }
 
-  async searchMembers(scope: TenantScope, filters: MemberListFilters): Promise<CursorPage<MemberListItem>> {
-    if (filters.branchId && !scope.branchIds.includes(filters.branchId)) return { data: [], page: { nextCursor: null, hasMore: false } };
+  async searchMembers(
+    scope: TenantScope,
+    filters: MemberListFilters
+  ): Promise<CursorPage<MemberListItem>> {
+    if (filters.branchId && !scope.branchIds.includes(filters.branchId))
+      return { data: [], page: { nextCursor: null, hasMore: false } };
     const query = filters.query?.trim().toLowerCase();
     const all = [...this.members.values()]
       .filter((member) => member.tenantId === scope.tenantId)
@@ -330,40 +370,79 @@ export class InMemoryFitosRepository implements FitosRepository {
       .filter((member) => !filters.branchId || member.homeBranchId === filters.branchId)
       .filter((member) => !filters.status || member.status === filters.status)
       .map((member) => ({ member, contact: this.contacts.get(member.contactId) }))
-      .filter((record): record is { member: StoredMember; contact: StoredContact } => Boolean(record.contact))
+      .filter((record): record is { member: StoredMember; contact: StoredContact } =>
+        Boolean(record.contact)
+      )
       .filter(({ member, contact }) => {
         if (!query) return true;
-        return [contact.firstName, contact.lastName, contact.phone, contact.email, member.memberNumber]
+        return [
+          contact.firstName,
+          contact.lastName,
+          contact.phone,
+          contact.email,
+          member.memberNumber
+        ]
           .filter(Boolean)
           .some((value) => value?.toLowerCase().includes(query));
       })
-      .sort((a, b) => b.member.createdAt.localeCompare(a.member.createdAt) || b.member.id.localeCompare(a.member.id));
+      .sort(
+        (a, b) =>
+          b.member.createdAt.localeCompare(a.member.createdAt) ||
+          b.member.id.localeCompare(a.member.id)
+      );
     const cursor = decodeCursor(filters.cursor);
     const afterCursor = cursor
-      ? all.filter(({ member }) => member.createdAt < cursor.createdAt || (member.createdAt === cursor.createdAt && member.id < cursor.id))
+      ? all.filter(
+          ({ member }) =>
+            member.createdAt < cursor.createdAt ||
+            (member.createdAt === cursor.createdAt && member.id < cursor.id)
+        )
       : all;
     const limit = Math.min(Math.max(filters.limit ?? 25, 1), 100);
     const selected = afterCursor.slice(0, limit + 1);
     const hasMore = selected.length > limit;
-    const data = selected.slice(0, limit).map(({ member, contact }) => this.toMemberListItem(member, contact));
+    const data = selected
+      .slice(0, limit)
+      .map(({ member, contact }) => this.toMemberListItem(member, contact));
     const last = data.at(-1);
     return {
       data,
-      page: { nextCursor: hasMore && last ? encodeCursor({ createdAt: last.updatedAt, id: last.id }) : null, hasMore }
+      page: {
+        nextCursor:
+          hasMore && last ? encodeCursor({ createdAt: last.updatedAt, id: last.id }) : null,
+        hasMore
+      }
     };
   }
 
-  async updateMember(scope: TenantScope, memberId: string, input: UpdateMemberRequest, normalizedPhone?: string | null): Promise<MemberResponse | null> {
+  async updateMember(
+    scope: TenantScope,
+    memberId: string,
+    input: UpdateMemberRequest,
+    normalizedPhone?: string | null
+  ): Promise<MemberResponse | null> {
     const member = this.members.get(memberId);
-    if (!member || member.tenantId !== scope.tenantId || (member.homeBranchId && !scope.branchIds.includes(member.homeBranchId))) return null;
-    if (input.homeBranchId !== undefined && input.homeBranchId !== null && !scope.branchIds.includes(input.homeBranchId)) return null;
+    if (
+      !member ||
+      member.tenantId !== scope.tenantId ||
+      (member.homeBranchId && !scope.branchIds.includes(member.homeBranchId))
+    )
+      return null;
+    if (
+      input.homeBranchId !== undefined &&
+      input.homeBranchId !== null &&
+      !scope.branchIds.includes(input.homeBranchId)
+    )
+      return null;
     const contact = this.contacts.get(member.contactId);
     if (!contact) return null;
     if (input.contact) {
       if (input.contact.firstName !== undefined) contact.firstName = input.contact.firstName;
       if (input.contact.lastName !== undefined) contact.lastName = input.contact.lastName ?? null;
-      if (input.contact.email !== undefined) contact.email = input.contact.email?.trim().toLowerCase() || null;
-      if (input.contact.dateOfBirth !== undefined) contact.dateOfBirth = input.contact.dateOfBirth ?? null;
+      if (input.contact.email !== undefined)
+        contact.email = input.contact.email?.trim().toLowerCase() || null;
+      if (input.contact.dateOfBirth !== undefined)
+        contact.dateOfBirth = input.contact.dateOfBirth ?? null;
       if (normalizedPhone !== undefined) contact.phone = normalizedPhone;
     }
     if (input.homeBranchId !== undefined) member.homeBranchId = input.homeBranchId;
@@ -387,7 +466,9 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   async findStaffByEmail(scope: TenantScope, email: string): Promise<StaffUserResponse | null> {
-    const user = [...this.users.values()].find((candidate) => candidate.email === normalizeEmail(email));
+    const user = [...this.users.values()].find(
+      (candidate) => candidate.email === normalizeEmail(email)
+    );
     return user ? this.findStaffByUserId(scope, user.id) : null;
   }
 
@@ -397,12 +478,27 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   async inviteStaff(scope: TenantScope, input: InviteStaffInput): Promise<StaffUserResponse> {
-    if (await this.findStaffByEmail(scope, input.email)) throw new Error("Staff member already exists.");
+    if (await this.findStaffByEmail(scope, input.email))
+      throw new Error("Staff member already exists.");
     const role = await this.findRoleById(scope, input.roleId);
-    if (!role || input.branchIds.some((branchId) => !scope.branchIds.includes(branchId))) throw new Error("Invalid staff access.");
-    const user: StoredUser = { id: randomUUID(), email: normalizeEmail(input.email), displayName: input.displayName, status: "invited", lastLoginAt: null, passwordHash: "!invite-required!" };
+    if (!role || input.branchIds.some((branchId) => !scope.branchIds.includes(branchId)))
+      throw new Error("Invalid staff access.");
+    const user: StoredUser = {
+      id: randomUUID(),
+      email: normalizeEmail(input.email),
+      displayName: input.displayName,
+      status: "invited",
+      lastLoginAt: null,
+      passwordHash: "!invite-required!"
+    };
     this.users.set(user.id, user);
-    const membership: StoredTenantUser = { id: randomUUID(), tenantId: scope.tenantId, userId: user.id, roleId: role.id, status: "invited" };
+    const membership: StoredTenantUser = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      userId: user.id,
+      roleId: role.id,
+      status: "invited"
+    };
     this.tenantUsers.set(membership.id, membership);
     this.branchAccess.set(membership.id, new Set(input.branchIds));
     const staff = this.toStaff(membership);
@@ -410,17 +506,30 @@ export class InMemoryFitosRepository implements FitosRepository {
     return staff;
   }
 
-  async updateStaffAccess(scope: TenantScope, userId: string, input: StaffAccessInput): Promise<StaffUserResponse | null> {
-    const membership = [...this.tenantUsers.values()].find((candidate) => candidate.tenantId === scope.tenantId && candidate.userId === userId);
+  async updateStaffAccess(
+    scope: TenantScope,
+    userId: string,
+    input: StaffAccessInput
+  ): Promise<StaffUserResponse | null> {
+    const membership = [...this.tenantUsers.values()].find(
+      (candidate) => candidate.tenantId === scope.tenantId && candidate.userId === userId
+    );
     const role = await this.findRoleById(scope, input.roleId);
-    if (!membership || !role || input.branchIds.some((branchId) => !scope.branchIds.includes(branchId))) return null;
+    if (
+      !membership ||
+      !role ||
+      input.branchIds.some((branchId) => !scope.branchIds.includes(branchId))
+    )
+      return null;
     membership.roleId = role.id;
     this.branchAccess.set(membership.id, new Set(input.branchIds));
     return this.toStaff(membership);
   }
 
   async deactivateStaff(scope: TenantScope, userId: string): Promise<StaffUserResponse | null> {
-    const membership = [...this.tenantUsers.values()].find((candidate) => candidate.tenantId === scope.tenantId && candidate.userId === userId);
+    const membership = [...this.tenantUsers.values()].find(
+      (candidate) => candidate.tenantId === scope.tenantId && candidate.userId === userId
+    );
     if (!membership) return null;
     membership.status = "deactivated";
     return this.toStaff(membership);
@@ -429,7 +538,11 @@ export class InMemoryFitosRepository implements FitosRepository {
   async countActiveOwners(scope: TenantScope): Promise<number> {
     return [...this.tenantUsers.values()].filter((membership) => {
       const role = this.roles.get(membership.roleId);
-      return membership.tenantId === scope.tenantId && membership.status === "active" && role?.key === "owner";
+      return (
+        membership.tenantId === scope.tenantId &&
+        membership.status === "active" &&
+        role?.key === "owner"
+      );
     }).length;
   }
 
@@ -452,7 +565,10 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   async listAuditEvents(scope: TenantScope, resourceId?: string): Promise<AuditEventResponse[]> {
-    return this.auditEvents.filter((event) => event.tenantId === scope.tenantId && (!resourceId || event.resourceId === resourceId));
+    return this.auditEvents.filter(
+      (event) =>
+        event.tenantId === scope.tenantId && (!resourceId || event.resourceId === resourceId)
+    );
   }
 
   async publishEvent(event: DomainEvent): Promise<void> {
@@ -468,10 +584,19 @@ export class InMemoryFitosRepository implements FitosRepository {
     }
     if (existing.fingerprint !== record.fingerprint) return { kind: "key_reused" };
     if (existing.status === "in_progress") return { kind: "in_progress" };
-    return { kind: "replay", responseStatus: existing.responseStatus ?? 200, responseBody: existing.responseBody ?? {} };
+    return {
+      kind: "replay",
+      responseStatus: existing.responseStatus ?? 200,
+      responseBody: existing.responseBody ?? {}
+    };
   }
 
-  async completeIdempotency(input: Pick<IdempotencyRecord, "tenantId" | "operation" | "key"> & { responseStatus: number; responseBody: unknown }): Promise<void> {
+  async completeIdempotency(
+    input: Pick<IdempotencyRecord, "tenantId" | "operation" | "key"> & {
+      responseStatus: number;
+      responseBody: unknown;
+    }
+  ): Promise<void> {
     const mapKey = `${input.tenantId}:${input.operation}:${input.key}`;
     const existing = this.idempotency.get(mapKey);
     if (existing) {
@@ -481,7 +606,9 @@ export class InMemoryFitosRepository implements FitosRepository {
     }
   }
 
-  async abandonIdempotency(input: Pick<IdempotencyRecord, "tenantId" | "operation" | "key">): Promise<void> {
+  async abandonIdempotency(
+    input: Pick<IdempotencyRecord, "tenantId" | "operation" | "key">
+  ): Promise<void> {
     this.idempotency.delete(`${input.tenantId}:${input.operation}:${input.key}`);
   }
 
@@ -493,7 +620,9 @@ export class InMemoryFitosRepository implements FitosRepository {
 
   private resolveBranchIds(membership: StoredTenantUser, role: StoredRole): string[] {
     if (role.key === "owner") {
-      return [...this.branches.values()].filter((branch) => branch.tenantId === membership.tenantId).map((branch) => branch.id);
+      return [...this.branches.values()]
+        .filter((branch) => branch.tenantId === membership.tenantId)
+        .map((branch) => branch.id);
     }
     return [...(this.branchAccess.get(membership.id) ?? new Set())];
   }
@@ -542,6 +671,11 @@ export class InMemoryFitosRepository implements FitosRepository {
       .map((branchId) => this.branches.get(branchId))
       .filter((branch): branch is StoredBranch => Boolean(branch))
       .map((branch) => this.toBranchResponse(branch));
-    return { user: this.toUserSummary(user), role: this.toRoleResponse(role), branches, tenantUserId: membership.id };
+    return {
+      user: this.toUserSummary(user),
+      role: this.toRoleResponse(role),
+      branches,
+      tenantUserId: membership.id
+    };
   }
 }

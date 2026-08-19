@@ -24,25 +24,27 @@ function ProtectedRoute() {
 }
 
 export function AppRouter() {
-  return <Routes>
-    <Route element={<LoginPage />} path="/login" />
-    <Route element={<ProtectedRoute />}>
-      <Route element={<AppShell />} path="/app">
-        <Route element={<Navigate replace to="overview" />} index />
-        <Route element={<OverviewPage />} path="overview" />
-        <Route element={<MembersPage />} path="members" />
-        <Route element={<NewMemberPage />} path="members/new" />
-        <Route element={<MemberDetailPage />} path="members/:memberId" />
-        <Route element={<StaffPage />} path="staff" />
-        <Route element={<SettingsPage />} path="settings" />
-        <Route element={<OrganizationSettingsPage />} path="settings/organization" />
-        <Route element={<BranchesSettingsPage />} path="settings/branches" />
-        <Route element={<BranchesSettingsPage />} path="settings/branches/new" />
-        <Route element={<StaffPage />} path="settings/team" />
-        <Route element={<SecuritySettingsPage />} path="settings/security" />
+  return (
+    <Routes>
+      <Route element={<LoginPage />} path="/login" />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppShell />} path="/app">
+          <Route element={<Navigate replace to="overview" />} index />
+          <Route element={<OverviewPage />} path="overview" />
+          <Route element={<MembersPage />} path="members" />
+          <Route element={<NewMemberPage />} path="members/new" />
+          <Route element={<MemberDetailPage />} path="members/:memberId" />
+          <Route element={<StaffPage />} path="staff" />
+          <Route element={<SettingsPage />} path="settings" />
+          <Route element={<OrganizationSettingsPage />} path="settings/organization" />
+          <Route element={<BranchesSettingsPage />} path="settings/branches" />
+          <Route element={<BranchesSettingsPage />} path="settings/branches/new" />
+          <Route element={<StaffPage />} path="settings/team" />
+          <Route element={<SecuritySettingsPage />} path="settings/security" />
+        </Route>
+        <Route element={<OnboardingPage />} path="/onboarding" />
       </Route>
-      <Route element={<OnboardingPage />} path="/onboarding" />
-    </Route>
-    <Route element={<Navigate replace to="/app/overview" />} path="*" />
-  </Routes>;
+      <Route element={<Navigate replace to="/app/overview" />} path="*" />
+    </Routes>
+  );
 }

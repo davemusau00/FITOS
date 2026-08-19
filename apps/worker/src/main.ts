@@ -20,10 +20,14 @@ const worker = new Worker(
 );
 
 worker.on("completed", (job) => {
-  process.stdout.write(JSON.stringify({ event: "worker.completed", jobId: job.id, name: job.name }) + "\n");
+  process.stdout.write(
+    JSON.stringify({ event: "worker.completed", jobId: job.id, name: job.name }) + "\n"
+  );
 });
 worker.on("failed", (job, error) => {
-  process.stderr.write(JSON.stringify({ event: "worker.failed", jobId: job?.id, message: error.message }) + "\n");
+  process.stderr.write(
+    JSON.stringify({ event: "worker.failed", jobId: job?.id, message: error.message }) + "\n"
+  );
 });
 
 async function shutdown(signal: string) {
