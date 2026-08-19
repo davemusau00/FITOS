@@ -224,6 +224,94 @@ export const members = pgTable(
   ]
 );
 
+export const leads = pgTable(
+  "leads",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    contactId: uuid("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
+    ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "set null" }),
+    interest: varchar("interest", { length: 255 }),
+    source: varchar("source", { length: 80 }),
+    stage: varchar("stage", { length: 30 }).notNull().default("new"),
+    lostReason: varchar("lost_reason", { length: 255 }),
+    nextFollowUpAt: timestamp("next_follow_up_at", { withTimezone: true }),
+    convertedMemberId: uuid("converted_member_id").references(() => members.id, {
+      onDelete: "set null"
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_leads_tenant_stage").on(table.tenantId, table.stage, table.createdAt),
+    index("idx_leads_tenant_branch").on(table.tenantId, table.branchId)
+  ]
+);
+
+export const leadEvents = pgTable(
+  "lead_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    eventType: varchar("event_type", { length: 60 }).notNull(),
+    previousStage: varchar("previous_stage", { length: 30 }),
+    nextStage: varchar("next_stage", { length: 30 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_lead_events_tenant_lead").on(table.tenantId, table.leadId, table.createdAt)
+  ]
+);
+
+export const leadTasks = pgTable(
+  "lead_tasks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    assigneeUserId: uuid("assignee_user_id").references(() => users.id, { onDelete: "set null" }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("idx_lead_tasks_tenant_lead").on(table.tenantId, table.leadId)]
+);
+
+export const leadNotes = pgTable(
+  "lead_notes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("idx_lead_notes_tenant_lead").on(table.tenantId, table.leadId, table.createdAt)]
+);
+
 export const auditEvents = pgTable(
   "audit_events",
   {
@@ -293,6 +381,10 @@ export const schema = {
   sessions,
   contacts,
   members,
+  leads,
+  leadEvents,
+  leadTasks,
+  leadNotes,
   auditEvents,
   idempotencyKeys
 };
