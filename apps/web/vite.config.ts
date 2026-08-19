@@ -12,5 +12,5 @@ export default defineConfig({
       }
     }
   },
-  build: { sourcemap: process.env.APP_ENV !== "production" }
+  build: { sourcemap: process.env.NODE_ENV === "development" }
 });
