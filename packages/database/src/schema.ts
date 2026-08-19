@@ -4,6 +4,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
   text,
@@ -50,8 +51,8 @@ export const branches = pgTable(
     addressLine2: varchar("address_line_2", { length: 255 }),
     city: varchar("city", { length: 120 }),
     countryCode: varchar("country_code", { length: 2 }).notNull().default("KE"),
-    latitude: varchar("latitude", { length: 16 }),
-    longitude: varchar("longitude", { length: 16 }),
+    latitude: numeric("latitude", { precision: 9, scale: 6 }),
+    longitude: numeric("longitude", { precision: 9, scale: 6 }),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()

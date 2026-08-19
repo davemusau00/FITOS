@@ -24,8 +24,8 @@ CREATE TABLE "branches" (
   "address_line_2" varchar(255),
   "city" varchar(120),
   "country_code" varchar(2) DEFAULT 'KE' NOT NULL,
-  "latitude" varchar(16),
-  "longitude" varchar(16),
+  "latitude" numeric(9,6),
+  "longitude" numeric(9,6),
   "is_active" boolean DEFAULT true NOT NULL,
   "created_at" timestamptz DEFAULT now() NOT NULL,
   "updated_at" timestamptz DEFAULT now() NOT NULL,
@@ -182,3 +182,88 @@ CREATE TABLE "idempotency_keys" (
 );
 CREATE UNIQUE INDEX "uq_idempotency_keys_tenant_operation_key" ON "idempotency_keys" USING btree ("tenant_id", "operation", "key");
 CREATE INDEX "idx_idempotency_keys_expires" ON "idempotency_keys" USING btree ("expires_at");
+
+-- Shared-schema tenant isolation needs database checks as well as mandatory
+-- repository scopes. These triggers reject cross-tenant foreign references.
+CREATE FUNCTION assert_branch_belongs_to_tenant() RETURNS trigger AS $$
+BEGIN
+  IF NEW.preferred_branch_id IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM branches WHERE id = NEW.preferred_branch_id AND tenant_id = NEW.tenant_id) THEN
+    RAISE EXCEPTION 'preferred branch must belong to the contact tenant';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER contacts_branch_tenant_guard
+BEFORE INSERT OR UPDATE OF tenant_id, preferred_branch_id ON contacts
+FOR EACH ROW EXECUTE FUNCTION assert_branch_belongs_to_tenant();
+
+CREATE FUNCTION assert_member_references_belong_to_tenant() RETURNS trigger AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM contacts WHERE id = NEW.contact_id AND tenant_id = NEW.tenant_id) THEN
+    RAISE EXCEPTION 'member contact must belong to the member tenant';
+  END IF;
+  IF NEW.home_branch_id IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM branches WHERE id = NEW.home_branch_id AND tenant_id = NEW.tenant_id) THEN
+    RAISE EXCEPTION 'member home branch must belong to the member tenant';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER members_tenant_guard
+BEFORE INSERT OR UPDATE OF tenant_id, contact_id, home_branch_id ON members
+FOR EACH ROW EXECUTE FUNCTION assert_member_references_belong_to_tenant();
+
+CREATE FUNCTION assert_tenant_user_role_matches_tenant() RETURNS trigger AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM roles WHERE id = NEW.role_id AND (tenant_id = NEW.tenant_id OR tenant_id IS NULL)) THEN
+    RAISE EXCEPTION 'role must belong to the tenant';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER tenant_users_role_tenant_guard
+BEFORE INSERT OR UPDATE OF tenant_id, role_id ON tenant_users
+FOR EACH ROW EXECUTE FUNCTION assert_tenant_user_role_matches_tenant();
+
+CREATE FUNCTION assert_branch_access_matches_tenant() RETURNS trigger AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM tenant_users tu
+    JOIN branches b ON b.id = NEW.branch_id
+    WHERE tu.id = NEW.tenant_user_id AND tu.tenant_id = b.tenant_id
+  ) THEN
+    RAISE EXCEPTION 'branch access must remain within the tenant';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER user_branch_access_tenant_guard
+BEFORE INSERT OR UPDATE OF tenant_user_id, branch_id ON user_branch_access
+FOR EACH ROW EXECUTE FUNCTION assert_branch_access_matches_tenant();
+
+CREATE FUNCTION assert_session_user_matches_tenant_user() RETURNS trigger AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM tenant_users WHERE id = NEW.tenant_user_id AND user_id = NEW.user_id) THEN
+    RAISE EXCEPTION 'session user must match tenant user';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER sessions_user_tenant_user_guard
+BEFORE INSERT OR UPDATE OF user_id, tenant_user_id ON sessions
+FOR EACH ROW EXECUTE FUNCTION assert_session_user_matches_tenant_user();
+
+CREATE FUNCTION assert_audit_branch_matches_tenant() RETURNS trigger AS $$
+BEGIN
+  IF NEW.branch_id IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM branches WHERE id = NEW.branch_id AND tenant_id = NEW.tenant_id) THEN
+    RAISE EXCEPTION 'audit branch must belong to the audit tenant';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER audit_events_branch_tenant_guard
+BEFORE INSERT OR UPDATE OF tenant_id, branch_id ON audit_events
+FOR EACH ROW EXECUTE FUNCTION assert_audit_branch_matches_tenant();

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { createOpaqueSessionToken, hashSessionToken, ScryptPasswordHasher } from "@fitos/auth";
+import { createCsrfToken, createOpaqueSessionToken, hashSessionToken, ScryptPasswordHasher } from "@fitos/auth";
 import type { AuthMeResponse, LoginRequest, RequestActor } from "@fitos/contracts";
 import { DomainError } from "../errors/domain-error.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
@@ -24,7 +24,7 @@ export class AuthService {
       throw new DomainError("UNAUTHENTICATED", "Email or password is incorrect.", 401);
     }
     const sessionToken = createOpaqueSessionToken();
-    const csrfToken = createOpaqueSessionToken();
+    const csrfToken = createCsrfToken(sessionToken);
     const now = new Date();
     const ttlSeconds = Number(process.env.SESSION_TTL_SECONDS ?? 28_800);
     const expiresAt = new Date(now.getTime() + ttlSeconds * 1_000).toISOString();

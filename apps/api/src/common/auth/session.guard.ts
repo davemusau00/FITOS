@@ -1,7 +1,7 @@
 import type { CanActivate, ExecutionContext} from "@nestjs/common";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Reflector } from "@nestjs/core";
-import { hashSessionToken, parseCookieHeader } from "@fitos/auth";
+import { hashSessionToken, parseCookieHeader, verifyCsrfToken } from "@fitos/auth";
 import type { RequestActor } from "@fitos/contracts";
 import { DomainError } from "../errors/domain-error.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
@@ -33,7 +33,7 @@ export class SessionGuard implements CanActivate {
     if (unsafeMethods.has(request.method)) {
       const csrfCookie = cookies.fitos_csrf;
       const csrfHeader = request.header("x-csrf-token");
-      if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+      if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader || !verifyCsrfToken(csrfCookie, token)) {
         throw new DomainError("FORBIDDEN", "The request could not be verified.", 403);
       }
       const origin = request.header("origin");

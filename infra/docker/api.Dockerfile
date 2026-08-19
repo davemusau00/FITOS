@@ -29,6 +29,7 @@ COPY --from=build /app/apps/api/dist apps/api/dist
 COPY --from=build /app/packages/auth/dist packages/auth/dist
 COPY --from=build /app/packages/contracts/dist packages/contracts/dist
 COPY --from=build /app/packages/database/dist packages/database/dist
+COPY --from=build /app/packages/database/migrations packages/database/migrations
 COPY --from=build /app/packages/shared/dist packages/shared/dist
 USER node
 EXPOSE 3000
