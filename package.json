@@ -1,0 +1,54 @@
+{
+  "name": "fitos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FITOS - a tenant-safe fitness business operating system",
+  "packageManager": "npm@11.17.0",
+  "allowScripts": {
+    "esbuild": true
+  },
+  "engines": {
+    "node": ">=24 <27",
+    "npm": ">=11"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,api,worker -c cyan,magenta,yellow \"npm run dev --workspace=@fitos/web\" \"npm run dev --workspace=@fitos/api\" \"npm run dev --workspace=@fitos/worker\"",
+    "build:packages": "npm run build --workspace=@fitos/contracts && npm run build --workspace=@fitos/shared && npm run build --workspace=@fitos/auth && npm run build --workspace=@fitos/ui && npm run build --workspace=@fitos/database",
+    "build": "npm run build:packages && npm run build --workspace=@fitos/api && npm run build --workspace=@fitos/worker && npm run build --workspace=@fitos/web",
+    "typecheck": "npm run build:packages && npm run typecheck --workspace=@fitos/api && npm run typecheck --workspace=@fitos/worker && npm run typecheck --workspace=@fitos/web",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write \"{apps,packages,infra,docs}/**/*.{ts,tsx,js,json,css,md,yml,yaml}\"",
+    "format:check": "prettier --check \"{apps,packages,infra,docs}/**/*.{ts,tsx,js,json,css,md,yml,yaml}\"",
+    "test": "npm run test --workspaces --if-present",
+    "test:unit": "npm run test:unit --workspaces --if-present",
+    "test:integration": "npm run test:integration --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace=@fitos/testing --if-present",
+    "test:tenancy": "npm run test:tenancy --workspace=@fitos/api --if-present",
+    "db:generate": "npm run generate --workspace=@fitos/database",
+    "db:migrate": "npm run migrate --workspace=@fitos/database",
+    "db:seed": "npm run seed --workspace=@fitos/database",
+    "db:status": "npm run status --workspace=@fitos/database",
+    "db:reset:test": "npm run reset:test --workspace=@fitos/database",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.4",
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "prettier": "^3.5.3",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

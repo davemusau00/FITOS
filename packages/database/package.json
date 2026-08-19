@@ -1,0 +1,40 @@
+{
+  "name": "@fitos/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "default": "./dist/schema.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts",
+    "provision:operator": "tsx src/provision-operator.ts",
+    "status": "tsx src/status.ts",
+    "reset:test": "tsx src/reset-test.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fitos/auth": "0.0.0",
+    "@fitos/contracts": "0.0.0",
+    "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.6",
+    "drizzle-kit": "^0.31.8"
+  }
+}
