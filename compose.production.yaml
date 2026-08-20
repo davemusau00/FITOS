@@ -1,5 +1,6 @@
 services:
   nginx:
+    image: fitos-nginx:${FITOS_RELEASE_TAG:-local}
     build:
       context: .
       dockerfile: infra/docker/nginx.Dockerfile
@@ -13,12 +14,14 @@ services:
     restart: unless-stopped
 
   api:
+    image: fitos-api:${FITOS_RELEASE_TAG:-local}
     build:
       context: .
       dockerfile: infra/docker/api.Dockerfile
     env_file: ${FITOS_ENV_FILE:-.env.production}
     environment:
       FITOS_REPOSITORY: drizzle
+      FITOS_RELEASE_TAG: ${FITOS_RELEASE_TAG:-local}
     expose: ["3000"]
     depends_on:
       postgres:
@@ -26,7 +29,13 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/v1/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/v1/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -34,10 +43,13 @@ services:
     restart: unless-stopped
 
   worker:
+    image: fitos-worker:${FITOS_RELEASE_TAG:-local}
     build:
       context: .
       dockerfile: infra/docker/worker.Dockerfile
     env_file: ${FITOS_ENV_FILE:-.env.production}
+    environment:
+      FITOS_RELEASE_TAG: ${FITOS_RELEASE_TAG:-local}
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,6 +57,26 @@ services:
         condition: service_healthy
     networks: [data]
     restart: unless-stopped
+
+  backup:
+    image: fitos-backup:${FITOS_RELEASE_TAG:-local}
+    build:
+      context: .
+      dockerfile: infra/docker/backup.Dockerfile
+    profiles: ["operations"]
+    env_file: ${FITOS_ENV_FILE:-.env.production}
+    environment:
+      BACKUP_DIRECTORY: /backups
+      BACKUP_OFFSITE_DIRECTORY: /offsite
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ${BACKUP_HOST_DIRECTORY:-./.data/backups}:/backups
+      - ${BACKUP_OFFSITE_HOST_DIRECTORY:-./.data/offsite-backups}:/offsite
+      - ${BACKUP_IDENTITY_HOST_DIRECTORY:-./.data/backup-identity}:/identity:ro
+    networks: [data]
+    restart: "no"
 
   postgres:
     ports: []

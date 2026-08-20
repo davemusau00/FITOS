@@ -7,6 +7,8 @@
 5. Check `/api/v1/health/ready`, login, member read, logs, and metrics.
 6. Keep the previous image tag. Roll back application images only when migrations remain backward compatible.
 
+Run an encrypted backup with `docker compose --profile operations run --rm backup`. The production off-site path must be a mounted remote volume or sync target on infrastructure separate from the VPS. A local directory on the same disk does not satisfy the pilot gate.
+
 Production must set `FITOS_REPOSITORY=drizzle`; the in-memory adapter is development-only.
 
 Terminate TLS at the VPS edge (for example, a managed load balancer or a certbot-managed Nginx companion) and forward the original `X-Forwarded-Proto` header. PostgreSQL and Redis must never be exposed publicly.

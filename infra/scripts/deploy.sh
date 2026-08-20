@@ -3,10 +3,11 @@ set -eu
 
 : "${FITOS_RELEASE_TAG:?FITOS_RELEASE_TAG is required}"
 test -f .env.production || { echo ".env.production is missing" >&2; exit 1; }
+export FITOS_ENV_FILE=.env.production
 
-compose="docker compose -f compose.yaml -f compose.production.yaml"
+compose="docker compose --env-file .env.production -f compose.yaml -f compose.production.yaml"
 
-$compose build --pull api worker nginx
+$compose build --pull api worker nginx backup
 $compose up -d --wait postgres redis
 $compose run --rm --no-deps api node packages/database/dist/migrate.js
 $compose up -d --remove-orphans

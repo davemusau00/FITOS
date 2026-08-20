@@ -23,8 +23,7 @@
     "seed": "tsx src/seed.ts",
     "provision:operator": "tsx src/provision-operator.ts",
     "status": "tsx src/status.ts",
-    "reset:test": "tsx src/reset-test.ts",
-    "test": "vitest run --passWithNoTests"
+    "reset:test": "tsx src/reset-test.ts"
   },
   "dependencies": {
     "@fitos/auth": "0.0.0",

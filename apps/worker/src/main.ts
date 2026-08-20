@@ -8,7 +8,8 @@ import { processOperationsJob } from "./processors/operations.processor.js";
 const config = z
   .object({
     REDIS_URL: z.string().url(),
-    LOG_LEVEL: z.string().default("info")
+    LOG_LEVEL: z.string().default("info"),
+    FITOS_RELEASE_TAG: z.string().default("development")
   })
   .parse(process.env);
 
@@ -38,4 +39,10 @@ async function shutdown(signal: string) {
 
 process.once("SIGINT", () => void shutdown("SIGINT"));
 process.once("SIGTERM", () => void shutdown("SIGTERM"));
-process.stdout.write(JSON.stringify({ event: "worker.ready", queue: WORKER_QUEUE }) + "\n");
+process.stdout.write(
+  JSON.stringify({
+    event: "worker.ready",
+    queue: WORKER_QUEUE,
+    release: config.FITOS_RELEASE_TAG
+  }) + "\n"
+);

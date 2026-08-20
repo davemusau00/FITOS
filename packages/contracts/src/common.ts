@@ -38,4 +38,5 @@ export interface DomainEvent<TPayload = Record<string, unknown>> {
 export interface HealthResponse {
   status: "ok" | "degraded";
   requestId: string;
+  release: string;
 }
