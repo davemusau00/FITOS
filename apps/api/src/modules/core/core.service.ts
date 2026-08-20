@@ -36,7 +36,19 @@ import type {
   UpdateServiceRequest,
   BookingListFilters,
   BookingResponse,
-  CreateBookingRequest
+  CreateBookingRequest,
+  MembershipPlanResponse,
+  CreateMembershipPlanRequest,
+  MemberMembershipResponse,
+  ActivateMembershipRequest,
+  CreditLedgerEntryResponse,
+  PaymentTransactionResponse,
+  CreatePaymentRequest,
+  PaymentListFilters,
+  AttendanceRecordResponse,
+  CheckInRequest,
+  UpdateRosterStatusRequest,
+  AttendanceListFilters
 } from "@fitos/contracts";
 import { DomainError } from "../../common/errors/domain-error.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
@@ -642,6 +654,15 @@ export class CoreService {
           source: booking.source
         }
       );
+      // Auto-debit 1 credit if member has an active membership
+      await this.repository.applyBookingCredit(
+        scopeOf(actor),
+        booking.id,
+        booking.memberId,
+        -1,
+        "booking",
+        "Class booking credit deduction"
+      );
       await this.publish(eventOf(actor, "booking.created", { bookingId: booking.id }));
       return booking;
     } catch (error) {
@@ -664,7 +685,8 @@ export class CoreService {
     const existing = await this.getBooking(actor, bookingId);
     if (existing.status === "cancelled") return existing;
     const booking = await this.repository.cancelBooking(scopeOf(actor), bookingId, reason);
-    if (!booking) throw new DomainError("RESOURCE_NOT_FOUND", "Booking not found.", 404);
+    if (!booking)
+      throw new DomainError("RESOURCE_NOT_FOUND", "Booking not found.", 404);
     await this.audit(
       actor,
       requestId,
@@ -677,8 +699,307 @@ export class CoreService {
         reason
       }
     );
+    // Restore 1 credit if member had active credit debited for this booking
+    await this.repository.applyBookingCredit(
+      scopeOf(actor),
+      booking.id,
+      booking.memberId,
+      1,
+      "cancellation",
+      "Booking cancellation credit restoration"
+    );
     await this.publish(eventOf(actor, "booking.cancelled", { bookingId: booking.id }));
     return booking;
+  }
+
+  async listMembershipPlans(
+    actor: RequestActor,
+    branchId?: string
+  ): Promise<MembershipPlanResponse[]> {
+    return this.repository.listMembershipPlans(scopeOf(actor), branchId);
+  }
+
+  async getMembershipPlan(
+    actor: RequestActor,
+    planId: string
+  ): Promise<MembershipPlanResponse> {
+    const plan = await this.repository.findMembershipPlanById(scopeOf(actor), planId);
+    if (!plan) throw new DomainError("RESOURCE_NOT_FOUND", "Membership plan not found.", 404);
+    return plan;
+  }
+
+  async createMembershipPlan(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateMembershipPlanRequest
+  ): Promise<MembershipPlanResponse> {
+    if (input.branchId) this.assertBranchesAccessible(actor, [input.branchId]);
+    const plan = await this.repository.createMembershipPlan(scopeOf(actor), input);
+    await this.audit(
+      actor,
+      requestId,
+      "membership_plan.created",
+      "membership_plan",
+      plan.id,
+      plan.branchId,
+      {
+        name: plan.name,
+        includedCredits: plan.includedCredits
+      }
+    );
+    await this.publish(eventOf(actor, "membership_plan.created", { planId: plan.id }));
+    return plan;
+  }
+
+  async updateMembershipPlan(
+    actor: RequestActor,
+    requestId: string,
+    planId: string,
+    input: Partial<CreateMembershipPlanRequest> & { isActive?: boolean }
+  ): Promise<MembershipPlanResponse> {
+    await this.getMembershipPlan(actor, planId);
+    const updated = await this.repository.updateMembershipPlan(scopeOf(actor), planId, input);
+    if (!updated)
+      throw new DomainError("RESOURCE_NOT_FOUND", "Membership plan not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "membership_plan.updated",
+      "membership_plan",
+      updated.id,
+      updated.branchId,
+      { name: updated.name }
+    );
+    await this.publish(eventOf(actor, "membership_plan.updated", { planId: updated.id }));
+    return updated;
+  }
+
+  async listMemberMemberships(
+    actor: RequestActor,
+    memberId: string
+  ): Promise<MemberMembershipResponse[]> {
+    await this.getMember(actor, memberId);
+    return this.repository.listMemberMemberships(scopeOf(actor), memberId);
+  }
+
+  async activateMembership(
+    actor: RequestActor,
+    requestId: string,
+    input: ActivateMembershipRequest
+  ): Promise<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }> {
+    await this.getMember(actor, input.memberId);
+    const plan = await this.getMembershipPlan(actor, input.planId);
+    const result = await this.repository.activateMembership(
+      scopeOf(actor),
+      input,
+      actor.userId
+    );
+    await this.audit(
+      actor,
+      requestId,
+      "membership.activated",
+      "member_membership",
+      result.membership.id,
+      plan.branchId,
+      {
+        memberId: input.memberId,
+        planName: plan.name,
+        includedCredits: plan.includedCredits
+      }
+    );
+    await this.publish(
+      eventOf(actor, "membership.activated", {
+        membershipId: result.membership.id,
+        memberId: input.memberId
+      })
+    );
+    return result;
+  }
+
+  async cancelMembership(
+    actor: RequestActor,
+    requestId: string,
+    membershipId: string,
+    reason?: string
+  ): Promise<MemberMembershipResponse> {
+    const membership = await this.repository.cancelMembership(
+      scopeOf(actor),
+      membershipId,
+      reason
+    );
+    if (!membership)
+      throw new DomainError("RESOURCE_NOT_FOUND", "Membership not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "membership.cancelled",
+      "member_membership",
+      membership.id,
+      null,
+      {
+        memberId: membership.memberId,
+        reason
+      }
+    );
+    await this.publish(
+      eventOf(actor, "membership.cancelled", {
+        membershipId: membership.id,
+        memberId: membership.memberId
+      })
+    );
+    return membership;
+  }
+
+  async listCreditLedger(
+    actor: RequestActor,
+    memberId: string
+  ): Promise<CreditLedgerEntryResponse[]> {
+    await this.getMember(actor, memberId);
+    return this.repository.listCreditLedger(scopeOf(actor), memberId);
+  }
+
+  async getCreditBalance(
+    actor: RequestActor,
+    memberId: string
+  ): Promise<{ balance: number }> {
+    await this.getMember(actor, memberId);
+    const balance = await this.repository.getCreditBalance(scopeOf(actor), memberId);
+    return { balance };
+  }
+
+  async listPayments(
+    actor: RequestActor,
+    filters: PaymentListFilters
+  ): Promise<CursorPage<PaymentTransactionResponse>> {
+    if (filters.branchId) this.assertBranchesAccessible(actor, [filters.branchId]);
+    return this.repository.listPayments(scopeOf(actor), filters);
+  }
+
+  async getPayment(
+    actor: RequestActor,
+    paymentId: string
+  ): Promise<PaymentTransactionResponse> {
+    const payment = await this.repository.findPaymentById(scopeOf(actor), paymentId);
+    if (!payment) throw new DomainError("RESOURCE_NOT_FOUND", "Payment not found.", 404);
+    return payment;
+  }
+
+  async createPayment(
+    actor: RequestActor,
+    requestId: string,
+    input: CreatePaymentRequest
+  ): Promise<PaymentTransactionResponse> {
+    this.assertBranchesAccessible(actor, [input.branchId]);
+    if (input.memberId) await this.getMember(actor, input.memberId);
+    const payment = await this.repository.createPayment(scopeOf(actor), input, actor.userId);
+    await this.audit(
+      actor,
+      requestId,
+      "payment.recorded",
+      "payment_transaction",
+      payment.id,
+      payment.branchId,
+      {
+        amountMinor: payment.amount.amountMinor,
+        currency: payment.amount.currency,
+        method: payment.method,
+        memberId: payment.memberId,
+        allocationType: payment.allocationType
+      }
+    );
+    await this.publish(eventOf(actor, "payment.recorded", { paymentId: payment.id }));
+    return payment;
+  }
+
+  async voidPayment(
+    actor: RequestActor,
+    requestId: string,
+    paymentId: string,
+    reason?: string
+  ): Promise<PaymentTransactionResponse> {
+    const existing = await this.getPayment(actor, paymentId);
+    if (existing.status === "voided") return existing;
+    const payment = await this.repository.voidPayment(scopeOf(actor), paymentId, reason);
+    if (!payment) throw new DomainError("RESOURCE_NOT_FOUND", "Payment not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "payment.voided",
+      "payment_transaction",
+      payment.id,
+      payment.branchId,
+      { reason }
+    );
+    await this.publish(eventOf(actor, "payment.voided", { paymentId: payment.id }));
+    return payment;
+  }
+
+  async listAttendanceRecords(
+    actor: RequestActor,
+    filters: AttendanceListFilters
+  ): Promise<CursorPage<AttendanceRecordResponse>> {
+    if (filters.branchId) this.assertBranchesAccessible(actor, [filters.branchId]);
+    return this.repository.listAttendanceRecords(scopeOf(actor), filters);
+  }
+
+  async getAttendanceRecord(
+    actor: RequestActor,
+    recordId: string
+  ): Promise<AttendanceRecordResponse> {
+    const record = await this.repository.findAttendanceRecord(scopeOf(actor), recordId);
+    if (!record) throw new DomainError("RESOURCE_NOT_FOUND", "Attendance record not found.", 404);
+    return record;
+  }
+
+  async checkIn(
+    actor: RequestActor,
+    requestId: string,
+    branchId: string,
+    input: CheckInRequest
+  ): Promise<AttendanceRecordResponse> {
+    this.assertBranchesAccessible(actor, [branchId]);
+    await this.getMember(actor, input.memberId);
+    const record = await this.repository.checkIn(scopeOf(actor), input, actor.userId, branchId);
+    await this.audit(
+      actor,
+      requestId,
+      "attendance.checked_in",
+      "attendance_record",
+      record.id,
+      record.branchId,
+      {
+        memberId: record.memberId,
+        occurrenceId: record.occurrenceId,
+        status: record.status
+      }
+    );
+    await this.publish(eventOf(actor, "attendance.checked_in", { attendanceId: record.id }));
+    return record;
+  }
+
+  async updateAttendanceStatus(
+    actor: RequestActor,
+    requestId: string,
+    recordId: string,
+    input: UpdateRosterStatusRequest
+  ): Promise<AttendanceRecordResponse> {
+    await this.getAttendanceRecord(actor, recordId);
+    const record = await this.repository.updateAttendanceStatus(scopeOf(actor), recordId, input);
+    if (!record) throw new DomainError("RESOURCE_NOT_FOUND", "Attendance record not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "attendance.status_updated",
+      "attendance_record",
+      record.id,
+      record.branchId,
+      {
+        status: record.status,
+        overrideReason: record.overrideReason
+      }
+    );
+    await this.publish(eventOf(actor, "attendance.status_updated", { attendanceId: record.id }));
+    return record;
   }
 
   async listStaff(actor: RequestActor): Promise<StaffUserResponse[]> {

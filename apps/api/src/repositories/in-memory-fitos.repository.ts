@@ -37,7 +37,20 @@ import type {
   UpdateServiceRequest,
   BookingListFilters,
   BookingResponse,
-  CreateBookingRequest
+  CreateBookingRequest,
+  MembershipPlanResponse,
+  CreateMembershipPlanRequest,
+  MemberMembershipResponse,
+  ActivateMembershipRequest,
+  CreditLedgerEntryResponse,
+  CreditReason,
+  PaymentTransactionResponse,
+  CreatePaymentRequest,
+  PaymentListFilters,
+  AttendanceRecordResponse,
+  CheckInRequest,
+  UpdateRosterStatusRequest,
+  AttendanceListFilters
 } from "@fitos/contracts";
 import { DEFAULT_ROLE_PERMISSIONS } from "@fitos/contracts";
 import { decodeCursor, encodeCursor } from "@fitos/shared";
@@ -74,6 +87,11 @@ type StoredService = ServiceResponse;
 type StoredRoom = RoomResponse;
 type StoredOccurrence = ScheduleOccurrenceResponse & { cancellationReason: string | null };
 type StoredBooking = BookingResponse;
+type StoredMembershipPlan = MembershipPlanResponse;
+type StoredMemberMembership = MemberMembershipResponse;
+type StoredCreditLedgerEntry = CreditLedgerEntryResponse & { tenantId: string };
+type StoredPaymentTransaction = PaymentTransactionResponse;
+type StoredAttendanceRecord = AttendanceRecordResponse;
 type StoredIdempotency = IdempotencyRecord;
 
 const now = () => new Date().toISOString();
@@ -103,6 +121,11 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly rooms = new Map<string, StoredRoom>();
   private readonly occurrences = new Map<string, StoredOccurrence>();
   private readonly bookings = new Map<string, StoredBooking>();
+  private readonly membershipPlans = new Map<string, StoredMembershipPlan>();
+  private readonly memberMemberships = new Map<string, StoredMemberMembership>();
+  private readonly creditLedger = new Map<string, StoredCreditLedgerEntry>();
+  private readonly payments = new Map<string, StoredPaymentTransaction>();
+  private readonly attendance = new Map<string, StoredAttendanceRecord>();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly domainEvents: DomainEvent[] = [];
@@ -1016,6 +1039,194 @@ export class InMemoryFitosRepository implements FitosRepository {
     return { ...booking };
   }
 
+  async listMembershipPlans(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<MembershipPlanResponse[]> {
+    return [...this.membershipPlans.values()]
+      .filter((p) => p.tenantId === scope.tenantId)
+      .filter((p) => !branchId || !p.branchId || p.branchId === branchId)
+      .map((p) => ({ ...p }));
+  }
+
+  async findMembershipPlanById(
+    scope: TenantScope,
+    planId: string
+  ): Promise<MembershipPlanResponse | null> {
+    const plan = this.membershipPlans.get(planId);
+    return plan && plan.tenantId === scope.tenantId ? { ...plan } : null;
+  }
+
+  async createMembershipPlan(
+    scope: TenantScope,
+    input: CreateMembershipPlanRequest
+  ): Promise<MembershipPlanResponse> {
+    const timestamp = now();
+    const plan: StoredMembershipPlan = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId: input.branchId ?? null,
+      name: input.name,
+      slug: input.slug ?? input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      price: input.price ?? null,
+      durationDays: input.durationDays ?? null,
+      includedCredits: input.includedCredits,
+      publicVisible: input.publicVisible ?? false,
+      isActive: true,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.membershipPlans.set(plan.id, plan);
+    return { ...plan };
+  }
+
+  async updateMembershipPlan(
+    scope: TenantScope,
+    planId: string,
+    input: Partial<CreateMembershipPlanRequest> & { isActive?: boolean }
+  ): Promise<MembershipPlanResponse | null> {
+    const plan = this.membershipPlans.get(planId);
+    if (!plan || plan.tenantId !== scope.tenantId) return null;
+    if (input.name !== undefined) plan.name = input.name;
+    if (input.slug !== undefined) plan.slug = input.slug;
+    if (input.price !== undefined) plan.price = input.price;
+    if (input.durationDays !== undefined) plan.durationDays = input.durationDays;
+    if (input.includedCredits !== undefined) plan.includedCredits = input.includedCredits;
+    if (input.publicVisible !== undefined) plan.publicVisible = input.publicVisible;
+    if (input.isActive !== undefined) plan.isActive = input.isActive;
+    plan.updatedAt = now();
+    return { ...plan };
+  }
+
+  async listMemberMemberships(
+    scope: TenantScope,
+    memberId: string
+  ): Promise<MemberMembershipResponse[]> {
+    return [...this.memberMemberships.values()]
+      .filter((m) => m.tenantId === scope.tenantId && m.memberId === memberId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((m) => ({ ...m }));
+  }
+
+  async findMemberMembershipById(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<MemberMembershipResponse | null> {
+    const membership = this.memberMemberships.get(membershipId);
+    return membership && membership.tenantId === scope.tenantId ? { ...membership } : null;
+  }
+
+  async activateMembership(
+    scope: TenantScope,
+    input: ActivateMembershipRequest,
+    _actorUserId?: string
+  ): Promise<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }> {
+    const plan = this.membershipPlans.get(input.planId);
+    if (!plan || plan.tenantId !== scope.tenantId) {
+      throw new Error("Membership plan not found.");
+    }
+    const member = this.members.get(input.memberId);
+    if (!member || member.tenantId !== scope.tenantId) {
+      throw new Error("Member not found.");
+    }
+    const timestamp = now();
+    const startsAt = input.startsAt ?? timestamp;
+    let endsAt: string | null = null;
+    if (plan.durationDays) {
+      const startMs = new Date(startsAt).getTime();
+      endsAt = new Date(startMs + plan.durationDays * 24 * 60 * 60 * 1000).toISOString();
+    }
+
+    const membership: StoredMemberMembership = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      memberId: input.memberId,
+      planId: plan.id,
+      planSnapshot: { ...plan },
+      status: "active",
+      startsAt,
+      endsAt,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.memberMemberships.set(membership.id, membership);
+
+    const ledgerEntry: StoredCreditLedgerEntry = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      membershipId: membership.id,
+      memberId: input.memberId,
+      delta: plan.includedCredits,
+      reason: "purchase",
+      bookingId: null,
+      note: `Membership activated: ${plan.name}`,
+      createdAt: timestamp
+    };
+    this.creditLedger.set(ledgerEntry.id, ledgerEntry);
+
+    return { membership: { ...membership }, ledgerEntry: { ...ledgerEntry } };
+  }
+
+  async cancelMembership(
+    scope: TenantScope,
+    membershipId: string,
+    _reason?: string
+  ): Promise<MemberMembershipResponse | null> {
+    const membership = this.memberMemberships.get(membershipId);
+    if (!membership || membership.tenantId !== scope.tenantId) return null;
+    membership.status = "cancelled";
+    membership.updatedAt = now();
+    return { ...membership };
+  }
+
+  async listCreditLedger(
+    scope: TenantScope,
+    memberId: string
+  ): Promise<CreditLedgerEntryResponse[]> {
+    return [...this.creditLedger.values()]
+      .filter((e) => e.tenantId === scope.tenantId && e.memberId === memberId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(({ tenantId: _, ...entry }) => entry);
+  }
+
+  async getCreditBalance(scope: TenantScope, memberId: string): Promise<number> {
+    const entries = [...this.creditLedger.values()].filter(
+      (e) => e.tenantId === scope.tenantId && e.memberId === memberId
+    );
+    return entries.reduce((sum, e) => sum + e.delta, 0);
+  }
+
+  async applyBookingCredit(
+    scope: TenantScope,
+    bookingId: string,
+    memberId: string,
+    delta: number,
+    reason: CreditReason,
+    note?: string
+  ): Promise<CreditLedgerEntryResponse | null> {
+    const activeMemberships = [...this.memberMemberships.values()].filter(
+      (m) => m.tenantId === scope.tenantId && m.memberId === memberId && m.status === "active"
+    );
+    const membership = activeMemberships[0];
+    if (!membership) return null;
+
+    const timestamp = now();
+    const ledgerEntry: StoredCreditLedgerEntry = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      membershipId: membership.id,
+      memberId,
+      delta,
+      reason,
+      bookingId,
+      note: note ?? null,
+      createdAt: timestamp
+    };
+    this.creditLedger.set(ledgerEntry.id, ledgerEntry);
+    const { tenantId: _, ...response } = ledgerEntry;
+    return response;
+  }
+
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {
     return [...this.tenantUsers.values()]
       .filter((membership) => membership.tenantId === scope.tenantId)
@@ -1138,6 +1349,192 @@ export class InMemoryFitosRepository implements FitosRepository {
 
   async publishEvent(event: DomainEvent): Promise<void> {
     this.domainEvents.push(event);
+  }
+
+  async createPayment(
+    scope: TenantScope,
+    input: CreatePaymentRequest,
+    actorUserId: string
+  ): Promise<PaymentTransactionResponse> {
+    if (!scope.branchIds.includes(input.branchId)) {
+      throw new Error("Branch unavailable.");
+    }
+    if (input.memberId) {
+      const member = this.members.get(input.memberId);
+      if (!member || member.tenantId !== scope.tenantId) {
+        throw new Error("Member unavailable.");
+      }
+    }
+    const timestamp = now();
+    const payment: StoredPaymentTransaction = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      memberId: input.memberId ?? null,
+      amount: input.amount,
+      method: input.method,
+      reference: input.reference ?? null,
+      providerRef: null,
+      status: "completed",
+      note: input.note ?? null,
+      allocationType: input.allocationType ?? null,
+      allocationId: input.allocationId ?? null,
+      recordedByUserId: actorUserId,
+      recordedAt: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.payments.set(payment.id, payment);
+    return { ...payment };
+  }
+
+  async findPaymentById(
+    scope: TenantScope,
+    paymentId: string
+  ): Promise<PaymentTransactionResponse | null> {
+    const payment = this.payments.get(paymentId);
+    return payment &&
+      payment.tenantId === scope.tenantId &&
+      scope.branchIds.includes(payment.branchId)
+      ? { ...payment }
+      : null;
+  }
+
+  async listPayments(
+    scope: TenantScope,
+    filters: PaymentListFilters
+  ): Promise<CursorPage<PaymentTransactionResponse>> {
+    const rows = [...this.payments.values()]
+      .filter(
+        (p) => p.tenantId === scope.tenantId && scope.branchIds.includes(p.branchId)
+      )
+      .filter((p) => !filters.branchId || p.branchId === filters.branchId)
+      .filter((p) => !filters.memberId || p.memberId === filters.memberId)
+      .filter((p) => !filters.method || p.method === filters.method)
+      .filter((p) => !filters.status || p.status === filters.status)
+      .filter((p) => !filters.unmatched || !p.memberId || !p.allocationType)
+      .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt) || b.id.localeCompare(a.id));
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+    const selected = rows.slice(0, limit + 1);
+    return {
+      data: selected.slice(0, limit).map((p) => ({ ...p })),
+      page: { hasMore: selected.length > limit, nextCursor: null }
+    };
+  }
+
+  async voidPayment(
+    scope: TenantScope,
+    paymentId: string,
+    reason?: string
+  ): Promise<PaymentTransactionResponse | null> {
+    const payment = this.payments.get(paymentId);
+    if (
+      !payment ||
+      payment.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(payment.branchId)
+    ) {
+      return null;
+    }
+    payment.status = "voided";
+    if (reason) payment.note = payment.note ? `${payment.note} | Void reason: ${reason}` : `Void reason: ${reason}`;
+    payment.updatedAt = now();
+    return { ...payment };
+  }
+
+  async checkIn(
+    scope: TenantScope,
+    input: CheckInRequest,
+    actorUserId: string,
+    branchId: string
+  ): Promise<AttendanceRecordResponse> {
+    const member = this.members.get(input.memberId);
+    if (!member || member.tenantId !== scope.tenantId) {
+      throw new Error("Member unavailable.");
+    }
+    let occurrenceId = input.occurrenceId;
+    if (!occurrenceId) {
+      const todayOccurrences = [...this.occurrences.values()].filter(
+        (o) =>
+          o.tenantId === scope.tenantId &&
+          o.branchId === branchId &&
+          o.status === "scheduled"
+      );
+      occurrenceId = todayOccurrences[0]?.id;
+      if (!occurrenceId) {
+        throw new Error("No active occurrence found for check-in.");
+      }
+    }
+    const timestamp = now();
+    const record: StoredAttendanceRecord = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId,
+      occurrenceId,
+      memberId: input.memberId,
+      status: "checked_in",
+      checkedInAt: timestamp,
+      actorUserId,
+      overrideReason: input.overrideReason ?? null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.attendance.set(record.id, record);
+    return { ...record };
+  }
+
+  async findAttendanceRecord(
+    scope: TenantScope,
+    recordId: string
+  ): Promise<AttendanceRecordResponse | null> {
+    const record = this.attendance.get(recordId);
+    return record &&
+      record.tenantId === scope.tenantId &&
+      scope.branchIds.includes(record.branchId)
+      ? { ...record }
+      : null;
+  }
+
+  async listAttendanceRecords(
+    scope: TenantScope,
+    filters: AttendanceListFilters
+  ): Promise<CursorPage<AttendanceRecordResponse>> {
+    const rows = [...this.attendance.values()]
+      .filter(
+        (r) => r.tenantId === scope.tenantId && scope.branchIds.includes(r.branchId)
+      )
+      .filter((r) => !filters.branchId || r.branchId === filters.branchId)
+      .filter((r) => !filters.occurrenceId || r.occurrenceId === filters.occurrenceId)
+      .filter((r) => !filters.memberId || r.memberId === filters.memberId)
+      .filter((r) => !filters.status || r.status === filters.status)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+    const selected = rows.slice(0, limit + 1);
+    return {
+      data: selected.slice(0, limit).map((r) => ({ ...r })),
+      page: { hasMore: selected.length > limit, nextCursor: null }
+    };
+  }
+
+  async updateAttendanceStatus(
+    scope: TenantScope,
+    recordId: string,
+    input: UpdateRosterStatusRequest
+  ): Promise<AttendanceRecordResponse | null> {
+    const record = this.attendance.get(recordId);
+    if (
+      !record ||
+      record.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(record.branchId)
+    ) {
+      return null;
+    }
+    record.status = input.status;
+    if (input.status === "checked_in" || input.status === "attended") {
+      if (!record.checkedInAt) record.checkedInAt = now();
+    }
+    if (input.overrideReason) record.overrideReason = input.overrideReason;
+    record.updatedAt = now();
+    return { ...record };
   }
 
   async acquireIdempotency(record: IdempotencyRecord): Promise<IdempotencyAcquireResult> {

@@ -24,6 +24,9 @@ import { LeadsController } from "./modules/leads/leads.controller.js";
 import { ServicesController } from "./modules/services/services.controller.js";
 import { ScheduleController } from "./modules/schedule/schedule.controller.js";
 import { BookingsController } from "./modules/bookings/bookings.controller.js";
+import { MembershipsController } from "./modules/memberships/memberships.controller.js";
+import { PaymentsController } from "./modules/payments/payments.controller.js";
+import { AttendanceController } from "./modules/attendance/attendance.controller.js";
 import { CoreService } from "./modules/core/core.service.js";
 
 class DevelopmentSeedService implements OnModuleInit {
@@ -64,7 +67,10 @@ const repositoryFactory = (): FitosRepository => {
     LeadsController,
     ServicesController,
     ScheduleController,
-    BookingsController
+    BookingsController,
+    MembershipsController,
+    PaymentsController,
+    AttendanceController
   ],
   providers: [
     { provide: FitosRepositoryToken, useFactory: repositoryFactory },

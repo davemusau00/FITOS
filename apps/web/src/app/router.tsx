@@ -2,11 +2,14 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth";
 import { AppShell } from "./shell";
 import {
+  AttendancePage,
   BookingsPage,
   BranchesSettingsPage,
+  ClassRosterPage,
   LeadsPage,
   LoginPage,
   MemberDetailPage,
+  MembershipsPage,
   MembersPage,
   NewBookingPage,
   NewLeadPage,
@@ -14,11 +17,13 @@ import {
   OnboardingPage,
   OrganizationSettingsPage,
   OverviewPage,
+  PaymentsPage,
   SchedulePage,
   SecuritySettingsPage,
   ServicesPage,
   SettingsPage,
-  StaffPage
+  StaffPage,
+  UnmatchedPaymentsPage
 } from "../features";
 
 function ProtectedRoute() {
@@ -38,9 +43,14 @@ export function AppRouter() {
           <Route element={<Navigate replace to="overview" />} index />
           <Route element={<OverviewPage />} path="overview" />
           <Route element={<SchedulePage />} path="schedule" />
+          <Route element={<AttendancePage />} path="attendance" />
+          <Route element={<ClassRosterPage />} path="attendance/roster/:occurrenceId" />
           <Route element={<BookingsPage />} path="bookings" />
           <Route element={<NewBookingPage />} path="bookings/new" />
           <Route element={<ServicesPage />} path="services" />
+          <Route element={<MembershipsPage />} path="memberships" />
+          <Route element={<PaymentsPage />} path="payments" />
+          <Route element={<UnmatchedPaymentsPage />} path="payments/unmatched" />
           <Route element={<MembersPage />} path="members" />
           <Route element={<NewMemberPage />} path="members/new" />
           <Route element={<MemberDetailPage />} path="members/:memberId" />

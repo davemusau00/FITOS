@@ -1,72 +1,73 @@
 # FITOS Implementation Task List
 
-## Phase 1 — Operator UX Catch-up
+## Phase 1 — Operator UX Catch-up (COMPLETED)
 
 ### 1.0 — Prep
-- [ ] Install calendar library (`@fullcalendar/react` bundle or `react-big-calendar`)
-- [ ] Add API client methods for services / schedule / bookings / rooms
+- [x] Install calendar library (`@fullcalendar/react` bundle)
+- [x] Add API client methods for services / schedule / bookings / rooms
 
 ### 1.1 — Refactor `pages.tsx` → Domain Feature Modules
-- [ ] Create `features/shared/` with `PageLoading`, `ErrorNotice`, `formatDate`, `Kpi`
-- [ ] Extract `features/overview/OverviewPage.tsx`
-- [ ] Extract `features/members/MembersPage.tsx`
-- [ ] Extract `features/members/NewMemberPage.tsx`
-- [ ] Extract `features/members/MemberDetailPage.tsx` (+ `MemberEditor`, `MemberFormValues`, helpers)
-- [ ] Extract `features/leads/LeadsPage.tsx`
-- [ ] Extract `features/leads/NewLeadPage.tsx`
-- [ ] Extract `features/staff/StaffPage.tsx`
-- [ ] Extract `features/settings/SettingsPage.tsx`
-- [ ] Extract `features/settings/OrganizationSettingsPage.tsx`
-- [ ] Extract `features/settings/BranchesSettingsPage.tsx`
-- [ ] Extract `features/settings/SecuritySettingsPage.tsx`
-- [ ] Extract `features/onboarding/OnboardingPage.tsx`
-- [ ] Update `features/index.ts` (re-export barrel)
-- [ ] Delete old `pages.tsx`
-- [ ] Verify router still compiles + all existing pages render
+- [x] Create `features/shared/` with `PageLoading`, `ErrorNotice`, `formatDate`, `formatDateTime`, `formatCurrency`
+- [x] Extract `features/overview/OverviewPage.tsx`
+- [x] Extract `features/members/MembersPage.tsx`
+- [x] Extract `features/members/NewMemberPage.tsx`
+- [x] Extract `features/members/MemberDetailPage.tsx` (+ `MemberEditor`, `MemberFormValues`, helpers)
+- [x] Extract `features/leads/LeadsPage.tsx`
+- [x] Extract `features/leads/NewLeadPage.tsx`
+- [x] Extract `features/staff/StaffPage.tsx`
+- [x] Extract `features/settings/SettingsPage.tsx`
+- [x] Extract `features/settings/OrganizationSettingsPage.tsx`
+- [x] Extract `features/settings/BranchesSettingsPage.tsx`
+- [x] Extract `features/settings/SecuritySettingsPage.tsx`
+- [x] Extract `features/onboarding/OnboardingPage.tsx`
+- [x] Extract `features/auth/LoginPage.tsx`
+- [x] Update `features/index.ts` (re-export barrel)
+- [x] Delete old monolithic `pages.tsx`
+- [x] Verify router still compiles + all existing pages render
 
 ### 1.2 — Nav + Router Updates
-- [ ] Add Services / Schedule / Bookings / Memberships links to `shell.tsx`
-- [ ] Add routes to `router.tsx`
-- [ ] Add nav CSS icon for new sections
+- [x] Add Services / Schedule / Bookings links to `shell.tsx`
+- [x] Add routes to `router.tsx`
+- [x] Add nav CSS icon for new sections
 
 ### 1.3 — Services UI
-- [ ] `features/services/ServicesPage.tsx` — list + create/edit drawer
-- [ ] Add CSS: `.services-grid`, service card layout
-- [ ] Wire to `api.services()`, `api.createService()`, `api.updateService()`
+- [x] `features/services/ServicesPage.tsx` — list + create/edit modal + Rooms & Resources manager modal
+- [x] Wire to `api.services()`, `api.createService()`, `api.updateService()`, `api.rooms()`, `api.createRoom()`
 
 ### 1.4 — Schedule / Calendar UI
-- [ ] Install + configure calendar library
-- [ ] `features/schedule/SchedulePage.tsx` — weekly calendar (desktop) / agenda (mobile)
-- [ ] Occurrence card component
-- [ ] Create occurrence drawer form
-- [ ] Cancel occurrence confirm dialog
-- [ ] Wire to `api.schedule()`, `api.createOccurrence()`, `api.cancelOccurrence()`
-- [ ] Add CSS: calendar overrides to match FITOS dark theme
+- [x] Install + configure FullCalendar library with timeGrid, dayGrid, list, and interaction
+- [x] `features/schedule/SchedulePage.tsx` — weekly calendar (desktop) / agenda (mobile)
+- [x] Occurrence card component with interactive click handler
+- [x] Create occurrence modal form with validation and duration computation
+- [x] Cancel occurrence confirm dialog with reason input
+- [x] Wire to `api.scheduleOccurrences()`, `api.createScheduleOccurrence()`, `api.cancelScheduleOccurrence()`
+- [x] Add CSS: calendar dark theme overrides to match FITOS design system
 
 ### 1.5 — Bookings UI
-- [ ] `features/bookings/BookingsPage.tsx` — list with filters
-- [ ] `features/bookings/NewBookingPage.tsx` — 4-step wizard
-  - [ ] Step 1: Member search
-  - [ ] Step 2: Occurrence picker (with capacity)
-  - [ ] Step 3: Eligibility / confirm details
-  - [ ] Step 4: Confirm → POST /bookings
-- [ ] Cancel booking inline action
-- [ ] Wire to `api.bookings()`, `api.createBooking()`, `api.cancelBooking()`
-- [ ] Add CSS: booking wizard stepper layout
+- [x] `features/bookings/BookingsPage.tsx` — list with search & status filters + cancel modal
+- [x] `features/bookings/NewBookingPage.tsx` — step-by-step wizard
+  - [x] Step 1: Member search & picker
+  - [x] Step 2: Occurrence picker with real-time capacity validation
+  - [x] Step 3: Eligibility & summary card (drop-in authorized)
+  - [x] Step 4: Confirm → `POST /bookings` with idempotency key
+- [x] Cancel booking action with release of session capacity
+- [x] Wire to `api.bookings()`, `api.createBooking()`, `api.cancelBooking()`
+- [x] Add CSS: booking wizard stepper layout, selected entity badges, and summary cards
 
 ### 1.6 — Roster / Occurrence Detail
-- [ ] `features/schedule/OccurrenceDetailPage.tsx` — booking list per occurrence
-- [ ] + Add Booking shortcut
+- [x] `OccurrenceDetailModal` — attending members roster + quick book member button + session cancellation
 
 ---
 
-## Phase 2 — Membership Entitlements
+## Phase 2 — Membership Entitlements (IN PROGRESS)
 
-- [ ] `MembershipsController` (backend)
-- [ ] Repository methods for plans, memberships, credit ledger
-- [ ] `features/memberships/MembershipsPage.tsx` — Plans tab + Active tab
-- [ ] Member detail: add Membership tab
-- [ ] Booking: credit debit on create, restore on cancel
+- [ ] Add Membership & Credit methods to `FitosRepository` port
+- [ ] Implement in `InMemoryFitosRepository`
+- [ ] Implement in `DrizzleFitosRepository`
+- [ ] Add `MembershipsController` (backend) & wire into `CoreService` & `AppModule`
+- [ ] Hook booking creation to debit active membership credits & cancellation to restore
+- [ ] `features/memberships/MembershipsPage.tsx` — Plans tab + Active memberships tab
+- [ ] Member detail: add Membership tab with credit ledger view
 
 ---
 

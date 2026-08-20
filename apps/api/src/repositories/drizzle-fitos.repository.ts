@@ -5,12 +5,17 @@ import {
   branches,
   contacts,
   createDatabase,
+  creditLedger,
   idempotencyKeys,
   leadEvents,
   leadNotes,
   leadTasks,
   leads,
+  memberMemberships,
   members,
+  membershipPlans,
+  paymentTransactions,
+  attendanceRecords,
   rolePermissions,
   roles,
   rooms,
@@ -61,7 +66,20 @@ import type {
   UpdateServiceRequest,
   BookingListFilters,
   BookingResponse,
-  CreateBookingRequest
+  CreateBookingRequest,
+  MembershipPlanResponse,
+  CreateMembershipPlanRequest,
+  MemberMembershipResponse,
+  ActivateMembershipRequest,
+  CreditLedgerEntryResponse,
+  CreditReason,
+  PaymentTransactionResponse,
+  CreatePaymentRequest,
+  PaymentListFilters,
+  AttendanceRecordResponse,
+  CheckInRequest,
+  UpdateRosterStatusRequest,
+  AttendanceListFilters
 } from "@fitos/contracts";
 import { decodeCursor, encodeCursor } from "@fitos/shared";
 import type { Pool } from "pg";
@@ -1128,6 +1146,238 @@ export class DrizzleFitosRepository implements FitosRepository {
     return booking ? this.bookingResponse(booking) : null;
   }
 
+  async listMembershipPlans(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<MembershipPlanResponse[]> {
+    const conditions = [eq(membershipPlans.tenantId, scope.tenantId)];
+    if (branchId) {
+      conditions.push(or(eq(membershipPlans.branchId, branchId), isNull(membershipPlans.branchId))!);
+    }
+    const rows = await this.db
+      .select()
+      .from(membershipPlans)
+      .where(and(...conditions))
+      .orderBy(desc(membershipPlans.createdAt));
+    return rows.map((r) => this.membershipPlanResponse(r));
+  }
+
+  async findMembershipPlanById(
+    scope: TenantScope,
+    planId: string
+  ): Promise<MembershipPlanResponse | null> {
+    const [row] = await this.db
+      .select()
+      .from(membershipPlans)
+      .where(and(eq(membershipPlans.id, planId), eq(membershipPlans.tenantId, scope.tenantId)))
+      .limit(1);
+    return row ? this.membershipPlanResponse(row) : null;
+  }
+
+  async createMembershipPlan(
+    scope: TenantScope,
+    input: CreateMembershipPlanRequest
+  ): Promise<MembershipPlanResponse> {
+    const [row] = await this.db
+      .insert(membershipPlans)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId ?? null,
+        name: input.name,
+        slug: input.slug ? this.slug(input.slug) : this.slug(input.name),
+        amountMinor: input.price?.amountMinor ?? null,
+        currency: input.price?.currency ?? null,
+        durationDays: input.durationDays ?? null,
+        includedCredits: input.includedCredits,
+        publicVisible: input.publicVisible ?? false,
+        isActive: true
+      })
+      .returning();
+    return this.membershipPlanResponse(row!);
+  }
+
+  async updateMembershipPlan(
+    scope: TenantScope,
+    planId: string,
+    input: Partial<CreateMembershipPlanRequest> & { isActive?: boolean }
+  ): Promise<MembershipPlanResponse | null> {
+    const updates: Partial<typeof membershipPlans.$inferInsert> = { updatedAt: new Date() };
+    if (input.name !== undefined) updates.name = input.name;
+    if (input.slug !== undefined) updates.slug = this.slug(input.slug);
+    if (input.price !== undefined) {
+      updates.amountMinor = input.price?.amountMinor ?? null;
+      updates.currency = input.price?.currency ?? null;
+    }
+    if (input.durationDays !== undefined) updates.durationDays = input.durationDays;
+    if (input.includedCredits !== undefined) updates.includedCredits = input.includedCredits;
+    if (input.publicVisible !== undefined) updates.publicVisible = input.publicVisible;
+    if (input.isActive !== undefined) updates.isActive = input.isActive;
+
+    const [row] = await this.db
+      .update(membershipPlans)
+      .set(updates)
+      .where(and(eq(membershipPlans.id, planId), eq(membershipPlans.tenantId, scope.tenantId)))
+      .returning();
+    return row ? this.membershipPlanResponse(row) : null;
+  }
+
+  async listMemberMemberships(
+    scope: TenantScope,
+    memberId: string
+  ): Promise<MemberMembershipResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(memberMemberships)
+      .where(
+        and(
+          eq(memberMemberships.tenantId, scope.tenantId),
+          eq(memberMemberships.memberId, memberId)
+        )
+      )
+      .orderBy(desc(memberMemberships.createdAt));
+    return rows.map((r) => this.memberMembershipResponse(r));
+  }
+
+  async findMemberMembershipById(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<MemberMembershipResponse | null> {
+    const [row] = await this.db
+      .select()
+      .from(memberMemberships)
+      .where(
+        and(
+          eq(memberMemberships.id, membershipId),
+          eq(memberMemberships.tenantId, scope.tenantId)
+        )
+      )
+      .limit(1);
+    return row ? this.memberMembershipResponse(row) : null;
+  }
+
+  async activateMembership(
+    scope: TenantScope,
+    input: ActivateMembershipRequest,
+    _actorUserId?: string
+  ): Promise<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }> {
+    const plan = await this.findMembershipPlanById(scope, input.planId);
+    if (!plan) throw new Error("Membership plan not found.");
+
+    const startsAt = input.startsAt ? new Date(input.startsAt) : new Date();
+    let endsAt: Date | null = null;
+    if (plan.durationDays) {
+      endsAt = new Date(startsAt.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+    }
+
+    const [membership] = await this.db
+      .insert(memberMemberships)
+      .values({
+        tenantId: scope.tenantId,
+        memberId: input.memberId,
+        planId: plan.id,
+        planSnapshot: plan,
+        status: "active",
+        startsAt,
+        endsAt
+      })
+      .returning();
+
+    const [ledger] = await this.db
+      .insert(creditLedger)
+      .values({
+        tenantId: scope.tenantId,
+        membershipId: membership!.id,
+        memberId: input.memberId,
+        delta: plan.includedCredits,
+        reason: "purchase",
+        bookingId: null,
+        note: `Membership activated: ${plan.name}`
+      })
+      .returning();
+
+    return {
+      membership: this.memberMembershipResponse(membership!),
+      ledgerEntry: this.creditLedgerEntryResponse(ledger!)
+    };
+  }
+
+  async cancelMembership(
+    scope: TenantScope,
+    membershipId: string,
+    _reason?: string
+  ): Promise<MemberMembershipResponse | null> {
+    const [row] = await this.db
+      .update(memberMemberships)
+      .set({ status: "cancelled", updatedAt: new Date() })
+      .where(
+        and(
+          eq(memberMemberships.id, membershipId),
+          eq(memberMemberships.tenantId, scope.tenantId)
+        )
+      )
+      .returning();
+    return row ? this.memberMembershipResponse(row) : null;
+  }
+
+  async listCreditLedger(
+    scope: TenantScope,
+    memberId: string
+  ): Promise<CreditLedgerEntryResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(creditLedger)
+      .where(and(eq(creditLedger.tenantId, scope.tenantId), eq(creditLedger.memberId, memberId)))
+      .orderBy(desc(creditLedger.createdAt));
+    return rows.map((r) => this.creditLedgerEntryResponse(r));
+  }
+
+  async getCreditBalance(scope: TenantScope, memberId: string): Promise<number> {
+    const [result] = await this.db
+      .select({ total: sql<string>`coalesce(sum(${creditLedger.delta}), 0)` })
+      .from(creditLedger)
+      .where(and(eq(creditLedger.tenantId, scope.tenantId), eq(creditLedger.memberId, memberId)));
+    return Number(result?.total ?? 0);
+  }
+
+  async applyBookingCredit(
+    scope: TenantScope,
+    bookingId: string,
+    memberId: string,
+    delta: number,
+    reason: CreditReason,
+    note?: string
+  ): Promise<CreditLedgerEntryResponse | null> {
+    const [activeMembership] = await this.db
+      .select()
+      .from(memberMemberships)
+      .where(
+        and(
+          eq(memberMemberships.tenantId, scope.tenantId),
+          eq(memberMemberships.memberId, memberId),
+          eq(memberMemberships.status, "active")
+        )
+      )
+      .orderBy(desc(memberMemberships.createdAt))
+      .limit(1);
+
+    if (!activeMembership) return null;
+
+    const [ledger] = await this.db
+      .insert(creditLedger)
+      .values({
+        tenantId: scope.tenantId,
+        membershipId: activeMembership.id,
+        memberId,
+        delta,
+        reason,
+        bookingId,
+        note: note ?? null
+      })
+      .returning();
+
+    return ledger ? this.creditLedgerEntryResponse(ledger) : null;
+  }
+
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {
     const rows = await this.db
       .select({ membership: tenantUsers, user: users, role: roles })
@@ -1370,6 +1620,221 @@ export class DrizzleFitosRepository implements FitosRepository {
           eq(idempotencyKeys.key, input.key)
         )
       );
+  }
+
+  async createPayment(
+    scope: TenantScope,
+    input: CreatePaymentRequest,
+    actorUserId: string
+  ): Promise<PaymentTransactionResponse> {
+    if (!scope.branchIds.includes(input.branchId)) {
+      throw new Error("Branch unavailable.");
+    }
+    const [row] = await this.db
+      .insert(paymentTransactions)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        memberId: input.memberId ?? null,
+        amountMinor: input.amount.amountMinor,
+        currency: input.amount.currency,
+        method: input.method,
+        reference: input.reference ?? null,
+        status: "completed",
+        note: input.note ?? null,
+        allocationType: input.allocationType ?? null,
+        allocationId: input.allocationId ?? null,
+        recordedByUserId: actorUserId
+      })
+      .returning();
+    return this.paymentResponse(row!);
+  }
+
+  async findPaymentById(
+    scope: TenantScope,
+    paymentId: string
+  ): Promise<PaymentTransactionResponse | null> {
+    const [row] = await this.db
+      .select()
+      .from(paymentTransactions)
+      .where(
+        and(
+          eq(paymentTransactions.id, paymentId),
+          eq(paymentTransactions.tenantId, scope.tenantId),
+          inArray(paymentTransactions.branchId, scope.branchIds)
+        )
+      )
+      .limit(1);
+    return row ? this.paymentResponse(row) : null;
+  }
+
+  async listPayments(
+    scope: TenantScope,
+    filters: PaymentListFilters
+  ): Promise<CursorPage<PaymentTransactionResponse>> {
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+    const conditions = [
+      eq(paymentTransactions.tenantId, scope.tenantId),
+      inArray(paymentTransactions.branchId, scope.branchIds)
+    ];
+    if (filters.branchId) conditions.push(eq(paymentTransactions.branchId, filters.branchId));
+    if (filters.memberId) conditions.push(eq(paymentTransactions.memberId, filters.memberId));
+    if (filters.method) conditions.push(eq(paymentTransactions.method, filters.method));
+    if (filters.status) conditions.push(eq(paymentTransactions.status, filters.status));
+    if (filters.unmatched) {
+      conditions.push(or(isNull(paymentTransactions.memberId), isNull(paymentTransactions.allocationType))!);
+    }
+
+    const rows = await this.db
+      .select()
+      .from(paymentTransactions)
+      .where(and(...conditions))
+      .orderBy(desc(paymentTransactions.recordedAt))
+      .limit(limit + 1);
+
+    return {
+      data: rows.slice(0, limit).map((r) => this.paymentResponse(r)),
+      page: { hasMore: rows.length > limit, nextCursor: null }
+    };
+  }
+
+  async voidPayment(
+    scope: TenantScope,
+    paymentId: string,
+    reason?: string
+  ): Promise<PaymentTransactionResponse | null> {
+    const current = await this.findPaymentById(scope, paymentId);
+    if (!current) return null;
+    const note = reason
+      ? current.note
+        ? `${current.note} | Void reason: ${reason}`
+        : `Void reason: ${reason}`
+      : current.note;
+    const [row] = await this.db
+      .update(paymentTransactions)
+      .set({ status: "voided", note, updatedAt: new Date() })
+      .where(
+        and(
+          eq(paymentTransactions.id, paymentId),
+          eq(paymentTransactions.tenantId, scope.tenantId)
+        )
+      )
+      .returning();
+    return row ? this.paymentResponse(row) : null;
+  }
+
+  async checkIn(
+    scope: TenantScope,
+    input: CheckInRequest,
+    actorUserId: string,
+    branchId: string
+  ): Promise<AttendanceRecordResponse> {
+    let occurrenceId = input.occurrenceId;
+    if (!occurrenceId) {
+      const [todayOcc] = await this.db
+        .select()
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.tenantId, scope.tenantId),
+            eq(scheduleOccurrences.branchId, branchId),
+            eq(scheduleOccurrences.status, "scheduled")
+          )
+        )
+        .orderBy(desc(scheduleOccurrences.startsAt))
+        .limit(1);
+      if (!todayOcc) throw new Error("No active occurrence found for check-in.");
+      occurrenceId = todayOcc.id;
+    }
+
+    const [row] = await this.db
+      .insert(attendanceRecords)
+      .values({
+        tenantId: scope.tenantId,
+        branchId,
+        occurrenceId,
+        memberId: input.memberId,
+        status: "checked_in",
+        checkedInAt: new Date(),
+        actorUserId,
+        overrideReason: input.overrideReason ?? null
+      })
+      .returning();
+    return this.attendanceResponse(row!);
+  }
+
+  async findAttendanceRecord(
+    scope: TenantScope,
+    recordId: string
+  ): Promise<AttendanceRecordResponse | null> {
+    const [row] = await this.db
+      .select()
+      .from(attendanceRecords)
+      .where(
+        and(
+          eq(attendanceRecords.id, recordId),
+          eq(attendanceRecords.tenantId, scope.tenantId),
+          inArray(attendanceRecords.branchId, scope.branchIds)
+        )
+      )
+      .limit(1);
+    return row ? this.attendanceResponse(row) : null;
+  }
+
+  async listAttendanceRecords(
+    scope: TenantScope,
+    filters: AttendanceListFilters
+  ): Promise<CursorPage<AttendanceRecordResponse>> {
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+    const conditions = [
+      eq(attendanceRecords.tenantId, scope.tenantId),
+      inArray(attendanceRecords.branchId, scope.branchIds)
+    ];
+    if (filters.branchId) conditions.push(eq(attendanceRecords.branchId, filters.branchId));
+    if (filters.occurrenceId) conditions.push(eq(attendanceRecords.occurrenceId, filters.occurrenceId));
+    if (filters.memberId) conditions.push(eq(attendanceRecords.memberId, filters.memberId));
+    if (filters.status) conditions.push(eq(attendanceRecords.status, filters.status));
+
+    const rows = await this.db
+      .select()
+      .from(attendanceRecords)
+      .where(and(...conditions))
+      .orderBy(desc(attendanceRecords.createdAt))
+      .limit(limit + 1);
+
+    return {
+      data: rows.slice(0, limit).map((r) => this.attendanceResponse(r)),
+      page: { hasMore: rows.length > limit, nextCursor: null }
+    };
+  }
+
+  async updateAttendanceStatus(
+    scope: TenantScope,
+    recordId: string,
+    input: UpdateRosterStatusRequest
+  ): Promise<AttendanceRecordResponse | null> {
+    const current = await this.findAttendanceRecord(scope, recordId);
+    if (!current) return null;
+    const updates: Partial<typeof attendanceRecords.$inferInsert> = {
+      status: input.status,
+      updatedAt: new Date()
+    };
+    if (input.status === "checked_in" || input.status === "attended") {
+      if (!current.checkedInAt) updates.checkedInAt = new Date();
+    }
+    if (input.overrideReason) updates.overrideReason = input.overrideReason;
+
+    const [row] = await this.db
+      .update(attendanceRecords)
+      .set(updates)
+      .where(
+        and(
+          eq(attendanceRecords.id, recordId),
+          eq(attendanceRecords.tenantId, scope.tenantId)
+        )
+      )
+      .returning();
+    return row ? this.attendanceResponse(row) : null;
   }
 
   private async roleResponse(role: typeof roles.$inferSelect): Promise<RoleResponse> {
@@ -1627,6 +2092,98 @@ export class DrizzleFitosRepository implements FitosRepository {
       afterSummary: event.afterSummary as Record<string, unknown> | null,
       requestId: event.requestId ?? "",
       createdAt: event.createdAt.toISOString()
+    };
+  }
+
+  private membershipPlanResponse(plan: typeof membershipPlans.$inferSelect): MembershipPlanResponse {
+    return {
+      id: plan.id,
+      tenantId: plan.tenantId,
+      branchId: plan.branchId,
+      name: plan.name,
+      slug: plan.slug,
+      price:
+        plan.amountMinor === null || plan.currency === null
+          ? null
+          : { amountMinor: plan.amountMinor, currency: plan.currency },
+      durationDays: plan.durationDays,
+      includedCredits: plan.includedCredits,
+      publicVisible: plan.publicVisible,
+      isActive: plan.isActive,
+      createdAt: plan.createdAt.toISOString(),
+      updatedAt: plan.updatedAt.toISOString()
+    };
+  }
+
+  private memberMembershipResponse(
+    membership: typeof memberMemberships.$inferSelect
+  ): MemberMembershipResponse {
+    return {
+      id: membership.id,
+      tenantId: membership.tenantId,
+      memberId: membership.memberId,
+      planId: membership.planId,
+      planSnapshot: membership.planSnapshot as MembershipPlanResponse,
+      status: membership.status as MemberMembershipResponse["status"],
+      startsAt: membership.startsAt.toISOString(),
+      endsAt: membership.endsAt?.toISOString() ?? null,
+      createdAt: membership.createdAt.toISOString(),
+      updatedAt: membership.updatedAt.toISOString()
+    };
+  }
+
+  private creditLedgerEntryResponse(
+    entry: typeof creditLedger.$inferSelect
+  ): CreditLedgerEntryResponse {
+    return {
+      id: entry.id,
+      membershipId: entry.membershipId,
+      memberId: entry.memberId,
+      delta: entry.delta,
+      reason: entry.reason as CreditReason,
+      bookingId: entry.bookingId,
+      note: entry.note,
+      createdAt: entry.createdAt.toISOString()
+    };
+  }
+
+  private paymentResponse(row: typeof paymentTransactions.$inferSelect): PaymentTransactionResponse {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      branchId: row.branchId,
+      memberId: row.memberId,
+      amount: {
+        amountMinor: row.amountMinor,
+        currency: row.currency
+      },
+      method: row.method as PaymentTransactionResponse["method"],
+      reference: row.reference,
+      providerRef: row.providerRef,
+      status: row.status as PaymentTransactionResponse["status"],
+      note: row.note,
+      allocationType: row.allocationType as PaymentTransactionResponse["allocationType"],
+      allocationId: row.allocationId,
+      recordedByUserId: row.recordedByUserId ?? "",
+      recordedAt: row.recordedAt.toISOString(),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString()
+    };
+  }
+
+  private attendanceResponse(row: typeof attendanceRecords.$inferSelect): AttendanceRecordResponse {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      branchId: row.branchId,
+      occurrenceId: row.occurrenceId,
+      memberId: row.memberId,
+      status: row.status as AttendanceRecordResponse["status"],
+      checkedInAt: row.checkedInAt?.toISOString() ?? null,
+      actorUserId: row.actorUserId ?? "",
+      overrideReason: row.overrideReason,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString()
     };
   }
 

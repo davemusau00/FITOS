@@ -547,6 +547,78 @@ export interface Money {
   currency: string;
 }
 
+// ---------------------------------------------------------------------------
+// Payments
+// ---------------------------------------------------------------------------
+
+export const paymentTransactions = pgTable(
+  "payment_transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "set null" }),
+    amountMinor: varchar("amount_minor", { length: 20 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    method: varchar("method", { length: 40 }).notNull(),
+    reference: varchar("reference", { length: 255 }),
+    providerRef: varchar("provider_ref", { length: 255 }),
+    status: varchar("status", { length: 30 }).notNull().default("completed"),
+    note: text("note"),
+    allocationType: varchar("allocation_type", { length: 40 }),
+    allocationId: uuid("allocation_id"),
+    recordedByUserId: uuid("recorded_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_payment_transactions_tenant_branch").on(table.tenantId, table.branchId),
+    index("idx_payment_transactions_member").on(table.memberId),
+    index("idx_payment_transactions_status").on(table.status)
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// Attendance
+// ---------------------------------------------------------------------------
+
+export const attendanceRecords = pgTable(
+  "attendance_records",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    occurrenceId: uuid("occurrence_id")
+      .notNull()
+      .references(() => scheduleOccurrences.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "restrict" }),
+    status: varchar("status", { length: 30 }).notNull().default("checked_in"),
+    checkedInAt: timestamp("checked_in_at", { withTimezone: true }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    overrideReason: text("override_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_attendance_records_occurrence").on(table.occurrenceId),
+    index("idx_attendance_records_member").on(table.memberId),
+    index("idx_attendance_records_tenant_branch").on(table.tenantId, table.branchId)
+  ]
+);
+
 export const schema = {
   tenants,
   branches,
@@ -570,6 +642,8 @@ export const schema = {
   membershipPlans,
   memberMemberships,
   creditLedger,
+  paymentTransactions,
+  attendanceRecords,
   auditEvents,
   idempotencyKeys
 };

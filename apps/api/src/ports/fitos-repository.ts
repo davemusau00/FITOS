@@ -35,7 +35,20 @@ import type {
   UpdateServiceRequest,
   BookingListFilters,
   BookingResponse,
-  CreateBookingRequest
+  CreateBookingRequest,
+  MembershipPlanResponse,
+  CreateMembershipPlanRequest,
+  MemberMembershipResponse,
+  ActivateMembershipRequest,
+  CreditLedgerEntryResponse,
+  CreditReason,
+  PaymentTransactionResponse,
+  CreatePaymentRequest,
+  PaymentListFilters,
+  AttendanceRecordResponse,
+  CheckInRequest,
+  UpdateRosterStatusRequest,
+  AttendanceListFilters
 } from "@fitos/contracts";
 
 export interface TenantScope {
@@ -220,6 +233,44 @@ export interface FitosRepository {
     reason: string
   ): Promise<BookingResponse | null>;
 
+  // Memberships & Credits
+  listMembershipPlans(scope: TenantScope, branchId?: string): Promise<MembershipPlanResponse[]>;
+  findMembershipPlanById(scope: TenantScope, planId: string): Promise<MembershipPlanResponse | null>;
+  createMembershipPlan(
+    scope: TenantScope,
+    input: CreateMembershipPlanRequest
+  ): Promise<MembershipPlanResponse>;
+  updateMembershipPlan(
+    scope: TenantScope,
+    planId: string,
+    input: Partial<CreateMembershipPlanRequest> & { isActive?: boolean }
+  ): Promise<MembershipPlanResponse | null>;
+  listMemberMemberships(scope: TenantScope, memberId: string): Promise<MemberMembershipResponse[]>;
+  findMemberMembershipById(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<MemberMembershipResponse | null>;
+  activateMembership(
+    scope: TenantScope,
+    input: ActivateMembershipRequest,
+    actorUserId?: string
+  ): Promise<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }>;
+  cancelMembership(
+    scope: TenantScope,
+    membershipId: string,
+    reason?: string
+  ): Promise<MemberMembershipResponse | null>;
+  listCreditLedger(scope: TenantScope, memberId: string): Promise<CreditLedgerEntryResponse[]>;
+  getCreditBalance(scope: TenantScope, memberId: string): Promise<number>;
+  applyBookingCredit(
+    scope: TenantScope,
+    bookingId: string,
+    memberId: string,
+    delta: number,
+    reason: CreditReason,
+    note?: string
+  ): Promise<CreditLedgerEntryResponse | null>;
+
   listStaff(scope: TenantScope): Promise<StaffUserResponse[]>;
   findStaffByUserId(scope: TenantScope, userId: string): Promise<StaffUserResponse | null>;
   findStaffByEmail(scope: TenantScope, email: string): Promise<StaffUserResponse | null>;
@@ -236,6 +287,44 @@ export interface FitosRepository {
   recordAudit(input: AuditRecordInput): Promise<AuditEventResponse>;
   listAuditEvents(scope: TenantScope, resourceId?: string): Promise<AuditEventResponse[]>;
   publishEvent(event: DomainEvent): Promise<void>;
+
+  // Payments
+  createPayment(
+    scope: TenantScope,
+    input: CreatePaymentRequest,
+    actorUserId: string
+  ): Promise<PaymentTransactionResponse>;
+  findPaymentById(scope: TenantScope, paymentId: string): Promise<PaymentTransactionResponse | null>;
+  listPayments(
+    scope: TenantScope,
+    filters: PaymentListFilters
+  ): Promise<CursorPage<PaymentTransactionResponse>>;
+  voidPayment(
+    scope: TenantScope,
+    paymentId: string,
+    reason?: string
+  ): Promise<PaymentTransactionResponse | null>;
+
+  // Attendance
+  checkIn(
+    scope: TenantScope,
+    input: CheckInRequest,
+    actorUserId: string,
+    branchId: string
+  ): Promise<AttendanceRecordResponse>;
+  findAttendanceRecord(
+    scope: TenantScope,
+    recordId: string
+  ): Promise<AttendanceRecordResponse | null>;
+  listAttendanceRecords(
+    scope: TenantScope,
+    filters: AttendanceListFilters
+  ): Promise<CursorPage<AttendanceRecordResponse>>;
+  updateAttendanceStatus(
+    scope: TenantScope,
+    recordId: string,
+    input: UpdateRosterStatusRequest
+  ): Promise<AttendanceRecordResponse | null>;
 
   acquireIdempotency(record: IdempotencyRecord): Promise<IdempotencyAcquireResult>;
   completeIdempotency(

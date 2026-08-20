@@ -1,11 +1,29 @@
 import { useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, FormField, PageHeader, Skeleton, StatusBadge } from "@fitos/ui";
-import type { BranchResponse, MemberResponse } from "@fitos/contracts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Button,
+  Card,
+  DataTable,
+  type DataTableColumn,
+  FormField,
+  Icon,
+  Modal,
+  PageHeader,
+  Skeleton,
+  StatusBadge
+} from "@fitos/ui";
+import type {
+  BranchResponse,
+  CreditLedgerEntryResponse,
+  MemberMembershipResponse,
+  MemberResponse,
+  MembershipPlanResponse
+} from "@fitos/contracts";
+import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
-import { PageLoading, ErrorNotice, formatDate } from "../shared";
+import { ErrorNotice, PageLoading, formatDate, formatDateTime } from "../shared";
 
 type MemberFormValues = {
   firstName: string;
@@ -27,6 +45,266 @@ function toMemberPayload(values: MemberFormValues) {
     },
     homeBranchId: values.homeBranchId
   };
+}
+
+export function MemberDetailPage() {
+  const { auth } = useAuth();
+  const { memberId } = useParams();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [isActivatingMembership, setIsActivatingMembership] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "membership" | "timeline">("overview");
+
+  const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
+  const member = useQuery({
+    queryKey: ["member", memberId ?? ""],
+    queryFn: () => api.member(memberId!),
+    enabled: Boolean(memberId)
+  });
+  const timeline = useQuery({
+    queryKey: ["member", memberId ?? "", "timeline"],
+    queryFn: () => api.memberTimeline(memberId!),
+    enabled: Boolean(memberId)
+  });
+  const memberships = useQuery({
+    queryKey: ["member", memberId ?? "", "memberships"],
+    queryFn: () => api.memberMemberships(memberId!),
+    enabled: Boolean(memberId)
+  });
+  const creditLedger = useQuery({
+    queryKey: ["member", memberId ?? "", "credits"],
+    queryFn: () => api.creditLedger(memberId!),
+    enabled: Boolean(memberId)
+  });
+  const creditBalance = useQuery({
+    queryKey: ["member", memberId ?? "", "credits", "balance"],
+    queryFn: () => api.creditBalance(memberId!),
+    enabled: Boolean(memberId)
+  });
+  const plans = useQuery({
+    queryKey: ["membership-plans"],
+    queryFn: () => api.membershipPlans()
+  });
+
+  const activeMembership = memberships.data?.find((m) => m.status === "active");
+
+  const cancelMembershipMutation = useMutation({
+    mutationFn: (membershipId: string) =>
+      api.cancelMembership(memberId!, membershipId, "Cancelled by staff"),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["member", memberId, "memberships"] });
+      void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits"] });
+    }
+  });
+
+  const creditColumns: DataTableColumn<CreditLedgerEntryResponse>[] = [
+    {
+      id: "delta",
+      header: "Movement",
+      cell: (e) => (
+        <strong style={{ color: e.delta > 0 ? "var(--success)" : "var(--danger)" }}>
+          {e.delta > 0 ? `+${e.delta}` : e.delta} credit{Math.abs(e.delta) === 1 ? "" : "s"}
+        </strong>
+      )
+    },
+    {
+      id: "reason",
+      header: "Reason",
+      cell: (e) => <StatusBadge status={e.reason} />
+    },
+    {
+      id: "note",
+      header: "Description / Reference",
+      cell: (e) => e.note ?? (e.bookingId ? `Booking ref: ${e.bookingId.slice(0, 8)}` : "—")
+    },
+    {
+      id: "date",
+      header: "Date & Time",
+      cell: (e) => formatDateTime(e.createdAt)
+    }
+  ];
+
+  if (!memberId) return <Navigate replace to="/app/members" />;
+  if (member.isLoading || branches.isLoading) return <PageLoading />;
+  if (member.error || !member.data) return <ErrorNotice error={member.error} />;
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Member profile"
+        title={`${member.data.contact.firstName} ${member.data.contact.lastName ?? ""}`.trim()}
+        description={`Joined ${formatDate(member.data.joinedAt)}`}
+        actions={
+          <>
+            <StatusBadge status={member.data.status} />
+            {can(auth, "membership:manage") && !activeMembership ? (
+              <Button icon="plus" onClick={() => setIsActivatingMembership(true)}>
+                Activate membership
+              </Button>
+            ) : null}
+            <Button icon="edit" onClick={() => setEditing((open) => !open)} variant="secondary">
+              {editing ? "Close edit" : "Edit profile"}
+            </Button>
+          </>
+        }
+      />
+
+      {/* Detail Grid */}
+      <section className="detail-grid">
+        {/* Left Column: Profile & Home Branch */}
+        <Card>
+          <h2>Contact & Identity</h2>
+          <dl className="detail-list">
+            <div>
+              <dt>Phone</dt>
+              <dd>{member.data.contact.phone ?? "Not recorded"}</dd>
+            </div>
+            <div>
+              <dt>Email</dt>
+              <dd>{member.data.contact.email ?? "Not recorded"}</dd>
+            </div>
+            <div>
+              <dt>Home branch</dt>
+              <dd>
+                {branches.data?.find((branch) => branch.id === member.data?.homeBranchId)?.name ??
+                  "Not assigned"}
+              </dd>
+            </div>
+            <div>
+              <dt>Member number</dt>
+              <dd>{member.data.memberNumber ?? "Assigned later"}</dd>
+            </div>
+          </dl>
+        </Card>
+
+        {/* Right Column: Active Membership & Credits */}
+        <Card>
+          <div className="section-header-row" style={{ marginTop: 0, marginBottom: "0.75rem" }}>
+            <h2>Active Membership & Entitlements</h2>
+            {activeMembership && can(auth, "membership:manage") ? (
+              <Button
+                onClick={() => cancelMembershipMutation.mutate(activeMembership.id)}
+                size="small"
+                variant="ghost"
+              >
+                Cancel plan
+              </Button>
+            ) : null}
+          </div>
+
+          {activeMembership ? (
+            <div className="form-stack">
+              <div className="selected-entity-badge">
+                <div className="selected-entity-badge__info">
+                  <Icon name="spark" size={20} />
+                  <div>
+                    <strong>{activeMembership.planSnapshot.name}</strong>
+                    <span>
+                      Valid until: {formatDate(activeMembership.endsAt)} (Started:{" "}
+                      {formatDate(activeMembership.startsAt)})
+                    </span>
+                  </div>
+                </div>
+                <StatusBadge status={activeMembership.status} />
+              </div>
+
+              <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+                <Card className="kpi kpi--energy">
+                  <span>Available credits</span>
+                  <strong>{creditBalance.data?.balance ?? 0}</strong>
+                </Card>
+                <Card className="kpi">
+                  <span>Total included</span>
+                  <strong>{activeMembership.planSnapshot.includedCredits}</strong>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="empty-membership-box">
+              <p className="muted">No active membership plan currently assigned.</p>
+              {can(auth, "membership:manage") ? (
+                <Button
+                  icon="plus"
+                  onClick={() => setIsActivatingMembership(true)}
+                  size="small"
+                  variant="secondary"
+                >
+                  Assign plan
+                </Button>
+              ) : null}
+            </div>
+          )}
+        </Card>
+      </section>
+
+      {/* Credit Ledger History */}
+      <Card className="detail-editor">
+        <h2>Credit Ledger & Audit History</h2>
+        {creditLedger.isLoading ? (
+          <Skeleton height="6rem" />
+        ) : creditLedger.data?.length ? (
+          <DataTable
+            columns={creditColumns}
+            data={creditLedger.data}
+            label="Credit Ledger"
+          />
+        ) : (
+          <p className="muted">No credit movements recorded yet.</p>
+        )}
+      </Card>
+
+      {/* Activity Timeline */}
+      <Card className="detail-editor">
+        <h2>Timeline</h2>
+        {timeline.isLoading ? (
+          <Skeleton height="6rem" />
+        ) : timeline.data?.length ? (
+          <ul className="timeline">
+            {timeline.data.map((event) => (
+              <li key={event.id}>
+                <span />
+                <div>
+                  <strong>{event.action.replaceAll(".", " ")}</strong>
+                  <p>{formatDate(event.createdAt)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">No activity has been recorded yet.</p>
+        )}
+      </Card>
+
+      {/* Member Editor */}
+      {editing ? (
+        <MemberEditor
+          branches={branches.data ?? []}
+          member={member.data}
+          onSaved={(updated) => {
+            queryClient.setQueryData(["member", memberId], updated);
+            void queryClient.invalidateQueries({ queryKey: ["members"] });
+            setEditing(false);
+          }}
+        />
+      ) : null}
+
+      {/* Activate Membership Modal */}
+      {isActivatingMembership ? (
+        <ActivateMembershipModal
+          isOpen={true}
+          memberId={memberId}
+          onClose={() => setIsActivatingMembership(false)}
+          onSuccess={() => {
+            void queryClient.invalidateQueries({ queryKey: ["member", memberId, "memberships"] });
+            void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits"] });
+            void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits", "balance"] });
+            setIsActivatingMembership(false);
+          }}
+          plans={plans.data?.filter((p) => p.isActive) ?? []}
+        />
+      ) : null}
+    </>
+  );
 }
 
 function MemberEditor({
@@ -105,96 +383,89 @@ function MemberEditor({
   );
 }
 
-export function MemberDetailPage() {
-  const { memberId } = useParams();
-  const queryClient = useQueryClient();
-  const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
-  const member = useQuery({
-    queryKey: ["member", memberId ?? ""],
-    queryFn: () => api.member(memberId!),
-    enabled: Boolean(memberId)
+function ActivateMembershipModal({
+  isOpen,
+  onClose,
+  memberId,
+  plans,
+  onSuccess
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  memberId: string;
+  plans: MembershipPlanResponse[];
+  onSuccess: () => void;
+}) {
+  const [error, setError] = useState<unknown>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { isSubmitting }
+  } = useForm<{ planId: string; startsAt: string }>({
+    defaultValues: {
+      planId: plans[0]?.id ?? "",
+      startsAt: new Date().toISOString().split("T")[0] ?? ""
+    }
   });
-  const timeline = useQuery({
-    queryKey: ["member", memberId ?? "", "timeline"],
-    queryFn: () => api.memberTimeline(memberId!),
-    enabled: Boolean(memberId)
-  });
-  const [editing, setEditing] = useState(false);
-  if (!memberId) return <Navigate to="/app/members" replace />;
-  if (member.isLoading || branches.isLoading) return <PageLoading />;
-  if (member.error || !member.data) return <ErrorNotice error={member.error} />;
+
+  const onSubmit = async (values: { planId: string; startsAt: string }) => {
+    setError(null);
+    try {
+      await api.activateMembership(memberId, {
+        planId: values.planId,
+        startsAt: values.startsAt ? new Date(values.startsAt).toISOString() : undefined
+      });
+      onSuccess();
+    } catch (cause) {
+      setError(cause);
+    }
+  };
+
   return (
-    <>
-      <PageHeader
-        eyebrow="Member profile"
-        title={`${member.data.contact.firstName} ${member.data.contact.lastName ?? ""}`.trim()}
-        description={`Joined ${formatDate(member.data.joinedAt)}`}
-        actions={
-          <>
-            <StatusBadge status={member.data.status} />
-            <Button icon="edit" onClick={() => setEditing((open) => !open)} variant="secondary">
-              {editing ? "Close edit" : "Edit"}
-            </Button>
-          </>
-        }
-      />
-      <section className="detail-grid">
-        <Card>
-          <h2>Overview</h2>
-          <dl className="detail-list">
-            <div>
-              <dt>Phone</dt>
-              <dd>{member.data.contact.phone ?? "Not recorded"}</dd>
-            </div>
-            <div>
-              <dt>Email</dt>
-              <dd>{member.data.contact.email ?? "Not recorded"}</dd>
-            </div>
-            <div>
-              <dt>Home branch</dt>
-              <dd>
-                {branches.data?.find((branch) => branch.id === member.data?.homeBranchId)?.name ??
-                  "Not assigned"}
-              </dd>
-            </div>
-            <div>
-              <dt>Member number</dt>
-              <dd>{member.data.memberNumber ?? "Assigned later"}</dd>
-            </div>
-          </dl>
-        </Card>
-        <Card>
-          <h2>Timeline</h2>
-          {timeline.isLoading ? (
-            <Skeleton height="8rem" />
-          ) : timeline.data?.length ? (
-            <ul className="timeline">
-              {timeline.data.map((event) => (
-                <li key={event.id}>
-                  <span />
-                  <div>
-                    <strong>{event.action.replaceAll(".", " ")}</strong>
-                    <p>{formatDate(event.createdAt)}</p>
-                  </div>
-                </li>
+    <Modal
+      description="Select a membership plan to grant class booking credits to this member."
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Activate membership"
+    >
+      <form className="form-stack" onSubmit={handleSubmit(onSubmit)}>
+        <div className="form-grid">
+          <FormField htmlFor="membershipPlan" label="Membership plan">
+            <select
+              className="fitos-control"
+              id="membershipPlan"
+              {...register("planId", { required: true })}
+            >
+              {plans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.includedCredits} credits
+                  {p.durationDays ? ` · ${p.durationDays} days` : ""})
+                </option>
               ))}
-            </ul>
-          ) : (
-            <p className="muted">No activity has been recorded yet.</p>
-          )}
-        </Card>
-      </section>
-      {editing ? (
-        <MemberEditor
-          branches={branches.data ?? []}
-          member={member.data}
-          onSaved={(updated) => {
-            queryClient.setQueryData(["member", memberId], updated);
-            void queryClient.invalidateQueries({ queryKey: ["members"] });
-            setEditing(false);
-          }}
-        />
-      ) : null}
-    </>
+            </select>
+          </FormField>
+
+          <FormField htmlFor="membershipStart" label="Start date">
+            <input
+              className="fitos-control"
+              id="membershipStart"
+              type="date"
+              {...register("startsAt", { required: true })}
+            />
+          </FormField>
+        </div>
+
+        <ErrorNotice error={error} />
+
+        <div className="form-actions">
+          <Button onClick={onClose} variant="ghost">
+            Cancel
+          </Button>
+          <Button loading={isSubmitting} type="submit">
+            Activate plan & grant credits
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

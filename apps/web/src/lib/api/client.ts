@@ -25,7 +25,16 @@ import type {
   ScheduleOccurrenceListResponse,
   BookingResponse,
   CreateBookingRequest,
-  BookingListResponse
+  BookingListResponse,
+  MembershipPlanResponse,
+  CreateMembershipPlanRequest,
+  MemberMembershipResponse,
+  ActivateMembershipRequest,
+  CreditLedgerEntryResponse,
+  PaymentTransactionResponse,
+  CreatePaymentRequest,
+  AttendanceRecordResponse,
+  UpdateRosterStatusRequest
 } from "@fitos/contracts";
 
 export class ApiClientError extends Error {
@@ -214,5 +223,88 @@ export const api = {
     request<BookingResponse>(`/bookings/${id}/cancel`, {
       method: "POST",
       body: json({ reason })
+    }),
+
+  // Memberships & Plans
+  membershipPlans: (branchId?: string) =>
+    request<MembershipPlanResponse[]>(
+      branchId ? `/membership-plans?branchId=${branchId}` : "/membership-plans"
+    ),
+  membershipPlan: (id: string) => request<MembershipPlanResponse>(`/membership-plans/${id}`),
+  createMembershipPlan: (payload: CreateMembershipPlanRequest) =>
+    request<MembershipPlanResponse>("/membership-plans", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateMembershipPlan: (
+    id: string,
+    payload: Partial<CreateMembershipPlanRequest> & { isActive?: boolean }
+  ) =>
+    request<MembershipPlanResponse>(`/membership-plans/${id}`, {
+      method: "PATCH",
+      body: json(payload)
+    }),
+  memberMemberships: (memberId: string) =>
+    request<MemberMembershipResponse[]>(`/members/${memberId}/memberships`),
+  activateMembership: (
+    memberId: string,
+    payload: { planId: string; startsAt?: string }
+  ) =>
+    request<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }>(
+      `/members/${memberId}/memberships`,
+      {
+        method: "POST",
+        body: json(payload),
+        headers: { "Idempotency-Key": idempotency() }
+      }
+    ),
+  cancelMembership: (memberId: string, membershipId: string, reason?: string) =>
+    request<MemberMembershipResponse>(
+      `/members/${memberId}/memberships/${membershipId}/cancel`,
+      {
+        method: "POST",
+        body: json({ reason })
+      }
+    ),
+  creditLedger: (memberId: string) =>
+    request<CreditLedgerEntryResponse[]>(`/members/${memberId}/credits`),
+  creditBalance: (memberId: string) =>
+    request<{ balance: number }>(`/members/${memberId}/credits/balance`),
+
+  // Payments
+  payments: (params?: URLSearchParams) =>
+    request<CursorPage<PaymentTransactionResponse>>(
+      `/payments${params ? `?${params.toString()}` : ""}`
+    ),
+  payment: (id: string) => request<PaymentTransactionResponse>(`/payments/${id}`),
+  createPayment: (payload: CreatePaymentRequest) =>
+    request<PaymentTransactionResponse>("/payments", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  voidPayment: (id: string, reason?: string) =>
+    request<PaymentTransactionResponse>(`/payments/${id}/void`, {
+      method: "POST",
+      body: json({ reason })
+    }),
+
+  // Attendance
+  attendanceRecords: (params?: URLSearchParams) =>
+    request<CursorPage<AttendanceRecordResponse>>(
+      `/attendance${params ? `?${params.toString()}` : ""}`
+    ),
+  attendanceRecord: (id: string) => request<AttendanceRecordResponse>(`/attendance/${id}`),
+  checkIn: (payload: { branchId: string; memberId: string; occurrenceId?: string | null; overrideReason?: string | null }) =>
+    request<AttendanceRecordResponse>("/attendance/checkin", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateAttendanceStatus: (id: string, payload: UpdateRosterStatusRequest) =>
+    request<AttendanceRecordResponse>(`/attendance/${id}`, {
+      method: "PATCH",
+      body: json(payload)
     })
 };

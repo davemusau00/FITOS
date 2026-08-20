@@ -13,8 +13,11 @@ type NavItem = {
 const nav: NavItem[] = [
   { to: "/app/overview", label: "Overview", icon: "dashboard", permission: "tenant:read" },
   { to: "/app/schedule", label: "Schedule", icon: "calendar", permission: "schedule:read" },
-  { to: "/app/bookings", label: "Bookings", icon: "check", permission: "booking:read" },
+  { to: "/app/attendance", label: "Attendance", icon: "check", permission: "attendance:read" },
+  { to: "/app/bookings", label: "Bookings", icon: "calendar", permission: "booking:read" },
   { to: "/app/services", label: "Services", icon: "spark", permission: "service:read" },
+  { to: "/app/memberships", label: "Memberships", icon: "shield", permission: "membership:read" },
+  { to: "/app/payments", label: "Payments", icon: "download", permission: "payment:read" },
   { to: "/app/members", label: "Members", icon: "users", permission: "member:read" },
   { to: "/app/leads", label: "Leads", icon: "user", permission: "lead:read" },
   { to: "/app/staff", label: "Staff", icon: "team", permission: "staff:read" },

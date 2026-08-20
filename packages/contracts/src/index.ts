@@ -1,4 +1,5 @@
 export * from "./audit.js";
+export * from "./attendance.js";
 export * from "./bookings.js";
 export * from "./common.js";
 export * from "./errors.js";
@@ -6,5 +7,6 @@ export * from "./identity.js";
 export * from "./leads.js";
 export * from "./members.js";
 export * from "./memberships.js";
+export * from "./payments.js";
 export * from "./permissions.js";
 export * from "./services.js";
