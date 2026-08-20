@@ -2,20 +2,24 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth";
 import { AppShell } from "./shell";
 import {
+  BookingsPage,
   BranchesSettingsPage,
-  LoginPage,
   LeadsPage,
-  NewLeadPage,
+  LoginPage,
   MemberDetailPage,
   MembersPage,
+  NewBookingPage,
+  NewLeadPage,
   NewMemberPage,
   OnboardingPage,
   OrganizationSettingsPage,
   OverviewPage,
+  SchedulePage,
   SecuritySettingsPage,
+  ServicesPage,
   SettingsPage,
   StaffPage
-} from "../features/pages";
+} from "../features";
 
 function ProtectedRoute() {
   const { auth, isLoading } = useAuth();
@@ -33,6 +37,10 @@ export function AppRouter() {
         <Route element={<AppShell />} path="/app">
           <Route element={<Navigate replace to="overview" />} index />
           <Route element={<OverviewPage />} path="overview" />
+          <Route element={<SchedulePage />} path="schedule" />
+          <Route element={<BookingsPage />} path="bookings" />
+          <Route element={<NewBookingPage />} path="bookings/new" />
+          <Route element={<ServicesPage />} path="services" />
           <Route element={<MembersPage />} path="members" />
           <Route element={<NewMemberPage />} path="members/new" />
           <Route element={<MemberDetailPage />} path="members/:memberId" />

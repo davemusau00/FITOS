@@ -14,7 +14,18 @@ import type {
   TenantSummary,
   UpdateBranchRequest,
   UpdateMemberRequest,
-  UpdateOrganizationRequest
+  UpdateOrganizationRequest,
+  ServiceResponse,
+  CreateServiceRequest,
+  UpdateServiceRequest,
+  RoomResponse,
+  CreateRoomRequest,
+  ScheduleOccurrenceResponse,
+  CreateScheduleOccurrenceRequest,
+  ScheduleOccurrenceListResponse,
+  BookingResponse,
+  CreateBookingRequest,
+  BookingListResponse
 } from "@fitos/contracts";
 
 export class ApiClientError extends Error {
@@ -148,5 +159,60 @@ export const api = {
   updateStaff: (userId: string, payload: { roleId: string; branchIds: string[] }) =>
     request<StaffUserResponse>(`/users/${userId}/access`, { method: "PATCH", body: json(payload) }),
   deactivateStaff: (userId: string) =>
-    request<StaffUserResponse>(`/users/${userId}/deactivate`, { method: "POST" })
+    request<StaffUserResponse>(`/users/${userId}/deactivate`, { method: "POST" }),
+
+  // Services & Rooms
+  services: () => request<ServiceResponse[]>("/services"),
+  service: (id: string) => request<ServiceResponse>(`/services/${id}`),
+  createService: (payload: CreateServiceRequest) =>
+    request<ServiceResponse>("/services", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateService: (id: string, payload: UpdateServiceRequest) =>
+    request<ServiceResponse>(`/services/${id}`, { method: "PATCH", body: json(payload) }),
+  rooms: (branchId?: string) =>
+    request<RoomResponse[]>(branchId ? `/rooms?branchId=${branchId}` : "/rooms"),
+  createRoom: (payload: CreateRoomRequest) =>
+    request<RoomResponse>("/rooms", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+
+  // Schedule
+  scheduleOccurrences: (params?: URLSearchParams) =>
+    request<ScheduleOccurrenceListResponse>(
+      `/schedule/occurrences${params ? `?${params.toString()}` : ""}`
+    ),
+  scheduleOccurrence: (id: string) =>
+    request<ScheduleOccurrenceResponse>(`/schedule/occurrences/${id}`),
+  createScheduleOccurrence: (payload: CreateScheduleOccurrenceRequest) =>
+    request<ScheduleOccurrenceResponse>("/schedule/occurrences", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  cancelScheduleOccurrence: (id: string, reason: string) =>
+    request<ScheduleOccurrenceResponse>(`/schedule/occurrences/${id}/cancel`, {
+      method: "POST",
+      body: json({ reason })
+    }),
+
+  // Bookings
+  bookings: (params?: URLSearchParams) =>
+    request<BookingListResponse>(`/bookings${params ? `?${params.toString()}` : ""}`),
+  booking: (id: string) => request<BookingResponse>(`/bookings/${id}`),
+  createBooking: (payload: CreateBookingRequest) =>
+    request<BookingResponse>("/bookings", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  cancelBooking: (id: string, reason: string) =>
+    request<BookingResponse>(`/bookings/${id}/cancel`, {
+      method: "POST",
+      body: json({ reason })
+    })
 };

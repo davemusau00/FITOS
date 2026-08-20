@@ -522,3 +522,211 @@
     min-width: 35rem;
   }
 }
+
+/* FullCalendar Dark Design Integration */
+.calendar-card {
+  padding: 1rem;
+}
+
+.fitos-calendar-wrapper {
+  --fc-border-color: var(--border-subtle);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--surface-2);
+  --fc-list-event-hover-bg-color: var(--surface-2);
+  --fc-today-bg-color: color-mix(in srgb, var(--fitos-energy) 6%, transparent);
+  --fc-event-bg-color: var(--surface-2);
+  --fc-event-border-color: var(--fitos-energy);
+  --fc-event-text-color: #ffffff;
+  --fc-highlight-color: color-mix(in srgb, var(--fitos-energy) 15%, transparent);
+  font-family: inherit;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.fc .fc-button {
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.4rem 0.8rem;
+  text-transform: capitalize;
+  transition: background var(--transition-fast);
+}
+
+.fc .fc-button:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: var(--fitos-energy);
+  border-color: var(--fitos-energy);
+  color: var(--fitos-jet);
+  font-weight: 800;
+}
+
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-col-header-cell-cushion {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.fc-event {
+  border-radius: 0.35rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.4rem;
+  transition: transform var(--transition-fast);
+}
+
+.fc-event:hover {
+  filter: brightness(1.15);
+  transform: scale(1.01);
+}
+
+/* Interactive Session & Booking Stepper Styles */
+.booking-stepper-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1.25rem;
+}
+
+.card-header-step {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.card-header-step h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.step-badge {
+  align-items: center;
+  background: var(--fitos-energy);
+  border-radius: 50%;
+  color: var(--fitos-jet);
+  display: flex;
+  font-size: 0.8125rem;
+  font-weight: 900;
+  height: 1.6rem;
+  justify-content: center;
+  width: 1.6rem;
+}
+
+.selected-entity-badge {
+  align-items: center;
+  background: color-mix(in srgb, var(--fitos-energy) 10%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--fitos-energy) 35%, transparent);
+  border-radius: var(--radius-card);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+}
+
+.selected-entity-badge__info {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.selected-entity-badge__info svg {
+  color: var(--fitos-energy);
+}
+
+.selected-entity-badge__info > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.selected-entity-badge__info span {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.clickable-list-item {
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  padding: 0.65rem 0.75rem !important;
+  transition: background var(--transition-fast);
+}
+
+.clickable-list-item:hover {
+  background: var(--surface-2);
+}
+
+.clickable-list-item.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.confirmation-summary-card {
+  border-color: color-mix(in srgb, var(--fitos-energy) 25%, var(--border-subtle));
+  max-width: 54rem;
+}
+
+.summary-details-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1.25rem 0;
+}
+
+.summary-details-grid > div {
+  border-left: 2px solid var(--border-strong);
+  display: grid;
+  gap: 0.25rem;
+  padding-left: 0.75rem;
+}
+
+.section-header-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+}
+
+.section-header-row h3 {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.divider {
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  margin: 1rem 0;
+}
+
+.danger-zone {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: var(--radius-control);
+  padding: 1rem;
+}
+
+.checkbox-stack {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+
+@media (max-width: 639px) {
+  .booking-stepper-grid,
+  .summary-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
