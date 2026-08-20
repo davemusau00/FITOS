@@ -42,6 +42,8 @@ export function PaymentsPage() {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
   const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null);
+  const [refundingPaymentId, setRefundingPaymentId] = useState<string | null>(null);
+  const [paymentActionReason, setPaymentActionReason] = useState("");
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const payments = useQuery({
@@ -57,10 +59,22 @@ export function PaymentsPage() {
   });
 
   const voidMutation = useMutation({
-    mutationFn: (paymentId: string) => api.voidPayment(paymentId, "Voided by operator"),
+    mutationFn: ({ paymentId, reason }: { paymentId: string; reason: string }) =>
+      api.voidPayment(paymentId, reason),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["payments"] });
       setVoidingPaymentId(null);
+      setPaymentActionReason("");
+    }
+  });
+
+  const refundMutation = useMutation({
+    mutationFn: ({ paymentId, reason }: { paymentId: string; reason: string }) =>
+      api.refundPayment(paymentId, reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["payments"] });
+      setRefundingPaymentId(null);
+      setPaymentActionReason("");
     }
   });
 
@@ -127,9 +141,14 @@ export function PaymentsPage() {
       header: "",
       cell: (p) =>
         p.status === "completed" && can(auth, "payment:refund") ? (
-          <Button onClick={() => setVoidingPaymentId(p.id)} size="small" variant="ghost">
-            Void
-          </Button>
+          <div className="form-actions">
+            <Button onClick={() => setRefundingPaymentId(p.id)} size="small" variant="ghost">
+              Refund
+            </Button>
+            <Button onClick={() => setVoidingPaymentId(p.id)} size="small" variant="ghost">
+              Void
+            </Button>
+          </div>
         ) : null
     }
   ];
@@ -152,6 +171,7 @@ export function PaymentsPage() {
       />
 
       <ErrorNotice error={payments.error} />
+      <ErrorNotice error={voidMutation.error ?? refundMutation.error} />
 
       <section className="kpi-grid">
         <Card className="kpi kpi--energy">
@@ -257,17 +277,88 @@ export function PaymentsPage() {
           onClose={() => setVoidingPaymentId(null)}
           title="Void payment transaction"
         >
-          <div className="form-actions">
-            <Button onClick={() => setVoidingPaymentId(null)} variant="ghost">
-              Cancel
-            </Button>
-            <Button
-              loading={voidMutation.isPending}
-              onClick={() => voidMutation.mutate(voidingPaymentId)}
-              variant="primary"
-            >
-              Confirm Void
-            </Button>
+          <div className="form-stack">
+            <FormField htmlFor="voidReason" label="Reason">
+              <input
+                className="fitos-control"
+                id="voidReason"
+                onChange={(event) => setPaymentActionReason(event.target.value)}
+                placeholder="Why is this record being voided?"
+                value={paymentActionReason}
+              />
+            </FormField>
+            <div className="form-actions">
+              <Button
+                onClick={() => {
+                  setVoidingPaymentId(null);
+                  setPaymentActionReason("");
+                }}
+                variant="ghost"
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!paymentActionReason.trim()}
+                loading={voidMutation.isPending}
+                onClick={() =>
+                  voidMutation.mutate({
+                    paymentId: voidingPaymentId,
+                    reason: paymentActionReason.trim()
+                  })
+                }
+                variant="primary"
+              >
+                Confirm Void
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
+      {refundingPaymentId ? (
+        <Modal
+          description="Record that the full payment amount was returned. This financial action is audited."
+          isOpen={true}
+          onClose={() => {
+            setRefundingPaymentId(null);
+            setPaymentActionReason("");
+          }}
+          title="Refund payment transaction"
+        >
+          <div className="form-stack">
+            <FormField htmlFor="refundReason" label="Reason">
+              <input
+                className="fitos-control"
+                id="refundReason"
+                onChange={(event) => setPaymentActionReason(event.target.value)}
+                placeholder="Why is this payment being refunded?"
+                value={paymentActionReason}
+              />
+            </FormField>
+            <div className="form-actions">
+              <Button
+                onClick={() => {
+                  setRefundingPaymentId(null);
+                  setPaymentActionReason("");
+                }}
+                variant="ghost"
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!paymentActionReason.trim()}
+                loading={refundMutation.isPending}
+                onClick={() =>
+                  refundMutation.mutate({
+                    paymentId: refundingPaymentId,
+                    reason: paymentActionReason.trim()
+                  })
+                }
+                variant="primary"
+              >
+                Confirm Refund
+              </Button>
+            </div>
           </div>
         </Modal>
       ) : null}

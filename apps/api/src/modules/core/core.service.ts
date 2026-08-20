@@ -27,6 +27,7 @@ import type {
   UpdateLeadStageRequest,
   UpdateOrganizationRequest,
   CreateRoomRequest,
+  UpdateRoomRequest,
   CreateScheduleOccurrenceRequest,
   CreateServiceRequest,
   RoomResponse,
@@ -488,6 +489,12 @@ export class CoreService {
     return this.repository.listRooms(scopeOf(actor), branchId);
   }
 
+  async getRoom(actor: RequestActor, roomId: string): Promise<RoomResponse> {
+    const room = await this.repository.findRoomById(scopeOf(actor), roomId);
+    if (!room) throw new DomainError("RESOURCE_NOT_FOUND", "Room not found.", 404);
+    return room;
+  }
+
   async createRoom(
     actor: RequestActor,
     requestId: string,
@@ -500,6 +507,29 @@ export class CoreService {
       const room = await this.repository.createRoom(scopeOf(actor), input);
       await this.audit(actor, requestId, "room.created", "room", room.id, room.branchId, {
         name: room.name
+      });
+      return room;
+    } catch (error) {
+      if (error instanceof Error && error.message.toLowerCase().includes("room")) {
+        throw new DomainError("VALIDATION_FAILED", "A room with that name already exists.", 409);
+      }
+      throw error;
+    }
+  }
+
+  async updateRoom(
+    actor: RequestActor,
+    requestId: string,
+    roomId: string,
+    input: UpdateRoomRequest
+  ): Promise<RoomResponse> {
+    const current = await this.getRoom(actor, roomId);
+    try {
+      const room = await this.repository.updateRoom(scopeOf(actor), roomId, input);
+      if (!room) throw new DomainError("RESOURCE_NOT_FOUND", "Room not found.", 404);
+      await this.audit(actor, requestId, "room.updated", "room", room.id, room.branchId, {
+        changed: Object.keys(input),
+        previousName: current.name
       });
       return room;
     } catch (error) {

@@ -26,6 +26,7 @@ import type {
   UpdateOrganizationRequest,
   UserSummary,
   CreateRoomRequest,
+  UpdateRoomRequest,
   CreateScheduleOccurrenceRequest,
   CreateServiceRequest,
   RoomResponse,
@@ -200,6 +201,11 @@ export interface FitosRepository {
   listRooms(scope: TenantScope, branchId?: string): Promise<RoomResponse[]>;
   findRoomById(scope: TenantScope, roomId: string): Promise<RoomResponse | null>;
   createRoom(scope: TenantScope, input: CreateRoomRequest): Promise<RoomResponse>;
+  updateRoom(
+    scope: TenantScope,
+    roomId: string,
+    input: UpdateRoomRequest
+  ): Promise<RoomResponse | null>;
   createScheduleOccurrence(
     scope: TenantScope,
     input: CreateScheduleOccurrenceRequest

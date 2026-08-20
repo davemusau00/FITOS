@@ -91,5 +91,23 @@ describe("payment ledger integrity", () => {
     await expect(repository.reconcilePayment(gymScope, payment.id, reconciliation)).rejects.toThrow(
       /completed/i
     );
+
+    const refundable = await repository.createPayment(
+      gymScope,
+      {
+        branchId: gym.branchIds[0]!,
+        memberId: member.id,
+        amount: { amountMinor: "50000", currency: "KES" },
+        method: "cash",
+        allocationType: "other"
+      },
+      gym.user.id
+    );
+    const refunds = await Promise.all([
+      repository.refundPayment(gymScope, refundable.id, "Class cancelled"),
+      repository.refundPayment(gymScope, refundable.id, "Class cancelled")
+    ]);
+    expect(refunds[0]?.status).toBe("refunded");
+    expect(refunds[1]).toEqual(refunds[0]);
   });
 });

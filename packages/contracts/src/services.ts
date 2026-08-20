@@ -71,6 +71,12 @@ export interface CreateRoomRequest {
   capacity?: number | null;
 }
 
+export interface UpdateRoomRequest {
+  name?: string;
+  capacity?: number | null;
+  isActive?: boolean;
+}
+
 export interface ScheduleOccurrenceResponse {
   id: string;
   tenantId: string;

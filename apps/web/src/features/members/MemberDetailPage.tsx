@@ -52,6 +52,7 @@ export function MemberDetailPage() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [isActivatingMembership, setIsActivatingMembership] = useState(false);
+  const [isAdjustingCredits, setIsAdjustingCredits] = useState(false);
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const member = useQuery({
@@ -179,15 +180,26 @@ export function MemberDetailPage() {
         <Card>
           <div className="section-header-row" style={{ marginTop: 0, marginBottom: "0.75rem" }}>
             <h2>Active Membership & Entitlements</h2>
-            {activeMembership && can(auth, "membership:manage") ? (
-              <Button
-                onClick={() => cancelMembershipMutation.mutate(activeMembership.id)}
-                size="small"
-                variant="ghost"
-              >
-                Cancel plan
-              </Button>
-            ) : null}
+            <div className="form-actions">
+              {activeMembership && can(auth, "membership:override") ? (
+                <Button
+                  onClick={() => setIsAdjustingCredits(true)}
+                  size="small"
+                  variant="secondary"
+                >
+                  Adjust credits
+                </Button>
+              ) : null}
+              {activeMembership && can(auth, "membership:manage") ? (
+                <Button
+                  onClick={() => cancelMembershipMutation.mutate(activeMembership.id)}
+                  size="small"
+                  variant="ghost"
+                >
+                  Cancel plan
+                </Button>
+              ) : null}
+            </div>
           </div>
 
           {activeMembership ? (
@@ -299,7 +311,102 @@ export function MemberDetailPage() {
           plans={plans.data?.filter((p) => p.isActive) ?? []}
         />
       ) : null}
+
+      {isAdjustingCredits && activeMembership ? (
+        <CreditAdjustmentModal
+          isOpen={true}
+          memberId={memberId}
+          membershipId={activeMembership.id}
+          onClose={() => setIsAdjustingCredits(false)}
+          onSuccess={() => {
+            void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits"] });
+            void queryClient.invalidateQueries({
+              queryKey: ["member", memberId, "credits", "balance"]
+            });
+            setIsAdjustingCredits(false);
+          }}
+        />
+      ) : null}
     </>
+  );
+}
+
+function CreditAdjustmentModal({
+  isOpen,
+  onClose,
+  memberId,
+  membershipId,
+  onSuccess
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  memberId: string;
+  membershipId: string;
+  onSuccess: () => void;
+}) {
+  const [error, setError] = useState<unknown>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting }
+  } = useForm<{ delta: number; reason: string }>({
+    defaultValues: { delta: 1, reason: "" }
+  });
+
+  return (
+    <Modal
+      description="Add or remove credits with a permanent ledger entry and audit event."
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Adjust membership credits"
+    >
+      <form
+        className="form-stack"
+        onSubmit={handleSubmit(async (values) => {
+          setError(null);
+          try {
+            await api.adjustCredit(memberId, {
+              membershipId,
+              delta: Number(values.delta),
+              reason: values.reason.trim()
+            });
+            onSuccess();
+          } catch (cause) {
+            setError(cause);
+          }
+        })}
+      >
+        <FormField error={errors.delta?.message} htmlFor="creditDelta" label="Credit change">
+          <input
+            className="fitos-control"
+            id="creditDelta"
+            type="number"
+            {...register("delta", {
+              required: "Enter a credit change",
+              validate: (value) => Number(value) !== 0 || "Change cannot be zero",
+              valueAsNumber: true
+            })}
+          />
+        </FormField>
+        <FormField error={errors.reason?.message} htmlFor="creditAdjustmentReason" label="Reason">
+          <input
+            className="fitos-control"
+            id="creditAdjustmentReason"
+            placeholder="Required audit reason"
+            {...register("reason", { required: "A reason is required" })}
+          />
+        </FormField>
+        <ErrorNotice error={error} />
+        <div className="form-actions">
+          <Button onClick={onClose} variant="ghost">
+            Cancel
+          </Button>
+          <Button loading={isSubmitting} type="submit">
+            Record adjustment
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

@@ -35,6 +35,11 @@ export function ClassRosterPage() {
     enabled: Boolean(occurrenceId)
   });
 
+  const members = useQuery({
+    queryKey: ["members", "roster-lookup"],
+    queryFn: () => api.members(new URLSearchParams({ limit: "100" }))
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ recordId, status }: { recordId: string; status: AttendanceStatus }) =>
       api.updateAttendanceStatus(recordId, { status }),
@@ -63,7 +68,9 @@ export function ClassRosterPage() {
         title="No occurrence selected"
       />
     );
-  if (occurrence.isLoading || bookings.isLoading || attendance.isLoading) return <PageLoading />;
+  if (occurrence.isLoading || bookings.isLoading || attendance.isLoading || members.isLoading) {
+    return <PageLoading />;
+  }
 
   const occ = occurrence.data;
   const bookingList = bookings.data?.data ?? [];
@@ -98,6 +105,7 @@ export function ClassRosterPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {bookingList.map((b) => {
                 const attRecord = attendanceList.find((a) => a.memberId === b.memberId);
+                const member = members.data?.data.find((item) => item.id === b.memberId);
                 return (
                   <div
                     key={b.id}
@@ -113,7 +121,11 @@ export function ClassRosterPage() {
                     <div>
                       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                         <Link to={`/app/members/${b.memberId}`}>
-                          <strong>Member ID: {b.memberId.slice(0, 8)}</strong>
+                          <strong>
+                            {member
+                              ? `${member.firstName} ${member.lastName}`.trim()
+                              : `Member ID: ${b.memberId.slice(0, 8)}`}
+                          </strong>
                         </Link>
                         <StatusBadge status={b.status} />
                       </div>

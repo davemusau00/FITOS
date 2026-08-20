@@ -57,6 +57,7 @@ import type {
   UpdateOrganizationRequest,
   UserSummary,
   CreateRoomRequest,
+  UpdateRoomRequest,
   CreateScheduleOccurrenceRequest,
   CreateServiceRequest,
   RoomResponse,
@@ -918,6 +919,7 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   async createRoom(scope: TenantScope, input: CreateRoomRequest): Promise<RoomResponse> {
+    if (!scope.branchIds.includes(input.branchId)) throw new Error("Branch unavailable.");
     const [room] = await this.db
       .insert(rooms)
       .values({
@@ -929,6 +931,30 @@ export class DrizzleFitosRepository implements FitosRepository {
       .returning();
     if (!room) throw new Error("Unable to create room.");
     return this.roomResponse(room);
+  }
+
+  async updateRoom(
+    scope: TenantScope,
+    roomId: string,
+    input: UpdateRoomRequest
+  ): Promise<RoomResponse | null> {
+    const [room] = await this.db
+      .update(rooms)
+      .set({
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.capacity !== undefined ? { capacity: input.capacity } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(rooms.id, roomId),
+          eq(rooms.tenantId, scope.tenantId),
+          inArray(rooms.branchId, scope.branchIds)
+        )
+      )
+      .returning();
+    return room ? this.roomResponse(room) : null;
   }
 
   async createScheduleOccurrence(
@@ -2080,10 +2106,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         .update(paymentTransactions)
         .set({ status: "refunded", note, updatedAt: new Date() })
         .where(
-          and(
-            eq(paymentTransactions.id, paymentId),
-            eq(paymentTransactions.status, "completed")
-          )
+          and(eq(paymentTransactions.id, paymentId), eq(paymentTransactions.status, "completed"))
         )
         .returning();
       return row ? this.paymentResponse(row) : null;

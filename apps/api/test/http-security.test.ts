@@ -7,6 +7,7 @@ let baseUrl = "";
 let close: (() => Promise<void>) | undefined;
 
 type CookieValues = { session: string; csrf: string };
+const loginCache = new Map<string, CookieValues>();
 
 const cookieValues = (response: Response): CookieValues => {
   const cookies = response.headers.getSetCookie();
@@ -23,13 +24,17 @@ const cookieValues = (response: Response): CookieValues => {
 };
 
 const login = async (email: string): Promise<CookieValues> => {
+  const cached = loginCache.get(email);
+  if (cached) return cached;
   const response = await fetch(`${baseUrl}/api/v1/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email, password: "ChangeMe123!" })
   });
   expect(response.status).toBe(201);
-  return cookieValues(response);
+  const cookies = cookieValues(response);
+  loginCache.set(email, cookies);
+  return cookies;
 };
 
 const protectedHeaders = (
@@ -54,7 +59,7 @@ beforeAll(async () => {
   const address = app.getHttpServer().address() as AddressInfo;
   baseUrl = `http://127.0.0.1:${address.port}`;
   close = () => app.close();
-});
+}, 30_000);
 
 afterAll(async () => close?.());
 
@@ -344,5 +349,309 @@ describe("HTTP security boundary", () => {
       body: JSON.stringify({ occurrenceId: occurrence.id, memberId: memberIds[1] })
     });
     expect(replacement.status).toBe(201);
+  });
+
+  it("enforces reception, finance, trainer, refund, and credit-override boundaries", async () => {
+    const owner = await login("owner@gym.fitos.test");
+    const reception = await login("reception@gym.fitos.test");
+    const finance = await login("finance@gym.fitos.test");
+    const trainer = await login("trainer@gym.fitos.test");
+    const me = await fetch(`${baseUrl}/api/v1/auth/me`, {
+      headers: { cookie: `fitos_session=${owner.session}; fitos_csrf=${owner.csrf}` }
+    });
+    const branchId = (await me.json()).branches[0].id as string;
+
+    const memberResponse = await fetch(`${baseUrl}/api/v1/members`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({
+        contact: { firstName: "Permission Boundary" },
+        homeBranchId: branchId
+      })
+    });
+    expect(memberResponse.status).toBe(201);
+    const member = await memberResponse.json();
+    const planResponse = await fetch(`${baseUrl}/api/v1/membership-plans`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({
+        branchId,
+        name: `Permission Pack ${crypto.randomUUID().slice(0, 8)}`,
+        includedCredits: 2,
+        durationDays: 30
+      })
+    });
+    expect(planResponse.status).toBe(201);
+    const plan = await planResponse.json();
+    const activationResponse = await fetch(`${baseUrl}/api/v1/members/${member.id}/memberships`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({ planId: plan.id })
+    });
+    expect(activationResponse.status).toBe(201);
+    const activation = await activationResponse.json();
+
+    const forbiddenAdjustment = await fetch(
+      `${baseUrl}/api/v1/members/${member.id}/credits/adjustments`,
+      {
+        method: "POST",
+        headers: protectedHeaders(reception),
+        body: JSON.stringify({
+          membershipId: activation.membership.id,
+          delta: 1,
+          reason: "Reception must not adjust ledger truth"
+        })
+      }
+    );
+    expect(forbiddenAdjustment.status).toBe(403);
+
+    const adjustmentKey = crypto.randomUUID();
+    const adjustmentBody = JSON.stringify({
+      membershipId: activation.membership.id,
+      delta: 1,
+      reason: "Owner-approved service recovery"
+    });
+    const adjustment = await fetch(`${baseUrl}/api/v1/members/${member.id}/credits/adjustments`, {
+      method: "POST",
+      headers: protectedHeaders(owner, adjustmentKey),
+      body: adjustmentBody
+    });
+    expect(adjustment.status).toBe(201);
+    const adjustmentReplay = await fetch(
+      `${baseUrl}/api/v1/members/${member.id}/credits/adjustments`,
+      {
+        method: "POST",
+        headers: protectedHeaders(owner, adjustmentKey),
+        body: adjustmentBody
+      }
+    );
+    expect(adjustmentReplay.status).toBe(201);
+    expect((await adjustmentReplay.json()).id).toBe((await adjustment.json()).id);
+
+    const paymentResponse = await fetch(`${baseUrl}/api/v1/payments`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({
+        branchId,
+        memberId: member.id,
+        amount: { amountMinor: "100000", currency: "KES" },
+        method: "cash",
+        allocationType: "other"
+      })
+    });
+    expect(paymentResponse.status).toBe(201);
+    const payment = await paymentResponse.json();
+
+    const forbiddenRefund = await fetch(`${baseUrl}/api/v1/payments/${payment.id}/refund`, {
+      method: "POST",
+      headers: protectedHeaders(reception),
+      body: JSON.stringify({ reason: "Reception refund attempt" })
+    });
+    expect(forbiddenRefund.status).toBe(403);
+    const refund = await fetch(`${baseUrl}/api/v1/payments/${payment.id}/refund`, {
+      method: "POST",
+      headers: protectedHeaders(finance),
+      body: JSON.stringify({ reason: "Customer-requested full refund" })
+    });
+    expect(refund.status).toBe(200);
+    expect((await refund.json()).status).toBe("refunded");
+
+    const trainerCreate = await fetch(`${baseUrl}/api/v1/members`, {
+      method: "POST",
+      headers: protectedHeaders(trainer),
+      body: JSON.stringify({
+        contact: { firstName: "Forbidden Trainer Create" },
+        homeBranchId: branchId
+      })
+    });
+    expect(trainerCreate.status).toBe(403);
+    const receptionOverride = await fetch(`${baseUrl}/api/v1/attendance/checkin`, {
+      method: "POST",
+      headers: protectedHeaders(reception),
+      body: JSON.stringify({
+        branchId,
+        memberId: member.id,
+        overrideReason: "Reception override attempt"
+      })
+    });
+    expect(receptionOverride.status).toBe(403);
+  });
+
+  it("denies exact-UUID reads and mutations across the full tenant resource matrix", async () => {
+    const gym = await login("owner@gym.fitos.test");
+    const pilates = await login("owner@pilates.fitos.test");
+    const gymMe = await fetch(`${baseUrl}/api/v1/auth/me`, {
+      headers: { cookie: `fitos_session=${gym.session}; fitos_csrf=${gym.csrf}` }
+    });
+    const gymBranchId = (await gymMe.json()).branches[0].id as string;
+    const tag = crypto.randomUUID().slice(0, 8);
+
+    const member = await (
+      await fetch(`${baseUrl}/api/v1/members`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({
+          contact: { firstName: `Matrix Member ${tag}` },
+          homeBranchId: gymBranchId
+        })
+      })
+    ).json();
+    const lead = await (
+      await fetch(`${baseUrl}/api/v1/leads`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({
+          contact: { firstName: `Matrix Lead ${tag}` },
+          branchId: gymBranchId,
+          source: "matrix-test"
+        })
+      })
+    ).json();
+    const service = await (
+      await fetch(`${baseUrl}/api/v1/services`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({
+          branchId: gymBranchId,
+          name: `Matrix Service ${tag}`,
+          serviceType: "class",
+          durationMinutes: 45,
+          defaultCapacity: 8,
+          creditsRequired: 0
+        })
+      })
+    ).json();
+    const room = await (
+      await fetch(`${baseUrl}/api/v1/rooms`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({ branchId: gymBranchId, name: `Matrix Room ${tag}`, capacity: 8 })
+      })
+    ).json();
+    const occurrence = await (
+      await fetch(`${baseUrl}/api/v1/schedule/occurrences`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({
+          branchId: gymBranchId,
+          serviceId: service.id,
+          roomId: room.id,
+          startsAt: "2032-01-10T08:00:00.000Z",
+          endsAt: "2032-01-10T08:45:00.000Z",
+          capacity: 8
+        })
+      })
+    ).json();
+    const plan = await (
+      await fetch(`${baseUrl}/api/v1/membership-plans`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({
+          branchId: gymBranchId,
+          name: `Matrix Plan ${tag}`,
+          includedCredits: 2,
+          durationDays: 30
+        })
+      })
+    ).json();
+    const activation = await (
+      await fetch(`${baseUrl}/api/v1/members/${member.id}/memberships`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({ planId: plan.id })
+      })
+    ).json();
+    const booking = await (
+      await fetch(`${baseUrl}/api/v1/bookings`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({ occurrenceId: occurrence.id, memberId: member.id })
+      })
+    ).json();
+    const payment = await (
+      await fetch(`${baseUrl}/api/v1/payments`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({
+          branchId: gymBranchId,
+          memberId: member.id,
+          amount: { amountMinor: "75000", currency: "KES" },
+          method: "cash",
+          allocationType: "other"
+        })
+      })
+    ).json();
+    const attendance = await (
+      await fetch(`${baseUrl}/api/v1/attendance/checkin`, {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({
+          branchId: gymBranchId,
+          memberId: member.id,
+          occurrenceId: occurrence.id
+        })
+      })
+    ).json();
+
+    const readRequests: Array<[string, string]> = [
+      ["member", `/members/${member.id}`],
+      ["lead", `/leads/${lead.id}`],
+      ["service", `/services/${service.id}`],
+      ["room", `/rooms/${room.id}`],
+      ["occurrence", `/schedule/occurrences/${occurrence.id}`],
+      ["booking", `/bookings/${booking.id}`],
+      ["membership plan", `/membership-plans/${plan.id}`],
+      ["member memberships", `/members/${member.id}/memberships`],
+      ["credit ledger", `/members/${member.id}/credits`],
+      ["payment", `/payments/${payment.id}`],
+      ["attendance", `/attendance/${attendance.id}`]
+    ];
+    for (const [resource, path] of readRequests) {
+      const response = await fetch(`${baseUrl}/api/v1${path}`, {
+        headers: { cookie: `fitos_session=${pilates.session}; fitos_csrf=${pilates.csrf}` }
+      });
+      expect(response.status, `${resource} read leaked`).toBe(404);
+    }
+
+    const mutationRequests: Array<[string, string, string, unknown]> = [
+      ["member", "PATCH", `/members/${member.id}`, { contact: { firstName: "Cross tenant" } }],
+      ["lead", "POST", `/leads/${lead.id}/stage`, { stage: "lost", lostReason: "Cross tenant" }],
+      ["service", "PATCH", `/services/${service.id}`, { name: "Cross tenant" }],
+      ["room", "PATCH", `/rooms/${room.id}`, { name: "Cross tenant" }],
+      [
+        "occurrence",
+        "POST",
+        `/schedule/occurrences/${occurrence.id}/cancel`,
+        { reason: "Cross tenant" }
+      ],
+      ["booking", "POST", `/bookings/${booking.id}/cancel`, { reason: "Cross tenant" }],
+      ["membership plan", "PATCH", `/membership-plans/${plan.id}`, { name: "Cross tenant" }],
+      [
+        "membership",
+        "POST",
+        `/members/${member.id}/memberships/${activation.membership.id}/cancel`,
+        { reason: "Cross tenant" }
+      ],
+      [
+        "credit ledger",
+        "POST",
+        `/members/${member.id}/credits/adjustments`,
+        {
+          membershipId: activation.membership.id,
+          delta: 1,
+          reason: "Cross tenant"
+        }
+      ],
+      ["payment", "POST", `/payments/${payment.id}/refund`, { reason: "Cross tenant" }],
+      ["attendance", "PATCH", `/attendance/${attendance.id}`, { status: "attended" }]
+    ];
+    for (const [resource, method, path, body] of mutationRequests) {
+      const response = await fetch(`${baseUrl}/api/v1${path}`, {
+        method,
+        headers: protectedHeaders(pilates),
+        body: JSON.stringify(body)
+      });
+      expect(response.status, `${resource} mutation leaked`).toBe(404);
+    }
   });
 });

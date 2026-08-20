@@ -8,7 +8,10 @@ import type {
   MemberListItem,
   MemberResponse,
   LeadListResponse,
+  LeadNoteResponse,
   LeadResponse,
+  LeadTaskResponse,
+  CreateLeadTaskRequest,
   UpdateLeadStageRequest,
   StaffUserResponse,
   TenantSummary,
@@ -20,6 +23,7 @@ import type {
   UpdateServiceRequest,
   RoomResponse,
   CreateRoomRequest,
+  UpdateRoomRequest,
   ScheduleOccurrenceResponse,
   CreateScheduleOccurrenceRequest,
   ScheduleOccurrenceListResponse,
@@ -30,6 +34,7 @@ import type {
   CreateMembershipPlanRequest,
   MemberMembershipResponse,
   CreditLedgerEntryResponse,
+  ManualCreditAdjustmentRequest,
   PaymentTransactionResponse,
   CreatePaymentRequest,
   ReconcilePaymentRequest,
@@ -153,6 +158,18 @@ export const api = {
       `/leads/${id}/convert`,
       { method: "POST", body: json({}) }
     ),
+  leadNotes: (id: string) => request<LeadNoteResponse[]>(`/leads/${id}/notes`),
+  addLeadNote: (id: string, body: string) =>
+    request<LeadNoteResponse>(`/leads/${id}/notes`, {
+      method: "POST",
+      body: json({ body })
+    }),
+  leadTasks: (id: string) => request<LeadTaskResponse[]>(`/leads/${id}/tasks`),
+  addLeadTask: (id: string, payload: CreateLeadTaskRequest) =>
+    request<LeadTaskResponse>(`/leads/${id}/tasks`, {
+      method: "POST",
+      body: json(payload)
+    }),
   staff: () => request<StaffUserResponse[]>("/users"),
   inviteStaff: (payload: {
     email: string;
@@ -183,12 +200,15 @@ export const api = {
     request<ServiceResponse>(`/services/${id}`, { method: "PATCH", body: json(payload) }),
   rooms: (branchId?: string) =>
     request<RoomResponse[]>(branchId ? `/rooms?branchId=${branchId}` : "/rooms"),
+  room: (id: string) => request<RoomResponse>(`/rooms/${id}`),
   createRoom: (payload: CreateRoomRequest) =>
     request<RoomResponse>("/rooms", {
       method: "POST",
       body: json(payload),
       headers: { "Idempotency-Key": idempotency() }
     }),
+  updateRoom: (id: string, payload: UpdateRoomRequest) =>
+    request<RoomResponse>(`/rooms/${id}`, { method: "PATCH", body: json(payload) }),
 
   // Schedule
   scheduleOccurrences: (params?: URLSearchParams) =>
@@ -265,6 +285,12 @@ export const api = {
     request<CreditLedgerEntryResponse[]>(`/members/${memberId}/credits`),
   creditBalance: (memberId: string) =>
     request<{ balance: number }>(`/members/${memberId}/credits/balance`),
+  adjustCredit: (memberId: string, payload: ManualCreditAdjustmentRequest) =>
+    request<CreditLedgerEntryResponse>(`/members/${memberId}/credits/adjustments`, {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
 
   // Payments
   payments: (params?: URLSearchParams) =>
@@ -287,6 +313,12 @@ export const api = {
     request<PaymentTransactionResponse>(`/payments/${id}/reconcile`, {
       method: "POST",
       body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  refundPayment: (id: string, reason: string) =>
+    request<PaymentTransactionResponse>(`/payments/${id}/refund`, {
+      method: "POST",
+      body: json({ reason }),
       headers: { "Idempotency-Key": idempotency() }
     }),
 

@@ -5,6 +5,7 @@ import type {
   CreateRoomRequest,
   CreateServiceRequest,
   RequestActor,
+  UpdateRoomRequest,
   UpdateServiceRequest
 } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
@@ -63,6 +64,13 @@ const createRoomSchema = z
   })
   .strict();
 const roomListSchema = z.object({ branchId: z.string().uuid().optional() }).passthrough();
+const updateRoomSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    capacity: z.coerce.number().int().min(1).max(10_000).nullable().optional(),
+    isActive: z.boolean().optional()
+  })
+  .strict();
 
 @ApiTags("services")
 @Controller()
@@ -142,5 +150,27 @@ export class ServicesController {
       status: 201,
       action: () => this.core.createRoom(actor, requestId, input)
     });
+  }
+
+  @Get("rooms/:roomId")
+  @RequirePermission("service:read")
+  getRoom(@Actor() actor: RequestActor, @Param("roomId") roomId: string) {
+    return this.core.getRoom(actor, z.string().uuid().parse(roomId));
+  }
+
+  @Patch("rooms/:roomId")
+  @RequirePermission("service:manage")
+  updateRoom(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("roomId") roomId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.updateRoom(
+      actor,
+      requestId,
+      z.string().uuid().parse(roomId),
+      updateRoomSchema.parse(body) satisfies UpdateRoomRequest
+    );
   }
 }

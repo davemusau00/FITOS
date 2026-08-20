@@ -135,6 +135,31 @@ describe("Memberships and Booking Credits Integration", () => {
     const balanceRestored = await repository.getCreditBalance(gymScope, member.id);
     expect(balanceRestored).toBe(10);
 
+    const adjustment = await repository.adjustCredit(
+      gymScope,
+      member.id,
+      {
+        membershipId: activation.membership.id,
+        delta: -2,
+        reason: "Correcting two complimentary sessions"
+      },
+      gym.user.id
+    );
+    expect(adjustment.reason).toBe("manual_adjustment");
+    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(8);
+    await expect(
+      repository.adjustCredit(
+        gymScope,
+        member.id,
+        {
+          membershipId: activation.membership.id,
+          delta: -9,
+          reason: "Invalid negative correction"
+        },
+        gym.user.id
+      )
+    ).rejects.toThrow(/negative balance/i);
+
     // 8. Verify tenant isolation on plans and memberships
     const pilatesPlans = await repository.listMembershipPlans(pilatesScope);
     expect(pilatesPlans.find((p) => p.id === plan.id)).toBeUndefined();

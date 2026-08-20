@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Headers, Inject, Param, Post, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Query
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type {
@@ -116,6 +126,7 @@ export class PaymentsController {
   }
 
   @Post(":paymentId/void")
+  @HttpCode(200)
   @RequirePermission("payment:refund")
   void(
     @Actor() actor: RequestActor,
@@ -133,6 +144,7 @@ export class PaymentsController {
   }
 
   @Post(":paymentId/reconcile")
+  @HttpCode(200)
   @RequirePermission("payment:match")
   reconcile(
     @Actor() actor: RequestActor,
@@ -154,6 +166,7 @@ export class PaymentsController {
   }
 
   @Post(":paymentId/refund")
+  @HttpCode(200)
   @RequirePermission("payment:refund")
   refund(
     @Actor() actor: RequestActor,

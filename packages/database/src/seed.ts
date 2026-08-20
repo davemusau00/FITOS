@@ -30,6 +30,11 @@ async function ensureDemoTenant(input: {
   email: string;
   displayName: string;
   passwordHash: string;
+  staff?: Array<{
+    email: string;
+    displayName: string;
+    roleKey: Exclude<RoleKey, "owner">;
+  }>;
 }) {
   const existing = await database.db.query.tenants.findFirst({
     where: eq(tenants.slug, input.slug)
@@ -90,6 +95,28 @@ async function ensureDemoTenant(input: {
       .returning();
     if (!tenantUser) throw new Error("Unable to create demo tenant user.");
     await tx.insert(userBranchAccess).values({ tenantUserId: tenantUser.id, branchId: branch.id });
+
+    for (const staffInput of input.staff ?? []) {
+      const roleId = roleByKey.get(staffInput.roleKey);
+      if (!roleId) throw new Error(`Unable to find ${staffInput.roleKey} role.`);
+      const [staffUser] = await tx
+        .insert(users)
+        .values({
+          email: staffInput.email,
+          displayName: staffInput.displayName,
+          passwordHash: input.passwordHash
+        })
+        .returning();
+      if (!staffUser) throw new Error(`Unable to create ${staffInput.roleKey} demo user.`);
+      const [staffMembership] = await tx
+        .insert(tenantUsers)
+        .values({ tenantId: tenant.id, userId: staffUser.id, roleId })
+        .returning();
+      if (!staffMembership) throw new Error(`Unable to create ${staffInput.roleKey} membership.`);
+      await tx
+        .insert(userBranchAccess)
+        .values({ tenantUserId: staffMembership.id, branchId: branch.id });
+    }
   });
 }
 
@@ -111,7 +138,24 @@ try {
     branchSlug: "kilimani",
     email: "owner@gym.fitos.test",
     displayName: "Gym Owner",
-    passwordHash
+    passwordHash,
+    staff: [
+      {
+        email: "reception@gym.fitos.test",
+        displayName: "Gym Reception",
+        roleKey: "reception"
+      },
+      {
+        email: "finance@gym.fitos.test",
+        displayName: "Gym Finance",
+        roleKey: "finance"
+      },
+      {
+        email: "trainer@gym.fitos.test",
+        displayName: "Gym Trainer",
+        roleKey: "trainer"
+      }
+    ]
   });
   await ensureDemoTenant({
     name: "FITOS Demo Pilates",

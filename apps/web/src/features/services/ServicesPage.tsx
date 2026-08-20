@@ -38,6 +38,9 @@ type ServiceFormValues = {
   serviceType: ServiceType;
   durationMinutes: number;
   defaultCapacity: string;
+  creditsRequired: string;
+  cancellationCutoffMinutes: string;
+  restoreCreditOnLateCancel: boolean;
   priceAmount: string;
   currency: string;
   branchId: string;
@@ -264,6 +267,9 @@ function ServiceEditorModal({
       serviceType: service?.serviceType ?? "class",
       durationMinutes: service?.durationMinutes ?? 60,
       defaultCapacity: service?.defaultCapacity ? String(service.defaultCapacity) : "15",
+      creditsRequired: String(service?.creditsRequired ?? 1),
+      cancellationCutoffMinutes: String(service?.cancellationCutoffMinutes ?? 120),
+      restoreCreditOnLateCancel: service?.restoreCreditOnLateCancel ?? false,
       priceAmount: service?.price ? String(parseInt(service.price.amountMinor, 10) / 100) : "",
       currency: service?.price?.currency ?? defaultCurrency,
       branchId: service?.branchId ?? "",
@@ -287,6 +293,9 @@ function ServiceEditorModal({
           name: values.name.trim(),
           durationMinutes: Number(values.durationMinutes),
           defaultCapacity: values.defaultCapacity ? Number(values.defaultCapacity) : null,
+          creditsRequired: Number(values.creditsRequired),
+          cancellationCutoffMinutes: Number(values.cancellationCutoffMinutes),
+          restoreCreditOnLateCancel: values.restoreCreditOnLateCancel,
           price,
           publicVisible: values.publicVisible,
           isActive: values.isActive
@@ -299,6 +308,9 @@ function ServiceEditorModal({
           serviceType: values.serviceType,
           durationMinutes: Number(values.durationMinutes),
           defaultCapacity: values.defaultCapacity ? Number(values.defaultCapacity) : null,
+          creditsRequired: Number(values.creditsRequired),
+          cancellationCutoffMinutes: Number(values.cancellationCutoffMinutes),
+          restoreCreditOnLateCancel: values.restoreCreditOnLateCancel,
           price,
           branchId: values.branchId || null,
           publicVisible: values.publicVisible
@@ -387,6 +399,32 @@ function ServiceEditorModal({
             />
           </FormField>
 
+          <FormField htmlFor="creditsRequired" label="Credits per booking">
+            <input
+              className="fitos-control"
+              id="creditsRequired"
+              min={0}
+              type="number"
+              {...register("creditsRequired", {
+                required: true,
+                min: 0
+              })}
+            />
+          </FormField>
+
+          <FormField htmlFor="cancellationCutoffMinutes" label="Cancellation cutoff (minutes)">
+            <input
+              className="fitos-control"
+              id="cancellationCutoffMinutes"
+              min={0}
+              type="number"
+              {...register("cancellationCutoffMinutes", {
+                required: true,
+                min: 0
+              })}
+            />
+          </FormField>
+
           <FormField htmlFor="serviceBranch" label="Branch limitation" optional>
             <select className="fitos-control" id="serviceBranch" {...register("branchId")}>
               <option value="">Organization-wide (All branches)</option>
@@ -414,6 +452,10 @@ function ServiceEditorModal({
           <label className="fitos-checkbox-row">
             <Checkbox {...register("publicVisible")} />
             <span>Visible on public booking timetable</span>
+          </label>
+          <label className="fitos-checkbox-row">
+            <Checkbox {...register("restoreCreditOnLateCancel")} />
+            <span>Restore credits when a member cancels inside the cutoff</span>
           </label>
           {isEditing ? (
             <label className="fitos-checkbox-row">

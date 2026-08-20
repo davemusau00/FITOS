@@ -28,6 +28,7 @@ import type {
   UpdateOrganizationRequest,
   UserSummary,
   CreateRoomRequest,
+  UpdateRoomRequest,
   CreateScheduleOccurrenceRequest,
   CreateServiceRequest,
   RoomResponse,
@@ -140,7 +141,27 @@ export class InMemoryFitosRepository implements FitosRepository {
     await this.createDemoTenant({
       tenant: { name: "FITOS Demo Gym", slug: "fitos-demo-gym" },
       branch: { name: "Kilimani", slug: "kilimani" },
-      owner: { email: "owner@gym.fitos.test", displayName: "Gym Owner", passwordHash }
+      owner: { email: "owner@gym.fitos.test", displayName: "Gym Owner", passwordHash },
+      staff: [
+        {
+          email: "reception@gym.fitos.test",
+          displayName: "Gym Reception",
+          roleKey: "reception",
+          passwordHash
+        },
+        {
+          email: "finance@gym.fitos.test",
+          displayName: "Gym Finance",
+          roleKey: "finance",
+          passwordHash
+        },
+        {
+          email: "trainer@gym.fitos.test",
+          displayName: "Gym Trainer",
+          roleKey: "trainer",
+          passwordHash
+        }
+      ]
     });
     await this.createDemoTenant({
       tenant: { name: "FITOS Demo Pilates", slug: "fitos-demo-pilates" },
@@ -153,6 +174,12 @@ export class InMemoryFitosRepository implements FitosRepository {
     tenant: Pick<TenantSummary, "name" | "slug">;
     branch: Pick<BranchResponse, "name" | "slug">;
     owner: { email: string; displayName: string; passwordHash: string };
+    staff?: Array<{
+      email: string;
+      displayName: string;
+      roleKey: Exclude<RoleKey, "owner">;
+      passwordHash: string;
+    }>;
   }): Promise<void> {
     const tenantId = randomUUID();
     const tenant: StoredTenant = {
@@ -216,6 +243,29 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
     this.tenantUsers.set(tenantUser.id, tenantUser);
     this.branchAccess.set(tenantUser.id, new Set([branch.id]));
+
+    for (const staffInput of input.staff ?? []) {
+      const role = roleByKey.get(staffInput.roleKey);
+      if (!role) throw new Error(`${staffInput.roleKey} role unavailable.`);
+      const staffUser: StoredUser = {
+        id: randomUUID(),
+        email: normalizeEmail(staffInput.email),
+        displayName: staffInput.displayName,
+        status: "active",
+        lastLoginAt: null,
+        passwordHash: staffInput.passwordHash
+      };
+      this.users.set(staffUser.id, staffUser);
+      const staffMembership: StoredTenantUser = {
+        id: randomUUID(),
+        tenantId,
+        userId: staffUser.id,
+        roleId: role.id,
+        status: "active"
+      };
+      this.tenantUsers.set(staffMembership.id, staffMembership);
+      this.branchAccess.set(staffMembership.id, new Set([branch.id]));
+    }
   }
 
   async findLoginIdentity(email: string): Promise<LoginIdentity | null> {
@@ -842,6 +892,34 @@ export class InMemoryFitosRepository implements FitosRepository {
       updatedAt: timestamp
     };
     this.rooms.set(room.id, room);
+    return { ...room };
+  }
+
+  async updateRoom(
+    scope: TenantScope,
+    roomId: string,
+    input: UpdateRoomRequest
+  ): Promise<RoomResponse | null> {
+    const room = this.rooms.get(roomId);
+    if (!room || room.tenantId !== scope.tenantId || !scope.branchIds.includes(room.branchId)) {
+      return null;
+    }
+    const nextName = input.name ?? room.name;
+    if (
+      [...this.rooms.values()].some(
+        (candidate) =>
+          candidate.id !== room.id &&
+          candidate.tenantId === room.tenantId &&
+          candidate.branchId === room.branchId &&
+          candidate.name.toLowerCase() === nextName.toLowerCase()
+      )
+    ) {
+      throw new Error("room name already exists");
+    }
+    if (input.name !== undefined) room.name = input.name;
+    if (input.capacity !== undefined) room.capacity = input.capacity;
+    if (input.isActive !== undefined) room.isActive = input.isActive;
+    room.updatedAt = now();
     return { ...room };
   }
 

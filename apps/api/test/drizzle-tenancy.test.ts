@@ -70,6 +70,59 @@ describeDatabase("Drizzle tenant isolation", () => {
     );
   });
 
+  it("denies exact operational UUIDs across services, rooms, occurrences, and bookings", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const member = await repository.createMember(
+      gymScope,
+      {
+        contact: { firstName: `Operational Matrix ${suffix}` },
+        homeBranchId: gym.branchIds[0]!
+      },
+      null
+    );
+    const service = await repository.createService(gymScope, {
+      branchId: gym.branchIds[0],
+      name: `Operational Service ${suffix}`,
+      serviceType: "class",
+      durationMinutes: 30,
+      defaultCapacity: 4,
+      creditsRequired: 0
+    });
+    const room = await repository.createRoom(gymScope, {
+      branchId: gym.branchIds[0]!,
+      name: `Operational Room ${suffix}`,
+      capacity: 4
+    });
+    const startsAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const occurrence = await repository.createScheduleOccurrence(gymScope, {
+      branchId: gym.branchIds[0]!,
+      serviceId: service.id,
+      roomId: room.id,
+      startsAt: startsAt.toISOString(),
+      endsAt: new Date(startsAt.getTime() + 30 * 60 * 1000).toISOString(),
+      capacity: 4
+    });
+    const booking = await repository.createBooking(
+      gymScope,
+      { occurrenceId: occurrence.id, memberId: member.id, source: "staff" },
+      gym.user.id,
+      false
+    );
+
+    expect(await repository.findServiceById(pilatesScope, service.id)).toBeNull();
+    expect(await repository.updateService(pilatesScope, service.id, { name: "Denied" })).toBeNull();
+    expect(await repository.findRoomById(pilatesScope, room.id)).toBeNull();
+    expect(await repository.updateRoom(pilatesScope, room.id, { name: "Denied" })).toBeNull();
+    expect(await repository.findScheduleOccurrenceById(pilatesScope, occurrence.id)).toBeNull();
+    expect(
+      await repository.cancelScheduleOccurrence(pilatesScope, occurrence.id, "Denied")
+    ).toBeNull();
+    expect(await repository.findBookingById(pilatesScope, booking.id)).toBeNull();
+    expect(await repository.cancelBooking(pilatesScope, booking.id, "Denied")).toBeNull();
+  });
+
   it("serializes the final member credit across concurrent bookings", async () => {
     const gymScope = scopeOf(gym);
     const pilatesScope = scopeOf(pilates);
@@ -142,6 +195,30 @@ describeDatabase("Drizzle tenant isolation", () => {
         (entry) => entry.reason === "booking"
       )
     ).toHaveLength(1);
+
+    await repository.adjustCredit(
+      gymScope,
+      member.id,
+      { membershipId: activation.membership.id, delta: 1, reason: "Race test grant" },
+      gym.user.id
+    );
+    const adjustmentAttempts = await Promise.allSettled([
+      repository.adjustCredit(
+        gymScope,
+        member.id,
+        { membershipId: activation.membership.id, delta: -1, reason: "Race correction A" },
+        gym.user.id
+      ),
+      repository.adjustCredit(
+        gymScope,
+        member.id,
+        { membershipId: activation.membership.id, delta: -1, reason: "Race correction B" },
+        gym.user.id
+      )
+    ]);
+    expect(adjustmentAttempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(1);
+    expect(adjustmentAttempts.filter((attempt) => attempt.status === "rejected")).toHaveLength(1);
+    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(0);
 
     expect(await repository.findMembershipPlanById(pilatesScope, plan.id)).toBeNull();
     expect(await repository.listMemberMemberships(pilatesScope, member.id)).toEqual([]);
@@ -217,6 +294,24 @@ describeDatabase("Drizzle tenant isolation", () => {
     ]);
     expect(voidAttempts[0]?.status).toBe("voided");
     expect(voidAttempts[1]?.status).toBe("voided");
+
+    const refundable = await repository.createPayment(
+      gymScope,
+      {
+        branchId: gym.branchIds[0]!,
+        memberId: gymMember.id,
+        amount: { amountMinor: "50000", currency: "KES" },
+        method: "cash",
+        allocationType: "other"
+      },
+      gym.user.id
+    );
+    const refunds = await Promise.all([
+      repository.refundPayment(gymScope, refundable.id, "Class cancelled"),
+      repository.refundPayment(gymScope, refundable.id, "Class cancelled")
+    ]);
+    expect(refunds[0]?.status).toBe("refunded");
+    expect(refunds[1]?.status).toBe("refunded");
   });
 
   it("creates one attendance effect for concurrent class check-ins", async () => {

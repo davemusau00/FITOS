@@ -1,12 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  Card,
   DataTable,
   type DataTableColumn,
   EmptyState,
   Icon,
+  Modal,
   PageHeader,
   SearchBar
 } from "@fitos/ui";
@@ -27,6 +29,9 @@ export const leadStages = [
 export function LeadsPage() {
   const [params, setParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const [selectedLead, setSelectedLead] = useState<LeadResponse | null>(null);
+  const [noteBody, setNoteBody] = useState("");
+  const [taskBody, setTaskBody] = useState("");
   const query = params.get("query") ?? "";
   const stage = params.get("stage") ?? "";
   const requestParams = useMemo(() => {
@@ -53,7 +58,34 @@ export function LeadsPage() {
   });
   const convert = useMutation({
     mutationFn: api.convertLead,
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["leads"] })
+    onSuccess: (result) => {
+      setSelectedLead(result.lead);
+      void queryClient.invalidateQueries({ queryKey: ["leads"] });
+    }
+  });
+  const notes = useQuery({
+    queryKey: ["lead", selectedLead?.id ?? "", "notes"],
+    queryFn: () => api.leadNotes(selectedLead!.id),
+    enabled: Boolean(selectedLead)
+  });
+  const tasks = useQuery({
+    queryKey: ["lead", selectedLead?.id ?? "", "tasks"],
+    queryFn: () => api.leadTasks(selectedLead!.id),
+    enabled: Boolean(selectedLead)
+  });
+  const addNote = useMutation({
+    mutationFn: (body: string) => api.addLeadNote(selectedLead!.id, body),
+    onSuccess: () => {
+      setNoteBody("");
+      void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "notes"] });
+    }
+  });
+  const addTask = useMutation({
+    mutationFn: (body: string) => api.addLeadTask(selectedLead!.id, { body }),
+    onSuccess: () => {
+      setTaskBody("");
+      void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "tasks"] });
+    }
   });
   const set = (name: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -109,24 +141,22 @@ export function LeadsPage() {
     {
       id: "convert",
       header: "",
-      cell: (lead) =>
-        lead.convertedMemberId ? (
-          <Link className="text-link" to={`/app/members/${lead.convertedMemberId}`}>
-            Member
-          </Link>
-        ) : (
+      cell: (lead) => (
+        <div className="form-actions">
           <Button
-            disabled={convert.isPending}
-            onClick={() => {
-              if (window.confirm(`Convert ${lead.contact.firstName} to a member?`))
-                convert.mutate(lead.id);
-            }}
+            onClick={() => setSelectedLead(lead)}
             size="small"
             variant="ghost"
           >
-            Convert
+            Open
           </Button>
-        )
+          {lead.convertedMemberId ? (
+            <Link className="text-link" to={`/app/members/${lead.convertedMemberId}`}>
+              Member
+            </Link>
+          ) : null}
+        </div>
+      )
     }
   ];
   return (
@@ -179,6 +209,116 @@ export function LeadsPage() {
       ) : (
         <DataTable columns={columns} data={leads.data.data} label="Leads" />
       )}
+
+      {selectedLead ? (
+        <Modal
+          description={`${selectedLead.contact.firstName} ${selectedLead.contact.lastName ?? ""}`.trim()}
+          isOpen={true}
+          onClose={() => setSelectedLead(null)}
+          title="Lead follow-up"
+        >
+          <div className="form-stack">
+            <Card>
+              <p>
+                <strong>Stage:</strong> {selectedLead.stage.replaceAll("_", " ")}
+              </p>
+              <p>
+                <strong>Contact:</strong>{" "}
+                {selectedLead.contact.phone ?? selectedLead.contact.email ?? "No contact method"}
+              </p>
+              {!selectedLead.convertedMemberId ? (
+                <Button
+                  loading={convert.isPending}
+                  onClick={() => convert.mutate(selectedLead.id)}
+                  variant="primary"
+                >
+                  Convert to member
+                </Button>
+              ) : (
+                <Link
+                  className="fitos-button fitos-button--secondary"
+                  to={`/app/members/${selectedLead.convertedMemberId}`}
+                >
+                  Open member profile
+                </Link>
+              )}
+            </Card>
+
+            <section>
+              <h3>Notes</h3>
+              <div className="form-actions">
+                <input
+                  aria-label="Lead note"
+                  className="fitos-control"
+                  onChange={(event) => setNoteBody(event.target.value)}
+                  placeholder="Add a follow-up note"
+                  value={noteBody}
+                />
+                <Button
+                  disabled={!noteBody.trim()}
+                  loading={addNote.isPending}
+                  onClick={() => addNote.mutate(noteBody.trim())}
+                  size="small"
+                >
+                  Add note
+                </Button>
+              </div>
+              {notes.data?.length ? (
+                <ul className="timeline">
+                  {notes.data.map((note) => (
+                    <li key={note.id}>
+                      <span />
+                      <div>
+                        <strong>{note.body}</strong>
+                        <p>{formatDate(note.createdAt)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">No notes yet.</p>
+              )}
+            </section>
+
+            <section>
+              <h3>Tasks</h3>
+              <div className="form-actions">
+                <input
+                  aria-label="Lead task"
+                  className="fitos-control"
+                  onChange={(event) => setTaskBody(event.target.value)}
+                  placeholder="Add a follow-up task"
+                  value={taskBody}
+                />
+                <Button
+                  disabled={!taskBody.trim()}
+                  loading={addTask.isPending}
+                  onClick={() => addTask.mutate(taskBody.trim())}
+                  size="small"
+                >
+                  Add task
+                </Button>
+              </div>
+              {tasks.data?.length ? (
+                <ul className="timeline">
+                  {tasks.data.map((task) => (
+                    <li key={task.id}>
+                      <span />
+                      <div>
+                        <strong>{task.body}</strong>
+                        <p>{task.completedAt ? "Completed" : "Open"}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">No tasks yet.</p>
+              )}
+            </section>
+            <ErrorNotice error={notes.error ?? tasks.error ?? addNote.error ?? addTask.error} />
+          </div>
+        </Modal>
+      ) : null}
     </>
   );
 }

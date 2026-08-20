@@ -558,20 +558,30 @@ function OccurrenceDetailModal({
 
         <div className="section-header-row">
           <h3>Attending members ({activeBookings.length})</h3>
-          {occurrence.status === "scheduled" &&
-          activeBookings.length < occurrence.capacity &&
-          can(auth, "booking:create") ? (
-            <Button
-              icon="plus"
-              onClick={() => {
-                onClose();
-                navigate(`/app/bookings/new?occurrenceId=${occurrence.id}`);
-              }}
-              size="small"
-            >
-              Book member
-            </Button>
-          ) : null}
+          <div className="form-actions">
+            {can(auth, "attendance:read") ? (
+              <Link
+                className="fitos-button fitos-button--secondary fitos-button--small"
+                to={`/app/attendance/roster/${occurrence.id}`}
+              >
+                Open class roster
+              </Link>
+            ) : null}
+            {occurrence.status === "scheduled" &&
+            activeBookings.length < occurrence.capacity &&
+            can(auth, "booking:create") ? (
+              <Button
+                icon="plus"
+                onClick={() => {
+                  onClose();
+                  navigate(`/app/bookings/new?occurrenceId=${occurrence.id}`);
+                }}
+                size="small"
+              >
+                Book member
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         {bookings.length ? (
