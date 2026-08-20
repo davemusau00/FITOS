@@ -169,7 +169,7 @@ test("owner completes the pilot operating river and reception is denied a refund
     const cancelDialog = page.getByRole("dialog", { name: "Cancel booking" });
     await cancelDialog.getByLabel("Cancellation reason").fill("Pilot cancellation restoration proof");
     await cancelDialog.getByRole("button", { name: "Confirm cancellation" }).click();
-    await expect(bookingRow.getByText("cancelled", { exact: true })).toBeVisible();
+    await expect(bookingRow.getByText("Cancelled", { exact: true })).toBeVisible();
     await page.goto(`/app/members/${memberId}`);
     await expect(page.getByText("Available credits").locator("..").locator("strong")).toHaveText(
       "3"
@@ -212,7 +212,7 @@ test("owner completes the pilot operating river and reception is denied a refund
     await page.getByRole("button", { name: "Check In" }).click();
     await expect(page.getByRole("button", { name: "Mark attended" })).toBeVisible();
     await page.getByRole("button", { name: "Mark attended" }).click();
-    await expect(page.getByText("attended", { exact: true })).toBeVisible();
+    await expect(page.getByText("Attended", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Sign out" }).click();
     await signIn(page, "reception@gym.fitos.test");
