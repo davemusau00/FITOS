@@ -143,11 +143,7 @@ export function LeadsPage() {
       header: "",
       cell: (lead) => (
         <div className="form-actions">
-          <Button
-            onClick={() => setSelectedLead(lead)}
-            size="small"
-            variant="ghost"
-          >
+          <Button onClick={() => setSelectedLead(lead)} size="small" variant="ghost">
             Open
           </Button>
           {lead.convertedMemberId ? (

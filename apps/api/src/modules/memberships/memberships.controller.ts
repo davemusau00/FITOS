@@ -58,7 +58,12 @@ const cancelMembershipSchema = z
 const creditAdjustmentSchema = z
   .object({
     membershipId: z.string().uuid(),
-    delta: z.coerce.number().int().min(-10_000).max(10_000).refine((value) => value !== 0),
+    delta: z.coerce
+      .number()
+      .int()
+      .min(-10_000)
+      .max(10_000)
+      .refine((value) => value !== 0),
     reason: z.string().trim().min(1).max(255)
   })
   .strict();

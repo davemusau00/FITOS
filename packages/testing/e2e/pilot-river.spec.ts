@@ -167,7 +167,9 @@ test("owner completes the pilot operating river and reception is denied a refund
     const bookingRow = page.getByRole("row").filter({ hasText: fullName }).first();
     await bookingRow.getByRole("button", { name: "Cancel" }).click();
     const cancelDialog = page.getByRole("dialog", { name: "Cancel booking" });
-    await cancelDialog.getByLabel("Cancellation reason").fill("Pilot cancellation restoration proof");
+    await cancelDialog
+      .getByLabel("Cancellation reason")
+      .fill("Pilot cancellation restoration proof");
     await cancelDialog.getByRole("button", { name: "Confirm cancellation" }).click();
     await expect(bookingRow.getByText("Cancelled", { exact: true })).toBeVisible();
     await page.goto(`/app/members/${memberId}`);
@@ -220,24 +222,27 @@ test("owner completes the pilot operating river and reception is denied a refund
     await expect(page.getByRole("row").filter({ hasText: paymentReference })).toBeVisible();
     await expect(page.getByRole("button", { name: "Refund" })).toHaveCount(0);
 
-    const refundStatus = await page.evaluate(async ({ paymentId }) => {
-      const csrf = document.cookie
-        .split(";")
-        .map((part) => part.trim())
-        .find((part) => part.startsWith("fitos_csrf="))
-        ?.slice("fitos_csrf=".length);
-      const response = await fetch(`/api/v1/payments/${paymentId}/refund`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
-          ...(csrf ? { "X-CSRF-Token": csrf } : {})
-        },
-        body: JSON.stringify({ reason: "Reception must not be able to refund" })
-      });
-      return response.status;
-    }, { paymentId: payment.id });
+    const refundStatus = await page.evaluate(
+      async ({ paymentId }) => {
+        const csrf = document.cookie
+          .split(";")
+          .map((part) => part.trim())
+          .find((part) => part.startsWith("fitos_csrf="))
+          ?.slice("fitos_csrf=".length);
+        const response = await fetch(`/api/v1/payments/${paymentId}/refund`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": crypto.randomUUID(),
+            ...(csrf ? { "X-CSRF-Token": csrf } : {})
+          },
+          body: JSON.stringify({ reason: "Reception must not be able to refund" })
+        });
+        return response.status;
+      },
+      { paymentId: payment.id }
+    );
     expect(refundStatus).toBe(403);
   });
 });

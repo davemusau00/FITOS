@@ -4,6 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 const packageDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(packageDirectory, "../..");
+const e2eDatabaseUrl = process.env.E2E_DATABASE_URL;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -36,7 +37,8 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         NODE_ENV: "test",
-        FITOS_REPOSITORY: "memory",
+        FITOS_REPOSITORY: e2eDatabaseUrl ? "drizzle" : "memory",
+        ...(e2eDatabaseUrl ? { DATABASE_URL: e2eDatabaseUrl } : {}),
         SESSION_SECRET: "e2e-session-secret-must-be-long-enough",
         CSRF_SECRET: "e2e-csrf-secret-must-be-long-enough",
         WEB_PUBLIC_URL: "http://127.0.0.1:5173",
