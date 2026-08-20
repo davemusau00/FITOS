@@ -14,7 +14,10 @@ import type {
   MemberResponse,
   LeadListFilters,
   LeadConversionResponse,
+  LeadNoteResponse,
   LeadResponse,
+  LeadTaskResponse,
+  CreateLeadTaskRequest,
   RequestActor,
   RoleResponse,
   StaffUserResponse,
@@ -330,6 +333,55 @@ export class CoreService {
     });
     await this.publish(eventOf(actor, "lead.converted", { leadId, memberId: result.member.id }));
     return result;
+  }
+
+  async addLeadNote(
+    actor: RequestActor,
+    requestId: string,
+    leadId: string,
+    body: string
+  ): Promise<LeadNoteResponse> {
+    const lead = await this.getLead(actor, leadId);
+    const note = await this.repository.addLeadNote(scopeOf(actor), leadId, body, actor.userId);
+    if (!note) throw new DomainError("RESOURCE_NOT_FOUND", "Lead not found.", 404);
+    await this.audit(actor, requestId, "lead.note_added", "lead", leadId, lead.branchId, {
+      noteId: note.id
+    });
+    return note;
+  }
+
+  async leadNotes(actor: RequestActor, leadId: string): Promise<LeadNoteResponse[]> {
+    await this.getLead(actor, leadId);
+    return this.repository.listLeadNotes(scopeOf(actor), leadId);
+  }
+
+  async createLeadTask(
+    actor: RequestActor,
+    requestId: string,
+    leadId: string,
+    input: CreateLeadTaskRequest
+  ): Promise<LeadTaskResponse> {
+    const lead = await this.getLead(actor, leadId);
+    if (
+      input.assigneeUserId &&
+      !(await this.repository.findStaffByUserId(scopeOf(actor), input.assigneeUserId))
+    ) {
+      throw new DomainError("VALIDATION_FAILED", "Task assignee is unavailable.", 400, {
+        assigneeUserId: ["Unknown tenant staff member."]
+      });
+    }
+    const task = await this.repository.createLeadTask(scopeOf(actor), leadId, input);
+    if (!task) throw new DomainError("RESOURCE_NOT_FOUND", "Lead not found.", 404);
+    await this.audit(actor, requestId, "lead.task_created", "lead", leadId, lead.branchId, {
+      taskId: task.id,
+      dueAt: task.dueAt
+    });
+    return task;
+  }
+
+  async leadTasks(actor: RequestActor, leadId: string): Promise<LeadTaskResponse[]> {
+    await this.getLead(actor, leadId);
+    return this.repository.listLeadTasks(scopeOf(actor), leadId);
   }
 
   async listStaff(actor: RequestActor): Promise<StaffUserResponse[]> {

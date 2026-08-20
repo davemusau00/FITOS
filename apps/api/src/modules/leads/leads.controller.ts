@@ -46,6 +46,14 @@ const stageSchema = z
     lostReason: z.string().trim().min(1).max(255).nullable().optional()
   })
   .strict();
+const noteSchema = z.object({ body: z.string().trim().min(1).max(10_000) }).strict();
+const taskSchema = z
+  .object({
+    body: z.string().trim().min(1).max(2_000),
+    dueAt: z.string().datetime().nullable().optional(),
+    assigneeUserId: z.string().uuid().nullable().optional()
+  })
+  .strict();
 const listSchema = z
   .object({
     query: z.string().trim().max(160).optional(),
@@ -119,5 +127,49 @@ export class LeadsController {
     @Param("leadId") leadId: string
   ) {
     return this.core.convertLead(actor, requestId, z.string().uuid().parse(leadId));
+  }
+
+  @Get(":leadId/notes")
+  @RequirePermission("lead:read")
+  notes(@Actor() actor: RequestActor, @Param("leadId") leadId: string) {
+    return this.core.leadNotes(actor, z.string().uuid().parse(leadId));
+  }
+
+  @Post(":leadId/notes")
+  @RequirePermission("lead:update")
+  addNote(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("leadId") leadId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.addLeadNote(
+      actor,
+      requestId,
+      z.string().uuid().parse(leadId),
+      noteSchema.parse(body).body
+    );
+  }
+
+  @Get(":leadId/tasks")
+  @RequirePermission("lead:read")
+  tasks(@Actor() actor: RequestActor, @Param("leadId") leadId: string) {
+    return this.core.leadTasks(actor, z.string().uuid().parse(leadId));
+  }
+
+  @Post(":leadId/tasks")
+  @RequirePermission("lead:update")
+  addTask(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("leadId") leadId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.createLeadTask(
+      actor,
+      requestId,
+      z.string().uuid().parse(leadId),
+      taskSchema.parse(body)
+    );
   }
 }

@@ -134,6 +134,23 @@ describe("HTTP security boundary", () => {
     const lead = await created.json();
     expect(lead.stage).toBe("new");
 
+    const note = await fetch(`${baseUrl}/api/v1/leads/${lead.id}/notes`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({ body: "Requested an evening trial." })
+    });
+    expect(note.status).toBe(201);
+    const task = await fetch(`${baseUrl}/api/v1/leads/${lead.id}/tasks`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({ body: "Call tomorrow" })
+    });
+    expect(task.status).toBe(201);
+    const notes = await fetch(`${baseUrl}/api/v1/leads/${lead.id}/notes`, {
+      headers: { cookie: `fitos_session=${gymOwner.session}; fitos_csrf=${gymOwner.csrf}` }
+    });
+    expect(await notes.json()).toHaveLength(1);
+
     const invalidLost = await fetch(`${baseUrl}/api/v1/leads/${lead.id}/stage`, {
       method: "POST",
       headers: protectedHeaders(gymOwner),
