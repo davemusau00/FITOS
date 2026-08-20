@@ -24,7 +24,7 @@ if test -f "$checksum_file"; then
   )
 fi
 
-temporary="$(mktemp /tmp/fitos-restore-XXXXXX.dump)"
+temporary="$(mktemp /tmp/fitos-restore.dump.XXXXXX)"
 trap 'rm -f "$temporary"' EXIT
 age --decrypt -i "$BACKUP_IDENTITY_FILE" -o "$temporary" "$BACKUP_FILE"
 pg_restore --clean --if-exists --no-owner --no-privileges --dbname "$RESTORE_DATABASE_URL" "$temporary"

@@ -38,6 +38,8 @@ jobs:
       FITOS_REPOSITORY: drizzle
       RUN_DATABASE_TESTS: true
       WEB_PUBLIC_URL: http://localhost:5173
+      FITOS_ENV_FILE: .env.example
+      FITOS_RELEASE_TAG: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,13 +52,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run db:migrate
       - run: npm run db:seed
-      - run: npm test
+      - name: Unit, integration, tenancy, and HTTP security tests
+        run: npm test
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - run: npm run build
       - name: Validate production Compose configuration
         run: FITOS_ENV_FILE=.env.example docker compose -f compose.yaml -f compose.production.yaml config --quiet
+      - name: Build production images
+        run: docker compose -f compose.yaml -f compose.production.yaml build api worker nginx backup
+      - name: Validate backup and restore scripts
+        run: >-
+          docker run --rm --entrypoint sh fitos-backup:${FITOS_RELEASE_TAG}
+          -n /usr/local/bin/fitos-backup /usr/local/bin/fitos-restore /usr/local/bin/fitos-verify-restore
       - name: Dependency audit
         run: npm audit --omit=dev --audit-level=high
       - name: Secret scan
