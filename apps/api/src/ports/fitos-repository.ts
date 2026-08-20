@@ -220,7 +220,8 @@ export interface FitosRepository {
   createBooking(
     scope: TenantScope,
     input: CreateBookingRequest,
-    actorUserId: string
+    actorUserId: string,
+    allowEntitlementOverride: boolean
   ): Promise<BookingResponse>;
   findBookingById(scope: TenantScope, bookingId: string): Promise<BookingResponse | null>;
   listBookings(
@@ -235,7 +236,10 @@ export interface FitosRepository {
 
   // Memberships & Credits
   listMembershipPlans(scope: TenantScope, branchId?: string): Promise<MembershipPlanResponse[]>;
-  findMembershipPlanById(scope: TenantScope, planId: string): Promise<MembershipPlanResponse | null>;
+  findMembershipPlanById(
+    scope: TenantScope,
+    planId: string
+  ): Promise<MembershipPlanResponse | null>;
   createMembershipPlan(
     scope: TenantScope,
     input: CreateMembershipPlanRequest
@@ -294,7 +298,10 @@ export interface FitosRepository {
     input: CreatePaymentRequest,
     actorUserId: string
   ): Promise<PaymentTransactionResponse>;
-  findPaymentById(scope: TenantScope, paymentId: string): Promise<PaymentTransactionResponse | null>;
+  findPaymentById(
+    scope: TenantScope,
+    paymentId: string
+  ): Promise<PaymentTransactionResponse | null>;
   listPayments(
     scope: TenantScope,
     filters: PaymentListFilters

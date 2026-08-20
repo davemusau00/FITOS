@@ -33,6 +33,9 @@ const createServiceSchema = z
     serviceType: z.enum(serviceTypes),
     durationMinutes: z.coerce.number().int().min(1).max(1_440),
     defaultCapacity: z.coerce.number().int().min(1).max(10_000).nullable().optional(),
+    creditsRequired: z.coerce.number().int().min(0).max(1_000).optional(),
+    cancellationCutoffMinutes: z.coerce.number().int().min(0).max(525_600).optional(),
+    restoreCreditOnLateCancel: z.boolean().optional(),
     price: moneySchema.nullable().optional(),
     publicVisible: z.boolean().optional()
   })
@@ -43,6 +46,9 @@ const updateServiceSchema = createServiceSchema
     slug: true,
     durationMinutes: true,
     defaultCapacity: true,
+    creditsRequired: true,
+    cancellationCutoffMinutes: true,
+    restoreCreditOnLateCancel: true,
     price: true,
     publicVisible: true
   })

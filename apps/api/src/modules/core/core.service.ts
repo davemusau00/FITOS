@@ -639,8 +639,17 @@ export class CoreService {
       );
     }
     await this.getMember(actor, input.memberId);
+    const allowEntitlementOverride = Boolean(input.overrideReason);
+    if (allowEntitlementOverride && !actor.permissions.includes("booking:override")) {
+      throw new DomainError("FORBIDDEN", "You cannot override booking entitlement rules.", 403);
+    }
     try {
-      const booking = await this.repository.createBooking(scopeOf(actor), input, actor.userId);
+      const booking = await this.repository.createBooking(
+        scopeOf(actor),
+        input,
+        actor.userId,
+        allowEntitlementOverride
+      );
       await this.audit(
         actor,
         requestId,
@@ -651,22 +660,18 @@ export class CoreService {
         {
           occurrenceId: booking.occurrenceId,
           memberId: booking.memberId,
-          source: booking.source
+          source: booking.source,
+          creditsDebited: booking.creditsDebited,
+          entitlementOverridden: Boolean(booking.entitlementOverrideReason)
         }
-      );
-      // Auto-debit 1 credit if member has an active membership
-      await this.repository.applyBookingCredit(
-        scopeOf(actor),
-        booking.id,
-        booking.memberId,
-        -1,
-        "booking",
-        "Class booking credit deduction"
       );
       await this.publish(eventOf(actor, "booking.created", { bookingId: booking.id }));
       return booking;
     } catch (error) {
-      if (error instanceof Error && /full|already has a booking/i.test(error.message)) {
+      if (
+        error instanceof Error &&
+        /full|already has a booking|insufficient credits/i.test(error.message)
+      ) {
         throw new DomainError("VALIDATION_FAILED", error.message, 409);
       }
       if (error instanceof Error && /unavailable/i.test(error.message)) {
@@ -685,8 +690,7 @@ export class CoreService {
     const existing = await this.getBooking(actor, bookingId);
     if (existing.status === "cancelled") return existing;
     const booking = await this.repository.cancelBooking(scopeOf(actor), bookingId, reason);
-    if (!booking)
-      throw new DomainError("RESOURCE_NOT_FOUND", "Booking not found.", 404);
+    if (!booking) throw new DomainError("RESOURCE_NOT_FOUND", "Booking not found.", 404);
     await this.audit(
       actor,
       requestId,
@@ -699,15 +703,6 @@ export class CoreService {
         reason
       }
     );
-    // Restore 1 credit if member had active credit debited for this booking
-    await this.repository.applyBookingCredit(
-      scopeOf(actor),
-      booking.id,
-      booking.memberId,
-      1,
-      "cancellation",
-      "Booking cancellation credit restoration"
-    );
     await this.publish(eventOf(actor, "booking.cancelled", { bookingId: booking.id }));
     return booking;
   }
@@ -719,10 +714,7 @@ export class CoreService {
     return this.repository.listMembershipPlans(scopeOf(actor), branchId);
   }
 
-  async getMembershipPlan(
-    actor: RequestActor,
-    planId: string
-  ): Promise<MembershipPlanResponse> {
+  async getMembershipPlan(actor: RequestActor, planId: string): Promise<MembershipPlanResponse> {
     const plan = await this.repository.findMembershipPlanById(scopeOf(actor), planId);
     if (!plan) throw new DomainError("RESOURCE_NOT_FOUND", "Membership plan not found.", 404);
     return plan;
@@ -759,8 +751,7 @@ export class CoreService {
   ): Promise<MembershipPlanResponse> {
     await this.getMembershipPlan(actor, planId);
     const updated = await this.repository.updateMembershipPlan(scopeOf(actor), planId, input);
-    if (!updated)
-      throw new DomainError("RESOURCE_NOT_FOUND", "Membership plan not found.", 404);
+    if (!updated) throw new DomainError("RESOURCE_NOT_FOUND", "Membership plan not found.", 404);
     await this.audit(
       actor,
       requestId,
@@ -789,11 +780,7 @@ export class CoreService {
   ): Promise<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }> {
     await this.getMember(actor, input.memberId);
     const plan = await this.getMembershipPlan(actor, input.planId);
-    const result = await this.repository.activateMembership(
-      scopeOf(actor),
-      input,
-      actor.userId
-    );
+    const result = await this.repository.activateMembership(scopeOf(actor), input, actor.userId);
     await this.audit(
       actor,
       requestId,
@@ -822,13 +809,8 @@ export class CoreService {
     membershipId: string,
     reason?: string
   ): Promise<MemberMembershipResponse> {
-    const membership = await this.repository.cancelMembership(
-      scopeOf(actor),
-      membershipId,
-      reason
-    );
-    if (!membership)
-      throw new DomainError("RESOURCE_NOT_FOUND", "Membership not found.", 404);
+    const membership = await this.repository.cancelMembership(scopeOf(actor), membershipId, reason);
+    if (!membership) throw new DomainError("RESOURCE_NOT_FOUND", "Membership not found.", 404);
     await this.audit(
       actor,
       requestId,
@@ -858,10 +840,7 @@ export class CoreService {
     return this.repository.listCreditLedger(scopeOf(actor), memberId);
   }
 
-  async getCreditBalance(
-    actor: RequestActor,
-    memberId: string
-  ): Promise<{ balance: number }> {
+  async getCreditBalance(actor: RequestActor, memberId: string): Promise<{ balance: number }> {
     await this.getMember(actor, memberId);
     const balance = await this.repository.getCreditBalance(scopeOf(actor), memberId);
     return { balance };
@@ -875,10 +854,7 @@ export class CoreService {
     return this.repository.listPayments(scopeOf(actor), filters);
   }
 
-  async getPayment(
-    actor: RequestActor,
-    paymentId: string
-  ): Promise<PaymentTransactionResponse> {
+  async getPayment(actor: RequestActor, paymentId: string): Promise<PaymentTransactionResponse> {
     const payment = await this.repository.findPaymentById(scopeOf(actor), paymentId);
     if (!payment) throw new DomainError("RESOURCE_NOT_FOUND", "Payment not found.", 404);
     return payment;

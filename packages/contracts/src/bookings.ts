@@ -17,6 +17,10 @@ export interface BookingResponse {
   bookedAt: string;
   cancelledAt: string | null;
   cancellationReason: string | null;
+  creditMembershipId: string | null;
+  creditsDebited: number;
+  entitlementOverrideReason: string | null;
+  lateCancelled: boolean;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -26,6 +30,8 @@ export interface CreateBookingRequest {
   occurrenceId: string;
   memberId: string;
   source?: BookingSource;
+  /** Required when an authorized staff member bypasses insufficient entitlement. */
+  overrideReason?: string;
 }
 
 export interface CancelBookingRequest {

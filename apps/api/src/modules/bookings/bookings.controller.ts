@@ -11,7 +11,8 @@ const createSchema = z
   .object({
     occurrenceId: z.string().uuid(),
     memberId: z.string().uuid(),
-    source: z.enum(["staff", "public", "member_portal"]).optional()
+    source: z.enum(["staff", "public", "member_portal"]).optional(),
+    overrideReason: z.string().trim().min(1).max(255).optional()
   })
   .strict();
 const cancellationSchema = z.object({ reason: z.string().trim().min(1).max(255) }).strict();

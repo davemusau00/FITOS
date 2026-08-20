@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, ilike, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import {
   auditEvents,
   bookings,
@@ -832,6 +832,9 @@ export class DrizzleFitosRepository implements FitosRepository {
         serviceType: input.serviceType,
         durationMinutes: input.durationMinutes,
         defaultCapacity: input.defaultCapacity ?? null,
+        creditsRequired: input.creditsRequired ?? 0,
+        cancellationCutoffMinutes: input.cancellationCutoffMinutes ?? 0,
+        restoreCreditOnLateCancel: input.restoreCreditOnLateCancel ?? false,
         amountMinor: input.price?.amountMinor ?? null,
         currency: input.price?.currency ?? null,
         publicVisible: input.publicVisible ?? false
@@ -855,6 +858,13 @@ export class DrizzleFitosRepository implements FitosRepository {
         ...(input.slug !== undefined ? { slug: input.slug } : {}),
         ...(input.durationMinutes !== undefined ? { durationMinutes: input.durationMinutes } : {}),
         ...(input.defaultCapacity !== undefined ? { defaultCapacity: input.defaultCapacity } : {}),
+        ...(input.creditsRequired !== undefined ? { creditsRequired: input.creditsRequired } : {}),
+        ...(input.cancellationCutoffMinutes !== undefined
+          ? { cancellationCutoffMinutes: input.cancellationCutoffMinutes }
+          : {}),
+        ...(input.restoreCreditOnLateCancel !== undefined
+          ? { restoreCreditOnLateCancel: input.restoreCreditOnLateCancel }
+          : {}),
         ...(input.price !== undefined
           ? {
               amountMinor: input.price?.amountMinor ?? null,
@@ -1011,7 +1021,8 @@ export class DrizzleFitosRepository implements FitosRepository {
   async createBooking(
     scope: TenantScope,
     input: CreateBookingRequest,
-    actorUserId: string
+    actorUserId: string,
+    allowEntitlementOverride: boolean
   ): Promise<BookingResponse> {
     const booking = await this.db.transaction(async (tx) => {
       await tx.execute(sql`
@@ -1032,6 +1043,17 @@ export class DrizzleFitosRepository implements FitosRepository {
         .limit(1);
       if (!occurrence || occurrence.status !== "scheduled")
         throw new Error("Occurrence unavailable.");
+      const [service] = await tx
+        .select()
+        .from(services)
+        .where(and(eq(services.id, occurrence.serviceId), eq(services.tenantId, scope.tenantId)))
+        .limit(1);
+      if (!service || !service.isActive) throw new Error("Service unavailable.");
+      await tx.execute(sql`
+        SELECT id FROM members
+        WHERE id = ${input.memberId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
       const [member] = await tx
         .select({ id: members.id })
         .from(members)
@@ -1068,6 +1090,50 @@ export class DrizzleFitosRepository implements FitosRepository {
           )
         );
       if ((capacity?.count ?? 0) >= occurrence.capacity) throw new Error("Occurrence is full.");
+
+      let creditMembership: typeof memberMemberships.$inferSelect | null = null;
+      if (service.creditsRequired > 0) {
+        const candidates = await tx
+          .select()
+          .from(memberMemberships)
+          .where(
+            and(
+              eq(memberMemberships.tenantId, scope.tenantId),
+              eq(memberMemberships.memberId, member.id),
+              eq(memberMemberships.status, "active"),
+              lte(memberMemberships.startsAt, occurrence.startsAt),
+              or(
+                isNull(memberMemberships.endsAt),
+                gt(memberMemberships.endsAt, occurrence.startsAt)
+              )
+            )
+          )
+          .orderBy(memberMemberships.endsAt, memberMemberships.createdAt);
+        for (const candidate of candidates) {
+          const snapshot = candidate.planSnapshot as MembershipPlanResponse;
+          if (snapshot.branchId && snapshot.branchId !== occurrence.branchId) continue;
+          const [balance] = await tx
+            .select({ total: sql<number>`coalesce(sum(${creditLedger.delta}), 0)::int` })
+            .from(creditLedger)
+            .where(
+              and(
+                eq(creditLedger.tenantId, scope.tenantId),
+                eq(creditLedger.membershipId, candidate.id)
+              )
+            );
+          if ((balance?.total ?? 0) >= service.creditsRequired) {
+            creditMembership = candidate;
+            break;
+          }
+        }
+        if (!creditMembership && !allowEntitlementOverride) {
+          throw new Error("Insufficient credits for this service.");
+        }
+        if (!creditMembership && !input.overrideReason?.trim()) {
+          throw new Error("An entitlement override reason is required.");
+        }
+      }
+
       const [created] = await tx
         .insert(bookings)
         .values({
@@ -1076,10 +1142,27 @@ export class DrizzleFitosRepository implements FitosRepository {
           occurrenceId: occurrence.id,
           memberId: member.id,
           source: input.source ?? "staff",
+          creditMembershipId: creditMembership?.id ?? null,
+          creditsDebited: creditMembership ? service.creditsRequired : 0,
+          entitlementOverrideReason:
+            service.creditsRequired > 0 && !creditMembership
+              ? (input.overrideReason?.trim() ?? null)
+              : null,
           createdByUserId: actorUserId
         })
         .returning();
       if (!created) throw new Error("Unable to create booking.");
+      if (creditMembership && service.creditsRequired > 0) {
+        await tx.insert(creditLedger).values({
+          tenantId: scope.tenantId,
+          membershipId: creditMembership.id,
+          memberId: member.id,
+          delta: -service.creditsRequired,
+          reason: "booking",
+          bookingId: created.id,
+          note: `Booking credit deduction (${service.creditsRequired})`
+        });
+      }
       return created;
     });
     return this.bookingResponse(booking);
@@ -1130,19 +1213,89 @@ export class DrizzleFitosRepository implements FitosRepository {
     bookingId: string,
     reason: string
   ): Promise<BookingResponse | null> {
-    const current = await this.findBookingById(scope, bookingId);
-    if (!current) return null;
-    if (current.status === "cancelled") return current;
-    const [booking] = await this.db
-      .update(bookings)
-      .set({
-        status: "cancelled",
-        cancelledAt: new Date(),
-        cancellationReason: reason,
-        updatedAt: new Date()
-      })
-      .where(and(eq(bookings.id, bookingId), eq(bookings.tenantId, scope.tenantId)))
-      .returning();
+    const booking = await this.db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM bookings
+        WHERE id = ${bookingId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [current] = await tx
+        .select()
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.id, bookingId),
+            eq(bookings.tenantId, scope.tenantId),
+            inArray(bookings.branchId, scope.branchIds)
+          )
+        )
+        .limit(1);
+      if (!current) return null;
+      if (current.status === "cancelled") return current;
+      const [occurrence] = await tx
+        .select()
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.id, current.occurrenceId),
+            eq(scheduleOccurrences.tenantId, scope.tenantId)
+          )
+        )
+        .limit(1);
+      if (!occurrence) throw new Error("Booking occurrence unavailable.");
+      const [service] = await tx
+        .select()
+        .from(services)
+        .where(and(eq(services.id, occurrence.serviceId), eq(services.tenantId, scope.tenantId)))
+        .limit(1);
+      if (!service) throw new Error("Booking service unavailable.");
+      const cancelledAt = new Date();
+      const cutoffAt = new Date(
+        occurrence.startsAt.getTime() - service.cancellationCutoffMinutes * 60_000
+      );
+      const lateCancelled = cancelledAt >= cutoffAt;
+      const [cancelled] = await tx
+        .update(bookings)
+        .set({
+          status: "cancelled",
+          cancelledAt,
+          cancellationReason: reason,
+          lateCancelled,
+          updatedAt: cancelledAt
+        })
+        .where(and(eq(bookings.id, bookingId), eq(bookings.tenantId, scope.tenantId)))
+        .returning();
+      if (!cancelled) throw new Error("Unable to cancel booking.");
+      const restoreCredit =
+        cancelled.creditsDebited > 0 &&
+        Boolean(cancelled.creditMembershipId) &&
+        (!lateCancelled || service.restoreCreditOnLateCancel);
+      if (restoreCredit && cancelled.creditMembershipId) {
+        const [existingRestoration] = await tx
+          .select({ id: creditLedger.id })
+          .from(creditLedger)
+          .where(
+            and(
+              eq(creditLedger.tenantId, scope.tenantId),
+              eq(creditLedger.bookingId, cancelled.id),
+              eq(creditLedger.reason, "cancellation")
+            )
+          )
+          .limit(1);
+        if (!existingRestoration) {
+          await tx.insert(creditLedger).values({
+            tenantId: scope.tenantId,
+            membershipId: cancelled.creditMembershipId,
+            memberId: cancelled.memberId,
+            delta: cancelled.creditsDebited,
+            reason: "cancellation",
+            bookingId: cancelled.id,
+            note: `Booking cancellation credit restoration (${cancelled.creditsDebited})`
+          });
+        }
+      }
+      return cancelled;
+    });
     return booking ? this.bookingResponse(booking) : null;
   }
 
@@ -1152,7 +1305,9 @@ export class DrizzleFitosRepository implements FitosRepository {
   ): Promise<MembershipPlanResponse[]> {
     const conditions = [eq(membershipPlans.tenantId, scope.tenantId)];
     if (branchId) {
-      conditions.push(or(eq(membershipPlans.branchId, branchId), isNull(membershipPlans.branchId))!);
+      conditions.push(
+        or(eq(membershipPlans.branchId, branchId), isNull(membershipPlans.branchId))!
+      );
     }
     const rows = await this.db
       .select()
@@ -1246,10 +1401,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .select()
       .from(memberMemberships)
       .where(
-        and(
-          eq(memberMemberships.id, membershipId),
-          eq(memberMemberships.tenantId, scope.tenantId)
-        )
+        and(eq(memberMemberships.id, membershipId), eq(memberMemberships.tenantId, scope.tenantId))
       )
       .limit(1);
     return row ? this.memberMembershipResponse(row) : null;
@@ -1310,10 +1462,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .update(memberMemberships)
       .set({ status: "cancelled", updatedAt: new Date() })
       .where(
-        and(
-          eq(memberMemberships.id, membershipId),
-          eq(memberMemberships.tenantId, scope.tenantId)
-        )
+        and(eq(memberMemberships.id, membershipId), eq(memberMemberships.tenantId, scope.tenantId))
       )
       .returning();
     return row ? this.memberMembershipResponse(row) : null;
@@ -1682,7 +1831,9 @@ export class DrizzleFitosRepository implements FitosRepository {
     if (filters.method) conditions.push(eq(paymentTransactions.method, filters.method));
     if (filters.status) conditions.push(eq(paymentTransactions.status, filters.status));
     if (filters.unmatched) {
-      conditions.push(or(isNull(paymentTransactions.memberId), isNull(paymentTransactions.allocationType))!);
+      conditions.push(
+        or(isNull(paymentTransactions.memberId), isNull(paymentTransactions.allocationType))!
+      );
     }
 
     const rows = await this.db
@@ -1714,10 +1865,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .update(paymentTransactions)
       .set({ status: "voided", note, updatedAt: new Date() })
       .where(
-        and(
-          eq(paymentTransactions.id, paymentId),
-          eq(paymentTransactions.tenantId, scope.tenantId)
-        )
+        and(eq(paymentTransactions.id, paymentId), eq(paymentTransactions.tenantId, scope.tenantId))
       )
       .returning();
     return row ? this.paymentResponse(row) : null;
@@ -1791,7 +1939,8 @@ export class DrizzleFitosRepository implements FitosRepository {
       inArray(attendanceRecords.branchId, scope.branchIds)
     ];
     if (filters.branchId) conditions.push(eq(attendanceRecords.branchId, filters.branchId));
-    if (filters.occurrenceId) conditions.push(eq(attendanceRecords.occurrenceId, filters.occurrenceId));
+    if (filters.occurrenceId)
+      conditions.push(eq(attendanceRecords.occurrenceId, filters.occurrenceId));
     if (filters.memberId) conditions.push(eq(attendanceRecords.memberId, filters.memberId));
     if (filters.status) conditions.push(eq(attendanceRecords.status, filters.status));
 
@@ -1828,10 +1977,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .update(attendanceRecords)
       .set(updates)
       .where(
-        and(
-          eq(attendanceRecords.id, recordId),
-          eq(attendanceRecords.tenantId, scope.tenantId)
-        )
+        and(eq(attendanceRecords.id, recordId), eq(attendanceRecords.tenantId, scope.tenantId))
       )
       .returning();
     return row ? this.attendanceResponse(row) : null;
@@ -2018,6 +2164,9 @@ export class DrizzleFitosRepository implements FitosRepository {
       serviceType: service.serviceType as ServiceResponse["serviceType"],
       durationMinutes: service.durationMinutes,
       defaultCapacity: service.defaultCapacity,
+      creditsRequired: service.creditsRequired,
+      cancellationCutoffMinutes: service.cancellationCutoffMinutes,
+      restoreCreditOnLateCancel: service.restoreCreditOnLateCancel,
       price:
         service.amountMinor === null || service.currency === null
           ? null
@@ -2073,6 +2222,10 @@ export class DrizzleFitosRepository implements FitosRepository {
       bookedAt: booking.bookedAt.toISOString(),
       cancelledAt: booking.cancelledAt?.toISOString() ?? null,
       cancellationReason: booking.cancellationReason,
+      creditMembershipId: booking.creditMembershipId,
+      creditsDebited: booking.creditsDebited,
+      entitlementOverrideReason: booking.entitlementOverrideReason,
+      lateCancelled: booking.lateCancelled,
       createdByUserId: booking.createdByUserId,
       createdAt: booking.createdAt.toISOString(),
       updatedAt: booking.updatedAt.toISOString()
@@ -2095,7 +2248,9 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  private membershipPlanResponse(plan: typeof membershipPlans.$inferSelect): MembershipPlanResponse {
+  private membershipPlanResponse(
+    plan: typeof membershipPlans.$inferSelect
+  ): MembershipPlanResponse {
     return {
       id: plan.id,
       tenantId: plan.tenantId,
@@ -2147,7 +2302,9 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  private paymentResponse(row: typeof paymentTransactions.$inferSelect): PaymentTransactionResponse {
+  private paymentResponse(
+    row: typeof paymentTransactions.$inferSelect
+  ): PaymentTransactionResponse {
     return {
       id: row.id,
       tenantId: row.tenantId,

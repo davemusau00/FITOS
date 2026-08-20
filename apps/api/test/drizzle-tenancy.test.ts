@@ -69,4 +69,69 @@ describeDatabase("Drizzle tenant isolation", () => {
       true
     );
   });
+
+  it("serializes the final member credit across concurrent bookings", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const plan = await repository.createMembershipPlan(gymScope, {
+      branchId: gym.branchIds[0],
+      name: `One Credit ${suffix}`,
+      includedCredits: 1,
+      durationDays: 30
+    });
+    const member = await repository.createMember(
+      gymScope,
+      {
+        contact: { firstName: `Credit Race ${suffix}` },
+        homeBranchId: gym.branchIds[0]!
+      },
+      null
+    );
+    await repository.activateMembership(gymScope, { memberId: member.id, planId: plan.id });
+    const service = await repository.createService(gymScope, {
+      branchId: gym.branchIds[0],
+      name: `Credit Service ${suffix}`,
+      serviceType: "class",
+      durationMinutes: 45,
+      defaultCapacity: 10,
+      creditsRequired: 1
+    });
+    const firstStart = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const secondStart = new Date(firstStart.getTime() + 2 * 60 * 60 * 1000);
+    const occurrences = await Promise.all(
+      [firstStart, secondStart].map((startsAt) =>
+        repository.createScheduleOccurrence(gymScope, {
+          branchId: gym.branchIds[0]!,
+          serviceId: service.id,
+          startsAt: startsAt.toISOString(),
+          endsAt: new Date(startsAt.getTime() + 45 * 60 * 1000).toISOString(),
+          capacity: 10
+        })
+      )
+    );
+
+    const attempts = await Promise.allSettled(
+      occurrences.map((occurrence) =>
+        repository.createBooking(
+          gymScope,
+          { occurrenceId: occurrence.id, memberId: member.id, source: "staff" },
+          gym.user.id,
+          false
+        )
+      )
+    );
+    expect(attempts.filter((attempt) => attempt.status === "fulfilled")).toHaveLength(1);
+    expect(attempts.filter((attempt) => attempt.status === "rejected")).toHaveLength(1);
+    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(0);
+    expect(
+      (await repository.listCreditLedger(gymScope, member.id)).filter(
+        (entry) => entry.reason === "booking"
+      )
+    ).toHaveLength(1);
+
+    expect(await repository.findMembershipPlanById(pilatesScope, plan.id)).toBeNull();
+    expect(await repository.listMemberMemberships(pilatesScope, member.id)).toEqual([]);
+    expect(await repository.listCreditLedger(pilatesScope, member.id)).toEqual([]);
+  });
 });

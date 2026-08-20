@@ -750,6 +750,9 @@ export class InMemoryFitosRepository implements FitosRepository {
       serviceType: input.serviceType,
       durationMinutes: input.durationMinutes,
       defaultCapacity: input.defaultCapacity ?? null,
+      creditsRequired: input.creditsRequired ?? 0,
+      cancellationCutoffMinutes: input.cancellationCutoffMinutes ?? 0,
+      restoreCreditOnLateCancel: input.restoreCreditOnLateCancel ?? false,
       price: input.price ?? null,
       publicVisible: input.publicVisible ?? false,
       isActive: true,
@@ -946,7 +949,8 @@ export class InMemoryFitosRepository implements FitosRepository {
   async createBooking(
     scope: TenantScope,
     input: CreateBookingRequest,
-    actorUserId: string
+    actorUserId: string,
+    allowEntitlementOverride: boolean
   ): Promise<BookingResponse> {
     const occurrence = this.occurrences.get(input.occurrenceId);
     if (
@@ -969,6 +973,30 @@ export class InMemoryFitosRepository implements FitosRepository {
       throw new Error("Member already has a booking for this occurrence.");
     }
     if (activeBookings.length >= occurrence.capacity) throw new Error("Occurrence is full.");
+    const service = this.services.get(occurrence.serviceId);
+    if (!service || service.tenantId !== scope.tenantId) throw new Error("Service unavailable.");
+    const creditsRequired = service.creditsRequired;
+    const eligibleMemberships = [...this.memberMemberships.values()]
+      .filter(
+        (membership) =>
+          membership.tenantId === scope.tenantId &&
+          membership.memberId === input.memberId &&
+          membership.status === "active" &&
+          membership.startsAt <= occurrence.startsAt &&
+          (!membership.endsAt || membership.endsAt > occurrence.startsAt) &&
+          (!membership.planSnapshot.branchId ||
+            membership.planSnapshot.branchId === occurrence.branchId)
+      )
+      .sort((a, b) => (a.endsAt ?? "9999").localeCompare(b.endsAt ?? "9999"));
+    const creditMembership = eligibleMemberships.find((membership) => {
+      const balance = [...this.creditLedger.values()]
+        .filter((entry) => entry.membershipId === membership.id)
+        .reduce((total, entry) => total + entry.delta, 0);
+      return balance >= creditsRequired;
+    });
+    if (creditsRequired > 0 && !creditMembership && !allowEntitlementOverride) {
+      throw new Error("Insufficient credits for this service.");
+    }
     const timestamp = now();
     const booking: StoredBooking = {
       id: randomUUID(),
@@ -981,11 +1009,30 @@ export class InMemoryFitosRepository implements FitosRepository {
       bookedAt: timestamp,
       cancelledAt: null,
       cancellationReason: null,
+      creditMembershipId: creditMembership?.id ?? null,
+      creditsDebited: creditMembership ? creditsRequired : 0,
+      entitlementOverrideReason:
+        creditsRequired > 0 && !creditMembership ? (input.overrideReason ?? null) : null,
+      lateCancelled: false,
       createdByUserId: actorUserId,
       createdAt: timestamp,
       updatedAt: timestamp
     };
     this.bookings.set(booking.id, booking);
+    if (creditMembership && creditsRequired > 0) {
+      const entry: StoredCreditLedgerEntry = {
+        id: randomUUID(),
+        tenantId: scope.tenantId,
+        membershipId: creditMembership.id,
+        memberId: booking.memberId,
+        delta: -creditsRequired,
+        reason: "booking",
+        bookingId: booking.id,
+        note: `Booking credit deduction (${creditsRequired})`,
+        createdAt: timestamp
+      };
+      this.creditLedger.set(entry.id, entry);
+    }
     return { ...booking };
   }
 
@@ -1032,10 +1079,39 @@ export class InMemoryFitosRepository implements FitosRepository {
     )
       return null;
     if (booking.status === "cancelled") return { ...booking };
+    const occurrence = this.occurrences.get(booking.occurrenceId);
+    const service = occurrence ? this.services.get(occurrence.serviceId) : undefined;
+    if (!occurrence || !service) throw new Error("Booking service unavailable.");
+    const cutoffAt =
+      new Date(occurrence.startsAt).getTime() - service.cancellationCutoffMinutes * 60_000;
+    const lateCancelled = Date.now() >= cutoffAt;
+    const restoreCredit =
+      booking.creditsDebited > 0 && (!lateCancelled || service.restoreCreditOnLateCancel);
     booking.status = "cancelled";
     booking.cancelledAt = now();
     booking.cancellationReason = reason;
+    booking.lateCancelled = lateCancelled;
     booking.updatedAt = booking.cancelledAt;
+    if (
+      restoreCredit &&
+      booking.creditMembershipId &&
+      ![...this.creditLedger.values()].some(
+        (entry) => entry.bookingId === booking.id && entry.reason === "cancellation"
+      )
+    ) {
+      const entry: StoredCreditLedgerEntry = {
+        id: randomUUID(),
+        tenantId: scope.tenantId,
+        membershipId: booking.creditMembershipId,
+        memberId: booking.memberId,
+        delta: booking.creditsDebited,
+        reason: "cancellation",
+        bookingId: booking.id,
+        note: `Booking cancellation credit restoration (${booking.creditsDebited})`,
+        createdAt: booking.cancelledAt
+      };
+      this.creditLedger.set(entry.id, entry);
+    }
     return { ...booking };
   }
 
@@ -1405,9 +1481,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     filters: PaymentListFilters
   ): Promise<CursorPage<PaymentTransactionResponse>> {
     const rows = [...this.payments.values()]
-      .filter(
-        (p) => p.tenantId === scope.tenantId && scope.branchIds.includes(p.branchId)
-      )
+      .filter((p) => p.tenantId === scope.tenantId && scope.branchIds.includes(p.branchId))
       .filter((p) => !filters.branchId || p.branchId === filters.branchId)
       .filter((p) => !filters.memberId || p.memberId === filters.memberId)
       .filter((p) => !filters.method || p.method === filters.method)
@@ -1436,7 +1510,10 @@ export class InMemoryFitosRepository implements FitosRepository {
       return null;
     }
     payment.status = "voided";
-    if (reason) payment.note = payment.note ? `${payment.note} | Void reason: ${reason}` : `Void reason: ${reason}`;
+    if (reason)
+      payment.note = payment.note
+        ? `${payment.note} | Void reason: ${reason}`
+        : `Void reason: ${reason}`;
     payment.updatedAt = now();
     return { ...payment };
   }
@@ -1454,10 +1531,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     let occurrenceId = input.occurrenceId;
     if (!occurrenceId) {
       const todayOccurrences = [...this.occurrences.values()].filter(
-        (o) =>
-          o.tenantId === scope.tenantId &&
-          o.branchId === branchId &&
-          o.status === "scheduled"
+        (o) => o.tenantId === scope.tenantId && o.branchId === branchId && o.status === "scheduled"
       );
       occurrenceId = todayOccurrences[0]?.id;
       if (!occurrenceId) {
@@ -1487,9 +1561,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     recordId: string
   ): Promise<AttendanceRecordResponse | null> {
     const record = this.attendance.get(recordId);
-    return record &&
-      record.tenantId === scope.tenantId &&
-      scope.branchIds.includes(record.branchId)
+    return record && record.tenantId === scope.tenantId && scope.branchIds.includes(record.branchId)
       ? { ...record }
       : null;
   }
@@ -1499,9 +1571,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     filters: AttendanceListFilters
   ): Promise<CursorPage<AttendanceRecordResponse>> {
     const rows = [...this.attendance.values()]
-      .filter(
-        (r) => r.tenantId === scope.tenantId && scope.branchIds.includes(r.branchId)
-      )
+      .filter((r) => r.tenantId === scope.tenantId && scope.branchIds.includes(r.branchId))
       .filter((r) => !filters.branchId || r.branchId === filters.branchId)
       .filter((r) => !filters.occurrenceId || r.occurrenceId === filters.occurrenceId)
       .filter((r) => !filters.memberId || r.memberId === filters.memberId)

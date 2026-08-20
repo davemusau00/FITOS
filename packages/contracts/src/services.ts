@@ -15,6 +15,11 @@ export interface ServiceResponse {
   serviceType: ServiceType;
   durationMinutes: number;
   defaultCapacity: number | null;
+  /** Credits debited atomically when this service is booked. Zero means no entitlement is required. */
+  creditsRequired: number;
+  /** A cancellation at or inside this window is late. */
+  cancellationCutoffMinutes: number;
+  restoreCreditOnLateCancel: boolean;
   price: Money | null;
   publicVisible: boolean;
   isActive: boolean;
@@ -29,6 +34,9 @@ export interface CreateServiceRequest {
   serviceType: ServiceType;
   durationMinutes: number;
   defaultCapacity?: number | null;
+  creditsRequired?: number;
+  cancellationCutoffMinutes?: number;
+  restoreCreditOnLateCancel?: boolean;
   price?: Money | null;
   publicVisible?: boolean;
 }
@@ -38,6 +46,9 @@ export interface UpdateServiceRequest {
   slug?: string;
   durationMinutes?: number;
   defaultCapacity?: number | null;
+  creditsRequired?: number;
+  cancellationCutoffMinutes?: number;
+  restoreCreditOnLateCancel?: boolean;
   price?: Money | null;
   publicVisible?: boolean;
   isActive?: boolean;

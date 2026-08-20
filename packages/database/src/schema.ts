@@ -325,6 +325,9 @@ export const services = pgTable(
     serviceType: varchar("service_type", { length: 30 }).notNull(),
     durationMinutes: integer("duration_minutes").notNull(),
     defaultCapacity: integer("default_capacity"),
+    creditsRequired: integer("credits_required").notNull().default(0),
+    cancellationCutoffMinutes: integer("cancellation_cutoff_minutes").notNull().default(0),
+    restoreCreditOnLateCancel: boolean("restore_credit_on_late_cancel").notNull().default(false),
     amountMinor: text("amount_minor"),
     currency: varchar("currency", { length: 3 }),
     publicVisible: boolean("public_visible").notNull().default(false),
@@ -418,6 +421,11 @@ export const bookings = pgTable(
     bookedAt: timestamp("booked_at", { withTimezone: true }).notNull().defaultNow(),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancellationReason: varchar("cancellation_reason", { length: 255 }),
+    // The forward migration adds the FK; keeping this as a UUID avoids a schema declaration cycle.
+    creditMembershipId: uuid("credit_membership_id"),
+    creditsDebited: integer("credits_debited").notNull().default(0),
+    entitlementOverrideReason: varchar("entitlement_override_reason", { length: 255 }),
+    lateCancelled: boolean("late_cancelled").notNull().default(false),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "set null"
     }),
@@ -438,7 +446,9 @@ export const membershipPlans = pgTable(
   "membership_plans",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
     branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
     name: varchar("name", { length: 160 }).notNull(),
     slug: varchar("slug", { length: 120 }).notNull(),
@@ -458,8 +468,12 @@ export const memberMemberships = pgTable(
   "member_memberships",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
-    memberId: uuid("member_id").notNull().references(() => members.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "restrict" }),
     planId: uuid("plan_id").references(() => membershipPlans.id, { onDelete: "set null" }),
     planSnapshot: jsonb("plan_snapshot").notNull(),
     status: varchar("status", { length: 30 }).notNull().default("active"),
@@ -468,16 +482,28 @@ export const memberMemberships = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
-  (table) => [index("idx_member_memberships_tenant_member_status").on(table.tenantId, table.memberId, table.status)]
+  (table) => [
+    index("idx_member_memberships_tenant_member_status").on(
+      table.tenantId,
+      table.memberId,
+      table.status
+    )
+  ]
 );
 
 export const creditLedger = pgTable(
   "credit_ledger",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
-    membershipId: uuid("membership_id").notNull().references(() => memberMemberships.id, { onDelete: "restrict" }),
-    memberId: uuid("member_id").notNull().references(() => members.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    membershipId: uuid("membership_id")
+      .notNull()
+      .references(() => memberMemberships.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "restrict" }),
     delta: integer("delta").notNull(),
     reason: varchar("reason", { length: 30 }).notNull(),
     bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "restrict" }),
@@ -485,8 +511,12 @@ export const creditLedger = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
-    index("idx_credit_ledger_tenant_membership_created").on(table.tenantId, table.membershipId, table.createdAt),
-    uniqueIndex("uq_credit_ledger_booking_consumption").on(table.bookingId)
+    index("idx_credit_ledger_tenant_membership_created").on(
+      table.tenantId,
+      table.membershipId,
+      table.createdAt
+    ),
+    uniqueIndex("uq_credit_ledger_booking_reason").on(table.bookingId, table.reason)
   ]
 );
 

@@ -68,6 +68,7 @@ describe("Memberships and Booking Credits Integration", () => {
       serviceType: "class",
       durationMinutes: 60,
       defaultCapacity: 10,
+      creditsRequired: 1,
       branchId: gym.branchIds[0]
     });
 
@@ -81,7 +82,7 @@ describe("Memberships and Booking Credits Integration", () => {
       capacity: 10
     });
 
-    // 6. Create booking and apply credit deduction
+    // 6. Booking and entitlement debit are one repository transaction.
     const booking = await repository.createBooking(
       gymScope,
       {
@@ -89,27 +90,18 @@ describe("Memberships and Booking Credits Integration", () => {
         memberId: member.id,
         source: "staff"
       },
-      gym.user.id
+      gym.user.id,
+      false
     );
 
     expect(booking.status).toBe("confirmed");
-
-    const debit = await repository.applyBookingCredit(
-      gymScope,
-      booking.id,
-      member.id,
-      -1,
-      "booking",
-      "Class booking credit deduction"
-    );
-
-    expect(debit?.delta).toBe(-1);
-    expect(debit?.reason).toBe("booking");
+    expect(booking.creditsDebited).toBe(1);
+    expect(booking.creditMembershipId).toBe(activation.membership.id);
 
     const balanceAfterBooking = await repository.getCreditBalance(gymScope, member.id);
     expect(balanceAfterBooking).toBe(9);
 
-    // 7. Cancel booking and restore credit
+    // 7. Cancellation and eligible restoration are one repository transaction.
     const cancelledBooking = await repository.cancelBooking(
       gymScope,
       booking.id,
@@ -118,17 +110,14 @@ describe("Memberships and Booking Credits Integration", () => {
 
     expect(cancelledBooking?.status).toBe("cancelled");
 
-    const creditRestore = await repository.applyBookingCredit(
-      gymScope,
-      booking.id,
-      member.id,
-      1,
-      "cancellation",
-      "Booking cancellation credit restoration"
-    );
-
-    expect(creditRestore?.delta).toBe(1);
-    expect(creditRestore?.reason).toBe("cancellation");
+    const ledger = await repository.listCreditLedger(gymScope, member.id);
+    expect(
+      ledger.find((entry) => entry.bookingId === booking.id && entry.reason === "booking")?.delta
+    ).toBe(-1);
+    expect(
+      ledger.find((entry) => entry.bookingId === booking.id && entry.reason === "cancellation")
+        ?.delta
+    ).toBe(1);
 
     const balanceRestored = await repository.getCreditBalance(gymScope, member.id);
     expect(balanceRestored).toBe(10);
