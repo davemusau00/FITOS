@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -13,6 +14,7 @@ import {
   uuid,
   varchar
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Foundation schema only. New domain tables are introduced with the vertical
@@ -609,9 +611,41 @@ export const paymentTransactions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
-    index("idx_payment_transactions_tenant_branch").on(table.tenantId, table.branchId),
-    index("idx_payment_transactions_member").on(table.memberId),
-    index("idx_payment_transactions_status").on(table.status)
+    index("idx_payment_transactions_tenant_branch_status_recorded").on(
+      table.tenantId,
+      table.branchId,
+      table.status,
+      table.recordedAt
+    ),
+    index("idx_payment_transactions_tenant_member_recorded").on(
+      table.tenantId,
+      table.memberId,
+      table.recordedAt
+    ),
+    uniqueIndex("uq_payment_provider_reference")
+      .on(table.tenantId, table.method, table.providerRef)
+      .where(sql`${table.providerRef} IS NOT NULL`),
+    check(
+      "payment_amount_positive",
+      sql`${table.amountMinor} ~ '^[0-9]+$' AND ${table.amountMinor}::numeric > 0`
+    ),
+    check("payment_currency_valid", sql`${table.currency} ~ '^[A-Z]{3}$'`),
+    check(
+      "payment_method_valid",
+      sql`${table.method} IN ('cash', 'bank_transfer', 'mpesa', 'card', 'other')`
+    ),
+    check(
+      "payment_status_valid",
+      sql`${table.status} IN ('pending', 'completed', 'refunded', 'voided')`
+    ),
+    check(
+      "payment_allocation_valid",
+      sql`(
+        (${table.allocationType} IS NULL AND ${table.allocationId} IS NULL)
+        OR (${table.allocationType} IN ('membership', 'booking') AND ${table.allocationId} IS NOT NULL)
+        OR (${table.allocationType} IN ('walkIn', 'other') AND ${table.allocationId} IS NULL)
+      ) AND (${table.allocationType} IS NULL OR ${table.memberId} IS NOT NULL)`
+    )
   ]
 );
 
@@ -629,9 +663,9 @@ export const attendanceRecords = pgTable(
     branchId: uuid("branch_id")
       .notNull()
       .references(() => branches.id, { onDelete: "restrict" }),
-    occurrenceId: uuid("occurrence_id")
-      .notNull()
-      .references(() => scheduleOccurrences.id, { onDelete: "restrict" }),
+    occurrenceId: uuid("occurrence_id").references(() => scheduleOccurrences.id, {
+      onDelete: "restrict"
+    }),
     memberId: uuid("member_id")
       .notNull()
       .references(() => members.id, { onDelete: "restrict" }),
@@ -643,9 +677,40 @@ export const attendanceRecords = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
-    index("idx_attendance_records_occurrence").on(table.occurrenceId),
-    index("idx_attendance_records_member").on(table.memberId),
-    index("idx_attendance_records_tenant_branch").on(table.tenantId, table.branchId)
+    uniqueIndex("uq_attendance_occurrence_member")
+      .on(table.tenantId, table.occurrenceId, table.memberId)
+      .where(sql`${table.occurrenceId} IS NOT NULL`),
+    uniqueIndex("uq_attendance_active_general_visit")
+      .on(table.tenantId, table.branchId, table.memberId)
+      .where(sql`${table.occurrenceId} IS NULL AND ${table.status} = 'checked_in'`),
+    index("idx_attendance_tenant_occurrence_status").on(
+      table.tenantId,
+      table.occurrenceId,
+      table.status
+    ),
+    index("idx_attendance_tenant_member_created").on(
+      table.tenantId,
+      table.memberId,
+      table.createdAt
+    ),
+    index("idx_attendance_tenant_branch_status_created").on(
+      table.tenantId,
+      table.branchId,
+      table.status,
+      table.createdAt
+    ),
+    check(
+      "attendance_status_valid",
+      sql`${table.status} IN ('booked', 'checked_in', 'attended', 'no_show', 'late_cancel')`
+    ),
+    check(
+      "attendance_checkin_timestamp_valid",
+      sql`${table.status} NOT IN ('checked_in', 'attended') OR ${table.checkedInAt} IS NOT NULL`
+    ),
+    check(
+      "attendance_override_reason_nonblank",
+      sql`${table.overrideReason} IS NULL OR length(trim(${table.overrideReason})) > 0`
+    )
   ]
 );
 

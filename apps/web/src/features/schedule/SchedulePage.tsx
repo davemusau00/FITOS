@@ -1,21 +1,18 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentProps } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
-import type { EventClickArg } from "@fullcalendar/core";
 import {
   Button,
   Card,
   DataTable,
   type DataTableColumn,
-  EmptyState,
   FormField,
-  Icon,
   Modal,
   PageHeader,
   StatusBadge
@@ -24,15 +21,13 @@ import type {
   BookingResponse,
   BranchResponse,
   CreateScheduleOccurrenceRequest,
-  MemberListItem,
   RoomResponse,
-  ScheduleOccurrenceResponse,
   ServiceResponse,
   StaffUserResponse
 } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
-import { ErrorNotice, PageLoading, formatDate, formatDateTime } from "../shared";
+import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 type OccurrenceFormValues = {
   branchId: string;
@@ -45,9 +40,15 @@ type OccurrenceFormValues = {
   capacity: number;
 };
 
+const calendarPlugins = [
+  dayGridPlugin,
+  timeGridPlugin,
+  listPlugin,
+  interactionPlugin
+] as unknown as ComponentProps<typeof FullCalendar>["plugins"];
+
 export function SchedulePage() {
   const { auth } = useAuth();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedBranch, setSelectedBranch] = useState(auth?.branches[0]?.id ?? "");
   const [selectedTrainer, setSelectedTrainer] = useState("");
@@ -74,9 +75,8 @@ export function SchedulePage() {
     }
   });
 
-  const occurrences = occurrencesQuery.data?.data ?? [];
-
   const calendarEvents = useMemo(() => {
+    const occurrences = occurrencesQuery.data?.data ?? [];
     return occurrences.map((occ) => {
       const service = services.data?.find((s) => s.id === occ.serviceId);
       const trainer = staff.data?.find((u) => u.user.id === occ.trainerUserId);
@@ -99,11 +99,7 @@ export function SchedulePage() {
         }
       };
     });
-  }, [occurrences, services.data, staff.data, rooms.data]);
-
-  const handleEventClick = (info: EventClickArg) => {
-    setSelectedOccurrenceId(info.event.id);
-  };
+  }, [occurrencesQuery.data?.data, services.data, staff.data, rooms.data]);
 
   if (branches.isLoading || services.isLoading) return <PageLoading />;
 
@@ -183,7 +179,7 @@ export function SchedulePage() {
             }}
             initialView="timeGridWeek"
             nowIndicator={true}
-            plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin] as any}
+            plugins={calendarPlugins}
             slotMaxTime="22:00:00"
             slotMinTime="05:30:00"
           />
@@ -263,7 +259,6 @@ function CreateOccurrenceModal({
     }
   });
 
-  const selectedServiceId = watch("serviceId");
   const selectedBranchId = watch("branchId");
 
   const branchRooms = useMemo(() => {

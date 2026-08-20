@@ -1,7 +1,13 @@
 import { Body, Controller, Get, Headers, Inject, Param, Post, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
-import type { CreatePaymentRequest, PaymentListFilters, RequestActor } from "@fitos/contracts";
+import type {
+  CreatePaymentRequest,
+  PaymentListFilters,
+  ReconcilePaymentRequest,
+  RefundPaymentRequest,
+  RequestActor
+} from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { IdempotencyService } from "../../common/idempotency/idempotency.service.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
@@ -29,9 +35,31 @@ const createPaymentSchema = z
 
 const voidPaymentSchema = z
   .object({
-    reason: z.string().trim().max(255).optional()
+    reason: z.string().trim().min(1).max(255)
   })
   .strict();
+
+const reconcilePaymentSchema = z
+  .object({
+    memberId: z.string().uuid(),
+    allocationType: z.enum(["membership", "booking", "walkIn", "other"]),
+    allocationId: z.string().uuid().nullable().optional(),
+    reason: z.string().trim().min(1).max(255)
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const requiresTarget =
+      value.allocationType === "membership" || value.allocationType === "booking";
+    if (requiresTarget !== Boolean(value.allocationId)) {
+      context.addIssue({
+        code: "custom",
+        path: ["allocationId"],
+        message: requiresTarget
+          ? "An allocation target is required."
+          : "Walk-in and other allocations cannot have a target ID."
+      });
+    }
+  });
 
 const paymentListQuerySchema = z
   .object({
@@ -102,5 +130,47 @@ export class PaymentsController {
       z.string().uuid().parse(paymentId),
       parsed.reason
     );
+  }
+
+  @Post(":paymentId/reconcile")
+  @RequirePermission("payment:match")
+  reconcile(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") key: string | undefined,
+    @Param("paymentId") paymentId: string,
+    @Body() body: unknown
+  ) {
+    const id = z.string().uuid().parse(paymentId);
+    const input = reconcilePaymentSchema.parse(body) satisfies ReconcilePaymentRequest;
+    return this.idempotency.execute({
+      actor,
+      operation: `payment:reconcile:${id}`,
+      key,
+      body: input,
+      status: 200,
+      action: () => this.core.reconcilePayment(actor, requestId, id, input)
+    });
+  }
+
+  @Post(":paymentId/refund")
+  @RequirePermission("payment:refund")
+  refund(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") key: string | undefined,
+    @Param("paymentId") paymentId: string,
+    @Body() body: unknown
+  ) {
+    const id = z.string().uuid().parse(paymentId);
+    const input = voidPaymentSchema.parse(body) satisfies RefundPaymentRequest;
+    return this.idempotency.execute({
+      actor,
+      operation: `payment:refund:${id}`,
+      key,
+      body: input,
+      status: 200,
+      action: () => this.core.refundPayment(actor, requestId, id, input.reason)
+    });
   }
 }

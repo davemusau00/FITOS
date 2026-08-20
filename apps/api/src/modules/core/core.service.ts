@@ -42,9 +42,12 @@ import type {
   MemberMembershipResponse,
   ActivateMembershipRequest,
   CreditLedgerEntryResponse,
+  ManualCreditAdjustmentRequest,
   PaymentTransactionResponse,
   CreatePaymentRequest,
   PaymentListFilters,
+  PaymentAllocationType,
+  ReconcilePaymentRequest,
   AttendanceRecordResponse,
   CheckInRequest,
   UpdateRosterStatusRequest,
@@ -848,6 +851,48 @@ export class CoreService {
     return { balance };
   }
 
+  async adjustCredit(
+    actor: RequestActor,
+    requestId: string,
+    memberId: string,
+    input: ManualCreditAdjustmentRequest
+  ): Promise<CreditLedgerEntryResponse> {
+    await this.getMember(actor, memberId);
+    const membership = await this.repository.findMemberMembershipById(
+      scopeOf(actor),
+      input.membershipId
+    );
+    if (!membership || membership.memberId !== memberId) {
+      throw new DomainError("RESOURCE_NOT_FOUND", "Membership not found.", 404);
+    }
+    let entry: CreditLedgerEntryResponse;
+    try {
+      entry = await this.repository.adjustCredit(scopeOf(actor), memberId, input, actor.userId);
+    } catch (error) {
+      if (error instanceof Error && /balance|membership|adjustment/i.test(error.message)) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 409);
+      }
+      throw error;
+    }
+    await this.audit(
+      actor,
+      requestId,
+      "credit.adjusted",
+      "member_membership",
+      membership.id,
+      membership.planSnapshot.branchId,
+      { memberId, delta: entry.delta, reason: input.reason }
+    );
+    await this.publish(
+      eventOf(actor, "credit.adjusted", {
+        membershipId: membership.id,
+        memberId,
+        delta: entry.delta
+      })
+    );
+    return entry;
+  }
+
   async listPayments(
     actor: RequestActor,
     filters: PaymentListFilters
@@ -868,8 +913,25 @@ export class CoreService {
     input: CreatePaymentRequest
   ): Promise<PaymentTransactionResponse> {
     this.assertBranchesAccessible(actor, [input.branchId]);
-    if (input.memberId) await this.getMember(actor, input.memberId);
-    const payment = await this.repository.createPayment(scopeOf(actor), input, actor.userId);
+    await this.assertPaymentAllocation(
+      actor,
+      input.branchId,
+      input.memberId ?? null,
+      input.allocationType ?? null,
+      input.allocationId ?? null
+    );
+    let payment: PaymentTransactionResponse;
+    try {
+      payment = await this.repository.createPayment(scopeOf(actor), input, actor.userId);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        /amount|currency|allocation|member|booking|membership/i.test(error.message)
+      ) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 400);
+      }
+      throw error;
+    }
     await this.audit(
       actor,
       requestId,
@@ -893,12 +955,21 @@ export class CoreService {
     actor: RequestActor,
     requestId: string,
     paymentId: string,
-    reason?: string
+    reason: string
   ): Promise<PaymentTransactionResponse> {
     const existing = await this.getPayment(actor, paymentId);
     if (existing.status === "voided") return existing;
+    if (existing.status !== "completed") {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        `A ${existing.status} payment cannot be voided.`,
+        409
+      );
+    }
     const payment = await this.repository.voidPayment(scopeOf(actor), paymentId, reason);
-    if (!payment) throw new DomainError("RESOURCE_NOT_FOUND", "Payment not found.", 404);
+    if (!payment) {
+      throw new DomainError("VALIDATION_FAILED", "Payment status changed; refresh and retry.", 409);
+    }
     await this.audit(
       actor,
       requestId,
@@ -909,6 +980,94 @@ export class CoreService {
       { reason }
     );
     await this.publish(eventOf(actor, "payment.voided", { paymentId: payment.id }));
+    return payment;
+  }
+
+  async reconcilePayment(
+    actor: RequestActor,
+    requestId: string,
+    paymentId: string,
+    input: ReconcilePaymentRequest
+  ): Promise<PaymentTransactionResponse> {
+    const existing = await this.getPayment(actor, paymentId);
+    if (existing.status !== "completed") {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        `A ${existing.status} payment cannot be reconciled.`,
+        409
+      );
+    }
+    await this.assertPaymentAllocation(
+      actor,
+      existing.branchId,
+      input.memberId,
+      input.allocationType,
+      input.allocationId ?? null
+    );
+    let payment: PaymentTransactionResponse | null;
+    try {
+      payment = await this.repository.reconcilePayment(scopeOf(actor), paymentId, input);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        /already|allocation|member|booking|membership/i.test(error.message)
+      ) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 409);
+      }
+      throw error;
+    }
+    if (!payment) throw new DomainError("RESOURCE_NOT_FOUND", "Payment not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "payment.reconciled",
+      "payment_transaction",
+      payment.id,
+      payment.branchId,
+      {
+        memberId: payment.memberId,
+        allocationType: payment.allocationType,
+        allocationId: payment.allocationId,
+        reason: input.reason
+      }
+    );
+    await this.publish(eventOf(actor, "payment.reconciled", { paymentId: payment.id }));
+    return payment;
+  }
+
+  async refundPayment(
+    actor: RequestActor,
+    requestId: string,
+    paymentId: string,
+    reason: string
+  ): Promise<PaymentTransactionResponse> {
+    const existing = await this.getPayment(actor, paymentId);
+    if (existing.status === "refunded") return existing;
+    if (existing.status !== "completed") {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        `A ${existing.status} payment cannot be refunded.`,
+        409
+      );
+    }
+    const payment = await this.repository.refundPayment(scopeOf(actor), paymentId, reason);
+    if (!payment) {
+      throw new DomainError("VALIDATION_FAILED", "Payment status changed; refresh and retry.", 409);
+    }
+    await this.audit(
+      actor,
+      requestId,
+      "payment.refunded",
+      "payment_transaction",
+      payment.id,
+      payment.branchId,
+      {
+        amountMinor: payment.amount.amountMinor,
+        currency: payment.amount.currency,
+        reason
+      }
+    );
+    await this.publish(eventOf(actor, "payment.refunded", { paymentId: payment.id }));
     return payment;
   }
 
@@ -937,7 +1096,28 @@ export class CoreService {
   ): Promise<AttendanceRecordResponse> {
     this.assertBranchesAccessible(actor, [branchId]);
     await this.getMember(actor, input.memberId);
-    const record = await this.repository.checkIn(scopeOf(actor), input, actor.userId, branchId);
+    const allowOverride = Boolean(input.overrideReason);
+    if (allowOverride && !actor.permissions.includes("attendance:override")) {
+      throw new DomainError("FORBIDDEN", "You cannot override attendance policy.", 403);
+    }
+    let record: AttendanceRecordResponse;
+    try {
+      record = await this.repository.checkIn(
+        scopeOf(actor),
+        input,
+        actor.userId,
+        branchId,
+        allowOverride
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        /booking|membership|entitlement|occurrence|already/i.test(error.message)
+      ) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 409);
+      }
+      throw error;
+    }
     await this.audit(
       actor,
       requestId,
@@ -948,7 +1128,9 @@ export class CoreService {
       {
         memberId: record.memberId,
         occurrenceId: record.occurrenceId,
-        status: record.status
+        status: record.status,
+        overridden: allowOverride,
+        overrideReason: record.overrideReason
       }
     );
     await this.publish(eventOf(actor, "attendance.checked_in", { attendanceId: record.id }));
@@ -961,8 +1143,36 @@ export class CoreService {
     recordId: string,
     input: UpdateRosterStatusRequest
   ): Promise<AttendanceRecordResponse> {
-    await this.getAttendanceRecord(actor, recordId);
-    const record = await this.repository.updateAttendanceStatus(scopeOf(actor), recordId, input);
+    const existing = await this.getAttendanceRecord(actor, recordId);
+    if (existing.status === input.status) return existing;
+    const normalTransitions: Record<
+      AttendanceRecordResponse["status"],
+      readonly AttendanceRecordResponse["status"][]
+    > = {
+      booked: ["checked_in", "no_show", "late_cancel"],
+      checked_in: ["attended"],
+      attended: [],
+      no_show: [],
+      late_cancel: []
+    };
+    const normalTransition = normalTransitions[existing.status].includes(input.status);
+    const allowOverride = !normalTransition && Boolean(input.overrideReason);
+    if (!normalTransition && !allowOverride) {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        `Attendance cannot move from ${existing.status} to ${input.status} without an override reason.`,
+        409
+      );
+    }
+    if (allowOverride && !actor.permissions.includes("attendance:override")) {
+      throw new DomainError("FORBIDDEN", "You cannot override attendance status rules.", 403);
+    }
+    const record = await this.repository.updateAttendanceStatus(
+      scopeOf(actor),
+      recordId,
+      input,
+      allowOverride
+    );
     if (!record) throw new DomainError("RESOURCE_NOT_FOUND", "Attendance record not found.", 404);
     await this.audit(
       actor,
@@ -973,6 +1183,8 @@ export class CoreService {
       record.branchId,
       {
         status: record.status,
+        previousStatus: existing.status,
+        overridden: allowOverride,
         overrideReason: record.overrideReason
       }
     );
@@ -1093,6 +1305,87 @@ export class CoreService {
   private assertBranchesAccessible(actor: RequestActor, branchIds: string[]): void {
     if (!branchIds.length || branchIds.some((branchId) => !actor.branchIds.includes(branchId))) {
       throw new DomainError("BRANCH_ACCESS_DENIED", "One or more branches are unavailable.", 404);
+    }
+  }
+
+  private async assertPaymentAllocation(
+    actor: RequestActor,
+    branchId: string,
+    memberId: string | null,
+    allocationType: PaymentAllocationType | null,
+    allocationId: string | null
+  ): Promise<void> {
+    if (!memberId) {
+      if (allocationType || allocationId) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "A payment cannot be allocated until a member is selected.",
+          400
+        );
+      }
+      return;
+    }
+
+    await this.getMember(actor, memberId);
+    if (!allocationType) {
+      if (allocationId) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "An allocation type is required for the target.",
+          400
+        );
+      }
+      return;
+    }
+
+    if (allocationType === "booking") {
+      if (!allocationId) {
+        throw new DomainError("VALIDATION_FAILED", "A booking target is required.", 400);
+      }
+      const booking = await this.getBooking(actor, allocationId);
+      if (
+        booking.memberId !== memberId ||
+        booking.branchId !== branchId ||
+        booking.status !== "confirmed"
+      ) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "The booking is not an active booking for this member and branch.",
+          400
+        );
+      }
+      return;
+    }
+
+    if (allocationType === "membership") {
+      if (!allocationId) {
+        throw new DomainError("VALIDATION_FAILED", "A membership target is required.", 400);
+      }
+      const membership = await this.repository.findMemberMembershipById(
+        scopeOf(actor),
+        allocationId
+      );
+      if (
+        !membership ||
+        membership.memberId !== memberId ||
+        !["scheduled", "active"].includes(membership.status) ||
+        (membership.planSnapshot.branchId !== null && membership.planSnapshot.branchId !== branchId)
+      ) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "The membership is not eligible for this member and branch.",
+          400
+        );
+      }
+      return;
+    }
+
+    if (allocationId) {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        "Walk-in and other allocations cannot have a target ID.",
+        400
+      );
     }
   }
 

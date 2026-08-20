@@ -72,10 +72,12 @@ import type {
   MemberMembershipResponse,
   ActivateMembershipRequest,
   CreditLedgerEntryResponse,
+  ManualCreditAdjustmentRequest,
   CreditReason,
   PaymentTransactionResponse,
   CreatePaymentRequest,
   PaymentListFilters,
+  ReconcilePaymentRequest,
   AttendanceRecordResponse,
   CheckInRequest,
   UpdateRosterStatusRequest,
@@ -1548,6 +1550,71 @@ export class DrizzleFitosRepository implements FitosRepository {
     return Number(result?.total ?? 0);
   }
 
+  async adjustCredit(
+    scope: TenantScope,
+    memberId: string,
+    input: ManualCreditAdjustmentRequest,
+    _actorUserId: string
+  ): Promise<CreditLedgerEntryResponse> {
+    if (!Number.isInteger(input.delta) || input.delta === 0) {
+      throw new Error("Credit adjustment must be a non-zero integer.");
+    }
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM member_memberships
+        WHERE id = ${input.membershipId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [membership] = await tx
+        .select()
+        .from(memberMemberships)
+        .where(
+          and(
+            eq(memberMemberships.id, input.membershipId),
+            eq(memberMemberships.tenantId, scope.tenantId),
+            eq(memberMemberships.memberId, memberId),
+            eq(memberMemberships.status, "active")
+          )
+        )
+        .limit(1);
+      const snapshot = membership?.planSnapshot as { branchId?: string | null } | undefined;
+      if (
+        !membership ||
+        (snapshot?.branchId !== null &&
+          snapshot?.branchId !== undefined &&
+          !scope.branchIds.includes(snapshot.branchId))
+      ) {
+        throw new Error("Active membership unavailable for adjustment.");
+      }
+      const [current] = await tx
+        .select({ total: sql<string>`coalesce(sum(${creditLedger.delta}), 0)` })
+        .from(creditLedger)
+        .where(
+          and(
+            eq(creditLedger.tenantId, scope.tenantId),
+            eq(creditLedger.membershipId, membership.id)
+          )
+        );
+      if (Number(current?.total ?? 0) + input.delta < 0) {
+        throw new Error("Credit adjustment would create a negative balance.");
+      }
+      const [entry] = await tx
+        .insert(creditLedger)
+        .values({
+          tenantId: scope.tenantId,
+          membershipId: membership.id,
+          memberId,
+          delta: input.delta,
+          reason: "manual_adjustment",
+          bookingId: null,
+          note: input.reason
+        })
+        .returning();
+      if (!entry) throw new Error("Unable to record credit adjustment.");
+      return this.creditLedgerEntryResponse(entry);
+    });
+  }
+
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {
     const rows = await this.db
       .select({ membership: tenantUsers, user: users, role: roles })
@@ -1800,6 +1867,19 @@ export class DrizzleFitosRepository implements FitosRepository {
     if (!scope.branchIds.includes(input.branchId)) {
       throw new Error("Branch unavailable.");
     }
+    if (!/^\d+$/.test(input.amount.amountMinor) || BigInt(input.amount.amountMinor) <= 0n) {
+      throw new Error("Payment amount must be greater than zero.");
+    }
+    if (!/^[A-Z]{3}$/.test(input.amount.currency)) {
+      throw new Error("Payment currency must be a three-letter uppercase code.");
+    }
+    await this.assertPaymentAllocationTarget(
+      scope,
+      input.branchId,
+      input.memberId ?? null,
+      input.allocationType ?? null,
+      input.allocationId ?? null
+    );
     const [row] = await this.db
       .insert(paymentTransactions)
       .values({
@@ -1873,47 +1953,326 @@ export class DrizzleFitosRepository implements FitosRepository {
   async voidPayment(
     scope: TenantScope,
     paymentId: string,
-    reason?: string
+    reason: string
+  ): Promise<PaymentTransactionResponse | null> {
+    return this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(paymentTransactions)
+        .where(
+          and(
+            eq(paymentTransactions.id, paymentId),
+            eq(paymentTransactions.tenantId, scope.tenantId),
+            inArray(paymentTransactions.branchId, scope.branchIds)
+          )
+        )
+        .for("update")
+        .limit(1);
+      if (!current) return null;
+      if (current.status === "voided") return this.paymentResponse(current);
+      if (current.status !== "completed") return null;
+      const note = current.note
+        ? `${current.note} | Void reason: ${reason}`
+        : `Void reason: ${reason}`;
+      const [row] = await tx
+        .update(paymentTransactions)
+        .set({ status: "voided", note, updatedAt: new Date() })
+        .where(
+          and(
+            eq(paymentTransactions.id, paymentId),
+            eq(paymentTransactions.tenantId, scope.tenantId),
+            eq(paymentTransactions.status, "completed")
+          )
+        )
+        .returning();
+      return row ? this.paymentResponse(row) : null;
+    });
+  }
+
+  async reconcilePayment(
+    scope: TenantScope,
+    paymentId: string,
+    input: ReconcilePaymentRequest
   ): Promise<PaymentTransactionResponse | null> {
     const current = await this.findPaymentById(scope, paymentId);
     if (!current) return null;
-    const note = reason
-      ? current.note
-        ? `${current.note} | Void reason: ${reason}`
-        : `Void reason: ${reason}`
-      : current.note;
-    const [row] = await this.db
-      .update(paymentTransactions)
-      .set({ status: "voided", note, updatedAt: new Date() })
+    await this.assertPaymentAllocationTarget(
+      scope,
+      current.branchId,
+      input.memberId,
+      input.allocationType,
+      input.allocationId ?? null
+    );
+    return this.db.transaction(async (tx) => {
+      const [payment] = await tx
+        .select()
+        .from(paymentTransactions)
+        .where(
+          and(
+            eq(paymentTransactions.id, paymentId),
+            eq(paymentTransactions.tenantId, scope.tenantId),
+            inArray(paymentTransactions.branchId, scope.branchIds)
+          )
+        )
+        .for("update")
+        .limit(1);
+      if (!payment) return null;
+      if (payment.status !== "completed") {
+        throw new Error("Only completed payments can be reconciled.");
+      }
+      if (
+        payment.memberId === input.memberId &&
+        payment.allocationType === input.allocationType &&
+        payment.allocationId === (input.allocationId ?? null)
+      ) {
+        return this.paymentResponse(payment);
+      }
+      if (
+        (payment.memberId && payment.memberId !== input.memberId) ||
+        (payment.allocationType && payment.allocationType !== input.allocationType) ||
+        (payment.allocationId && payment.allocationId !== (input.allocationId ?? null))
+      ) {
+        throw new Error("Payment is already reconciled to a different target.");
+      }
+      const note = payment.note
+        ? `${payment.note} | Reconciliation: ${input.reason}`
+        : `Reconciliation: ${input.reason}`;
+      const [row] = await tx
+        .update(paymentTransactions)
+        .set({
+          memberId: input.memberId,
+          allocationType: input.allocationType,
+          allocationId: input.allocationId ?? null,
+          note,
+          updatedAt: new Date()
+        })
+        .where(eq(paymentTransactions.id, payment.id))
+        .returning();
+      return row ? this.paymentResponse(row) : null;
+    });
+  }
+
+  async refundPayment(
+    scope: TenantScope,
+    paymentId: string,
+    reason: string
+  ): Promise<PaymentTransactionResponse | null> {
+    return this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(paymentTransactions)
+        .where(
+          and(
+            eq(paymentTransactions.id, paymentId),
+            eq(paymentTransactions.tenantId, scope.tenantId),
+            inArray(paymentTransactions.branchId, scope.branchIds)
+          )
+        )
+        .for("update")
+        .limit(1);
+      if (!current) return null;
+      if (current.status === "refunded") return this.paymentResponse(current);
+      if (current.status !== "completed") return null;
+      const note = current.note
+        ? `${current.note} | Refund reason: ${reason}`
+        : `Refund reason: ${reason}`;
+      const [row] = await tx
+        .update(paymentTransactions)
+        .set({ status: "refunded", note, updatedAt: new Date() })
+        .where(
+          and(
+            eq(paymentTransactions.id, paymentId),
+            eq(paymentTransactions.status, "completed")
+          )
+        )
+        .returning();
+      return row ? this.paymentResponse(row) : null;
+    });
+  }
+
+  private async assertPaymentAllocationTarget(
+    scope: TenantScope,
+    branchId: string,
+    memberId: string | null,
+    allocationType: PaymentTransactionResponse["allocationType"],
+    allocationId: string | null
+  ): Promise<void> {
+    if (!memberId) {
+      if (allocationType || allocationId) {
+        throw new Error("A payment cannot be allocated without a member.");
+      }
+      return;
+    }
+    const [member] = await this.db
+      .select({ id: members.id })
+      .from(members)
       .where(
-        and(eq(paymentTransactions.id, paymentId), eq(paymentTransactions.tenantId, scope.tenantId))
+        and(
+          eq(members.id, memberId),
+          eq(members.tenantId, scope.tenantId),
+          eq(members.status, "active"),
+          branchAccessCondition(scope)
+        )
       )
-      .returning();
-    return row ? this.paymentResponse(row) : null;
+      .limit(1);
+    if (!member) throw new Error("Member unavailable.");
+    if (!allocationType) {
+      if (allocationId) throw new Error("Allocation type is required.");
+      return;
+    }
+    if (allocationType === "booking") {
+      if (!allocationId) throw new Error("Booking allocation target is required.");
+      const [booking] = await this.db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.id, allocationId),
+            eq(bookings.tenantId, scope.tenantId),
+            eq(bookings.branchId, branchId),
+            eq(bookings.memberId, memberId),
+            eq(bookings.status, "confirmed")
+          )
+        )
+        .limit(1);
+      if (!booking) throw new Error("Booking allocation target is unavailable.");
+      return;
+    }
+    if (allocationType === "membership") {
+      if (!allocationId) throw new Error("Membership allocation target is required.");
+      const [membership] = await this.db
+        .select()
+        .from(memberMemberships)
+        .where(
+          and(
+            eq(memberMemberships.id, allocationId),
+            eq(memberMemberships.tenantId, scope.tenantId),
+            eq(memberMemberships.memberId, memberId),
+            inArray(memberMemberships.status, ["scheduled", "active"])
+          )
+        )
+        .limit(1);
+      const planSnapshot = membership?.planSnapshot as { branchId?: string | null } | undefined;
+      if (!membership || (planSnapshot?.branchId && planSnapshot.branchId !== branchId)) {
+        throw new Error("Membership allocation target is unavailable.");
+      }
+      return;
+    }
+    if (allocationId) {
+      throw new Error("Walk-in and other allocations cannot have a target ID.");
+    }
   }
 
   async checkIn(
     scope: TenantScope,
     input: CheckInRequest,
     actorUserId: string,
-    branchId: string
+    branchId: string,
+    allowOverride: boolean
   ): Promise<AttendanceRecordResponse> {
-    let occurrenceId = input.occurrenceId;
-    if (!occurrenceId) {
-      const [todayOcc] = await this.db
-        .select()
+    if (!scope.branchIds.includes(branchId)) throw new Error("Branch unavailable.");
+    const [member] = await this.db
+      .select({ id: members.id })
+      .from(members)
+      .where(
+        and(
+          eq(members.id, input.memberId),
+          eq(members.tenantId, scope.tenantId),
+          eq(members.status, "active"),
+          branchAccessCondition(scope)
+        )
+      )
+      .limit(1);
+    if (!member) throw new Error("Member unavailable.");
+
+    const occurrenceId = input.occurrenceId ?? null;
+    if (occurrenceId) {
+      const [occurrence] = await this.db
+        .select({ id: scheduleOccurrences.id })
         .from(scheduleOccurrences)
         .where(
           and(
+            eq(scheduleOccurrences.id, occurrenceId),
             eq(scheduleOccurrences.tenantId, scope.tenantId),
             eq(scheduleOccurrences.branchId, branchId),
             eq(scheduleOccurrences.status, "scheduled")
           )
         )
-        .orderBy(desc(scheduleOccurrences.startsAt))
         .limit(1);
-      if (!todayOcc) throw new Error("No active occurrence found for check-in.");
-      occurrenceId = todayOcc.id;
+      if (!occurrence) throw new Error("Occurrence unavailable for check-in.");
+      const [booking] = await this.db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.tenantId, scope.tenantId),
+            eq(bookings.occurrenceId, occurrenceId),
+            eq(bookings.memberId, input.memberId),
+            eq(bookings.status, "confirmed")
+          )
+        )
+        .limit(1);
+      if (!booking && !allowOverride) {
+        throw new Error("A confirmed booking is required for class check-in.");
+      }
+    } else {
+      const timestamp = new Date();
+      const eligibleMemberships = await this.db
+        .select({ id: memberMemberships.id })
+        .from(memberMemberships)
+        .where(
+          and(
+            eq(memberMemberships.tenantId, scope.tenantId),
+            eq(memberMemberships.memberId, input.memberId),
+            eq(memberMemberships.status, "active"),
+            lte(memberMemberships.startsAt, timestamp),
+            or(isNull(memberMemberships.endsAt), gt(memberMemberships.endsAt, timestamp))
+          )
+        );
+      let hasEntitlement = false;
+      for (const membership of eligibleMemberships) {
+        const [balance] = await this.db
+          .select({ total: sql<string>`coalesce(sum(${creditLedger.delta}), 0)` })
+          .from(creditLedger)
+          .where(
+            and(
+              eq(creditLedger.tenantId, scope.tenantId),
+              eq(creditLedger.membershipId, membership.id)
+            )
+          );
+        if (Number(balance?.total ?? 0) > 0) {
+          hasEntitlement = true;
+          break;
+        }
+      }
+      if (!hasEntitlement && !allowOverride) {
+        throw new Error("An active membership entitlement is required for general check-in.");
+      }
+    }
+
+    const existingConditions = [
+      eq(attendanceRecords.tenantId, scope.tenantId),
+      eq(attendanceRecords.branchId, branchId),
+      eq(attendanceRecords.memberId, input.memberId)
+    ];
+    if (occurrenceId) {
+      existingConditions.push(eq(attendanceRecords.occurrenceId, occurrenceId));
+    } else {
+      existingConditions.push(
+        isNull(attendanceRecords.occurrenceId),
+        eq(attendanceRecords.status, "checked_in")
+      );
+    }
+    const [existing] = await this.db
+      .select()
+      .from(attendanceRecords)
+      .where(and(...existingConditions))
+      .limit(1);
+    if (existing) {
+      if (["checked_in", "attended"].includes(existing.status)) {
+        return this.attendanceResponse(existing);
+      }
+      throw new Error(`Member already has ${existing.status} attendance for this occurrence.`);
     }
 
     const [row] = await this.db
@@ -1926,10 +2285,18 @@ export class DrizzleFitosRepository implements FitosRepository {
         status: "checked_in",
         checkedInAt: new Date(),
         actorUserId,
-        overrideReason: input.overrideReason ?? null
+        overrideReason: allowOverride ? (input.overrideReason ?? null) : null
       })
+      .onConflictDoNothing()
       .returning();
-    return this.attendanceResponse(row!);
+    if (row) return this.attendanceResponse(row);
+    const [concurrent] = await this.db
+      .select()
+      .from(attendanceRecords)
+      .where(and(...existingConditions))
+      .limit(1);
+    if (!concurrent) throw new Error("Unable to record attendance.");
+    return this.attendanceResponse(concurrent);
   }
 
   async findAttendanceRecord(
@@ -1981,27 +2348,60 @@ export class DrizzleFitosRepository implements FitosRepository {
   async updateAttendanceStatus(
     scope: TenantScope,
     recordId: string,
-    input: UpdateRosterStatusRequest
+    input: UpdateRosterStatusRequest,
+    allowOverride: boolean
   ): Promise<AttendanceRecordResponse | null> {
-    const current = await this.findAttendanceRecord(scope, recordId);
-    if (!current) return null;
-    const updates: Partial<typeof attendanceRecords.$inferInsert> = {
-      status: input.status,
-      updatedAt: new Date()
-    };
-    if (input.status === "checked_in" || input.status === "attended") {
-      if (!current.checkedInAt) updates.checkedInAt = new Date();
-    }
-    if (input.overrideReason) updates.overrideReason = input.overrideReason;
-
-    const [row] = await this.db
-      .update(attendanceRecords)
-      .set(updates)
-      .where(
-        and(eq(attendanceRecords.id, recordId), eq(attendanceRecords.tenantId, scope.tenantId))
-      )
-      .returning();
-    return row ? this.attendanceResponse(row) : null;
+    return this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(attendanceRecords)
+        .where(
+          and(
+            eq(attendanceRecords.id, recordId),
+            eq(attendanceRecords.tenantId, scope.tenantId),
+            inArray(attendanceRecords.branchId, scope.branchIds)
+          )
+        )
+        .for("update")
+        .limit(1);
+      if (!current) return null;
+      if (current.status === input.status) return this.attendanceResponse(current);
+      const normalTransitions: Record<
+        AttendanceRecordResponse["status"],
+        readonly AttendanceRecordResponse["status"][]
+      > = {
+        booked: ["checked_in", "no_show", "late_cancel"],
+        checked_in: ["attended"],
+        attended: [],
+        no_show: [],
+        late_cancel: []
+      };
+      if (
+        !normalTransitions[current.status as AttendanceRecordResponse["status"]].includes(
+          input.status
+        ) &&
+        !allowOverride
+      ) {
+        throw new Error(`Illegal attendance transition from ${current.status} to ${input.status}.`);
+      }
+      if (allowOverride && !input.overrideReason) {
+        throw new Error("An override reason is required.");
+      }
+      const updates: Partial<typeof attendanceRecords.$inferInsert> = {
+        status: input.status,
+        updatedAt: new Date()
+      };
+      if ((input.status === "checked_in" || input.status === "attended") && !current.checkedInAt) {
+        updates.checkedInAt = new Date();
+      }
+      if (allowOverride) updates.overrideReason = input.overrideReason;
+      const [row] = await tx
+        .update(attendanceRecords)
+        .set(updates)
+        .where(eq(attendanceRecords.id, recordId))
+        .returning();
+      return row ? this.attendanceResponse(row) : null;
+    });
   }
 
   private async roleResponse(role: typeof roles.$inferSelect): Promise<RoleResponse> {

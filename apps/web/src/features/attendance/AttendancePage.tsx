@@ -120,27 +120,14 @@ export function AttendancePage() {
       id: "actions",
       header: "Update status",
       cell: (r) =>
-        can(auth, "attendance:checkin") ? (
-          <div style={{ display: "flex", gap: "0.25rem" }}>
-            {r.status !== "attended" ? (
-              <Button
-                onClick={() => updateStatusMutation.mutate({ id: r.id, status: "attended" })}
-                size="small"
-                variant="ghost"
-              >
-                Mark Attended
-              </Button>
-            ) : null}
-            {r.status !== "no_show" ? (
-              <Button
-                onClick={() => updateStatusMutation.mutate({ id: r.id, status: "no_show" })}
-                size="small"
-                variant="ghost"
-              >
-                No-Show
-              </Button>
-            ) : null}
-          </div>
+        can(auth, "attendance:checkin") && r.status === "checked_in" ? (
+          <Button
+            onClick={() => updateStatusMutation.mutate({ id: r.id, status: "attended" })}
+            size="small"
+            variant="ghost"
+          >
+            Mark Attended
+          </Button>
         ) : null
     }
   ];

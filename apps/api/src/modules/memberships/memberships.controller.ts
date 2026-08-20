@@ -4,6 +4,7 @@ import { z } from "zod";
 import type {
   ActivateMembershipRequest,
   CreateMembershipPlanRequest,
+  ManualCreditAdjustmentRequest,
   RequestActor
 } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
@@ -51,6 +52,14 @@ const activateMembershipSchema = z
 const cancelMembershipSchema = z
   .object({
     reason: z.string().trim().max(255).optional()
+  })
+  .strict();
+
+const creditAdjustmentSchema = z
+  .object({
+    membershipId: z.string().uuid(),
+    delta: z.coerce.number().int().min(-10_000).max(10_000).refine((value) => value !== 0),
+    reason: z.string().trim().min(1).max(255)
   })
   .strict();
 
@@ -170,5 +179,26 @@ export class MembershipsController {
   @RequirePermission("membership:read")
   getCreditBalance(@Actor() actor: RequestActor, @Param("memberId") memberId: string) {
     return this.core.getCreditBalance(actor, z.string().uuid().parse(memberId));
+  }
+
+  @Post("members/:memberId/credits/adjustments")
+  @RequirePermission("membership:override")
+  adjustCredit(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") key: string | undefined,
+    @Param("memberId") memberId: string,
+    @Body() body: unknown
+  ) {
+    const id = z.string().uuid().parse(memberId);
+    const input = creditAdjustmentSchema.parse(body) satisfies ManualCreditAdjustmentRequest;
+    return this.idempotency.execute({
+      actor,
+      operation: `credit:adjust:${id}`,
+      key,
+      body: input,
+      status: 201,
+      action: () => this.core.adjustCredit(actor, requestId, id, input)
+    });
   }
 }

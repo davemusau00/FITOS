@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -22,7 +21,7 @@ import type {
 } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
-import { ErrorNotice, PageLoading, formatCurrency, formatDate, formatDateTime } from "../shared";
+import { ErrorNotice, PageLoading, formatCurrency, formatDateTime } from "../shared";
 
 type PaymentFormValues = {
   branchId: string;
@@ -32,7 +31,7 @@ type PaymentFormValues = {
   method: PaymentMethod;
   reference: string;
   note: string;
-  allocationType: "membership" | "booking" | "walkIn" | "other";
+  allocationType: "walkIn" | "other";
 };
 
 export function PaymentsPage() {
@@ -316,7 +315,7 @@ function RecordPaymentModal({
       method: "cash",
       reference: "",
       note: "",
-      allocationType: "membership"
+      allocationType: "other"
     }
   });
 
@@ -333,7 +332,7 @@ function RecordPaymentModal({
         method: values.method,
         reference: values.reference.trim() || null,
         note: values.note.trim() || null,
-        allocationType: values.allocationType || null
+        allocationType: selectedMember ? values.allocationType : null
       };
       await api.createPayment(payload);
       onSuccess();
@@ -391,10 +390,8 @@ function RecordPaymentModal({
 
           <FormField htmlFor="payAlloc" label="Allocation Type">
             <select className="fitos-control" id="payAlloc" {...register("allocationType")}>
-              <option value="membership">Membership Plan / Package</option>
-              <option value="booking">Class / Session Booking</option>
               <option value="walkIn">Walk-in Day Pass</option>
-              <option value="other">General / Merchandise / Other</option>
+              <option value="other">General member payment</option>
             </select>
           </FormField>
 

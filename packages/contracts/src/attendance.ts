@@ -11,7 +11,7 @@ export interface AttendanceRecordResponse {
   id: string;
   tenantId: string;
   branchId: string;
-  occurrenceId: string;
+  occurrenceId: string | null;
   memberId: string;
   status: AttendanceStatus;
   checkedInAt: string | null;

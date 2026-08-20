@@ -73,3 +73,9 @@ export interface CreditLedgerEntryResponse {
   note: string | null;
   createdAt: string;
 }
+
+export interface ManualCreditAdjustmentRequest {
+  membershipId: string;
+  delta: number;
+  reason: string;
+}

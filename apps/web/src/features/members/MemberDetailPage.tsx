@@ -17,7 +17,6 @@ import {
 import type {
   BranchResponse,
   CreditLedgerEntryResponse,
-  MemberMembershipResponse,
   MemberResponse,
   MembershipPlanResponse
 } from "@fitos/contracts";
@@ -53,7 +52,6 @@ export function MemberDetailPage() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [isActivatingMembership, setIsActivatingMembership] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "membership" | "timeline">("overview");
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const member = useQuery({

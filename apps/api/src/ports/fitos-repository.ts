@@ -41,9 +41,11 @@ import type {
   MemberMembershipResponse,
   ActivateMembershipRequest,
   CreditLedgerEntryResponse,
+  ManualCreditAdjustmentRequest,
   PaymentTransactionResponse,
   CreatePaymentRequest,
   PaymentListFilters,
+  ReconcilePaymentRequest,
   AttendanceRecordResponse,
   CheckInRequest,
   UpdateRosterStatusRequest,
@@ -265,6 +267,12 @@ export interface FitosRepository {
   ): Promise<MemberMembershipResponse | null>;
   listCreditLedger(scope: TenantScope, memberId: string): Promise<CreditLedgerEntryResponse[]>;
   getCreditBalance(scope: TenantScope, memberId: string): Promise<number>;
+  adjustCredit(
+    scope: TenantScope,
+    memberId: string,
+    input: ManualCreditAdjustmentRequest,
+    actorUserId: string
+  ): Promise<CreditLedgerEntryResponse>;
 
   listStaff(scope: TenantScope): Promise<StaffUserResponse[]>;
   findStaffByUserId(scope: TenantScope, userId: string): Promise<StaffUserResponse | null>;
@@ -300,7 +308,17 @@ export interface FitosRepository {
   voidPayment(
     scope: TenantScope,
     paymentId: string,
-    reason?: string
+    reason: string
+  ): Promise<PaymentTransactionResponse | null>;
+  reconcilePayment(
+    scope: TenantScope,
+    paymentId: string,
+    input: ReconcilePaymentRequest
+  ): Promise<PaymentTransactionResponse | null>;
+  refundPayment(
+    scope: TenantScope,
+    paymentId: string,
+    reason: string
   ): Promise<PaymentTransactionResponse | null>;
 
   // Attendance
@@ -308,7 +326,8 @@ export interface FitosRepository {
     scope: TenantScope,
     input: CheckInRequest,
     actorUserId: string,
-    branchId: string
+    branchId: string,
+    allowOverride: boolean
   ): Promise<AttendanceRecordResponse>;
   findAttendanceRecord(
     scope: TenantScope,
@@ -321,7 +340,8 @@ export interface FitosRepository {
   updateAttendanceStatus(
     scope: TenantScope,
     recordId: string,
-    input: UpdateRosterStatusRequest
+    input: UpdateRosterStatusRequest,
+    allowOverride: boolean
   ): Promise<AttendanceRecordResponse | null>;
 
   acquireIdempotency(record: IdempotencyRecord): Promise<IdempotencyAcquireResult>;

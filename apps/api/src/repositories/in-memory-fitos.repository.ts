@@ -43,9 +43,11 @@ import type {
   MemberMembershipResponse,
   ActivateMembershipRequest,
   CreditLedgerEntryResponse,
+  ManualCreditAdjustmentRequest,
   PaymentTransactionResponse,
   CreatePaymentRequest,
   PaymentListFilters,
+  ReconcilePaymentRequest,
   AttendanceRecordResponse,
   CheckInRequest,
   UpdateRosterStatusRequest,
@@ -1311,6 +1313,48 @@ export class InMemoryFitosRepository implements FitosRepository {
     return entries.reduce((sum, e) => sum + e.delta, 0);
   }
 
+  async adjustCredit(
+    scope: TenantScope,
+    memberId: string,
+    input: ManualCreditAdjustmentRequest,
+    _actorUserId: string
+  ): Promise<CreditLedgerEntryResponse> {
+    const membership = this.memberMemberships.get(input.membershipId);
+    if (
+      !membership ||
+      membership.tenantId !== scope.tenantId ||
+      membership.memberId !== memberId ||
+      membership.status !== "active" ||
+      (membership.planSnapshot.branchId !== null &&
+        !scope.branchIds.includes(membership.planSnapshot.branchId))
+    ) {
+      throw new Error("Active membership unavailable for adjustment.");
+    }
+    if (!Number.isInteger(input.delta) || input.delta === 0) {
+      throw new Error("Credit adjustment must be a non-zero integer.");
+    }
+    const balance = [...this.creditLedger.values()]
+      .filter((entry) => entry.membershipId === membership.id)
+      .reduce((sum, entry) => sum + entry.delta, 0);
+    if (balance + input.delta < 0) {
+      throw new Error("Credit adjustment would create a negative balance.");
+    }
+    const entry: StoredCreditLedgerEntry = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      membershipId: membership.id,
+      memberId,
+      delta: input.delta,
+      reason: "manual_adjustment",
+      bookingId: null,
+      note: input.reason,
+      createdAt: now()
+    };
+    this.creditLedger.set(entry.id, entry);
+    const { tenantId: _tenantId, ...response } = entry;
+    return response;
+  }
+
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {
     return [...this.tenantUsers.values()]
       .filter((membership) => membership.tenantId === scope.tenantId)
@@ -1443,12 +1487,19 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (!scope.branchIds.includes(input.branchId)) {
       throw new Error("Branch unavailable.");
     }
-    if (input.memberId) {
-      const member = this.members.get(input.memberId);
-      if (!member || member.tenantId !== scope.tenantId) {
-        throw new Error("Member unavailable.");
-      }
+    if (!/^\d+$/.test(input.amount.amountMinor) || BigInt(input.amount.amountMinor) <= 0n) {
+      throw new Error("Payment amount must be greater than zero.");
     }
+    if (!/^[A-Z]{3}$/.test(input.amount.currency)) {
+      throw new Error("Payment currency must be a three-letter uppercase code.");
+    }
+    this.assertPaymentAllocationTarget(
+      scope,
+      input.branchId,
+      input.memberId ?? null,
+      input.allocationType ?? null,
+      input.allocationId ?? null
+    );
     const timestamp = now();
     const payment: StoredPaymentTransaction = {
       id: randomUUID(),
@@ -1507,7 +1558,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   async voidPayment(
     scope: TenantScope,
     paymentId: string,
-    reason?: string
+    reason: string
   ): Promise<PaymentTransactionResponse | null> {
     const payment = this.payments.get(paymentId);
     if (
@@ -1517,34 +1568,215 @@ export class InMemoryFitosRepository implements FitosRepository {
     ) {
       return null;
     }
+    if (payment.status === "voided") return { ...payment };
+    if (payment.status !== "completed") return null;
     payment.status = "voided";
-    if (reason)
-      payment.note = payment.note
-        ? `${payment.note} | Void reason: ${reason}`
-        : `Void reason: ${reason}`;
+    payment.note = payment.note
+      ? `${payment.note} | Void reason: ${reason}`
+      : `Void reason: ${reason}`;
     payment.updatedAt = now();
     return { ...payment };
+  }
+
+  async reconcilePayment(
+    scope: TenantScope,
+    paymentId: string,
+    input: ReconcilePaymentRequest
+  ): Promise<PaymentTransactionResponse | null> {
+    const payment = this.payments.get(paymentId);
+    if (
+      !payment ||
+      payment.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(payment.branchId)
+    ) {
+      return null;
+    }
+    if (payment.status !== "completed") {
+      throw new Error("Only completed payments can be reconciled.");
+    }
+    if (
+      payment.memberId === input.memberId &&
+      payment.allocationType === input.allocationType &&
+      payment.allocationId === (input.allocationId ?? null)
+    ) {
+      return { ...payment };
+    }
+    if (
+      (payment.memberId && payment.memberId !== input.memberId) ||
+      (payment.allocationType && payment.allocationType !== input.allocationType) ||
+      (payment.allocationId && payment.allocationId !== (input.allocationId ?? null))
+    ) {
+      throw new Error("Payment is already reconciled to a different target.");
+    }
+    this.assertPaymentAllocationTarget(
+      scope,
+      payment.branchId,
+      input.memberId,
+      input.allocationType,
+      input.allocationId ?? null
+    );
+    payment.memberId = input.memberId;
+    payment.allocationType = input.allocationType;
+    payment.allocationId = input.allocationId ?? null;
+    payment.note = payment.note
+      ? `${payment.note} | Reconciliation: ${input.reason}`
+      : `Reconciliation: ${input.reason}`;
+    payment.updatedAt = now();
+    return { ...payment };
+  }
+
+  async refundPayment(
+    scope: TenantScope,
+    paymentId: string,
+    reason: string
+  ): Promise<PaymentTransactionResponse | null> {
+    const payment = this.payments.get(paymentId);
+    if (
+      !payment ||
+      payment.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(payment.branchId)
+    ) {
+      return null;
+    }
+    if (payment.status === "refunded") return { ...payment };
+    if (payment.status !== "completed") return null;
+    payment.status = "refunded";
+    payment.note = payment.note
+      ? `${payment.note} | Refund reason: ${reason}`
+      : `Refund reason: ${reason}`;
+    payment.updatedAt = now();
+    return { ...payment };
+  }
+
+  private assertPaymentAllocationTarget(
+    scope: TenantScope,
+    branchId: string,
+    memberId: string | null,
+    allocationType: PaymentTransactionResponse["allocationType"],
+    allocationId: string | null
+  ): void {
+    if (!memberId) {
+      if (allocationType || allocationId) {
+        throw new Error("A payment cannot be allocated without a member.");
+      }
+      return;
+    }
+    const member = this.members.get(memberId);
+    if (
+      !member ||
+      member.tenantId !== scope.tenantId ||
+      member.status !== "active" ||
+      (member.homeBranchId !== null && !scope.branchIds.includes(member.homeBranchId))
+    ) {
+      throw new Error("Member unavailable.");
+    }
+    if (!allocationType) {
+      if (allocationId) throw new Error("Allocation type is required.");
+      return;
+    }
+    if (allocationType === "booking") {
+      const booking = allocationId ? this.bookings.get(allocationId) : null;
+      if (
+        !booking ||
+        booking.tenantId !== scope.tenantId ||
+        booking.branchId !== branchId ||
+        booking.memberId !== memberId ||
+        booking.status !== "confirmed"
+      ) {
+        throw new Error("Booking allocation target is unavailable.");
+      }
+      return;
+    }
+    if (allocationType === "membership") {
+      const membership = allocationId ? this.memberMemberships.get(allocationId) : null;
+      if (
+        !membership ||
+        membership.tenantId !== scope.tenantId ||
+        membership.memberId !== memberId ||
+        !["scheduled", "active"].includes(membership.status) ||
+        (membership.planSnapshot.branchId !== null && membership.planSnapshot.branchId !== branchId)
+      ) {
+        throw new Error("Membership allocation target is unavailable.");
+      }
+      return;
+    }
+    if (allocationId) {
+      throw new Error("Walk-in and other allocations cannot have a target ID.");
+    }
   }
 
   async checkIn(
     scope: TenantScope,
     input: CheckInRequest,
     actorUserId: string,
-    branchId: string
+    branchId: string,
+    allowOverride: boolean
   ): Promise<AttendanceRecordResponse> {
     const member = this.members.get(input.memberId);
-    if (!member || member.tenantId !== scope.tenantId) {
+    if (
+      !scope.branchIds.includes(branchId) ||
+      !member ||
+      member.tenantId !== scope.tenantId ||
+      member.status !== "active" ||
+      (member.homeBranchId !== null && !scope.branchIds.includes(member.homeBranchId))
+    ) {
       throw new Error("Member unavailable.");
     }
-    let occurrenceId = input.occurrenceId;
-    if (!occurrenceId) {
-      const todayOccurrences = [...this.occurrences.values()].filter(
-        (o) => o.tenantId === scope.tenantId && o.branchId === branchId && o.status === "scheduled"
-      );
-      occurrenceId = todayOccurrences[0]?.id;
-      if (!occurrenceId) {
-        throw new Error("No active occurrence found for check-in.");
+    const occurrenceId = input.occurrenceId ?? null;
+    if (occurrenceId) {
+      const occurrence = this.occurrences.get(occurrenceId);
+      if (
+        !occurrence ||
+        occurrence.tenantId !== scope.tenantId ||
+        occurrence.branchId !== branchId ||
+        occurrence.status !== "scheduled"
+      ) {
+        throw new Error("Occurrence unavailable for check-in.");
       }
+      const booking = [...this.bookings.values()].find(
+        (candidate) =>
+          candidate.tenantId === scope.tenantId &&
+          candidate.occurrenceId === occurrenceId &&
+          candidate.memberId === input.memberId &&
+          candidate.status === "confirmed"
+      );
+      if (!booking && !allowOverride) {
+        throw new Error("A confirmed booking is required for class check-in.");
+      }
+    } else {
+      const timestamp = Date.now();
+      const eligibleMembership = [...this.memberMemberships.values()].find((membership) => {
+        if (
+          membership.tenantId !== scope.tenantId ||
+          membership.memberId !== input.memberId ||
+          membership.status !== "active" ||
+          new Date(membership.startsAt).getTime() > timestamp ||
+          (membership.endsAt && new Date(membership.endsAt).getTime() <= timestamp)
+        ) {
+          return false;
+        }
+        return (
+          [...this.creditLedger.values()]
+            .filter((entry) => entry.membershipId === membership.id)
+            .reduce((sum, entry) => sum + entry.delta, 0) > 0
+        );
+      });
+      if (!eligibleMembership && !allowOverride) {
+        throw new Error("An active membership entitlement is required for general check-in.");
+      }
+    }
+    const existing = [...this.attendance.values()].find(
+      (record) =>
+        record.tenantId === scope.tenantId &&
+        record.branchId === branchId &&
+        record.memberId === input.memberId &&
+        (occurrenceId
+          ? record.occurrenceId === occurrenceId
+          : record.occurrenceId === null && record.status === "checked_in")
+    );
+    if (existing) {
+      if (["checked_in", "attended"].includes(existing.status)) return { ...existing };
+      throw new Error(`Member already has ${existing.status} attendance for this occurrence.`);
     }
     const timestamp = now();
     const record: StoredAttendanceRecord = {
@@ -1556,7 +1788,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       status: "checked_in",
       checkedInAt: timestamp,
       actorUserId,
-      overrideReason: input.overrideReason ?? null,
+      overrideReason: allowOverride ? (input.overrideReason ?? null) : null,
       createdAt: timestamp,
       updatedAt: timestamp
     };
@@ -1596,7 +1828,8 @@ export class InMemoryFitosRepository implements FitosRepository {
   async updateAttendanceStatus(
     scope: TenantScope,
     recordId: string,
-    input: UpdateRosterStatusRequest
+    input: UpdateRosterStatusRequest,
+    allowOverride: boolean
   ): Promise<AttendanceRecordResponse | null> {
     const record = this.attendance.get(recordId);
     if (
@@ -1606,11 +1839,28 @@ export class InMemoryFitosRepository implements FitosRepository {
     ) {
       return null;
     }
+    if (record.status === input.status) return { ...record };
+    const normalTransitions: Record<
+      AttendanceRecordResponse["status"],
+      readonly AttendanceRecordResponse["status"][]
+    > = {
+      booked: ["checked_in", "no_show", "late_cancel"],
+      checked_in: ["attended"],
+      attended: [],
+      no_show: [],
+      late_cancel: []
+    };
+    if (!normalTransitions[record.status].includes(input.status) && !allowOverride) {
+      throw new Error(`Illegal attendance transition from ${record.status} to ${input.status}.`);
+    }
+    if (allowOverride && !input.overrideReason) {
+      throw new Error("An override reason is required.");
+    }
     record.status = input.status;
     if (input.status === "checked_in" || input.status === "attended") {
       if (!record.checkedInAt) record.checkedInAt = now();
     }
-    if (input.overrideReason) record.overrideReason = input.overrideReason;
+    if (allowOverride) record.overrideReason = input.overrideReason ?? null;
     record.updatedAt = now();
     return { ...record };
   }

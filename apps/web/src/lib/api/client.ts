@@ -29,10 +29,10 @@ import type {
   MembershipPlanResponse,
   CreateMembershipPlanRequest,
   MemberMembershipResponse,
-  ActivateMembershipRequest,
   CreditLedgerEntryResponse,
   PaymentTransactionResponse,
   CreatePaymentRequest,
+  ReconcilePaymentRequest,
   AttendanceRecordResponse,
   UpdateRosterStatusRequest
 } from "@fitos/contracts";
@@ -278,10 +278,16 @@ export const api = {
       body: json(payload),
       headers: { "Idempotency-Key": idempotency() }
     }),
-  voidPayment: (id: string, reason?: string) =>
+  voidPayment: (id: string, reason: string) =>
     request<PaymentTransactionResponse>(`/payments/${id}/void`, {
       method: "POST",
       body: json({ reason })
+    }),
+  reconcilePayment: (id: string, payload: ReconcilePaymentRequest) =>
+    request<PaymentTransactionResponse>(`/payments/${id}/reconcile`, {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
     }),
 
   // Attendance

@@ -23,6 +23,22 @@ export function UnmatchedPaymentsPage() {
   );
   const [memberSearch, setMemberSearch] = useState("");
 
+  const reconcile = useMutation({
+    mutationFn: (memberId: string) => {
+      if (!selectedTransaction) throw new Error("Select a payment first.");
+      return api.reconcilePayment(selectedTransaction.id, {
+        memberId,
+        allocationType: "other",
+        reason: "Matched to member by operator"
+      });
+    },
+    onSuccess: async () => {
+      setSelectedTransaction(null);
+      setMemberSearch("");
+      await queryClient.invalidateQueries({ queryKey: ["payments"] });
+    }
+  });
+
   const unmatched = useQuery({
     queryKey: ["payments", "unmatched"],
     queryFn: () => {
@@ -93,6 +109,7 @@ export function UnmatchedPaymentsPage() {
       />
 
       <ErrorNotice error={unmatched.error} />
+      <ErrorNotice error={reconcile.error} />
 
       <div
         style={{
@@ -163,10 +180,9 @@ export function UnmatchedPaymentsPage() {
                       </p>
                     </div>
                     <Button
-                      onClick={() => {
-                        // In a full implementation this matches the transaction
-                        setSelectedTransaction(null);
-                      }}
+                      disabled={!can(auth, "payment:match")}
+                      loading={reconcile.isPending}
+                      onClick={() => reconcile.mutate(m.id)}
                       size="small"
                       variant="secondary"
                     >

@@ -41,6 +41,17 @@ export interface CreatePaymentRequest {
   allocationId?: string | null;
 }
 
+export interface ReconcilePaymentRequest {
+  memberId: string;
+  allocationType: PaymentAllocationType;
+  allocationId?: string | null;
+  reason: string;
+}
+
+export interface RefundPaymentRequest {
+  reason: string;
+}
+
 export interface PaymentListFilters {
   branchId?: string;
   memberId?: string;

@@ -17,14 +17,14 @@ const checkInSchema = z
     branchId: z.string().uuid(),
     memberId: z.string().uuid(),
     occurrenceId: z.string().uuid().nullable().optional(),
-    overrideReason: z.string().trim().max(500).nullable().optional()
+    overrideReason: z.string().trim().min(1).max(500).nullable().optional()
   })
   .strict();
 
 const updateRosterStatusSchema = z
   .object({
     status: z.enum(["booked", "checked_in", "attended", "no_show", "late_cancel"]),
-    overrideReason: z.string().trim().max(500).nullable().optional()
+    overrideReason: z.string().trim().min(1).max(500).nullable().optional()
   })
   .strict();
 

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { StatusBadge } from "@fitos/ui";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
-import { PageLoading, ErrorNotice, formatDate } from "../shared";
+import { PageLoading, ErrorNotice } from "../shared";
 
 const queryKeys = {
   members: (query: string) => ["members", query] as const,

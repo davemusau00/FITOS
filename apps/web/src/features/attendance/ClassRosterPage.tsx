@@ -1,19 +1,10 @@
-import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Card,
-  DataTable,
-  type DataTableColumn,
-  EmptyState,
-  PageHeader,
-  StatusBadge
-} from "@fitos/ui";
+import { Button, Card, EmptyState, PageHeader, StatusBadge } from "@fitos/ui";
 import type { AttendanceStatus, BookingResponse } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
-import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
+import { PageLoading, formatDateTime } from "../shared";
 
 export function ClassRosterPage() {
   const { occurrenceId } = useParams();
@@ -135,24 +126,20 @@ export function ClassRosterPage() {
                       {attRecord ? (
                         <>
                           <StatusBadge status={attRecord.status} />
-                          {can(auth, "attendance:checkin") ? (
-                            <select
-                              aria-label="Change attendance status"
-                              className="fitos-control"
-                              onChange={(e) =>
+                          {can(auth, "attendance:checkin") && attRecord.status === "checked_in" ? (
+                            <Button
+                              loading={updateStatusMutation.isPending}
+                              onClick={() =>
                                 updateStatusMutation.mutate({
                                   recordId: attRecord.id,
-                                  status: e.target.value as AttendanceStatus
+                                  status: "attended"
                                 })
                               }
-                              style={{ width: "140px" }}
-                              value={attRecord.status}
+                              size="small"
+                              variant="ghost"
                             >
-                              <option value="checked_in">Checked In</option>
-                              <option value="attended">Attended</option>
-                              <option value="no_show">No-Show</option>
-                              <option value="late_cancel">Late Cancel</option>
-                            </select>
+                              Mark attended
+                            </Button>
                           ) : null}
                         </>
                       ) : b.status === "confirmed" && can(auth, "attendance:checkin") ? (

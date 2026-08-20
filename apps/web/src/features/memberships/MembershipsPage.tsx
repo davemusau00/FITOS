@@ -10,7 +10,6 @@ import {
   type DataTableColumn,
   EmptyState,
   FormField,
-  Icon,
   Modal,
   PageHeader,
   SearchBar,
@@ -23,7 +22,7 @@ import type {
 } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
-import { ErrorNotice, PageLoading, formatCurrency, formatDate } from "../shared";
+import { ErrorNotice, PageLoading, formatCurrency } from "../shared";
 
 type PlanFormValues = {
   name: string;

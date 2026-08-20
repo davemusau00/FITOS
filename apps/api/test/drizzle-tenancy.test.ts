@@ -150,4 +150,158 @@ describeDatabase("Drizzle tenant isolation", () => {
       await repository.findMembershipPlanById({ ...gymScope, branchIds: [] }, plan.id)
     ).toBeNull();
   });
+
+  it("reconciles a payment once and rejects cross-tenant payment references", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const gymMember = await repository.createMember(
+      gymScope,
+      {
+        contact: { firstName: `Payment Gym ${suffix}` },
+        homeBranchId: gym.branchIds[0]!
+      },
+      null
+    );
+    const pilatesMember = await repository.createMember(
+      pilatesScope,
+      {
+        contact: { firstName: `Payment Pilates ${suffix}` },
+        homeBranchId: pilates.branchIds[0]!
+      },
+      null
+    );
+    const payment = await repository.createPayment(
+      gymScope,
+      {
+        branchId: gym.branchIds[0]!,
+        amount: { amountMinor: "250000", currency: "KES" },
+        method: "bank_transfer",
+        reference: `BANK-${suffix}`
+      },
+      gym.user.id
+    );
+    const reconciliation = {
+      memberId: gymMember.id,
+      allocationType: "other" as const,
+      reason: "Reference confirmed"
+    };
+    const duplicateAttempts = await Promise.all([
+      repository.reconcilePayment(gymScope, payment.id, reconciliation),
+      repository.reconcilePayment(gymScope, payment.id, reconciliation)
+    ]);
+    expect(duplicateAttempts[0]).toEqual(duplicateAttempts[1]);
+    expect(duplicateAttempts[0]?.note?.match(/Reconciliation:/g)).toHaveLength(1);
+    expect(await repository.findPaymentById(pilatesScope, payment.id)).toBeNull();
+
+    await expect(
+      repository.reconcilePayment(gymScope, payment.id, {
+        ...reconciliation,
+        memberId: pilatesMember.id
+      })
+    ).rejects.toThrow();
+
+    await expect(
+      repository.pool.query(
+        `INSERT INTO payment_transactions
+          (tenant_id, branch_id, member_id, amount_minor, currency, method, status,
+           allocation_type, recorded_by_user_id)
+         VALUES ($1, $2, $3, '10000', 'KES', 'cash', 'completed', 'other', $4)`,
+        [gym.tenant.id, gym.branchIds[0], pilatesMember.id, gym.user.id]
+      )
+    ).rejects.toThrow();
+
+    const voidAttempts = await Promise.all([
+      repository.voidPayment(gymScope, payment.id, "Duplicate bank entry"),
+      repository.voidPayment(gymScope, payment.id, "Duplicate bank entry")
+    ]);
+    expect(voidAttempts[0]?.status).toBe("voided");
+    expect(voidAttempts[1]?.status).toBe("voided");
+  });
+
+  it("creates one attendance effect for concurrent class check-ins", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const member = await repository.createMember(
+      gymScope,
+      {
+        contact: { firstName: `Attendance ${suffix}` },
+        homeBranchId: gym.branchIds[0]!
+      },
+      null
+    );
+    const pilatesMember = await repository.createMember(
+      pilatesScope,
+      {
+        contact: { firstName: `Attendance Pilates ${suffix}` },
+        homeBranchId: pilates.branchIds[0]!
+      },
+      null
+    );
+    const service = await repository.createService(gymScope, {
+      branchId: gym.branchIds[0],
+      name: `Attendance Service ${suffix}`,
+      serviceType: "class",
+      durationMinutes: 45,
+      defaultCapacity: 10,
+      creditsRequired: 0
+    });
+    const startsAt = new Date(Date.now() + 60 * 60 * 1000);
+    const occurrence = await repository.createScheduleOccurrence(gymScope, {
+      branchId: gym.branchIds[0]!,
+      serviceId: service.id,
+      startsAt: startsAt.toISOString(),
+      endsAt: new Date(startsAt.getTime() + 45 * 60 * 1000).toISOString(),
+      capacity: 10
+    });
+    await repository.createBooking(
+      gymScope,
+      { occurrenceId: occurrence.id, memberId: member.id, source: "staff" },
+      gym.user.id,
+      false
+    );
+    const attempts = await Promise.all([
+      repository.checkIn(
+        gymScope,
+        { memberId: member.id, occurrenceId: occurrence.id },
+        gym.user.id,
+        gym.branchIds[0]!,
+        false
+      ),
+      repository.checkIn(
+        gymScope,
+        { memberId: member.id, occurrenceId: occurrence.id },
+        gym.user.id,
+        gym.branchIds[0]!,
+        false
+      )
+    ]);
+    expect(attempts[0]).toEqual(attempts[1]);
+    expect(
+      (await repository.listAttendanceRecords(gymScope, { occurrenceId: occurrence.id })).data
+    ).toHaveLength(1);
+    expect(await repository.findAttendanceRecord(pilatesScope, attempts[0].id)).toBeNull();
+
+    await repository.updateAttendanceStatus(
+      gymScope,
+      attempts[0].id,
+      { status: "attended" },
+      false
+    );
+    await expect(
+      repository.pool.query(
+        `UPDATE attendance_records SET status = 'no_show', updated_at = now() WHERE id = $1`,
+        [attempts[0].id]
+      )
+    ).rejects.toThrow();
+    await expect(
+      repository.pool.query(
+        `INSERT INTO attendance_records
+          (tenant_id, branch_id, occurrence_id, member_id, status, checked_in_at, actor_user_id)
+         VALUES ($1, $2, $3, $4, 'checked_in', now(), $5)`,
+        [gym.tenant.id, gym.branchIds[0], occurrence.id, pilatesMember.id, gym.user.id]
+      )
+    ).rejects.toThrow();
+  });
 });
