@@ -10,6 +10,10 @@ import type {
   MemberListFilters,
   MemberListItem,
   MemberResponse,
+  CreateLeadRequest,
+  LeadListFilters,
+  LeadResponse,
+  UpdateLeadStageRequest,
   PermissionKey,
   RoleKey,
   RoleResponse,
@@ -48,6 +52,7 @@ type StoredTenantUser = {
 type StoredSession = CreateSessionInput & { id: string; revokedAt: string | null };
 type StoredContact = MemberResponse["contact"] & { tenantId: string };
 type StoredMember = Omit<MemberResponse, "contact"> & { contactId: string };
+type StoredLead = Omit<LeadResponse, "contact"> & { contactId: string };
 type StoredIdempotency = IdempotencyRecord;
 
 const now = () => new Date().toISOString();
@@ -70,6 +75,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly sessions = new Map<string, StoredSession>();
   private readonly contacts = new Map<string, StoredContact>();
   private readonly members = new Map<string, StoredMember>();
+  private readonly leads = new Map<string, StoredLead>();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly domainEvents: DomainEvent[] = [];
@@ -449,6 +455,60 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (input.status !== undefined) member.status = input.status;
     member.updatedAt = now();
     return this.toMemberResponse(member, contact);
+  }
+
+  async createLead(scope: TenantScope, input: CreateLeadRequest, normalizedPhone: string | null): Promise<LeadResponse> {
+    if (input.branchId && !scope.branchIds.includes(input.branchId)) throw new Error("Branch unavailable.");
+    const timestamp = now();
+    const contact: StoredContact = {
+      id: randomUUID(), tenantId: scope.tenantId, firstName: input.contact.firstName,
+      lastName: input.contact.lastName ?? null, phone: normalizedPhone,
+      email: input.contact.email?.trim().toLowerCase() || null, dateOfBirth: input.contact.dateOfBirth ?? null
+    };
+    const lead: StoredLead = {
+      id: randomUUID(), tenantId: scope.tenantId, contactId: contact.id, branchId: input.branchId ?? null,
+      ownerUserId: input.ownerUserId ?? null, interest: input.interest ?? null, source: input.source ?? null,
+      stage: "new", lostReason: null, nextFollowUpAt: input.nextFollowUpAt ?? null, convertedMemberId: null,
+      createdAt: timestamp, updatedAt: timestamp
+    };
+    this.contacts.set(contact.id, contact);
+    this.leads.set(lead.id, lead);
+    return this.toLeadResponse(lead, contact);
+  }
+
+  async findLeadById(scope: TenantScope, leadId: string): Promise<LeadResponse | null> {
+    const lead = this.leads.get(leadId);
+    if (!lead || lead.tenantId !== scope.tenantId || (lead.branchId && !scope.branchIds.includes(lead.branchId))) return null;
+    const contact = this.contacts.get(lead.contactId);
+    return contact ? this.toLeadResponse(lead, contact) : null;
+  }
+
+  async searchLeads(scope: TenantScope, filters: LeadListFilters): Promise<CursorPage<LeadResponse>> {
+    if (filters.branchId && !scope.branchIds.includes(filters.branchId)) return { data: [], page: { nextCursor: null, hasMore: false } };
+    const query = filters.query?.trim().toLowerCase();
+    const rows = [...this.leads.values()]
+      .filter((lead) => lead.tenantId === scope.tenantId && (!lead.branchId || scope.branchIds.includes(lead.branchId)))
+      .filter((lead) => !filters.branchId || lead.branchId === filters.branchId)
+      .filter((lead) => !filters.stage || lead.stage === filters.stage)
+      .map((lead) => ({ lead, contact: this.contacts.get(lead.contactId) }))
+      .filter((row): row is { lead: StoredLead; contact: StoredContact } => Boolean(row.contact))
+      .filter(({ lead, contact }) => !query || [contact.firstName, contact.lastName, contact.phone, contact.email, lead.interest].filter(Boolean).some((value) => value?.toLowerCase().includes(query)))
+      .sort((a, b) => b.lead.createdAt.localeCompare(a.lead.createdAt) || b.lead.id.localeCompare(a.lead.id));
+    const limit = Math.min(Math.max(filters.limit ?? 25, 1), 100);
+    const selected = rows.slice(0, limit + 1);
+    const data = selected.slice(0, limit).map(({ lead, contact }) => this.toLeadResponse(lead, contact));
+    const last = data.at(-1);
+    return { data, page: { hasMore: selected.length > limit, nextCursor: selected.length > limit && last ? encodeCursor({ createdAt: last.createdAt, id: last.id }) : null } };
+  }
+
+  async updateLeadStage(scope: TenantScope, leadId: string, input: UpdateLeadStageRequest, _actorUserId: string): Promise<LeadResponse | null> {
+    const lead = this.leads.get(leadId);
+    if (!lead || lead.tenantId !== scope.tenantId || (lead.branchId && !scope.branchIds.includes(lead.branchId))) return null;
+    lead.stage = input.stage;
+    lead.lostReason = input.stage === "lost" ? input.lostReason ?? null : null;
+    lead.updatedAt = now();
+    const contact = this.contacts.get(lead.contactId);
+    return contact ? this.toLeadResponse(lead, contact) : null;
   }
 
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {

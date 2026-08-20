@@ -9,6 +9,10 @@ import type {
   MemberListFilters,
   MemberListItem,
   MemberResponse,
+  CreateLeadRequest,
+  LeadListFilters,
+  LeadResponse,
+  UpdateLeadStageRequest,
   PermissionKey,
   RoleResponse,
   StaffUserResponse,
@@ -123,6 +127,11 @@ export interface FitosRepository {
     input: UpdateMemberRequest,
     normalizedPhone?: string | null
   ): Promise<MemberResponse | null>;
+
+  createLead(scope: TenantScope, input: CreateLeadRequest, normalizedPhone: string | null): Promise<LeadResponse>;
+  findLeadById(scope: TenantScope, leadId: string): Promise<LeadResponse | null>;
+  searchLeads(scope: TenantScope, filters: LeadListFilters): Promise<CursorPage<LeadResponse>>;
+  updateLeadStage(scope: TenantScope, leadId: string, input: UpdateLeadStageRequest, actorUserId: string): Promise<LeadResponse | null>;
 
   listStaff(scope: TenantScope): Promise<StaffUserResponse[]>;
   findStaffByUserId(scope: TenantScope, userId: string): Promise<StaffUserResponse | null>;
