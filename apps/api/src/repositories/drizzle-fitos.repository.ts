@@ -5,6 +5,10 @@ import {
   contacts,
   createDatabase,
   idempotencyKeys,
+  leadEvents,
+  leadNotes,
+  leadTasks,
+  leads,
   members,
   rolePermissions,
   roles,
@@ -21,11 +25,18 @@ import type {
   BranchResponse,
   CreateBranchRequest,
   CreateMemberRequest,
+  CreateLeadRequest,
+  CreateLeadTaskRequest,
   CursorPage,
   DomainEvent,
   MemberListFilters,
   MemberListItem,
   MemberResponse,
+  LeadListFilters,
+  LeadConversionResponse,
+  LeadNoteResponse,
+  LeadResponse,
+  LeadTaskResponse,
   PermissionKey,
   RoleKey,
   RoleResponse,
@@ -33,6 +44,7 @@ import type {
   TenantSummary,
   UpdateBranchRequest,
   UpdateMemberRequest,
+  UpdateLeadStageRequest,
   UpdateOrganizationRequest,
   UserSummary
 } from "@fitos/contracts";
@@ -455,6 +467,298 @@ export class DrizzleFitosRepository implements FitosRepository {
     return result ? this.memberResponse(result.member, result.contact) : null;
   }
 
+  async createLead(
+    scope: TenantScope,
+    input: CreateLeadRequest,
+    normalizedPhone: string | null
+  ): Promise<LeadResponse> {
+    const timestamp = new Date();
+    const result = await this.db.transaction(async (tx) => {
+      const [contact] = await tx
+        .insert(contacts)
+        .values({
+          tenantId: scope.tenantId,
+          firstName: input.contact.firstName,
+          ...(input.contact.lastName !== undefined ? { lastName: input.contact.lastName } : {}),
+          ...(input.contact.phone !== undefined
+            ? { phoneRaw: input.contact.phone, phoneE164: normalizedPhone }
+            : {}),
+          ...(input.contact.email !== undefined
+            ? { email: input.contact.email?.trim().toLowerCase() || null }
+            : {}),
+          ...(input.contact.dateOfBirth !== undefined
+            ? { dateOfBirth: input.contact.dateOfBirth }
+            : {}),
+          ...(input.branchId !== undefined ? { preferredBranchId: input.branchId } : {}),
+          createdAt: timestamp,
+          updatedAt: timestamp
+        })
+        .returning();
+      if (!contact) throw new Error("Unable to create lead contact.");
+      const [lead] = await tx
+        .insert(leads)
+        .values({
+          tenantId: scope.tenantId,
+          contactId: contact.id,
+          ...(input.branchId !== undefined ? { branchId: input.branchId } : {}),
+          ...(input.ownerUserId !== undefined ? { ownerUserId: input.ownerUserId } : {}),
+          ...(input.interest !== undefined ? { interest: input.interest } : {}),
+          ...(input.source !== undefined ? { source: input.source } : {}),
+          ...(input.nextFollowUpAt !== undefined
+            ? { nextFollowUpAt: input.nextFollowUpAt ? new Date(input.nextFollowUpAt) : null }
+            : {}),
+          createdAt: timestamp,
+          updatedAt: timestamp
+        })
+        .returning();
+      if (!lead) throw new Error("Unable to create lead.");
+      await tx
+        .insert(leadEvents)
+        .values({ tenantId: scope.tenantId, leadId: lead.id, eventType: "lead.created" });
+      return { lead, contact };
+    });
+    return this.leadResponse(result.lead, result.contact);
+  }
+
+  async findLeadById(scope: TenantScope, leadId: string): Promise<LeadResponse | null> {
+    const [row] = await this.db
+      .select({ lead: leads, contact: contacts })
+      .from(leads)
+      .innerJoin(contacts, eq(contacts.id, leads.contactId))
+      .where(
+        and(
+          eq(leads.id, leadId),
+          eq(leads.tenantId, scope.tenantId),
+          scope.branchIds.length
+            ? or(isNull(leads.branchId), inArray(leads.branchId, scope.branchIds))
+            : sql`false`
+        )
+      )
+      .limit(1);
+    return row ? this.leadResponse(row.lead, row.contact) : null;
+  }
+
+  async searchLeads(
+    scope: TenantScope,
+    filters: LeadListFilters
+  ): Promise<CursorPage<LeadResponse>> {
+    if (filters.branchId && !scope.branchIds.includes(filters.branchId))
+      return { data: [], page: { nextCursor: null, hasMore: false } };
+    const conditions = [
+      eq(leads.tenantId, scope.tenantId),
+      scope.branchIds.length
+        ? or(isNull(leads.branchId), inArray(leads.branchId, scope.branchIds))
+        : sql`false`
+    ];
+    if (filters.branchId) conditions.push(eq(leads.branchId, filters.branchId));
+    if (filters.stage) conditions.push(eq(leads.stage, filters.stage));
+    if (filters.query) {
+      const term = `%${filters.query.trim().replace(/[\\%_]/g, "\\$&")}%`;
+      conditions.push(
+        or(
+          ilike(contacts.firstName, term),
+          ilike(contacts.lastName, term),
+          ilike(contacts.phoneE164, term),
+          ilike(contacts.email, term),
+          ilike(leads.interest, term)
+        )!
+      );
+    }
+    const cursor = decodeCursor(filters.cursor);
+    if (cursor)
+      conditions.push(
+        or(
+          lt(leads.createdAt, new Date(cursor.createdAt)),
+          and(eq(leads.createdAt, new Date(cursor.createdAt)), lt(leads.id, cursor.id))
+        )!
+      );
+    const limit = Math.min(Math.max(filters.limit ?? 25, 1), 100);
+    const rows = await this.db
+      .select({ lead: leads, contact: contacts })
+      .from(leads)
+      .innerJoin(contacts, eq(contacts.id, leads.contactId))
+      .where(and(...conditions))
+      .orderBy(desc(leads.createdAt), desc(leads.id))
+      .limit(limit + 1);
+    const hasMore = rows.length > limit;
+    const selected = rows.slice(0, limit);
+    const last = selected.at(-1)?.lead;
+    return {
+      data: selected.map(({ lead, contact }) => this.leadResponse(lead, contact)),
+      page: {
+        hasMore,
+        nextCursor:
+          hasMore && last
+            ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
+            : null
+      }
+    };
+  }
+
+  async updateLeadStage(
+    scope: TenantScope,
+    leadId: string,
+    input: UpdateLeadStageRequest,
+    actorUserId: string
+  ): Promise<LeadResponse | null> {
+    const current = await this.findLeadById(scope, leadId);
+    if (!current) return null;
+    const [lead] = await this.db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(leads)
+        .set({
+          stage: input.stage,
+          lostReason: input.stage === "lost" ? (input.lostReason ?? null) : null,
+          updatedAt: new Date()
+        })
+        .where(and(eq(leads.id, leadId), eq(leads.tenantId, scope.tenantId)))
+        .returning();
+      if (!updated) return [];
+      await tx.insert(leadEvents).values({
+        tenantId: scope.tenantId,
+        leadId,
+        actorUserId,
+        eventType: "lead.stage_changed",
+        previousStage: current.stage,
+        nextStage: input.stage
+      });
+      return [updated];
+    });
+    if (!lead) return null;
+    const [contact] = await this.db
+      .select()
+      .from(contacts)
+      .where(and(eq(contacts.id, lead.contactId), eq(contacts.tenantId, scope.tenantId)))
+      .limit(1);
+    return contact ? this.leadResponse(lead, contact) : null;
+  }
+
+  async convertLead(
+    scope: TenantScope,
+    leadId: string,
+    actorUserId: string
+  ): Promise<LeadConversionResponse | null> {
+    const current = await this.findLeadById(scope, leadId);
+    if (!current) return null;
+    const result = await this.db.transaction(async (tx) => {
+      const [lead] = await tx
+        .select()
+        .from(leads)
+        .where(and(eq(leads.id, leadId), eq(leads.tenantId, scope.tenantId)))
+        .limit(1);
+      if (!lead) return null;
+      const [contact] = await tx
+        .select()
+        .from(contacts)
+        .where(and(eq(contacts.id, lead.contactId), eq(contacts.tenantId, scope.tenantId)))
+        .limit(1);
+      if (!contact) return null;
+      const [existing] = await tx
+        .select()
+        .from(members)
+        .where(and(eq(members.tenantId, scope.tenantId), eq(members.contactId, contact.id)))
+        .limit(1);
+      const timestamp = new Date();
+      const member =
+        existing ??
+        (
+          await tx
+            .insert(members)
+            .values({
+              tenantId: scope.tenantId,
+              contactId: contact.id,
+              homeBranchId: lead.branchId,
+              status: "active",
+              joinedAt: timestamp,
+              createdAt: timestamp,
+              updatedAt: timestamp
+            })
+            .returning()
+        )[0];
+      if (!member) throw new Error("Unable to create member from lead.");
+      const [updatedLead] = await tx
+        .update(leads)
+        .set({
+          stage: "joined",
+          lostReason: null,
+          convertedMemberId: member.id,
+          updatedAt: timestamp
+        })
+        .where(eq(leads.id, lead.id))
+        .returning();
+      if (!updatedLead) throw new Error("Unable to convert lead.");
+      await tx.insert(leadEvents).values({
+        tenantId: scope.tenantId,
+        leadId,
+        actorUserId,
+        eventType: "lead.converted",
+        previousStage: current.stage,
+        nextStage: "joined"
+      });
+      return { lead: updatedLead, contact, member, alreadyConverted: Boolean(existing) };
+    });
+    return result
+      ? {
+          lead: this.leadResponse(result.lead, result.contact),
+          member: this.memberResponse(result.member, result.contact),
+          alreadyConverted: result.alreadyConverted
+        }
+      : null;
+  }
+
+  async addLeadNote(
+    scope: TenantScope,
+    leadId: string,
+    body: string,
+    actorUserId: string
+  ): Promise<LeadNoteResponse | null> {
+    if (!(await this.findLeadById(scope, leadId))) return null;
+    const [note] = await this.db
+      .insert(leadNotes)
+      .values({ tenantId: scope.tenantId, leadId, body, createdByUserId: actorUserId })
+      .returning();
+    return note ? this.leadNoteResponse(note) : null;
+  }
+
+  async listLeadNotes(scope: TenantScope, leadId: string): Promise<LeadNoteResponse[]> {
+    if (!(await this.findLeadById(scope, leadId))) return [];
+    const notes = await this.db
+      .select()
+      .from(leadNotes)
+      .where(and(eq(leadNotes.tenantId, scope.tenantId), eq(leadNotes.leadId, leadId)))
+      .orderBy(desc(leadNotes.createdAt));
+    return notes.map((note) => this.leadNoteResponse(note));
+  }
+
+  async createLeadTask(
+    scope: TenantScope,
+    leadId: string,
+    input: CreateLeadTaskRequest
+  ): Promise<LeadTaskResponse | null> {
+    if (!(await this.findLeadById(scope, leadId))) return null;
+    const [task] = await this.db
+      .insert(leadTasks)
+      .values({
+        tenantId: scope.tenantId,
+        leadId,
+        body: input.body,
+        ...(input.dueAt !== undefined ? { dueAt: input.dueAt ? new Date(input.dueAt) : null } : {}),
+        ...(input.assigneeUserId !== undefined ? { assigneeUserId: input.assigneeUserId } : {})
+      })
+      .returning();
+    return task ? this.leadTaskResponse(task) : null;
+  }
+
+  async listLeadTasks(scope: TenantScope, leadId: string): Promise<LeadTaskResponse[]> {
+    if (!(await this.findLeadById(scope, leadId))) return [];
+    const tasks = await this.db
+      .select()
+      .from(leadTasks)
+      .where(and(eq(leadTasks.tenantId, scope.tenantId), eq(leadTasks.leadId, leadId)))
+      .orderBy(leadTasks.dueAt, leadTasks.createdAt);
+    return tasks.map((task) => this.leadTaskResponse(task));
+  }
+
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {
     const rows = await this.db
       .select({ membership: tenantUsers, user: users, role: roles })
@@ -820,6 +1124,53 @@ export class DrizzleFitosRepository implements FitosRepository {
       email: contact.email,
       joinedAt: (member.joinedAt ?? member.createdAt).toISOString(),
       updatedAt: member.updatedAt.toISOString()
+    };
+  }
+
+  private leadResponse(
+    lead: typeof leads.$inferSelect,
+    contact: typeof contacts.$inferSelect
+  ): LeadResponse {
+    return {
+      id: lead.id,
+      tenantId: lead.tenantId,
+      branchId: lead.branchId,
+      ownerUserId: lead.ownerUserId,
+      interest: lead.interest,
+      source: lead.source,
+      stage: lead.stage as LeadResponse["stage"],
+      lostReason: lead.lostReason,
+      nextFollowUpAt: lead.nextFollowUpAt?.toISOString() ?? null,
+      convertedMemberId: lead.convertedMemberId,
+      createdAt: lead.createdAt.toISOString(),
+      updatedAt: lead.updatedAt.toISOString(),
+      contact: {
+        id: contact.id,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        phone: contact.phoneE164,
+        email: contact.email
+      }
+    };
+  }
+
+  private leadNoteResponse(note: typeof leadNotes.$inferSelect): LeadNoteResponse {
+    return {
+      id: note.id,
+      body: note.body,
+      createdByUserId: note.createdByUserId,
+      createdAt: note.createdAt.toISOString()
+    };
+  }
+
+  private leadTaskResponse(task: typeof leadTasks.$inferSelect): LeadTaskResponse {
+    return {
+      id: task.id,
+      body: task.body,
+      dueAt: task.dueAt?.toISOString() ?? null,
+      assigneeUserId: task.assigneeUserId,
+      completedAt: task.completedAt?.toISOString() ?? null,
+      createdAt: task.createdAt.toISOString()
     };
   }
 

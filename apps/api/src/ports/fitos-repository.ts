@@ -11,7 +11,11 @@ import type {
   MemberResponse,
   CreateLeadRequest,
   LeadListFilters,
+  LeadConversionResponse,
+  LeadNoteResponse,
   LeadResponse,
+  LeadTaskResponse,
+  CreateLeadTaskRequest,
   UpdateLeadStageRequest,
   PermissionKey,
   RoleResponse,
@@ -128,10 +132,37 @@ export interface FitosRepository {
     normalizedPhone?: string | null
   ): Promise<MemberResponse | null>;
 
-  createLead(scope: TenantScope, input: CreateLeadRequest, normalizedPhone: string | null): Promise<LeadResponse>;
+  createLead(
+    scope: TenantScope,
+    input: CreateLeadRequest,
+    normalizedPhone: string | null
+  ): Promise<LeadResponse>;
   findLeadById(scope: TenantScope, leadId: string): Promise<LeadResponse | null>;
   searchLeads(scope: TenantScope, filters: LeadListFilters): Promise<CursorPage<LeadResponse>>;
-  updateLeadStage(scope: TenantScope, leadId: string, input: UpdateLeadStageRequest, actorUserId: string): Promise<LeadResponse | null>;
+  updateLeadStage(
+    scope: TenantScope,
+    leadId: string,
+    input: UpdateLeadStageRequest,
+    actorUserId: string
+  ): Promise<LeadResponse | null>;
+  convertLead(
+    scope: TenantScope,
+    leadId: string,
+    actorUserId: string
+  ): Promise<LeadConversionResponse | null>;
+  addLeadNote(
+    scope: TenantScope,
+    leadId: string,
+    body: string,
+    actorUserId: string
+  ): Promise<LeadNoteResponse | null>;
+  listLeadNotes(scope: TenantScope, leadId: string): Promise<LeadNoteResponse[]>;
+  createLeadTask(
+    scope: TenantScope,
+    leadId: string,
+    input: CreateLeadTaskRequest
+  ): Promise<LeadTaskResponse | null>;
+  listLeadTasks(scope: TenantScope, leadId: string): Promise<LeadTaskResponse[]>;
 
   listStaff(scope: TenantScope): Promise<StaffUserResponse[]>;
   findStaffByUserId(scope: TenantScope, userId: string): Promise<StaffUserResponse | null>;

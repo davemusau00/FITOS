@@ -3,9 +3,13 @@ import type {
   BranchResponse,
   CreateBranchRequest,
   CreateMemberRequest,
+  CreateLeadRequest,
   CursorPage,
   MemberListItem,
   MemberResponse,
+  LeadListResponse,
+  LeadResponse,
+  UpdateLeadStageRequest,
   StaffUserResponse,
   TenantSummary,
   UpdateBranchRequest,
@@ -114,6 +118,21 @@ export const api = {
         afterSummary: Record<string, unknown> | null;
       }>
     >(`/members/${id}/timeline`),
+  leads: (params: URLSearchParams) => request<LeadListResponse>(`/leads?${params.toString()}`),
+  lead: (id: string) => request<LeadResponse>(`/leads/${id}`),
+  createLead: (payload: CreateLeadRequest) =>
+    request<LeadResponse>("/leads", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateLeadStage: (id: string, payload: UpdateLeadStageRequest) =>
+    request<LeadResponse>(`/leads/${id}/stage`, { method: "POST", body: json(payload) }),
+  convertLead: (id: string) =>
+    request<{ lead: LeadResponse; member: MemberResponse; alreadyConverted: boolean }>(
+      `/leads/${id}/convert`,
+      { method: "POST", body: json({}) }
+    ),
   staff: () => request<StaffUserResponse[]>("/users"),
   inviteStaff: (payload: {
     email: string;

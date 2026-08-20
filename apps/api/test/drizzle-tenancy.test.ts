@@ -49,4 +49,24 @@ describeDatabase("Drizzle tenant isolation", () => {
       )
     ).rejects.toThrow(/preferred branch must belong to the contact tenant/);
   });
+
+  it("scopes CRM records and reuses a lead contact on conversion", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const lead = await repository.createLead(
+      gymScope,
+      {
+        contact: { firstName: "Lead Isolation", phone: "+254712345680" },
+        branchId: gym.branchIds[0]!,
+        source: "integration-test"
+      },
+      normalizePhone("+254712345680")
+    );
+    expect(await repository.findLeadById(pilatesScope, lead.id)).toBeNull();
+    const converted = await repository.convertLead(gymScope, lead.id, gym.user.id);
+    expect(converted?.member.contact.id).toBe(lead.contact.id);
+    expect((await repository.convertLead(gymScope, lead.id, gym.user.id))?.alreadyConverted).toBe(
+      true
+    );
+  });
 });

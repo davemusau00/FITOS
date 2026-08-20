@@ -6,17 +6,22 @@ import type {
   BranchResponse,
   CreateBranchRequest,
   CreateMemberRequest,
+  CreateLeadRequest,
   CursorPage,
   DomainEvent,
   MemberListFilters,
   MemberListItem,
   MemberResponse,
+  LeadListFilters,
+  LeadConversionResponse,
+  LeadResponse,
   RequestActor,
   RoleResponse,
   StaffUserResponse,
   TenantSummary,
   UpdateBranchRequest,
   UpdateMemberRequest,
+  UpdateLeadStageRequest,
   UpdateOrganizationRequest
 } from "@fitos/contracts";
 import { DomainError } from "../../common/errors/domain-error.js";
@@ -238,6 +243,93 @@ export class CoreService {
   async memberTimeline(actor: RequestActor, memberId: string): Promise<AuditEventResponse[]> {
     await this.getMember(actor, memberId);
     return this.repository.listAuditEvents(scopeOf(actor), memberId);
+  }
+
+  async listLeads(actor: RequestActor, filters: LeadListFilters) {
+    return this.repository.searchLeads(scopeOf(actor), filters);
+  }
+
+  async getLead(actor: RequestActor, leadId: string): Promise<LeadResponse> {
+    const lead = await this.repository.findLeadById(scopeOf(actor), leadId);
+    if (!lead) throw new DomainError("RESOURCE_NOT_FOUND", "Lead not found.", 404);
+    return lead;
+  }
+
+  async createLead(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateLeadRequest
+  ): Promise<LeadResponse> {
+    if (input.branchId && !actor.branchIds.includes(input.branchId)) {
+      throw new DomainError(
+        "BRANCH_ACCESS_DENIED",
+        "You cannot create a lead for this branch.",
+        404
+      );
+    }
+    if (
+      input.ownerUserId &&
+      !(await this.repository.findStaffByUserId(scopeOf(actor), input.ownerUserId))
+    ) {
+      throw new DomainError("VALIDATION_FAILED", "Lead owner is unavailable.", 400, {
+        ownerUserId: ["Unknown tenant staff member."]
+      });
+    }
+    const lead = await this.repository.createLead(
+      scopeOf(actor),
+      input,
+      this.normalizePhoneInput(input.contact.phone)
+    );
+    await this.audit(actor, requestId, "lead.created", "lead", lead.id, lead.branchId, {
+      stage: lead.stage,
+      source: lead.source
+    });
+    await this.publish(eventOf(actor, "lead.created", { leadId: lead.id }));
+    return lead;
+  }
+
+  async updateLeadStage(
+    actor: RequestActor,
+    requestId: string,
+    leadId: string,
+    input: UpdateLeadStageRequest
+  ): Promise<LeadResponse> {
+    if (input.stage === "lost" && !input.lostReason?.trim()) {
+      throw new DomainError("VALIDATION_FAILED", "A lost reason is required.", 400, {
+        lostReason: ["Required when marking a lead lost."]
+      });
+    }
+    const existing = await this.getLead(actor, leadId);
+    const lead = await this.repository.updateLeadStage(scopeOf(actor), leadId, input, actor.userId);
+    if (!lead) throw new DomainError("RESOURCE_NOT_FOUND", "Lead not found.", 404);
+    await this.audit(actor, requestId, "lead.stage_changed", "lead", lead.id, lead.branchId, {
+      previousStage: existing.stage,
+      stage: lead.stage,
+      lostReason: lead.lostReason
+    });
+    await this.publish(
+      eventOf(actor, "lead.stage_changed", {
+        leadId: lead.id,
+        previousStage: existing.stage,
+        stage: lead.stage
+      })
+    );
+    return lead;
+  }
+
+  async convertLead(
+    actor: RequestActor,
+    requestId: string,
+    leadId: string
+  ): Promise<LeadConversionResponse> {
+    const result = await this.repository.convertLead(scopeOf(actor), leadId, actor.userId);
+    if (!result) throw new DomainError("RESOURCE_NOT_FOUND", "Lead not found.", 404);
+    await this.audit(actor, requestId, "lead.converted", "lead", leadId, result.lead.branchId, {
+      memberId: result.member.id,
+      alreadyConverted: result.alreadyConverted
+    });
+    await this.publish(eventOf(actor, "lead.converted", { leadId, memberId: result.member.id }));
+    return result;
   }
 
   async listStaff(actor: RequestActor): Promise<StaffUserResponse[]> {

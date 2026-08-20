@@ -113,4 +113,63 @@ describe("HTTP security boundary", () => {
     expect(leaked.status).toBe(404);
     expect((await leaked.json()).error.code).toBe("MEMBER_NOT_FOUND");
   });
+
+  it("creates, stages, and tenant-scopes leads", async () => {
+    const gymOwner = await login("owner@gym.fitos.test");
+    const pilatesOwner = await login("owner@pilates.fitos.test");
+    const me = await fetch(`${baseUrl}/api/v1/auth/me`, {
+      headers: { cookie: `fitos_session=${gymOwner.session}; fitos_csrf=${gymOwner.csrf}` }
+    });
+    const branchId = (await me.json()).branches[0].id as string;
+    const created = await fetch(`${baseUrl}/api/v1/leads`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({
+        contact: { firstName: "Lead Amina", phone: "0712345678" },
+        branchId,
+        source: "walk-in"
+      })
+    });
+    expect(created.status).toBe(201);
+    const lead = await created.json();
+    expect(lead.stage).toBe("new");
+
+    const invalidLost = await fetch(`${baseUrl}/api/v1/leads/${lead.id}/stage`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({ stage: "lost" })
+    });
+    expect(invalidLost.status).toBe(400);
+
+    const lost = await fetch(`${baseUrl}/api/v1/leads/${lead.id}/stage`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({ stage: "lost", lostReason: "Outside service area" })
+    });
+    expect(lost.status).toBe(201);
+    expect((await lost.json()).lostReason).toBe("Outside service area");
+
+    const conversion = await fetch(`${baseUrl}/api/v1/leads/${lead.id}/convert`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({})
+    });
+    expect(conversion.status).toBe(201);
+    const converted = await conversion.json();
+    expect(converted.lead.stage).toBe("joined");
+    expect(converted.member.contact.id).toBe(lead.contact.id);
+
+    const repeatedConversion = await fetch(`${baseUrl}/api/v1/leads/${lead.id}/convert`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({})
+    });
+    expect(repeatedConversion.status).toBe(201);
+    expect((await repeatedConversion.json()).alreadyConverted).toBe(true);
+
+    const leaked = await fetch(`${baseUrl}/api/v1/leads/${lead.id}`, {
+      headers: { cookie: `fitos_session=${pilatesOwner.session}; fitos_csrf=${pilatesOwner.csrf}` }
+    });
+    expect(leaked.status).toBe(404);
+  });
 });

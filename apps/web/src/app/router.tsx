@@ -4,6 +4,8 @@ import { AppShell } from "./shell";
 import {
   BranchesSettingsPage,
   LoginPage,
+  LeadsPage,
+  NewLeadPage,
   MemberDetailPage,
   MembersPage,
   NewMemberPage,
@@ -34,6 +36,8 @@ export function AppRouter() {
           <Route element={<MembersPage />} path="members" />
           <Route element={<NewMemberPage />} path="members/new" />
           <Route element={<MemberDetailPage />} path="members/:memberId" />
+          <Route element={<LeadsPage />} path="leads" />
+          <Route element={<NewLeadPage />} path="leads/new" />
           <Route element={<StaffPage />} path="staff" />
           <Route element={<SettingsPage />} path="settings" />
           <Route element={<OrganizationSettingsPage />} path="settings/organization" />

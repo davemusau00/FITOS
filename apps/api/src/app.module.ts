@@ -20,6 +20,7 @@ import { BranchesController } from "./modules/branches/branches.controller.js";
 import { MembersController } from "./modules/members/members.controller.js";
 import { UsersController } from "./modules/users/users.controller.js";
 import { AuditController } from "./modules/audit/audit.controller.js";
+import { LeadsController } from "./modules/leads/leads.controller.js";
 import { CoreService } from "./modules/core/core.service.js";
 
 class DevelopmentSeedService implements OnModuleInit {
@@ -56,7 +57,8 @@ const repositoryFactory = (): FitosRepository => {
     BranchesController,
     MembersController,
     UsersController,
-    AuditController
+    AuditController,
+    LeadsController
   ],
   providers: [
     { provide: FitosRepositoryToken, useFactory: repositoryFactory },

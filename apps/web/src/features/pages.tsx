@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   Button,
@@ -18,6 +18,7 @@ import {
 } from "@fitos/ui";
 import type {
   BranchResponse,
+  LeadResponse,
   MemberListItem,
   MemberResponse,
   StaffUserResponse
@@ -31,6 +32,7 @@ const queryKeys = {
   members: (query: string) => ["members", query] as const,
   member: (id: string) => ["member", id] as const,
   memberTimeline: (id: string) => ["member", id, "timeline"] as const,
+  leads: (query: string) => ["leads", query] as const,
   staff: ["staff"] as const
 };
 
@@ -230,6 +232,314 @@ function Kpi({ label, value, tone }: { label: string; value: string | number; to
       <span>{label}</span>
       <strong>{value}</strong>
     </Card>
+  );
+}
+
+const leadStages = [
+  "new",
+  "contacted",
+  "trial_booked",
+  "trial_completed",
+  "offer",
+  "joined",
+  "lost"
+] as const;
+
+export function LeadsPage() {
+  const [params, setParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const query = params.get("query") ?? "";
+  const stage = params.get("stage") ?? "";
+  const requestParams = useMemo(() => {
+    const next = new URLSearchParams();
+    if (query) next.set("query", query);
+    if (stage) next.set("stage", stage);
+    return next;
+  }, [query, stage]);
+  const leads = useQuery({
+    queryKey: queryKeys.leads(requestParams.toString()),
+    queryFn: () => api.leads(requestParams)
+  });
+  const updateStage = useMutation({
+    mutationFn: ({
+      id,
+      nextStage,
+      lostReason
+    }: {
+      id: string;
+      nextStage: (typeof leadStages)[number];
+      lostReason?: string;
+    }) => api.updateLeadStage(id, { stage: nextStage, ...(lostReason ? { lostReason } : {}) }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["leads"] })
+  });
+  const convert = useMutation({
+    mutationFn: api.convertLead,
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["leads"] })
+  });
+  const set = (name: string, value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(name, value);
+    else next.delete(name);
+    setParams(next, { replace: true });
+  };
+  const changeStage = (lead: LeadResponse, nextStage: (typeof leadStages)[number]) => {
+    const lostReason =
+      nextStage === "lost" ? window.prompt("Why was this lead lost?")?.trim() : undefined;
+    if (nextStage === "lost" && !lostReason) return;
+    updateStage.mutate({ id: lead.id, nextStage, lostReason });
+  };
+  const columns: DataTableColumn<LeadResponse>[] = [
+    {
+      id: "lead",
+      header: "Lead",
+      cell: (lead) => (
+        <div>
+          <strong className="fitos-data-table__primary">
+            {lead.contact.firstName} {lead.contact.lastName}
+          </strong>
+          <span className="fitos-data-table__muted">
+            {lead.contact.phone ?? lead.contact.email ?? "No contact method"}
+          </span>
+        </div>
+      )
+    },
+    { id: "interest", header: "Interest", cell: (lead) => lead.interest ?? "â€”" },
+    { id: "source", header: "Source", cell: (lead) => lead.source ?? "â€”" },
+    {
+      id: "stage",
+      header: "Stage",
+      cell: (lead) => (
+        <select
+          aria-label={`Change stage for ${lead.contact.firstName}`}
+          className="fitos-control fitos-control--compact"
+          disabled={updateStage.isPending}
+          onChange={(event) =>
+            changeStage(lead, event.currentTarget.value as (typeof leadStages)[number])
+          }
+          value={lead.stage}
+        >
+          {leadStages.map((item) => (
+            <option key={item} value={item}>
+              {item.replaceAll("_", " ")}
+            </option>
+          ))}
+        </select>
+      )
+    },
+    { id: "followup", header: "Follow-up", cell: (lead) => formatDate(lead.nextFollowUpAt) },
+    {
+      id: "convert",
+      header: "",
+      cell: (lead) =>
+        lead.convertedMemberId ? (
+          <Link className="text-link" to={`/app/members/${lead.convertedMemberId}`}>
+            Member
+          </Link>
+        ) : (
+          <Button
+            disabled={convert.isPending}
+            onClick={() => {
+              if (window.confirm(`Convert ${lead.contact.firstName} to a member?`))
+                convert.mutate(lead.id);
+            }}
+            size="small"
+            variant="ghost"
+          >
+            Convert
+          </Button>
+        )
+    }
+  ];
+  return (
+    <>
+      <PageHeader
+        eyebrow="Growth"
+        title="Leads"
+        description="Capture interest, track follow-up, and move every prospect toward a clear outcome."
+        actions={
+          <Link className="fitos-button fitos-button--primary" to="/app/leads/new">
+            <Icon name="plus" size={16} />
+            Add lead
+          </Link>
+        }
+      />
+      <ErrorNotice error={leads.error ?? updateStage.error ?? convert.error} />
+      <section className="filter-row">
+        <SearchBar
+          aria-label="Search leads"
+          onChange={(event) => set("query", event.currentTarget.value)}
+          placeholder="Search name, phone, email or interest"
+          value={query}
+        />
+        <select
+          aria-label="Filter leads by stage"
+          className="fitos-control"
+          onChange={(event) => set("stage", event.currentTarget.value)}
+          value={stage}
+        >
+          <option value="">All stages</option>
+          {leadStages.map((item) => (
+            <option key={item} value={item}>
+              {item.replaceAll("_", " ")}
+            </option>
+          ))}
+        </select>
+      </section>
+      {leads.isLoading ? (
+        <PageLoading />
+      ) : !leads.data?.data.length ? (
+        <EmptyState
+          action={
+            <Link className="fitos-button fitos-button--primary" to="/app/leads/new">
+              Add first lead
+            </Link>
+          }
+          description="Prospects will appear here with their source, interest, and follow-up status."
+          title="No matching leads"
+        />
+      ) : (
+        <DataTable columns={columns} data={leads.data.data} label="Leads" />
+      )}
+    </>
+  );
+}
+
+type LeadFormValues = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  branchId: string;
+  interest: string;
+  source: string;
+  nextFollowUpAt: string;
+};
+
+export function NewLeadPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const branches = useQuery({ queryKey: queryKeys.branches, queryFn: api.branches });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting }
+  } = useForm<LeadFormValues>({
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      email: "",
+      branchId: "",
+      interest: "",
+      source: "",
+      nextFollowUpAt: ""
+    }
+  });
+  const [submissionError, setSubmissionError] = useState<unknown>(null);
+  if (branches.isLoading) return <PageLoading />;
+  return (
+    <>
+      <PageHeader
+        eyebrow="Leads"
+        title="Add lead"
+        description="Record the prospect and the next action while the conversation is still fresh."
+        actions={
+          <Link className="fitos-button fitos-button--ghost" to="/app/leads">
+            Cancel
+          </Link>
+        }
+      />
+      <form
+        className="form-card form-stack"
+        onSubmit={handleSubmit(async (values) => {
+          setSubmissionError(null);
+          try {
+            await api.createLead({
+              contact: {
+                firstName: values.firstName.trim(),
+                lastName: values.lastName.trim() || null,
+                phone: values.phone.trim() || null,
+                email: values.email.trim() || null
+              },
+              branchId: values.branchId || null,
+              interest: values.interest.trim() || null,
+              source: values.source.trim() || null,
+              nextFollowUpAt: values.nextFollowUpAt
+                ? new Date(values.nextFollowUpAt).toISOString()
+                : null
+            });
+            await queryClient.invalidateQueries({ queryKey: ["leads"] });
+            navigate("/app/leads");
+          } catch (error) {
+            setSubmissionError(error);
+          }
+        })}
+      >
+        <div className="form-grid">
+          <FormField error={errors.firstName?.message} htmlFor="leadFirstName" label="First name">
+            <input
+              className="fitos-control"
+              id="leadFirstName"
+              {...register("firstName", { required: "First name is required." })}
+            />
+          </FormField>
+          <FormField htmlFor="leadLastName" label="Last name" optional>
+            <input className="fitos-control" id="leadLastName" {...register("lastName")} />
+          </FormField>
+          <FormField htmlFor="leadPhone" label="Phone" optional>
+            <input
+              className="fitos-control"
+              id="leadPhone"
+              placeholder="+254 7â€¦"
+              {...register("phone")}
+            />
+          </FormField>
+          <FormField htmlFor="leadEmail" label="Email" optional>
+            <input className="fitos-control" id="leadEmail" type="email" {...register("email")} />
+          </FormField>
+          <FormField htmlFor="leadBranch" label="Branch" optional>
+            <select className="fitos-control" id="leadBranch" {...register("branchId")}>
+              <option value="">Organization-wide</option>
+              {branches.data?.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField htmlFor="leadInterest" label="Interest" optional>
+            <input
+              className="fitos-control"
+              id="leadInterest"
+              placeholder="e.g. Pilates trial"
+              {...register("interest")}
+            />
+          </FormField>
+          <FormField htmlFor="leadSource" label="Source" optional>
+            <input
+              className="fitos-control"
+              id="leadSource"
+              placeholder="e.g. Instagram, referral, walk-in"
+              {...register("source")}
+            />
+          </FormField>
+          <FormField htmlFor="leadFollowUp" label="Next follow-up" optional>
+            <input
+              className="fitos-control"
+              id="leadFollowUp"
+              type="datetime-local"
+              {...register("nextFollowUpAt")}
+            />
+          </FormField>
+        </div>
+        <ErrorNotice error={submissionError} />
+        <div className="form-actions">
+          <Button loading={isSubmitting} type="submit">
+            Create lead
+          </Button>
+        </div>
+      </form>
+    </>
   );
 }
 

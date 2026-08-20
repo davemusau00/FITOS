@@ -12,7 +12,11 @@ import type {
   MemberResponse,
   CreateLeadRequest,
   LeadListFilters,
+  LeadConversionResponse,
+  LeadNoteResponse,
   LeadResponse,
+  LeadTaskResponse,
+  CreateLeadTaskRequest,
   UpdateLeadStageRequest,
   PermissionKey,
   RoleKey,
@@ -53,6 +57,8 @@ type StoredSession = CreateSessionInput & { id: string; revokedAt: string | null
 type StoredContact = MemberResponse["contact"] & { tenantId: string };
 type StoredMember = Omit<MemberResponse, "contact"> & { contactId: string };
 type StoredLead = Omit<LeadResponse, "contact"> & { contactId: string };
+type StoredLeadNote = LeadNoteResponse & { tenantId: string; leadId: string };
+type StoredLeadTask = LeadTaskResponse & { tenantId: string; leadId: string };
 type StoredIdempotency = IdempotencyRecord;
 
 const now = () => new Date().toISOString();
@@ -76,6 +82,8 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly contacts = new Map<string, StoredContact>();
   private readonly members = new Map<string, StoredMember>();
   private readonly leads = new Map<string, StoredLead>();
+  private readonly leadNotes = new Map<string, StoredLeadNote>();
+  private readonly leadTasks = new Map<string, StoredLeadTask>();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly domainEvents: DomainEvent[] = [];
@@ -457,19 +465,37 @@ export class InMemoryFitosRepository implements FitosRepository {
     return this.toMemberResponse(member, contact);
   }
 
-  async createLead(scope: TenantScope, input: CreateLeadRequest, normalizedPhone: string | null): Promise<LeadResponse> {
-    if (input.branchId && !scope.branchIds.includes(input.branchId)) throw new Error("Branch unavailable.");
+  async createLead(
+    scope: TenantScope,
+    input: CreateLeadRequest,
+    normalizedPhone: string | null
+  ): Promise<LeadResponse> {
+    if (input.branchId && !scope.branchIds.includes(input.branchId))
+      throw new Error("Branch unavailable.");
     const timestamp = now();
     const contact: StoredContact = {
-      id: randomUUID(), tenantId: scope.tenantId, firstName: input.contact.firstName,
-      lastName: input.contact.lastName ?? null, phone: normalizedPhone,
-      email: input.contact.email?.trim().toLowerCase() || null, dateOfBirth: input.contact.dateOfBirth ?? null
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      firstName: input.contact.firstName,
+      lastName: input.contact.lastName ?? null,
+      phone: normalizedPhone,
+      email: input.contact.email?.trim().toLowerCase() || null,
+      dateOfBirth: input.contact.dateOfBirth ?? null
     };
     const lead: StoredLead = {
-      id: randomUUID(), tenantId: scope.tenantId, contactId: contact.id, branchId: input.branchId ?? null,
-      ownerUserId: input.ownerUserId ?? null, interest: input.interest ?? null, source: input.source ?? null,
-      stage: "new", lostReason: null, nextFollowUpAt: input.nextFollowUpAt ?? null, convertedMemberId: null,
-      createdAt: timestamp, updatedAt: timestamp
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      contactId: contact.id,
+      branchId: input.branchId ?? null,
+      ownerUserId: input.ownerUserId ?? null,
+      interest: input.interest ?? null,
+      source: input.source ?? null,
+      stage: "new",
+      lostReason: null,
+      nextFollowUpAt: input.nextFollowUpAt ?? null,
+      convertedMemberId: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
     };
     this.contacts.set(contact.id, contact);
     this.leads.set(lead.id, lead);
@@ -478,37 +504,176 @@ export class InMemoryFitosRepository implements FitosRepository {
 
   async findLeadById(scope: TenantScope, leadId: string): Promise<LeadResponse | null> {
     const lead = this.leads.get(leadId);
-    if (!lead || lead.tenantId !== scope.tenantId || (lead.branchId && !scope.branchIds.includes(lead.branchId))) return null;
+    if (
+      !lead ||
+      lead.tenantId !== scope.tenantId ||
+      (lead.branchId && !scope.branchIds.includes(lead.branchId))
+    )
+      return null;
     const contact = this.contacts.get(lead.contactId);
     return contact ? this.toLeadResponse(lead, contact) : null;
   }
 
-  async searchLeads(scope: TenantScope, filters: LeadListFilters): Promise<CursorPage<LeadResponse>> {
-    if (filters.branchId && !scope.branchIds.includes(filters.branchId)) return { data: [], page: { nextCursor: null, hasMore: false } };
+  async searchLeads(
+    scope: TenantScope,
+    filters: LeadListFilters
+  ): Promise<CursorPage<LeadResponse>> {
+    if (filters.branchId && !scope.branchIds.includes(filters.branchId))
+      return { data: [], page: { nextCursor: null, hasMore: false } };
     const query = filters.query?.trim().toLowerCase();
     const rows = [...this.leads.values()]
-      .filter((lead) => lead.tenantId === scope.tenantId && (!lead.branchId || scope.branchIds.includes(lead.branchId)))
+      .filter(
+        (lead) =>
+          lead.tenantId === scope.tenantId &&
+          (!lead.branchId || scope.branchIds.includes(lead.branchId))
+      )
       .filter((lead) => !filters.branchId || lead.branchId === filters.branchId)
       .filter((lead) => !filters.stage || lead.stage === filters.stage)
       .map((lead) => ({ lead, contact: this.contacts.get(lead.contactId) }))
       .filter((row): row is { lead: StoredLead; contact: StoredContact } => Boolean(row.contact))
-      .filter(({ lead, contact }) => !query || [contact.firstName, contact.lastName, contact.phone, contact.email, lead.interest].filter(Boolean).some((value) => value?.toLowerCase().includes(query)))
-      .sort((a, b) => b.lead.createdAt.localeCompare(a.lead.createdAt) || b.lead.id.localeCompare(a.lead.id));
+      .filter(
+        ({ lead, contact }) =>
+          !query ||
+          [contact.firstName, contact.lastName, contact.phone, contact.email, lead.interest]
+            .filter(Boolean)
+            .some((value) => value?.toLowerCase().includes(query))
+      )
+      .sort(
+        (a, b) =>
+          b.lead.createdAt.localeCompare(a.lead.createdAt) || b.lead.id.localeCompare(a.lead.id)
+      );
     const limit = Math.min(Math.max(filters.limit ?? 25, 1), 100);
     const selected = rows.slice(0, limit + 1);
-    const data = selected.slice(0, limit).map(({ lead, contact }) => this.toLeadResponse(lead, contact));
+    const data = selected
+      .slice(0, limit)
+      .map(({ lead, contact }) => this.toLeadResponse(lead, contact));
     const last = data.at(-1);
-    return { data, page: { hasMore: selected.length > limit, nextCursor: selected.length > limit && last ? encodeCursor({ createdAt: last.createdAt, id: last.id }) : null } };
+    return {
+      data,
+      page: {
+        hasMore: selected.length > limit,
+        nextCursor:
+          selected.length > limit && last
+            ? encodeCursor({ createdAt: last.createdAt, id: last.id })
+            : null
+      }
+    };
   }
 
-  async updateLeadStage(scope: TenantScope, leadId: string, input: UpdateLeadStageRequest, _actorUserId: string): Promise<LeadResponse | null> {
+  async updateLeadStage(
+    scope: TenantScope,
+    leadId: string,
+    input: UpdateLeadStageRequest,
+    _actorUserId: string
+  ): Promise<LeadResponse | null> {
     const lead = this.leads.get(leadId);
-    if (!lead || lead.tenantId !== scope.tenantId || (lead.branchId && !scope.branchIds.includes(lead.branchId))) return null;
+    if (
+      !lead ||
+      lead.tenantId !== scope.tenantId ||
+      (lead.branchId && !scope.branchIds.includes(lead.branchId))
+    )
+      return null;
     lead.stage = input.stage;
-    lead.lostReason = input.stage === "lost" ? input.lostReason ?? null : null;
+    lead.lostReason = input.stage === "lost" ? (input.lostReason ?? null) : null;
     lead.updatedAt = now();
     const contact = this.contacts.get(lead.contactId);
     return contact ? this.toLeadResponse(lead, contact) : null;
+  }
+
+  async convertLead(
+    scope: TenantScope,
+    leadId: string,
+    _actorUserId: string
+  ): Promise<LeadConversionResponse | null> {
+    const lead = this.leads.get(leadId);
+    if (
+      !lead ||
+      lead.tenantId !== scope.tenantId ||
+      (lead.branchId && !scope.branchIds.includes(lead.branchId))
+    )
+      return null;
+    const contact = this.contacts.get(lead.contactId);
+    if (!contact) return null;
+    const existing = [...this.members.values()].find(
+      (member) => member.tenantId === scope.tenantId && member.contactId === contact.id
+    );
+    const timestamp = now();
+    const member = existing ?? {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      contactId: contact.id,
+      homeBranchId: lead.branchId,
+      memberNumber: null,
+      status: "active" as const,
+      joinedAt: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    if (!existing) this.members.set(member.id, member);
+    lead.convertedMemberId = member.id;
+    lead.stage = "joined";
+    lead.lostReason = null;
+    lead.updatedAt = timestamp;
+    return {
+      lead: this.toLeadResponse(lead, contact),
+      member: this.toMemberResponse(member, contact),
+      alreadyConverted: Boolean(existing)
+    };
+  }
+
+  async addLeadNote(
+    scope: TenantScope,
+    leadId: string,
+    body: string,
+    actorUserId: string
+  ): Promise<LeadNoteResponse | null> {
+    if (!(await this.findLeadById(scope, leadId))) return null;
+    const note: StoredLeadNote = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      leadId,
+      body,
+      createdByUserId: actorUserId,
+      createdAt: now()
+    };
+    this.leadNotes.set(note.id, note);
+    return this.noteResponse(note);
+  }
+
+  async listLeadNotes(scope: TenantScope, leadId: string): Promise<LeadNoteResponse[]> {
+    if (!(await this.findLeadById(scope, leadId))) return [];
+    return [...this.leadNotes.values()]
+      .filter((note) => note.tenantId === scope.tenantId && note.leadId === leadId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((note) => this.noteResponse(note));
+  }
+
+  async createLeadTask(
+    scope: TenantScope,
+    leadId: string,
+    input: CreateLeadTaskRequest
+  ): Promise<LeadTaskResponse | null> {
+    if (!(await this.findLeadById(scope, leadId))) return null;
+    const task: StoredLeadTask = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      leadId,
+      body: input.body,
+      dueAt: input.dueAt ?? null,
+      assigneeUserId: input.assigneeUserId ?? null,
+      completedAt: null,
+      createdAt: now()
+    };
+    this.leadTasks.set(task.id, task);
+    return this.taskResponse(task);
+  }
+
+  async listLeadTasks(scope: TenantScope, leadId: string): Promise<LeadTaskResponse[]> {
+    if (!(await this.findLeadById(scope, leadId))) return [];
+    return [...this.leadTasks.values()]
+      .filter((task) => task.tenantId === scope.tenantId && task.leadId === leadId)
+      .sort((a, b) => (a.dueAt ?? a.createdAt).localeCompare(b.dueAt ?? b.createdAt))
+      .map((task) => this.taskResponse(task));
   }
 
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {
@@ -721,6 +886,30 @@ export class InMemoryFitosRepository implements FitosRepository {
       joinedAt: member.joinedAt,
       updatedAt: member.updatedAt
     };
+  }
+
+  private toLeadResponse(lead: StoredLead, contact: StoredContact): LeadResponse {
+    const { contactId: _contactId, ...response } = lead;
+    return {
+      ...response,
+      contact: {
+        id: contact.id,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        phone: contact.phone,
+        email: contact.email
+      }
+    };
+  }
+
+  private noteResponse(note: StoredLeadNote): LeadNoteResponse {
+    const { tenantId: _tenantId, leadId: _leadId, ...response } = note;
+    return response;
+  }
+
+  private taskResponse(task: StoredLeadTask): LeadTaskResponse {
+    const { tenantId: _tenantId, leadId: _leadId, ...response } = task;
+    return response;
   }
 
   private toStaff(membership: StoredTenantUser): StaffUserResponse | null {
