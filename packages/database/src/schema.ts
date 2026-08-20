@@ -312,6 +312,184 @@ export const leadNotes = pgTable(
   (table) => [index("idx_lead_notes_tenant_lead").on(table.tenantId, table.leadId, table.createdAt)]
 );
 
+export const services = pgTable(
+  "services",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
+    name: varchar("name", { length: 160 }).notNull(),
+    slug: varchar("slug", { length: 120 }).notNull(),
+    serviceType: varchar("service_type", { length: 30 }).notNull(),
+    durationMinutes: integer("duration_minutes").notNull(),
+    defaultCapacity: integer("default_capacity"),
+    amountMinor: text("amount_minor"),
+    currency: varchar("currency", { length: 3 }),
+    publicVisible: boolean("public_visible").notNull().default(false),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_services_tenant_branch_slug").on(table.tenantId, table.branchId, table.slug),
+    index("idx_services_tenant_branch_active").on(table.tenantId, table.branchId, table.isActive)
+  ]
+);
+
+export const rooms = pgTable(
+  "rooms",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    capacity: integer("capacity"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_rooms_tenant_branch_name").on(table.tenantId, table.branchId, table.name),
+    index("idx_rooms_tenant_branch_active").on(table.tenantId, table.branchId, table.isActive)
+  ]
+);
+
+export const scheduleOccurrences = pgTable(
+  "schedule_occurrences",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "restrict" }),
+    trainerUserId: uuid("trainer_user_id").references(() => users.id, { onDelete: "set null" }),
+    roomId: uuid("room_id").references(() => rooms.id, { onDelete: "set null" }),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    capacity: integer("capacity").notNull(),
+    status: varchar("status", { length: 30 }).notNull().default("scheduled"),
+    cancellationReason: varchar("cancellation_reason", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_occurrences_tenant_branch_starts").on(
+      table.tenantId,
+      table.branchId,
+      table.startsAt
+    ),
+    index("idx_occurrences_tenant_service_starts").on(
+      table.tenantId,
+      table.serviceId,
+      table.startsAt
+    )
+  ]
+);
+
+export const bookings = pgTable(
+  "bookings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    occurrenceId: uuid("occurrence_id")
+      .notNull()
+      .references(() => scheduleOccurrences.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "restrict" }),
+    status: varchar("status", { length: 30 }).notNull().default("confirmed"),
+    source: varchar("source", { length: 30 }).notNull().default("staff"),
+    bookedAt: timestamp("booked_at", { withTimezone: true }).notNull().defaultNow(),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancellationReason: varchar("cancellation_reason", { length: 255 }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_bookings_tenant_occurrence_status").on(
+      table.tenantId,
+      table.occurrenceId,
+      table.status
+    ),
+    index("idx_bookings_tenant_member_booked").on(table.tenantId, table.memberId, table.bookedAt)
+  ]
+);
+
+export const membershipPlans = pgTable(
+  "membership_plans",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
+    name: varchar("name", { length: 160 }).notNull(),
+    slug: varchar("slug", { length: 120 }).notNull(),
+    amountMinor: text("amount_minor"),
+    currency: varchar("currency", { length: 3 }),
+    durationDays: integer("duration_days"),
+    includedCredits: integer("included_credits").notNull().default(0),
+    publicVisible: boolean("public_visible").notNull().default(false),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("idx_membership_plans_tenant_active").on(table.tenantId, table.isActive)]
+);
+
+export const memberMemberships = pgTable(
+  "member_memberships",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id").notNull().references(() => members.id, { onDelete: "restrict" }),
+    planId: uuid("plan_id").references(() => membershipPlans.id, { onDelete: "set null" }),
+    planSnapshot: jsonb("plan_snapshot").notNull(),
+    status: varchar("status", { length: 30 }).notNull().default("active"),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("idx_member_memberships_tenant_member_status").on(table.tenantId, table.memberId, table.status)]
+);
+
+export const creditLedger = pgTable(
+  "credit_ledger",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    membershipId: uuid("membership_id").notNull().references(() => memberMemberships.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id").notNull().references(() => members.id, { onDelete: "restrict" }),
+    delta: integer("delta").notNull(),
+    reason: varchar("reason", { length: 30 }).notNull(),
+    bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "restrict" }),
+    note: varchar("note", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_credit_ledger_tenant_membership_created").on(table.tenantId, table.membershipId, table.createdAt),
+    uniqueIndex("uq_credit_ledger_booking_consumption").on(table.bookingId)
+  ]
+);
+
 export const auditEvents = pgTable(
   "audit_events",
   {
@@ -385,6 +563,13 @@ export const schema = {
   leadEvents,
   leadTasks,
   leadNotes,
+  services,
+  rooms,
+  scheduleOccurrences,
+  bookings,
+  membershipPlans,
+  memberMemberships,
+  creditLedger,
   auditEvents,
   idempotencyKeys
 };

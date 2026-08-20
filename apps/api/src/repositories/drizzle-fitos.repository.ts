@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import {
   auditEvents,
+  bookings,
   branches,
   contacts,
   createDatabase,
@@ -12,7 +13,10 @@ import {
   members,
   rolePermissions,
   roles,
+  rooms,
+  scheduleOccurrences,
   sessions,
+  services,
   tenantUsers,
   tenants,
   userBranchAccess,
@@ -46,7 +50,18 @@ import type {
   UpdateMemberRequest,
   UpdateLeadStageRequest,
   UpdateOrganizationRequest,
-  UserSummary
+  UserSummary,
+  CreateRoomRequest,
+  CreateScheduleOccurrenceRequest,
+  CreateServiceRequest,
+  RoomResponse,
+  ScheduleOccurrenceFilters,
+  ScheduleOccurrenceResponse,
+  ServiceResponse,
+  UpdateServiceRequest,
+  BookingListFilters,
+  BookingResponse,
+  CreateBookingRequest
 } from "@fitos/contracts";
 import { decodeCursor, encodeCursor } from "@fitos/shared";
 import type { Pool } from "pg";
@@ -65,6 +80,11 @@ import type {
 const branchAccessCondition = (scope: TenantScope, column = members.homeBranchId) => {
   if (!scope.branchIds.length) return sql`false`;
   return or(isNull(column), inArray(column, scope.branchIds));
+};
+
+const serviceBranchAccessCondition = (scope: TenantScope) => {
+  if (!scope.branchIds.length) return sql`false`;
+  return or(isNull(services.branchId), inArray(services.branchId, scope.branchIds));
 };
 
 const asRoleKey = (value: string | null): RoleKey | null =>
@@ -759,6 +779,355 @@ export class DrizzleFitosRepository implements FitosRepository {
     return tasks.map((task) => this.leadTaskResponse(task));
   }
 
+  async listServices(scope: TenantScope): Promise<ServiceResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(services)
+      .where(and(eq(services.tenantId, scope.tenantId), serviceBranchAccessCondition(scope)))
+      .orderBy(services.name);
+    return rows.map((service) => this.serviceResponse(service));
+  }
+
+  async findServiceById(scope: TenantScope, serviceId: string): Promise<ServiceResponse | null> {
+    const [service] = await this.db
+      .select()
+      .from(services)
+      .where(
+        and(
+          eq(services.id, serviceId),
+          eq(services.tenantId, scope.tenantId),
+          serviceBranchAccessCondition(scope)
+        )
+      )
+      .limit(1);
+    return service ? this.serviceResponse(service) : null;
+  }
+
+  async createService(scope: TenantScope, input: CreateServiceRequest): Promise<ServiceResponse> {
+    const [service] = await this.db
+      .insert(services)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId ?? null,
+        name: input.name,
+        slug: input.slug || this.slug(input.name),
+        serviceType: input.serviceType,
+        durationMinutes: input.durationMinutes,
+        defaultCapacity: input.defaultCapacity ?? null,
+        amountMinor: input.price?.amountMinor ?? null,
+        currency: input.price?.currency ?? null,
+        publicVisible: input.publicVisible ?? false
+      })
+      .returning();
+    if (!service) throw new Error("Unable to create service.");
+    return this.serviceResponse(service);
+  }
+
+  async updateService(
+    scope: TenantScope,
+    serviceId: string,
+    input: UpdateServiceRequest
+  ): Promise<ServiceResponse | null> {
+    const current = await this.findServiceById(scope, serviceId);
+    if (!current) return null;
+    const [service] = await this.db
+      .update(services)
+      .set({
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.slug !== undefined ? { slug: input.slug } : {}),
+        ...(input.durationMinutes !== undefined ? { durationMinutes: input.durationMinutes } : {}),
+        ...(input.defaultCapacity !== undefined ? { defaultCapacity: input.defaultCapacity } : {}),
+        ...(input.price !== undefined
+          ? {
+              amountMinor: input.price?.amountMinor ?? null,
+              currency: input.price?.currency ?? null
+            }
+          : {}),
+        ...(input.publicVisible !== undefined ? { publicVisible: input.publicVisible } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        updatedAt: new Date()
+      })
+      .where(and(eq(services.id, current.id), eq(services.tenantId, scope.tenantId)))
+      .returning();
+    return service ? this.serviceResponse(service) : null;
+  }
+
+  async listRooms(scope: TenantScope, branchId?: string): Promise<RoomResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(rooms)
+      .where(
+        and(
+          eq(rooms.tenantId, scope.tenantId),
+          inArray(rooms.branchId, scope.branchIds),
+          ...(branchId ? [eq(rooms.branchId, branchId)] : [])
+        )
+      )
+      .orderBy(rooms.name);
+    return rows.map((room) => this.roomResponse(room));
+  }
+
+  async findRoomById(scope: TenantScope, roomId: string): Promise<RoomResponse | null> {
+    const [room] = await this.db
+      .select()
+      .from(rooms)
+      .where(
+        and(
+          eq(rooms.id, roomId),
+          eq(rooms.tenantId, scope.tenantId),
+          inArray(rooms.branchId, scope.branchIds)
+        )
+      )
+      .limit(1);
+    return room ? this.roomResponse(room) : null;
+  }
+
+  async createRoom(scope: TenantScope, input: CreateRoomRequest): Promise<RoomResponse> {
+    const [room] = await this.db
+      .insert(rooms)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        name: input.name,
+        capacity: input.capacity ?? null
+      })
+      .returning();
+    if (!room) throw new Error("Unable to create room.");
+    return this.roomResponse(room);
+  }
+
+  async createScheduleOccurrence(
+    scope: TenantScope,
+    input: CreateScheduleOccurrenceRequest
+  ): Promise<ScheduleOccurrenceResponse> {
+    const [occurrence] = await this.db
+      .insert(scheduleOccurrences)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        serviceId: input.serviceId,
+        trainerUserId: input.trainerUserId ?? null,
+        roomId: input.roomId ?? null,
+        startsAt: new Date(input.startsAt),
+        endsAt: new Date(input.endsAt),
+        capacity: input.capacity
+      })
+      .returning();
+    if (!occurrence) throw new Error("Unable to create schedule occurrence.");
+    return this.occurrenceResponse(occurrence);
+  }
+
+  async findScheduleOccurrenceById(
+    scope: TenantScope,
+    occurrenceId: string
+  ): Promise<ScheduleOccurrenceResponse | null> {
+    const [occurrence] = await this.db
+      .select()
+      .from(scheduleOccurrences)
+      .where(
+        and(
+          eq(scheduleOccurrences.id, occurrenceId),
+          eq(scheduleOccurrences.tenantId, scope.tenantId),
+          inArray(scheduleOccurrences.branchId, scope.branchIds)
+        )
+      )
+      .limit(1);
+    return occurrence ? this.occurrenceResponse(occurrence) : null;
+  }
+
+  async listScheduleOccurrences(
+    scope: TenantScope,
+    filters: ScheduleOccurrenceFilters
+  ): Promise<CursorPage<ScheduleOccurrenceResponse>> {
+    const rows = await this.db
+      .select()
+      .from(scheduleOccurrences)
+      .where(
+        and(
+          eq(scheduleOccurrences.tenantId, scope.tenantId),
+          inArray(scheduleOccurrences.branchId, scope.branchIds),
+          ...(filters.branchId ? [eq(scheduleOccurrences.branchId, filters.branchId)] : []),
+          ...(filters.serviceId ? [eq(scheduleOccurrences.serviceId, filters.serviceId)] : []),
+          ...(filters.trainerUserId
+            ? [eq(scheduleOccurrences.trainerUserId, filters.trainerUserId)]
+            : []),
+          ...(filters.roomId ? [eq(scheduleOccurrences.roomId, filters.roomId)] : []),
+          ...(filters.status ? [eq(scheduleOccurrences.status, filters.status)] : []),
+          ...(filters.startsAfter
+            ? [gt(scheduleOccurrences.startsAt, new Date(filters.startsAfter))]
+            : []),
+          ...(filters.endsBefore
+            ? [lt(scheduleOccurrences.endsAt, new Date(filters.endsBefore))]
+            : [])
+        )
+      )
+      .orderBy(scheduleOccurrences.startsAt)
+      .limit(Math.min(Math.max(filters.limit ?? 50, 1), 100) + 1);
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+    return {
+      data: rows.slice(0, limit).map((occurrence) => this.occurrenceResponse(occurrence)),
+      page: { hasMore: rows.length > limit, nextCursor: null }
+    };
+  }
+
+  async cancelScheduleOccurrence(
+    scope: TenantScope,
+    occurrenceId: string,
+    reason: string
+  ): Promise<ScheduleOccurrenceResponse | null> {
+    const current = await this.findScheduleOccurrenceById(scope, occurrenceId);
+    if (!current) return null;
+    const [occurrence] = await this.db
+      .update(scheduleOccurrences)
+      .set({ status: "cancelled", cancellationReason: reason, updatedAt: new Date() })
+      .where(
+        and(
+          eq(scheduleOccurrences.id, occurrenceId),
+          eq(scheduleOccurrences.tenantId, scope.tenantId)
+        )
+      )
+      .returning();
+    return occurrence ? this.occurrenceResponse(occurrence) : null;
+  }
+
+  async createBooking(
+    scope: TenantScope,
+    input: CreateBookingRequest,
+    actorUserId: string
+  ): Promise<BookingResponse> {
+    const booking = await this.db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM schedule_occurrences
+        WHERE id = ${input.occurrenceId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [occurrence] = await tx
+        .select()
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.id, input.occurrenceId),
+            eq(scheduleOccurrences.tenantId, scope.tenantId),
+            inArray(scheduleOccurrences.branchId, scope.branchIds)
+          )
+        )
+        .limit(1);
+      if (!occurrence || occurrence.status !== "scheduled")
+        throw new Error("Occurrence unavailable.");
+      const [member] = await tx
+        .select({ id: members.id })
+        .from(members)
+        .where(
+          and(
+            eq(members.id, input.memberId),
+            eq(members.tenantId, scope.tenantId),
+            eq(members.status, "active")
+          )
+        )
+        .limit(1);
+      if (!member) throw new Error("Member unavailable.");
+      const [existing] = await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.tenantId, scope.tenantId),
+            eq(bookings.occurrenceId, occurrence.id),
+            eq(bookings.memberId, member.id),
+            eq(bookings.status, "confirmed")
+          )
+        )
+        .limit(1);
+      if (existing) throw new Error("Member already has a booking for this occurrence.");
+      const [capacity] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.tenantId, scope.tenantId),
+            eq(bookings.occurrenceId, occurrence.id),
+            eq(bookings.status, "confirmed")
+          )
+        );
+      if ((capacity?.count ?? 0) >= occurrence.capacity) throw new Error("Occurrence is full.");
+      const [created] = await tx
+        .insert(bookings)
+        .values({
+          tenantId: scope.tenantId,
+          branchId: occurrence.branchId,
+          occurrenceId: occurrence.id,
+          memberId: member.id,
+          source: input.source ?? "staff",
+          createdByUserId: actorUserId
+        })
+        .returning();
+      if (!created) throw new Error("Unable to create booking.");
+      return created;
+    });
+    return this.bookingResponse(booking);
+  }
+
+  async findBookingById(scope: TenantScope, bookingId: string): Promise<BookingResponse | null> {
+    const [booking] = await this.db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, bookingId),
+          eq(bookings.tenantId, scope.tenantId),
+          inArray(bookings.branchId, scope.branchIds)
+        )
+      )
+      .limit(1);
+    return booking ? this.bookingResponse(booking) : null;
+  }
+
+  async listBookings(
+    scope: TenantScope,
+    filters: BookingListFilters
+  ): Promise<CursorPage<BookingResponse>> {
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+    const rows = await this.db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.tenantId, scope.tenantId),
+          inArray(bookings.branchId, scope.branchIds),
+          ...(filters.occurrenceId ? [eq(bookings.occurrenceId, filters.occurrenceId)] : []),
+          ...(filters.memberId ? [eq(bookings.memberId, filters.memberId)] : []),
+          ...(filters.status ? [eq(bookings.status, filters.status)] : [])
+        )
+      )
+      .orderBy(desc(bookings.bookedAt))
+      .limit(limit + 1);
+    return {
+      data: rows.slice(0, limit).map((booking) => this.bookingResponse(booking)),
+      page: { hasMore: rows.length > limit, nextCursor: null }
+    };
+  }
+
+  async cancelBooking(
+    scope: TenantScope,
+    bookingId: string,
+    reason: string
+  ): Promise<BookingResponse | null> {
+    const current = await this.findBookingById(scope, bookingId);
+    if (!current) return null;
+    if (current.status === "cancelled") return current;
+    const [booking] = await this.db
+      .update(bookings)
+      .set({
+        status: "cancelled",
+        cancelledAt: new Date(),
+        cancellationReason: reason,
+        updatedAt: new Date()
+      })
+      .where(and(eq(bookings.id, bookingId), eq(bookings.tenantId, scope.tenantId)))
+      .returning();
+    return booking ? this.bookingResponse(booking) : null;
+  }
+
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {
     const rows = await this.db
       .select({ membership: tenantUsers, user: users, role: roles })
@@ -1171,6 +1540,77 @@ export class DrizzleFitosRepository implements FitosRepository {
       assigneeUserId: task.assigneeUserId,
       completedAt: task.completedAt?.toISOString() ?? null,
       createdAt: task.createdAt.toISOString()
+    };
+  }
+
+  private serviceResponse(service: typeof services.$inferSelect): ServiceResponse {
+    return {
+      id: service.id,
+      tenantId: service.tenantId,
+      branchId: service.branchId,
+      name: service.name,
+      slug: service.slug,
+      serviceType: service.serviceType as ServiceResponse["serviceType"],
+      durationMinutes: service.durationMinutes,
+      defaultCapacity: service.defaultCapacity,
+      price:
+        service.amountMinor === null || service.currency === null
+          ? null
+          : { amountMinor: service.amountMinor, currency: service.currency },
+      publicVisible: service.publicVisible,
+      isActive: service.isActive,
+      createdAt: service.createdAt.toISOString(),
+      updatedAt: service.updatedAt.toISOString()
+    };
+  }
+
+  private roomResponse(room: typeof rooms.$inferSelect): RoomResponse {
+    return {
+      id: room.id,
+      tenantId: room.tenantId,
+      branchId: room.branchId,
+      name: room.name,
+      capacity: room.capacity,
+      isActive: room.isActive,
+      createdAt: room.createdAt.toISOString(),
+      updatedAt: room.updatedAt.toISOString()
+    };
+  }
+
+  private occurrenceResponse(
+    occurrence: typeof scheduleOccurrences.$inferSelect
+  ): ScheduleOccurrenceResponse {
+    return {
+      id: occurrence.id,
+      tenantId: occurrence.tenantId,
+      branchId: occurrence.branchId,
+      serviceId: occurrence.serviceId,
+      trainerUserId: occurrence.trainerUserId,
+      roomId: occurrence.roomId,
+      startsAt: occurrence.startsAt.toISOString(),
+      endsAt: occurrence.endsAt.toISOString(),
+      capacity: occurrence.capacity,
+      status: occurrence.status as ScheduleOccurrenceResponse["status"],
+      createdAt: occurrence.createdAt.toISOString(),
+      updatedAt: occurrence.updatedAt.toISOString()
+    };
+  }
+
+  private bookingResponse(booking: typeof bookings.$inferSelect): BookingResponse {
+    return {
+      id: booking.id,
+      tenantId: booking.tenantId,
+      branchId: booking.branchId,
+      occurrenceId: booking.occurrenceId,
+      memberId: booking.memberId,
+      status: booking.status as BookingResponse["status"],
+      source: booking.source as BookingResponse["source"],
+      bookedAt: booking.bookedAt.toISOString(),
+      cancelledAt: booking.cancelledAt?.toISOString() ?? null,
+      cancellationReason: booking.cancellationReason,
+      createdByUserId: booking.createdByUserId,
+      createdAt: booking.createdAt.toISOString(),
+      updatedAt: booking.updatedAt.toISOString()
     };
   }
 

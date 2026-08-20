@@ -26,7 +26,18 @@ import type {
   UpdateBranchRequest,
   UpdateMemberRequest,
   UpdateOrganizationRequest,
-  UserSummary
+  UserSummary,
+  CreateRoomRequest,
+  CreateScheduleOccurrenceRequest,
+  CreateServiceRequest,
+  RoomResponse,
+  ScheduleOccurrenceFilters,
+  ScheduleOccurrenceResponse,
+  ServiceResponse,
+  UpdateServiceRequest,
+  BookingListFilters,
+  BookingResponse,
+  CreateBookingRequest
 } from "@fitos/contracts";
 import { DEFAULT_ROLE_PERMISSIONS } from "@fitos/contracts";
 import { decodeCursor, encodeCursor } from "@fitos/shared";
@@ -59,6 +70,10 @@ type StoredMember = Omit<MemberResponse, "contact"> & { contactId: string };
 type StoredLead = Omit<LeadResponse, "contact"> & { contactId: string };
 type StoredLeadNote = LeadNoteResponse & { tenantId: string; leadId: string };
 type StoredLeadTask = LeadTaskResponse & { tenantId: string; leadId: string };
+type StoredService = ServiceResponse;
+type StoredRoom = RoomResponse;
+type StoredOccurrence = ScheduleOccurrenceResponse & { cancellationReason: string | null };
+type StoredBooking = BookingResponse;
 type StoredIdempotency = IdempotencyRecord;
 
 const now = () => new Date().toISOString();
@@ -84,6 +99,10 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly leads = new Map<string, StoredLead>();
   private readonly leadNotes = new Map<string, StoredLeadNote>();
   private readonly leadTasks = new Map<string, StoredLeadTask>();
+  private readonly services = new Map<string, StoredService>();
+  private readonly rooms = new Map<string, StoredRoom>();
+  private readonly occurrences = new Map<string, StoredOccurrence>();
+  private readonly bookings = new Map<string, StoredBooking>();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly domainEvents: DomainEvent[] = [];
@@ -676,6 +695,327 @@ export class InMemoryFitosRepository implements FitosRepository {
       .map((task) => this.taskResponse(task));
   }
 
+  async listServices(scope: TenantScope): Promise<ServiceResponse[]> {
+    return [...this.services.values()]
+      .filter(
+        (service) =>
+          service.tenantId === scope.tenantId &&
+          (!service.branchId || scope.branchIds.includes(service.branchId))
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async findServiceById(scope: TenantScope, serviceId: string): Promise<ServiceResponse | null> {
+    const service = this.services.get(serviceId);
+    return service &&
+      service.tenantId === scope.tenantId &&
+      (!service.branchId || scope.branchIds.includes(service.branchId))
+      ? { ...service, price: service.price ? { ...service.price } : null }
+      : null;
+  }
+
+  async createService(scope: TenantScope, input: CreateServiceRequest): Promise<ServiceResponse> {
+    if (input.branchId && !scope.branchIds.includes(input.branchId))
+      throw new Error("Branch unavailable.");
+    const timestamp = now();
+    const service: StoredService = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId: input.branchId ?? null,
+      name: input.name,
+      slug: input.slug || toSlug(input.name),
+      serviceType: input.serviceType,
+      durationMinutes: input.durationMinutes,
+      defaultCapacity: input.defaultCapacity ?? null,
+      price: input.price ?? null,
+      publicVisible: input.publicVisible ?? false,
+      isActive: true,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    if (
+      [...this.services.values()].some(
+        (item) =>
+          item.tenantId === service.tenantId &&
+          item.branchId === service.branchId &&
+          item.slug === service.slug
+      )
+    )
+      throw new Error("service slug already exists");
+    this.services.set(service.id, service);
+    return { ...service, price: service.price ? { ...service.price } : null };
+  }
+
+  async updateService(
+    scope: TenantScope,
+    serviceId: string,
+    input: UpdateServiceRequest
+  ): Promise<ServiceResponse | null> {
+    const service = this.services.get(serviceId);
+    if (
+      !service ||
+      service.tenantId !== scope.tenantId ||
+      (service.branchId && !scope.branchIds.includes(service.branchId))
+    )
+      return null;
+    const slug = input.slug ?? service.slug;
+    if (
+      [...this.services.values()].some(
+        (item) =>
+          item.id !== service.id &&
+          item.tenantId === service.tenantId &&
+          item.branchId === service.branchId &&
+          item.slug === slug
+      )
+    )
+      throw new Error("service slug already exists");
+    Object.assign(service, input, { slug, updatedAt: now() });
+    return { ...service, price: service.price ? { ...service.price } : null };
+  }
+
+  async listRooms(scope: TenantScope, branchId?: string): Promise<RoomResponse[]> {
+    if (branchId && !scope.branchIds.includes(branchId)) return [];
+    return [...this.rooms.values()]
+      .filter(
+        (room) =>
+          room.tenantId === scope.tenantId &&
+          scope.branchIds.includes(room.branchId) &&
+          (!branchId || room.branchId === branchId)
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async findRoomById(scope: TenantScope, roomId: string): Promise<RoomResponse | null> {
+    const room = this.rooms.get(roomId);
+    return room && room.tenantId === scope.tenantId && scope.branchIds.includes(room.branchId)
+      ? { ...room }
+      : null;
+  }
+
+  async createRoom(scope: TenantScope, input: CreateRoomRequest): Promise<RoomResponse> {
+    if (!scope.branchIds.includes(input.branchId)) throw new Error("Branch unavailable.");
+    if (
+      [...this.rooms.values()].some(
+        (room) =>
+          room.tenantId === scope.tenantId &&
+          room.branchId === input.branchId &&
+          room.name.toLowerCase() === input.name.toLowerCase()
+      )
+    )
+      throw new Error("room name already exists");
+    const timestamp = now();
+    const room: StoredRoom = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      name: input.name,
+      capacity: input.capacity ?? null,
+      isActive: true,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.rooms.set(room.id, room);
+    return { ...room };
+  }
+
+  async createScheduleOccurrence(
+    scope: TenantScope,
+    input: CreateScheduleOccurrenceRequest
+  ): Promise<ScheduleOccurrenceResponse> {
+    if (!scope.branchIds.includes(input.branchId)) throw new Error("Branch unavailable.");
+    const service = await this.findServiceById(scope, input.serviceId);
+    if (!service || (service.branchId && service.branchId !== input.branchId))
+      throw new Error("Service unavailable.");
+    if (input.roomId) {
+      const room = await this.findRoomById(scope, input.roomId);
+      if (!room || room.branchId !== input.branchId || !room.isActive)
+        throw new Error("Room unavailable.");
+    }
+    if (input.trainerUserId && !(await this.findStaffByUserId(scope, input.trainerUserId)))
+      throw new Error("Trainer unavailable.");
+    const startsAt = new Date(input.startsAt);
+    const endsAt = new Date(input.endsAt);
+    if (endsAt <= startsAt) throw new Error("Occurrence end must be after start.");
+    const clashes = [...this.occurrences.values()].some(
+      (occurrence) =>
+        occurrence.tenantId === scope.tenantId &&
+        occurrence.status === "scheduled" &&
+        new Date(occurrence.startsAt) < endsAt &&
+        startsAt < new Date(occurrence.endsAt) &&
+        ((input.roomId && occurrence.roomId === input.roomId) ||
+          (input.trainerUserId && occurrence.trainerUserId === input.trainerUserId))
+    );
+    if (clashes) throw new Error("Schedule conflict.");
+    const timestamp = now();
+    const occurrence: StoredOccurrence = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      serviceId: input.serviceId,
+      trainerUserId: input.trainerUserId ?? null,
+      roomId: input.roomId ?? null,
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      capacity: input.capacity,
+      status: "scheduled",
+      cancellationReason: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.occurrences.set(occurrence.id, occurrence);
+    return this.occurrenceResponse(occurrence);
+  }
+
+  async findScheduleOccurrenceById(
+    scope: TenantScope,
+    occurrenceId: string
+  ): Promise<ScheduleOccurrenceResponse | null> {
+    const occurrence = this.occurrences.get(occurrenceId);
+    return occurrence &&
+      occurrence.tenantId === scope.tenantId &&
+      scope.branchIds.includes(occurrence.branchId)
+      ? this.occurrenceResponse(occurrence)
+      : null;
+  }
+
+  async listScheduleOccurrences(
+    scope: TenantScope,
+    filters: ScheduleOccurrenceFilters
+  ): Promise<CursorPage<ScheduleOccurrenceResponse>> {
+    if (filters.branchId && !scope.branchIds.includes(filters.branchId))
+      return { data: [], page: { hasMore: false, nextCursor: null } };
+    const rows = [...this.occurrences.values()]
+      .filter((item) => item.tenantId === scope.tenantId && scope.branchIds.includes(item.branchId))
+      .filter((item) => !filters.branchId || item.branchId === filters.branchId)
+      .filter((item) => !filters.serviceId || item.serviceId === filters.serviceId)
+      .filter((item) => !filters.trainerUserId || item.trainerUserId === filters.trainerUserId)
+      .filter((item) => !filters.roomId || item.roomId === filters.roomId)
+      .filter((item) => !filters.status || item.status === filters.status)
+      .filter((item) => !filters.startsAfter || item.startsAt >= filters.startsAfter)
+      .filter((item) => !filters.endsBefore || item.endsAt <= filters.endsBefore)
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id));
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+    const selected = rows.slice(0, limit + 1);
+    return {
+      data: selected.slice(0, limit).map((item) => this.occurrenceResponse(item)),
+      page: { hasMore: selected.length > limit, nextCursor: null }
+    };
+  }
+
+  async cancelScheduleOccurrence(
+    scope: TenantScope,
+    occurrenceId: string,
+    reason: string
+  ): Promise<ScheduleOccurrenceResponse | null> {
+    const occurrence = this.occurrences.get(occurrenceId);
+    if (
+      !occurrence ||
+      occurrence.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(occurrence.branchId)
+    )
+      return null;
+    occurrence.status = "cancelled";
+    occurrence.cancellationReason = reason;
+    occurrence.updatedAt = now();
+    return this.occurrenceResponse(occurrence);
+  }
+
+  async createBooking(
+    scope: TenantScope,
+    input: CreateBookingRequest,
+    actorUserId: string
+  ): Promise<BookingResponse> {
+    const occurrence = this.occurrences.get(input.occurrenceId);
+    if (
+      !occurrence ||
+      occurrence.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(occurrence.branchId) ||
+      occurrence.status !== "scheduled"
+    )
+      throw new Error("Occurrence unavailable.");
+    const member = this.members.get(input.memberId);
+    if (!member || member.tenantId !== scope.tenantId || member.status !== "active")
+      throw new Error("Member unavailable.");
+    const activeBookings = [...this.bookings.values()].filter(
+      (booking) =>
+        booking.tenantId === scope.tenantId &&
+        booking.occurrenceId === occurrence.id &&
+        booking.status === "confirmed"
+    );
+    if (activeBookings.some((booking) => booking.memberId === input.memberId)) {
+      throw new Error("Member already has a booking for this occurrence.");
+    }
+    if (activeBookings.length >= occurrence.capacity) throw new Error("Occurrence is full.");
+    const timestamp = now();
+    const booking: StoredBooking = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId: occurrence.branchId,
+      occurrenceId: occurrence.id,
+      memberId: input.memberId,
+      status: "confirmed",
+      source: input.source ?? "staff",
+      bookedAt: timestamp,
+      cancelledAt: null,
+      cancellationReason: null,
+      createdByUserId: actorUserId,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.bookings.set(booking.id, booking);
+    return { ...booking };
+  }
+
+  async findBookingById(scope: TenantScope, bookingId: string): Promise<BookingResponse | null> {
+    const booking = this.bookings.get(bookingId);
+    return booking &&
+      booking.tenantId === scope.tenantId &&
+      scope.branchIds.includes(booking.branchId)
+      ? { ...booking }
+      : null;
+  }
+
+  async listBookings(
+    scope: TenantScope,
+    filters: BookingListFilters
+  ): Promise<CursorPage<BookingResponse>> {
+    const rows = [...this.bookings.values()]
+      .filter(
+        (booking) =>
+          booking.tenantId === scope.tenantId && scope.branchIds.includes(booking.branchId)
+      )
+      .filter((booking) => !filters.occurrenceId || booking.occurrenceId === filters.occurrenceId)
+      .filter((booking) => !filters.memberId || booking.memberId === filters.memberId)
+      .filter((booking) => !filters.status || booking.status === filters.status)
+      .sort((a, b) => b.bookedAt.localeCompare(a.bookedAt) || b.id.localeCompare(a.id));
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+    const selected = rows.slice(0, limit + 1);
+    return {
+      data: selected.slice(0, limit).map((booking) => ({ ...booking })),
+      page: { hasMore: selected.length > limit, nextCursor: null }
+    };
+  }
+
+  async cancelBooking(
+    scope: TenantScope,
+    bookingId: string,
+    reason: string
+  ): Promise<BookingResponse | null> {
+    const booking = this.bookings.get(bookingId);
+    if (
+      !booking ||
+      booking.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(booking.branchId)
+    )
+      return null;
+    if (booking.status === "cancelled") return { ...booking };
+    booking.status = "cancelled";
+    booking.cancelledAt = now();
+    booking.cancellationReason = reason;
+    booking.updatedAt = booking.cancelledAt;
+    return { ...booking };
+  }
+
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {
     return [...this.tenantUsers.values()]
       .filter((membership) => membership.tenantId === scope.tenantId)
@@ -910,6 +1250,11 @@ export class InMemoryFitosRepository implements FitosRepository {
   private taskResponse(task: StoredLeadTask): LeadTaskResponse {
     const { tenantId: _tenantId, leadId: _leadId, ...response } = task;
     return response;
+  }
+
+  private occurrenceResponse(occurrence: StoredOccurrence): ScheduleOccurrenceResponse {
+    const { cancellationReason: _cancellationReason, ...response } = occurrence;
+    return { ...response };
   }
 
   private toStaff(membership: StoredTenantUser): StaffUserResponse | null {

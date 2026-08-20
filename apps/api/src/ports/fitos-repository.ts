@@ -24,7 +24,18 @@ import type {
   UpdateBranchRequest,
   UpdateMemberRequest,
   UpdateOrganizationRequest,
-  UserSummary
+  UserSummary,
+  CreateRoomRequest,
+  CreateScheduleOccurrenceRequest,
+  CreateServiceRequest,
+  RoomResponse,
+  ScheduleOccurrenceFilters,
+  ScheduleOccurrenceResponse,
+  ServiceResponse,
+  UpdateServiceRequest,
+  BookingListFilters,
+  BookingResponse,
+  CreateBookingRequest
 } from "@fitos/contracts";
 
 export interface TenantScope {
@@ -163,6 +174,51 @@ export interface FitosRepository {
     input: CreateLeadTaskRequest
   ): Promise<LeadTaskResponse | null>;
   listLeadTasks(scope: TenantScope, leadId: string): Promise<LeadTaskResponse[]>;
+
+  listServices(scope: TenantScope): Promise<ServiceResponse[]>;
+  findServiceById(scope: TenantScope, serviceId: string): Promise<ServiceResponse | null>;
+  createService(scope: TenantScope, input: CreateServiceRequest): Promise<ServiceResponse>;
+  updateService(
+    scope: TenantScope,
+    serviceId: string,
+    input: UpdateServiceRequest
+  ): Promise<ServiceResponse | null>;
+  listRooms(scope: TenantScope, branchId?: string): Promise<RoomResponse[]>;
+  findRoomById(scope: TenantScope, roomId: string): Promise<RoomResponse | null>;
+  createRoom(scope: TenantScope, input: CreateRoomRequest): Promise<RoomResponse>;
+  createScheduleOccurrence(
+    scope: TenantScope,
+    input: CreateScheduleOccurrenceRequest
+  ): Promise<ScheduleOccurrenceResponse>;
+  findScheduleOccurrenceById(
+    scope: TenantScope,
+    occurrenceId: string
+  ): Promise<ScheduleOccurrenceResponse | null>;
+  listScheduleOccurrences(
+    scope: TenantScope,
+    filters: ScheduleOccurrenceFilters
+  ): Promise<CursorPage<ScheduleOccurrenceResponse>>;
+  cancelScheduleOccurrence(
+    scope: TenantScope,
+    occurrenceId: string,
+    reason: string
+  ): Promise<ScheduleOccurrenceResponse | null>;
+
+  createBooking(
+    scope: TenantScope,
+    input: CreateBookingRequest,
+    actorUserId: string
+  ): Promise<BookingResponse>;
+  findBookingById(scope: TenantScope, bookingId: string): Promise<BookingResponse | null>;
+  listBookings(
+    scope: TenantScope,
+    filters: BookingListFilters
+  ): Promise<CursorPage<BookingResponse>>;
+  cancelBooking(
+    scope: TenantScope,
+    bookingId: string,
+    reason: string
+  ): Promise<BookingResponse | null>;
 
   listStaff(scope: TenantScope): Promise<StaffUserResponse[]>;
   findStaffByUserId(scope: TenantScope, userId: string): Promise<StaffUserResponse | null>;

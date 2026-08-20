@@ -189,4 +189,160 @@ describe("HTTP security boundary", () => {
     });
     expect(leaked.status).toBe(404);
   });
+
+  it("enforces tenant-safe services and room/trainer schedule conflicts", async () => {
+    const gymOwner = await login("owner@gym.fitos.test");
+    const pilatesOwner = await login("owner@pilates.fitos.test");
+    const me = await fetch(`${baseUrl}/api/v1/auth/me`, {
+      headers: { cookie: `fitos_session=${gymOwner.session}; fitos_csrf=${gymOwner.csrf}` }
+    });
+    const branchId = (await me.json()).branches[0].id as string;
+    const serviceResponse = await fetch(`${baseUrl}/api/v1/services`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({
+        branchId,
+        name: "Morning Strength",
+        serviceType: "class",
+        durationMinutes: 60,
+        defaultCapacity: 12
+      })
+    });
+    expect(serviceResponse.status).toBe(201);
+    const service = await serviceResponse.json();
+    const roomResponse = await fetch(`${baseUrl}/api/v1/rooms`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({ branchId, name: "Studio A", capacity: 12 })
+    });
+    expect(roomResponse.status).toBe(201);
+    const room = await roomResponse.json();
+    const startsAt = "2030-01-08T08:00:00.000Z";
+    const endsAt = "2030-01-08T09:00:00.000Z";
+    const occurrenceResponse = await fetch(`${baseUrl}/api/v1/schedule/occurrences`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({
+        branchId,
+        serviceId: service.id,
+        roomId: room.id,
+        startsAt,
+        endsAt,
+        capacity: 12
+      })
+    });
+    expect(occurrenceResponse.status).toBe(201);
+    const occurrence = await occurrenceResponse.json();
+
+    const collision = await fetch(`${baseUrl}/api/v1/schedule/occurrences`, {
+      method: "POST",
+      headers: protectedHeaders(gymOwner),
+      body: JSON.stringify({
+        branchId,
+        serviceId: service.id,
+        roomId: room.id,
+        startsAt: "2030-01-08T08:30:00.000Z",
+        endsAt: "2030-01-08T09:30:00.000Z",
+        capacity: 12
+      })
+    });
+    expect(collision.status).toBe(409);
+
+    const cancelled = await fetch(
+      `${baseUrl}/api/v1/schedule/occurrences/${occurrence.id}/cancel`,
+      {
+        method: "POST",
+        headers: protectedHeaders(gymOwner),
+        body: JSON.stringify({ reason: "Public holiday" })
+      }
+    );
+    expect(cancelled.status).toBe(201);
+    expect((await cancelled.json()).status).toBe("cancelled");
+
+    const leaked = await fetch(`${baseUrl}/api/v1/services/${service.id}`, {
+      headers: { cookie: `fitos_session=${pilatesOwner.session}; fitos_csrf=${pilatesOwner.csrf}` }
+    });
+    expect(leaked.status).toBe(404);
+  });
+
+  it("reserves exactly one final booking slot and retains cancellation history", async () => {
+    const owner = await login("owner@gym.fitos.test");
+    const me = await fetch(`${baseUrl}/api/v1/auth/me`, {
+      headers: { cookie: `fitos_session=${owner.session}; fitos_csrf=${owner.csrf}` }
+    });
+    const branchId = (await me.json()).branches[0].id as string;
+    const tag = crypto.randomUUID().slice(0, 8);
+    const serviceResponse = await fetch(`${baseUrl}/api/v1/services`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({
+        branchId,
+        name: `Final Slot ${tag}`,
+        serviceType: "class",
+        durationMinutes: 45,
+        defaultCapacity: 1
+      })
+    });
+    expect(serviceResponse.status).toBe(201);
+    const service = await serviceResponse.json();
+    const occurrenceResponse = await fetch(`${baseUrl}/api/v1/schedule/occurrences`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({
+        branchId,
+        serviceId: service.id,
+        startsAt: "2030-01-09T08:00:00.000Z",
+        endsAt: "2030-01-09T08:45:00.000Z",
+        capacity: 1
+      })
+    });
+    expect(occurrenceResponse.status).toBe(201);
+    const occurrence = await occurrenceResponse.json();
+    const memberIds: string[] = [];
+    for (const name of ["Final One", "Final Two"]) {
+      const memberResponse = await fetch(`${baseUrl}/api/v1/members`, {
+        method: "POST",
+        headers: protectedHeaders(owner),
+        body: JSON.stringify({ contact: { firstName: `${name} ${tag}` }, homeBranchId: branchId })
+      });
+      expect(memberResponse.status).toBe(201);
+      memberIds.push((await memberResponse.json()).id);
+    }
+
+    const attempts = await Promise.all(
+      memberIds.map((memberId) =>
+        fetch(`${baseUrl}/api/v1/bookings`, {
+          method: "POST",
+          headers: protectedHeaders(owner),
+          body: JSON.stringify({ occurrenceId: occurrence.id, memberId })
+        })
+      )
+    );
+    expect(attempts.map((response) => response.status).sort()).toEqual([201, 409]);
+    const successful = attempts.find((response) => response.status === 201);
+    if (!successful) throw new Error("Expected one booking to succeed.");
+    const booking = await successful.json();
+
+    const duplicate = await fetch(`${baseUrl}/api/v1/bookings`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({ occurrenceId: occurrence.id, memberId: booking.memberId })
+    });
+    expect(duplicate.status).toBe(409);
+
+    const cancelled = await fetch(`${baseUrl}/api/v1/bookings/${booking.id}/cancel`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({ reason: "Member changed plans" })
+    });
+    expect(cancelled.status).toBe(201);
+    expect((await cancelled.json()).cancelledAt).toBeTruthy();
+
+    const replacement = await fetch(`${baseUrl}/api/v1/bookings`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({ occurrenceId: occurrence.id, memberId: memberIds[1] })
+    });
+    expect(replacement.status).toBe(201);
+  });
 });

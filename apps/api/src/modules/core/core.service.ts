@@ -25,7 +25,18 @@ import type {
   UpdateBranchRequest,
   UpdateMemberRequest,
   UpdateLeadStageRequest,
-  UpdateOrganizationRequest
+  UpdateOrganizationRequest,
+  CreateRoomRequest,
+  CreateScheduleOccurrenceRequest,
+  CreateServiceRequest,
+  RoomResponse,
+  ScheduleOccurrenceFilters,
+  ScheduleOccurrenceResponse,
+  ServiceResponse,
+  UpdateServiceRequest,
+  BookingListFilters,
+  BookingResponse,
+  CreateBookingRequest
 } from "@fitos/contracts";
 import { DomainError } from "../../common/errors/domain-error.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
@@ -382,6 +393,292 @@ export class CoreService {
   async leadTasks(actor: RequestActor, leadId: string): Promise<LeadTaskResponse[]> {
     await this.getLead(actor, leadId);
     return this.repository.listLeadTasks(scopeOf(actor), leadId);
+  }
+
+  async listServices(actor: RequestActor): Promise<ServiceResponse[]> {
+    return this.repository.listServices(scopeOf(actor));
+  }
+
+  async getService(actor: RequestActor, serviceId: string): Promise<ServiceResponse> {
+    const service = await this.repository.findServiceById(scopeOf(actor), serviceId);
+    if (!service) throw new DomainError("RESOURCE_NOT_FOUND", "Service not found.", 404);
+    return service;
+  }
+
+  async createService(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateServiceRequest
+  ): Promise<ServiceResponse> {
+    if (input.branchId && !actor.branchIds.includes(input.branchId)) {
+      throw new DomainError("BRANCH_ACCESS_DENIED", "Branch is unavailable.", 404);
+    }
+    try {
+      const service = await this.repository.createService(scopeOf(actor), input);
+      await this.audit(
+        actor,
+        requestId,
+        "service.created",
+        "service",
+        service.id,
+        service.branchId,
+        {
+          name: service.name,
+          type: service.serviceType
+        }
+      );
+      await this.publish(eventOf(actor, "service.created", { serviceId: service.id }));
+      return service;
+    } catch (error) {
+      if (error instanceof Error && error.message.toLowerCase().includes("slug")) {
+        throw new DomainError("VALIDATION_FAILED", "A service with that slug already exists.", 409);
+      }
+      throw error;
+    }
+  }
+
+  async updateService(
+    actor: RequestActor,
+    requestId: string,
+    serviceId: string,
+    input: UpdateServiceRequest
+  ): Promise<ServiceResponse> {
+    await this.getService(actor, serviceId);
+    try {
+      const service = await this.repository.updateService(scopeOf(actor), serviceId, input);
+      if (!service) throw new DomainError("RESOURCE_NOT_FOUND", "Service not found.", 404);
+      await this.audit(
+        actor,
+        requestId,
+        "service.updated",
+        "service",
+        service.id,
+        service.branchId,
+        {
+          changed: Object.keys(input)
+        }
+      );
+      await this.publish(eventOf(actor, "service.updated", { serviceId: service.id }));
+      return service;
+    } catch (error) {
+      if (error instanceof Error && error.message.toLowerCase().includes("slug")) {
+        throw new DomainError("VALIDATION_FAILED", "A service with that slug already exists.", 409);
+      }
+      throw error;
+    }
+  }
+
+  async listRooms(actor: RequestActor, branchId?: string): Promise<RoomResponse[]> {
+    if (branchId && !actor.branchIds.includes(branchId)) return [];
+    return this.repository.listRooms(scopeOf(actor), branchId);
+  }
+
+  async createRoom(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateRoomRequest
+  ): Promise<RoomResponse> {
+    if (!actor.branchIds.includes(input.branchId)) {
+      throw new DomainError("BRANCH_ACCESS_DENIED", "Branch is unavailable.", 404);
+    }
+    try {
+      const room = await this.repository.createRoom(scopeOf(actor), input);
+      await this.audit(actor, requestId, "room.created", "room", room.id, room.branchId, {
+        name: room.name
+      });
+      return room;
+    } catch (error) {
+      if (error instanceof Error && error.message.toLowerCase().includes("room")) {
+        throw new DomainError("VALIDATION_FAILED", "A room with that name already exists.", 409);
+      }
+      throw error;
+    }
+  }
+
+  async listScheduleOccurrences(actor: RequestActor, filters: ScheduleOccurrenceFilters) {
+    if (filters.branchId && !actor.branchIds.includes(filters.branchId)) {
+      return { data: [], page: { hasMore: false, nextCursor: null } };
+    }
+    return this.repository.listScheduleOccurrences(scopeOf(actor), filters);
+  }
+
+  async getScheduleOccurrence(
+    actor: RequestActor,
+    occurrenceId: string
+  ): Promise<ScheduleOccurrenceResponse> {
+    const occurrence = await this.repository.findScheduleOccurrenceById(
+      scopeOf(actor),
+      occurrenceId
+    );
+    if (!occurrence)
+      throw new DomainError("RESOURCE_NOT_FOUND", "Schedule occurrence not found.", 404);
+    return occurrence;
+  }
+
+  async createScheduleOccurrence(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateScheduleOccurrenceRequest
+  ): Promise<ScheduleOccurrenceResponse> {
+    if (!actor.branchIds.includes(input.branchId)) {
+      throw new DomainError("BRANCH_ACCESS_DENIED", "Branch is unavailable.", 404);
+    }
+    const service = await this.getService(actor, input.serviceId);
+    if (service.branchId && service.branchId !== input.branchId) {
+      throw new DomainError("VALIDATION_FAILED", "Service is not offered by this branch.", 400);
+    }
+    if (input.roomId) {
+      const room = await this.repository.findRoomById(scopeOf(actor), input.roomId);
+      if (!room || room.branchId !== input.branchId || !room.isActive) {
+        throw new DomainError("VALIDATION_FAILED", "Room is unavailable.", 400);
+      }
+    }
+    if (input.trainerUserId) {
+      const trainer = await this.repository.findStaffByUserId(scopeOf(actor), input.trainerUserId);
+      if (!trainer || !trainer.branches.some((branch) => branch.id === input.branchId)) {
+        throw new DomainError("VALIDATION_FAILED", "Trainer is unavailable for this branch.", 400);
+      }
+    }
+    try {
+      const occurrence = await this.repository.createScheduleOccurrence(scopeOf(actor), input);
+      await this.audit(
+        actor,
+        requestId,
+        "schedule.occurrence_created",
+        "schedule_occurrence",
+        occurrence.id,
+        occurrence.branchId,
+        {
+          serviceId: occurrence.serviceId,
+          startsAt: occurrence.startsAt,
+          roomId: occurrence.roomId,
+          trainerUserId: occurrence.trainerUserId
+        }
+      );
+      await this.publish(
+        eventOf(actor, "schedule.occurrence_created", { occurrenceId: occurrence.id })
+      );
+      return occurrence;
+    } catch (error) {
+      if (error instanceof Error && /conflict|exclusion|collision/i.test(error.message)) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "Trainer or room has a conflicting occurrence.",
+          409
+        );
+      }
+      throw error;
+    }
+  }
+
+  async cancelScheduleOccurrence(
+    actor: RequestActor,
+    requestId: string,
+    occurrenceId: string,
+    reason: string
+  ): Promise<ScheduleOccurrenceResponse> {
+    const existing = await this.getScheduleOccurrence(actor, occurrenceId);
+    if (existing.status === "cancelled") return existing;
+    const occurrence = await this.repository.cancelScheduleOccurrence(
+      scopeOf(actor),
+      occurrenceId,
+      reason
+    );
+    if (!occurrence)
+      throw new DomainError("RESOURCE_NOT_FOUND", "Schedule occurrence not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "schedule.occurrence_cancelled",
+      "schedule_occurrence",
+      occurrence.id,
+      occurrence.branchId,
+      {
+        reason
+      }
+    );
+    await this.publish(
+      eventOf(actor, "schedule.occurrence_cancelled", { occurrenceId: occurrence.id })
+    );
+    return occurrence;
+  }
+
+  async listBookings(actor: RequestActor, filters: BookingListFilters) {
+    return this.repository.listBookings(scopeOf(actor), filters);
+  }
+
+  async getBooking(actor: RequestActor, bookingId: string): Promise<BookingResponse> {
+    const booking = await this.repository.findBookingById(scopeOf(actor), bookingId);
+    if (!booking) throw new DomainError("RESOURCE_NOT_FOUND", "Booking not found.", 404);
+    return booking;
+  }
+
+  async createBooking(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateBookingRequest
+  ): Promise<BookingResponse> {
+    const occurrence = await this.getScheduleOccurrence(actor, input.occurrenceId);
+    if (occurrence.status !== "scheduled") {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        "This occurrence is not available for booking.",
+        409
+      );
+    }
+    await this.getMember(actor, input.memberId);
+    try {
+      const booking = await this.repository.createBooking(scopeOf(actor), input, actor.userId);
+      await this.audit(
+        actor,
+        requestId,
+        "booking.created",
+        "booking",
+        booking.id,
+        booking.branchId,
+        {
+          occurrenceId: booking.occurrenceId,
+          memberId: booking.memberId,
+          source: booking.source
+        }
+      );
+      await this.publish(eventOf(actor, "booking.created", { bookingId: booking.id }));
+      return booking;
+    } catch (error) {
+      if (error instanceof Error && /full|already has a booking/i.test(error.message)) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 409);
+      }
+      if (error instanceof Error && /unavailable/i.test(error.message)) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 400);
+      }
+      throw error;
+    }
+  }
+
+  async cancelBooking(
+    actor: RequestActor,
+    requestId: string,
+    bookingId: string,
+    reason: string
+  ): Promise<BookingResponse> {
+    const existing = await this.getBooking(actor, bookingId);
+    if (existing.status === "cancelled") return existing;
+    const booking = await this.repository.cancelBooking(scopeOf(actor), bookingId, reason);
+    if (!booking) throw new DomainError("RESOURCE_NOT_FOUND", "Booking not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "booking.cancelled",
+      "booking",
+      booking.id,
+      booking.branchId,
+      {
+        occurrenceId: booking.occurrenceId,
+        reason
+      }
+    );
+    await this.publish(eventOf(actor, "booking.cancelled", { bookingId: booking.id }));
+    return booking;
   }
 
   async listStaff(actor: RequestActor): Promise<StaffUserResponse[]> {
