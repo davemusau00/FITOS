@@ -29,10 +29,15 @@ import type {
   CreateRoomRequest,
   UpdateRoomRequest,
   CreateScheduleOccurrenceRequest,
+  CreateScheduleTemplateRequest,
+  MaterializeScheduleTemplateRequest,
+  OverrideScheduleOccurrenceRequest,
   CreateServiceRequest,
   RoomResponse,
   ScheduleOccurrenceFilters,
   ScheduleOccurrenceResponse,
+  ScheduleTemplateResponse,
+  ScheduleTemplateMutationResponse,
   ServiceResponse,
   UpdateServiceRequest,
   BookingListFilters,
@@ -62,6 +67,15 @@ import type {
   StaffAccessInput,
   TenantScope
 } from "../../ports/fitos-repository.js";
+import {
+  assertBoundedWindow,
+  assertIanaTimezone,
+  assertLocalDate,
+  clampMaterializationDate,
+  defaultMaterializationDate,
+  generateWeeklyOccurrences,
+  nextDate
+} from "../schedule/recurrence.js";
 
 const scopeOf = (actor: RequestActor): TenantScope => ({
   tenantId: actor.tenantId,
@@ -540,6 +554,115 @@ export class CoreService {
     }
   }
 
+  async listScheduleTemplates(actor: RequestActor, branchId?: string) {
+    if (branchId && !actor.branchIds.includes(branchId)) return [];
+    return this.repository.listScheduleTemplates(scopeOf(actor), branchId);
+  }
+
+  async getScheduleTemplate(
+    actor: RequestActor,
+    templateId: string
+  ): Promise<ScheduleTemplateResponse> {
+    const template = await this.repository.findScheduleTemplateById(scopeOf(actor), templateId);
+    if (!template) throw new DomainError("RESOURCE_NOT_FOUND", "Schedule template not found.", 404);
+    return template;
+  }
+
+  async createScheduleTemplate(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateScheduleTemplateRequest
+  ): Promise<ScheduleTemplateMutationResponse> {
+    await this.assertScheduleResourceAccess(actor, input);
+    try {
+      assertIanaTimezone(input.timezone);
+      assertLocalDate(input.effectiveStartDate);
+      if (input.effectiveEndDate) {
+        assertLocalDate(input.effectiveEndDate);
+        if (input.effectiveEndDate < input.effectiveStartDate) {
+          throw new Error("Effective end must not precede effective start.");
+        }
+      }
+      const requestedThrough =
+        input.materializeThroughDate ?? defaultMaterializationDate(input.effectiveStartDate);
+      assertLocalDate(requestedThrough);
+      const throughDate = clampMaterializationDate(requestedThrough, input.effectiveEndDate);
+      assertBoundedWindow(input.effectiveStartDate, throughDate);
+      const occurrences = generateWeeklyOccurrences(input, input.effectiveStartDate, throughDate);
+      const result = await this.repository.createScheduleTemplate(
+        scopeOf(actor),
+        input,
+        occurrences,
+        throughDate
+      );
+      await this.audit(
+        actor,
+        requestId,
+        "schedule.template_created",
+        "schedule_template",
+        result.template.id,
+        result.template.branchId,
+        {
+          serviceId: result.template.serviceId,
+          daysOfWeek: result.template.daysOfWeek,
+          timezone: result.template.timezone,
+          materializedThrough: result.template.materializedThrough,
+          occurrencesCreated: result.occurrences.length
+        }
+      );
+      await this.publish(
+        eventOf(actor, "schedule.template_created", {
+          templateId: result.template.id,
+          occurrencesCreated: result.occurrences.length
+        })
+      );
+      return result;
+    } catch (error) {
+      throw this.scheduleError(error);
+    }
+  }
+
+  async materializeScheduleTemplate(
+    actor: RequestActor,
+    requestId: string,
+    templateId: string,
+    input: MaterializeScheduleTemplateRequest
+  ): Promise<ScheduleTemplateMutationResponse> {
+    const template = await this.getScheduleTemplate(actor, templateId);
+    if (!template.isActive) {
+      throw new DomainError("VALIDATION_FAILED", "Schedule template is inactive.", 409);
+    }
+    try {
+      assertLocalDate(input.throughDate);
+      const throughDate = clampMaterializationDate(input.throughDate, template.effectiveEndDate);
+      const fromDate = template.materializedThrough
+        ? nextDate(template.materializedThrough)
+        : template.effectiveStartDate;
+      if (throughDate < fromDate) return { template, occurrences: [] };
+      assertBoundedWindow(fromDate, throughDate);
+      const occurrences = generateWeeklyOccurrences(template, fromDate, throughDate);
+      const result = await this.repository.materializeScheduleTemplate(
+        scopeOf(actor),
+        template.id,
+        occurrences,
+        throughDate
+      );
+      if (!result) throw new DomainError("RESOURCE_NOT_FOUND", "Schedule template not found.", 404);
+      await this.audit(
+        actor,
+        requestId,
+        "schedule.template_materialized",
+        "schedule_template",
+        template.id,
+        template.branchId,
+        { throughDate, occurrencesCreated: result.occurrences.length }
+      );
+      return result;
+    } catch (error) {
+      throw this.scheduleError(error);
+    }
+  }
+
   async listScheduleOccurrences(actor: RequestActor, filters: ScheduleOccurrenceFilters) {
     if (filters.branchId && !actor.branchIds.includes(filters.branchId)) {
       return { data: [], page: { hasMore: false, nextCursor: null } };
@@ -624,10 +747,18 @@ export class CoreService {
   ): Promise<ScheduleOccurrenceResponse> {
     const existing = await this.getScheduleOccurrence(actor, occurrenceId);
     if (existing.status === "cancelled") return existing;
+    if (new Date(existing.startsAt).getTime() <= Date.now()) {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        "Historical schedule occurrences cannot be cancelled.",
+        409
+      );
+    }
     const occurrence = await this.repository.cancelScheduleOccurrence(
       scopeOf(actor),
       occurrenceId,
-      reason
+      reason,
+      actor.userId
     );
     if (!occurrence)
       throw new DomainError("RESOURCE_NOT_FOUND", "Schedule occurrence not found.", 404);
@@ -646,6 +777,74 @@ export class CoreService {
       eventOf(actor, "schedule.occurrence_cancelled", { occurrenceId: occurrence.id })
     );
     return occurrence;
+  }
+
+  async overrideScheduleOccurrence(
+    actor: RequestActor,
+    requestId: string,
+    occurrenceId: string,
+    input: OverrideScheduleOccurrenceRequest
+  ): Promise<ScheduleOccurrenceResponse> {
+    const existing = await this.getScheduleOccurrence(actor, occurrenceId);
+    if (!existing.templateId) {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        "Only an occurrence from a recurring template can have a one-off override.",
+        409
+      );
+    }
+    if (existing.status !== "scheduled" || new Date(existing.startsAt).getTime() <= Date.now()) {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        "Only a future scheduled occurrence can be overridden.",
+        409
+      );
+    }
+    await this.assertScheduleResourceAccess(actor, {
+      branchId: existing.branchId,
+      serviceId: existing.serviceId,
+      trainerUserId:
+        input.trainerUserId === undefined ? existing.trainerUserId : input.trainerUserId,
+      roomId: input.roomId === undefined ? existing.roomId : input.roomId
+    });
+    const startsAt = input.startsAt ?? existing.startsAt;
+    const endsAt = input.endsAt ?? existing.endsAt;
+    if (new Date(startsAt).getTime() <= Date.now() || new Date(endsAt) <= new Date(startsAt)) {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        "The override must retain a valid future time range.",
+        400
+      );
+    }
+    try {
+      const occurrence = await this.repository.overrideScheduleOccurrence(
+        scopeOf(actor),
+        occurrenceId,
+        input,
+        actor.userId
+      );
+      if (!occurrence)
+        throw new DomainError("RESOURCE_NOT_FOUND", "Schedule occurrence not found.", 404);
+      await this.audit(
+        actor,
+        requestId,
+        "schedule.occurrence_overridden",
+        "schedule_occurrence",
+        occurrence.id,
+        occurrence.branchId,
+        {
+          reason: input.reason,
+          previousStartsAt: existing.startsAt,
+          startsAt: occurrence.startsAt,
+          roomId: occurrence.roomId,
+          trainerUserId: occurrence.trainerUserId,
+          capacity: occurrence.capacity
+        }
+      );
+      return occurrence;
+    } catch (error) {
+      throw this.scheduleError(error);
+    }
   }
 
   async listBookings(actor: RequestActor, filters: BookingListFilters) {
@@ -1417,6 +1616,59 @@ export class CoreService {
         400
       );
     }
+  }
+
+  private async assertScheduleResourceAccess(
+    actor: RequestActor,
+    input: Pick<
+      CreateScheduleOccurrenceRequest,
+      "branchId" | "serviceId" | "trainerUserId" | "roomId"
+    >
+  ): Promise<void> {
+    if (!actor.branchIds.includes(input.branchId)) {
+      throw new DomainError("BRANCH_ACCESS_DENIED", "Branch is unavailable.", 404);
+    }
+    const service = await this.getService(actor, input.serviceId);
+    if (!service.isActive || (service.branchId && service.branchId !== input.branchId)) {
+      throw new DomainError("VALIDATION_FAILED", "Service is not offered by this branch.", 400);
+    }
+    if (input.roomId) {
+      const room = await this.repository.findRoomById(scopeOf(actor), input.roomId);
+      if (!room || room.branchId !== input.branchId || !room.isActive) {
+        throw new DomainError("VALIDATION_FAILED", "Room is unavailable.", 400);
+      }
+    }
+    if (input.trainerUserId) {
+      const trainer = await this.repository.findStaffByUserId(scopeOf(actor), input.trainerUserId);
+      if (!trainer || !trainer.branches.some((branch) => branch.id === input.branchId)) {
+        throw new DomainError("VALIDATION_FAILED", "Trainer is unavailable for this branch.", 400);
+      }
+    }
+  }
+
+  private scheduleError(error: unknown): Error {
+    if (error instanceof DomainError) return error;
+    if (error instanceof Error && /conflict|exclusion|collision/i.test(error.message)) {
+      return new DomainError(
+        "VALIDATION_FAILED",
+        "Trainer or room has a conflicting occurrence.",
+        409
+      );
+    }
+    if (error instanceof Error && /already overridden/i.test(error.message)) {
+      return new DomainError(
+        "VALIDATION_FAILED",
+        "This occurrence already has a one-off override.",
+        409
+      );
+    }
+    if (error instanceof Error && /capacity.*confirmed booking/i.test(error.message)) {
+      return new DomainError("VALIDATION_FAILED", error.message, 409);
+    }
+    if (error instanceof Error) {
+      return new DomainError("VALIDATION_FAILED", error.message, 400);
+    }
+    return new DomainError("VALIDATION_FAILED", "The schedule change is invalid.", 400);
   }
 
   private normalizePhoneInput(phone: string | null | undefined): string | null {

@@ -37,7 +37,7 @@ export const workerJobSchema = z.discriminatedUnion("type", [
 export type WorkerJob = z.infer<typeof workerJobSchema>;
 export type WorkerJobType = WorkerJob["type"];
 
-export const WORKER_QUEUE = "fitos:operations";
+export const WORKER_QUEUE = "fitos-operations";
 
 export function createOperationsQueue(connection: Redis) {
   return new Queue<WorkerJob>(WORKER_QUEUE, {

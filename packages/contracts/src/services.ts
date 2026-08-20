@@ -6,6 +6,9 @@ export type ServiceType = (typeof SERVICE_TYPES)[number];
 export const OCCURRENCE_STATUSES = ["scheduled", "cancelled"] as const;
 export type OccurrenceStatus = (typeof OCCURRENCE_STATUSES)[number];
 
+export const SCHEDULE_EXCEPTION_TYPES = ["cancelled", "overridden"] as const;
+export type ScheduleExceptionType = (typeof SCHEDULE_EXCEPTION_TYPES)[number];
+
 export interface ServiceResponse {
   id: string;
   tenantId: string;
@@ -81,6 +84,7 @@ export interface ScheduleOccurrenceResponse {
   id: string;
   tenantId: string;
   branchId: string;
+  templateId: string | null;
   serviceId: string;
   trainerUserId: string | null;
   roomId: string | null;
@@ -90,6 +94,74 @@ export interface ScheduleOccurrenceResponse {
   status: OccurrenceStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ScheduleTemplateResponse {
+  id: string;
+  tenantId: string;
+  branchId: string;
+  serviceId: string;
+  trainerUserId: string | null;
+  roomId: string | null;
+  timezone: string;
+  /** Sunday = 0 through Saturday = 6. */
+  daysOfWeek: number[];
+  /** Local wall-clock time in HH:mm form. */
+  localStartTime: string;
+  durationMinutes: number;
+  capacity: number;
+  effectiveStartDate: string;
+  effectiveEndDate: string | null;
+  materializedThrough: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateScheduleTemplateRequest {
+  branchId: string;
+  serviceId: string;
+  trainerUserId?: string | null;
+  roomId?: string | null;
+  timezone: string;
+  daysOfWeek: number[];
+  localStartTime: string;
+  durationMinutes: number;
+  capacity: number;
+  effectiveStartDate: string;
+  effectiveEndDate?: string | null;
+  /** Inclusive and bounded; defaults to twelve weeks after the effective start. */
+  materializeThroughDate?: string;
+}
+
+export interface MaterializeScheduleTemplateRequest {
+  throughDate: string;
+}
+
+export interface ScheduleTemplateMutationResponse {
+  template: ScheduleTemplateResponse;
+  occurrences: ScheduleOccurrenceResponse[];
+}
+
+export interface OverrideScheduleOccurrenceRequest {
+  trainerUserId?: string | null;
+  roomId?: string | null;
+  startsAt?: string;
+  endsAt?: string;
+  capacity?: number;
+  reason: string;
+}
+
+export interface ScheduleExceptionResponse {
+  id: string;
+  tenantId: string;
+  templateId: string;
+  occurrenceId: string;
+  exceptionType: ScheduleExceptionType;
+  reason: string;
+  originalStartsAt: string;
+  createdByUserId: string;
+  createdAt: string;
 }
 
 export interface CreateScheduleOccurrenceRequest {
@@ -120,3 +192,4 @@ export interface ScheduleOccurrenceFilters {
 
 export type ServiceListResponse = CursorPage<ServiceResponse>;
 export type ScheduleOccurrenceListResponse = CursorPage<ScheduleOccurrenceResponse>;
+export type ScheduleTemplateListResponse = CursorPage<ScheduleTemplateResponse>;

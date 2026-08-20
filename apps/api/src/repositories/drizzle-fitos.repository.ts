@@ -19,7 +19,9 @@ import {
   rolePermissions,
   roles,
   rooms,
+  scheduleExceptions,
   scheduleOccurrences,
+  scheduleTemplates,
   sessions,
   services,
   tenantUsers,
@@ -59,10 +61,14 @@ import type {
   CreateRoomRequest,
   UpdateRoomRequest,
   CreateScheduleOccurrenceRequest,
+  CreateScheduleTemplateRequest,
   CreateServiceRequest,
   RoomResponse,
   ScheduleOccurrenceFilters,
   ScheduleOccurrenceResponse,
+  ScheduleTemplateResponse,
+  ScheduleTemplateMutationResponse,
+  OverrideScheduleOccurrenceRequest,
   ServiceResponse,
   UpdateServiceRequest,
   BookingListFilters,
@@ -957,6 +963,172 @@ export class DrizzleFitosRepository implements FitosRepository {
     return room ? this.roomResponse(room) : null;
   }
 
+  async createScheduleTemplate(
+    scope: TenantScope,
+    input: CreateScheduleTemplateRequest,
+    occurrences: CreateScheduleOccurrenceRequest[],
+    materializedThrough: string
+  ): Promise<ScheduleTemplateMutationResponse> {
+    return this.db.transaction(async (tx) => {
+      const [template] = await tx
+        .insert(scheduleTemplates)
+        .values({
+          tenantId: scope.tenantId,
+          branchId: input.branchId,
+          serviceId: input.serviceId,
+          trainerUserId: input.trainerUserId ?? null,
+          roomId: input.roomId ?? null,
+          timezone: input.timezone,
+          daysOfWeek: input.daysOfWeek,
+          localStartTime: input.localStartTime,
+          durationMinutes: input.durationMinutes,
+          capacity: input.capacity,
+          effectiveStartDate: input.effectiveStartDate,
+          effectiveEndDate: input.effectiveEndDate ?? null,
+          materializedThrough
+        })
+        .returning();
+      if (!template) throw new Error("Unable to create schedule template.");
+      const created = occurrences.length
+        ? await tx
+            .insert(scheduleOccurrences)
+            .values(
+              occurrences.map((occurrence) => ({
+                tenantId: scope.tenantId,
+                branchId: occurrence.branchId,
+                templateId: template.id,
+                serviceId: occurrence.serviceId,
+                trainerUserId: occurrence.trainerUserId ?? null,
+                roomId: occurrence.roomId ?? null,
+                startsAt: new Date(occurrence.startsAt),
+                endsAt: new Date(occurrence.endsAt),
+                capacity: occurrence.capacity
+              }))
+            )
+            .returning()
+        : [];
+      return {
+        template: this.scheduleTemplateResponse(template),
+        occurrences: created.map((occurrence) => this.occurrenceResponse(occurrence))
+      };
+    });
+  }
+
+  async findScheduleTemplateById(
+    scope: TenantScope,
+    templateId: string
+  ): Promise<ScheduleTemplateResponse | null> {
+    const [template] = await this.db
+      .select()
+      .from(scheduleTemplates)
+      .where(
+        and(
+          eq(scheduleTemplates.id, templateId),
+          eq(scheduleTemplates.tenantId, scope.tenantId),
+          inArray(scheduleTemplates.branchId, scope.branchIds)
+        )
+      )
+      .limit(1);
+    return template ? this.scheduleTemplateResponse(template) : null;
+  }
+
+  async listScheduleTemplates(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<ScheduleTemplateResponse[]> {
+    if (branchId && !scope.branchIds.includes(branchId)) return [];
+    const templates = await this.db
+      .select()
+      .from(scheduleTemplates)
+      .where(
+        and(
+          eq(scheduleTemplates.tenantId, scope.tenantId),
+          inArray(scheduleTemplates.branchId, scope.branchIds),
+          ...(branchId ? [eq(scheduleTemplates.branchId, branchId)] : [])
+        )
+      )
+      .orderBy(scheduleTemplates.localStartTime);
+    return templates.map((template) => this.scheduleTemplateResponse(template));
+  }
+
+  async materializeScheduleTemplate(
+    scope: TenantScope,
+    templateId: string,
+    occurrences: CreateScheduleOccurrenceRequest[],
+    materializedThrough: string
+  ): Promise<ScheduleTemplateMutationResponse | null> {
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM schedule_templates
+        WHERE id = ${templateId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [template] = await tx
+        .select()
+        .from(scheduleTemplates)
+        .where(
+          and(
+            eq(scheduleTemplates.id, templateId),
+            eq(scheduleTemplates.tenantId, scope.tenantId),
+            inArray(scheduleTemplates.branchId, scope.branchIds)
+          )
+        )
+        .limit(1);
+      if (!template) return null;
+
+      const existing = occurrences.length
+        ? await tx
+            .select({ startsAt: scheduleOccurrences.startsAt })
+            .from(scheduleOccurrences)
+            .where(
+              and(
+                eq(scheduleOccurrences.templateId, template.id),
+                inArray(
+                  scheduleOccurrences.startsAt,
+                  occurrences.map((occurrence) => new Date(occurrence.startsAt))
+                )
+              )
+            )
+        : [];
+      const existingStarts = new Set(existing.map((row) => row.startsAt.toISOString()));
+      const pending = occurrences.filter(
+        (occurrence) => !existingStarts.has(new Date(occurrence.startsAt).toISOString())
+      );
+      const created = pending.length
+        ? await tx
+            .insert(scheduleOccurrences)
+            .values(
+              pending.map((occurrence) => ({
+                tenantId: scope.tenantId,
+                branchId: occurrence.branchId,
+                templateId: template.id,
+                serviceId: occurrence.serviceId,
+                trainerUserId: occurrence.trainerUserId ?? null,
+                roomId: occurrence.roomId ?? null,
+                startsAt: new Date(occurrence.startsAt),
+                endsAt: new Date(occurrence.endsAt),
+                capacity: occurrence.capacity
+              }))
+            )
+            .returning()
+        : [];
+      const targetThrough =
+        template.materializedThrough && template.materializedThrough > materializedThrough
+          ? template.materializedThrough
+          : materializedThrough;
+      const [updated] = await tx
+        .update(scheduleTemplates)
+        .set({ materializedThrough: targetThrough, updatedAt: new Date() })
+        .where(eq(scheduleTemplates.id, template.id))
+        .returning();
+      if (!updated) throw new Error("Unable to update schedule template.");
+      return {
+        template: this.scheduleTemplateResponse(updated),
+        occurrences: created.map((occurrence) => this.occurrenceResponse(occurrence))
+      };
+    });
+  }
+
   async createScheduleOccurrence(
     scope: TenantScope,
     input: CreateScheduleOccurrenceRequest
@@ -966,6 +1138,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .values({
         tenantId: scope.tenantId,
         branchId: input.branchId,
+        templateId: null,
         serviceId: input.serviceId,
         trainerUserId: input.trainerUserId ?? null,
         roomId: input.roomId ?? null,
@@ -1034,21 +1207,112 @@ export class DrizzleFitosRepository implements FitosRepository {
   async cancelScheduleOccurrence(
     scope: TenantScope,
     occurrenceId: string,
-    reason: string
+    reason: string,
+    actorUserId = scope.userId
   ): Promise<ScheduleOccurrenceResponse | null> {
-    const current = await this.findScheduleOccurrenceById(scope, occurrenceId);
-    if (!current) return null;
-    const [occurrence] = await this.db
-      .update(scheduleOccurrences)
-      .set({ status: "cancelled", cancellationReason: reason, updatedAt: new Date() })
-      .where(
-        and(
-          eq(scheduleOccurrences.id, occurrenceId),
-          eq(scheduleOccurrences.tenantId, scope.tenantId)
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM schedule_occurrences
+        WHERE id = ${occurrenceId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [current] = await tx
+        .select()
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.id, occurrenceId),
+            eq(scheduleOccurrences.tenantId, scope.tenantId),
+            inArray(scheduleOccurrences.branchId, scope.branchIds)
+          )
         )
-      )
-      .returning();
-    return occurrence ? this.occurrenceResponse(occurrence) : null;
+        .limit(1);
+      if (!current) return null;
+      if (current.status === "cancelled") return this.occurrenceResponse(current);
+      if (current.templateId) {
+        await tx
+          .insert(scheduleExceptions)
+          .values({
+            tenantId: scope.tenantId,
+            templateId: current.templateId,
+            occurrenceId: current.id,
+            exceptionType: "cancelled",
+            reason,
+            originalStartsAt: current.startsAt,
+            createdByUserId: actorUserId
+          })
+          .onConflictDoNothing();
+      }
+      const [occurrence] = await tx
+        .update(scheduleOccurrences)
+        .set({ status: "cancelled", cancellationReason: reason, updatedAt: new Date() })
+        .where(eq(scheduleOccurrences.id, occurrenceId))
+        .returning();
+      return occurrence ? this.occurrenceResponse(occurrence) : null;
+    });
+  }
+
+  async overrideScheduleOccurrence(
+    scope: TenantScope,
+    occurrenceId: string,
+    input: OverrideScheduleOccurrenceRequest,
+    actorUserId: string
+  ): Promise<ScheduleOccurrenceResponse | null> {
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM schedule_occurrences
+        WHERE id = ${occurrenceId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [current] = await tx
+        .select()
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.id, occurrenceId),
+            eq(scheduleOccurrences.tenantId, scope.tenantId),
+            inArray(scheduleOccurrences.branchId, scope.branchIds)
+          )
+        )
+        .limit(1);
+      if (!current?.templateId) return null;
+      if (input.capacity !== undefined) {
+        const [bookingCount] = await tx
+          .select({ value: sql<number>`count(*)::int` })
+          .from(bookings)
+          .where(and(eq(bookings.occurrenceId, current.id), eq(bookings.status, "confirmed")));
+        if (input.capacity < (bookingCount?.value ?? 0)) {
+          throw new Error("Capacity cannot be lower than confirmed bookings.");
+        }
+      }
+      const insertedException = await tx
+        .insert(scheduleExceptions)
+        .values({
+          tenantId: scope.tenantId,
+          templateId: current.templateId,
+          occurrenceId: current.id,
+          exceptionType: "overridden",
+          reason: input.reason,
+          originalStartsAt: current.startsAt,
+          createdByUserId: actorUserId
+        })
+        .onConflictDoNothing()
+        .returning({ id: scheduleExceptions.id });
+      if (!insertedException.length) throw new Error("Occurrence already overridden.");
+      const [occurrence] = await tx
+        .update(scheduleOccurrences)
+        .set({
+          ...(input.trainerUserId !== undefined ? { trainerUserId: input.trainerUserId } : {}),
+          ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
+          ...(input.startsAt !== undefined ? { startsAt: new Date(input.startsAt) } : {}),
+          ...(input.endsAt !== undefined ? { endsAt: new Date(input.endsAt) } : {}),
+          ...(input.capacity !== undefined ? { capacity: input.capacity } : {}),
+          updatedAt: new Date()
+        })
+        .where(eq(scheduleOccurrences.id, current.id))
+        .returning();
+      return occurrence ? this.occurrenceResponse(occurrence) : null;
+    });
   }
 
   async createBooking(
@@ -2635,6 +2899,30 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
+  private scheduleTemplateResponse(
+    template: typeof scheduleTemplates.$inferSelect
+  ): ScheduleTemplateResponse {
+    return {
+      id: template.id,
+      tenantId: template.tenantId,
+      branchId: template.branchId,
+      serviceId: template.serviceId,
+      trainerUserId: template.trainerUserId,
+      roomId: template.roomId,
+      timezone: template.timezone,
+      daysOfWeek: [...template.daysOfWeek],
+      localStartTime: template.localStartTime,
+      durationMinutes: template.durationMinutes,
+      capacity: template.capacity,
+      effectiveStartDate: template.effectiveStartDate,
+      effectiveEndDate: template.effectiveEndDate,
+      materializedThrough: template.materializedThrough,
+      isActive: template.isActive,
+      createdAt: template.createdAt.toISOString(),
+      updatedAt: template.updatedAt.toISOString()
+    };
+  }
+
   private occurrenceResponse(
     occurrence: typeof scheduleOccurrences.$inferSelect
   ): ScheduleOccurrenceResponse {
@@ -2642,6 +2930,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       id: occurrence.id,
       tenantId: occurrence.tenantId,
       branchId: occurrence.branchId,
+      templateId: occurrence.templateId,
       serviceId: occurrence.serviceId,
       trainerUserId: occurrence.trainerUserId,
       roomId: occurrence.roomId,

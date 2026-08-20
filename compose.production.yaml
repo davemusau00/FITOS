@@ -50,12 +50,25 @@ services:
     env_file: ${FITOS_ENV_FILE:-.env.production}
     environment:
       FITOS_RELEASE_TAG: ${FITOS_RELEASE_TAG:-local}
+      WORKER_METRICS_PORT: 9464
+    expose: ["9464"]
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks: [data]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:9464/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   backup:
@@ -79,12 +92,12 @@ services:
     restart: "no"
 
   postgres:
-    ports: []
+    ports: !reset []
     env_file: ${FITOS_ENV_FILE:-.env.production}
     networks: [data]
 
   redis:
-    ports: []
+    ports: !reset []
     networks: [data]
 
 networks:

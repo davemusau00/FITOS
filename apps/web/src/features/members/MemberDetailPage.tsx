@@ -15,14 +15,17 @@ import {
   StatusBadge
 } from "@fitos/ui";
 import type {
+  AttendanceRecordResponse,
+  BookingResponse,
   BranchResponse,
   CreditLedgerEntryResponse,
   MemberResponse,
-  MembershipPlanResponse
+  MembershipPlanResponse,
+  PaymentTransactionResponse
 } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
-import { ErrorNotice, PageLoading, formatDate, formatDateTime } from "../shared";
+import { ErrorNotice, PageLoading, formatCurrency, formatDate, formatDateTime } from "../shared";
 
 type MemberFormValues = {
   firstName: string;
@@ -84,6 +87,32 @@ export function MemberDetailPage() {
     queryKey: ["membership-plans"],
     queryFn: () => api.membershipPlans()
   });
+  const bookings = useQuery({
+    queryKey: ["member", memberId ?? "", "bookings"],
+    queryFn: () => api.bookings(new URLSearchParams({ memberId: memberId!, limit: "100" })),
+    enabled: Boolean(memberId) && can(auth, "booking:read")
+  });
+  const payments = useQuery({
+    queryKey: ["member", memberId ?? "", "payments"],
+    queryFn: () => api.payments(new URLSearchParams({ memberId: memberId!, limit: "100" })),
+    enabled: Boolean(memberId) && can(auth, "payment:read")
+  });
+  const attendance = useQuery({
+    queryKey: ["member", memberId ?? "", "attendance"],
+    queryFn: () =>
+      api.attendanceRecords(new URLSearchParams({ memberId: memberId!, limit: "100" })),
+    enabled: Boolean(memberId) && can(auth, "attendance:read")
+  });
+  const occurrences = useQuery({
+    queryKey: ["schedule", "member-profile-lookup"],
+    queryFn: () => api.scheduleOccurrences(new URLSearchParams({ limit: "100" })),
+    enabled: Boolean(memberId) && can(auth, "booking:read")
+  });
+  const services = useQuery({
+    queryKey: ["services", "member-profile-lookup"],
+    queryFn: api.services,
+    enabled: Boolean(memberId) && can(auth, "booking:read")
+  });
 
   const activeMembership = memberships.data?.find((m) => m.status === "active");
 
@@ -120,6 +149,74 @@ export function MemberDetailPage() {
       id: "date",
       header: "Date & Time",
       cell: (e) => formatDateTime(e.createdAt)
+    }
+  ];
+
+  const bookingColumns: DataTableColumn<BookingResponse>[] = [
+    {
+      id: "session",
+      header: "Session",
+      cell: (booking) => {
+        const occurrence = occurrences.data?.data.find((item) => item.id === booking.occurrenceId);
+        const service = services.data?.find((item) => item.id === occurrence?.serviceId);
+        return (
+          <div>
+            <strong className="fitos-data-table__primary">
+              {service?.name ?? "Class session"}
+            </strong>
+            <span className="fitos-data-table__muted">
+              {occurrence ? formatDateTime(occurrence.startsAt) : booking.occurrenceId.slice(0, 8)}
+            </span>
+          </div>
+        );
+      }
+    },
+    { id: "status", header: "Status", cell: (booking) => <StatusBadge status={booking.status} /> },
+    {
+      id: "credits",
+      header: "Credits",
+      cell: (booking) => (booking.creditsDebited ? `-${booking.creditsDebited}` : "None")
+    },
+    { id: "booked", header: "Booked", cell: (booking) => formatDateTime(booking.bookedAt) }
+  ];
+
+  const paymentColumns: DataTableColumn<PaymentTransactionResponse>[] = [
+    {
+      id: "amount",
+      header: "Amount",
+      cell: (payment) => formatCurrency(payment.amount.amountMinor, payment.amount.currency)
+    },
+    { id: "method", header: "Method", cell: (payment) => <StatusBadge status={payment.method} /> },
+    {
+      id: "allocation",
+      header: "Allocation",
+      cell: (payment) => payment.allocationType ?? "Unallocated"
+    },
+    { id: "status", header: "Status", cell: (payment) => <StatusBadge status={payment.status} /> },
+    {
+      id: "recorded",
+      header: "Recorded",
+      cell: (payment) => formatDateTime(payment.recordedAt)
+    }
+  ];
+
+  const attendanceColumns: DataTableColumn<AttendanceRecordResponse>[] = [
+    {
+      id: "visit",
+      header: "Visit / Class",
+      cell: (record) => {
+        const occurrence = occurrences.data?.data.find((item) => item.id === record.occurrenceId);
+        const service = services.data?.find((item) => item.id === occurrence?.serviceId);
+        return occurrence
+          ? `${service?.name ?? "Class"} · ${formatDateTime(occurrence.startsAt)}`
+          : "General visit";
+      }
+    },
+    { id: "status", header: "Status", cell: (record) => <StatusBadge status={record.status} /> },
+    {
+      id: "checkin",
+      header: "Checked in",
+      cell: (record) => (record.checkedInAt ? formatDateTime(record.checkedInAt) : "—")
     }
   ];
 
@@ -258,6 +355,51 @@ export function MemberDetailPage() {
           <p className="muted">No credit movements recorded yet.</p>
         )}
       </Card>
+
+      {can(auth, "booking:read") ? (
+        <Card className="detail-editor">
+          <h2>Booking History</h2>
+          {bookings.isLoading || occurrences.isLoading || services.isLoading ? (
+            <Skeleton height="6rem" />
+          ) : bookings.data?.data.length ? (
+            <DataTable columns={bookingColumns} data={bookings.data.data} label="Member Bookings" />
+          ) : (
+            <p className="muted">No bookings recorded for this member.</p>
+          )}
+        </Card>
+      ) : null}
+
+      {can(auth, "payment:read") ? (
+        <Card className="detail-editor">
+          <h2>Payment History</h2>
+          {payments.isLoading ? (
+            <Skeleton height="6rem" />
+          ) : payments.data?.data.length ? (
+            <DataTable columns={paymentColumns} data={payments.data.data} label="Member Payments" />
+          ) : (
+            <p className="muted">No payments recorded for this member.</p>
+          )}
+        </Card>
+      ) : null}
+
+      {can(auth, "attendance:read") ? (
+        <Card className="detail-editor">
+          <h2>Attendance History</h2>
+          {attendance.isLoading ? (
+            <Skeleton height="6rem" />
+          ) : attendance.data?.data.length ? (
+            <DataTable
+              columns={attendanceColumns}
+              data={attendance.data.data}
+              label="Member Attendance"
+            />
+          ) : (
+            <p className="muted">No attendance recorded for this member.</p>
+          )}
+        </Card>
+      ) : null}
+
+      <ErrorNotice error={bookings.error ?? payments.error ?? attendance.error} />
 
       {/* Activity Timeline */}
       <Card className="detail-editor">

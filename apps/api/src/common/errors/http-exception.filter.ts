@@ -1,5 +1,6 @@
 import {
   Catch,
+  Inject,
   type ArgumentsHost,
   type ExceptionFilter,
   HttpException,
@@ -10,9 +11,12 @@ import type { Response } from "express";
 import { ZodError } from "zod";
 import { DomainError, validationError } from "./domain-error.js";
 import type { FitosRequest } from "../request-context/request-context.js";
+import { MetricsService } from "../metrics/metrics.service.js";
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
+  constructor(@Inject(MetricsService) private readonly metrics: MetricsService) {}
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
@@ -57,6 +61,25 @@ export class ApiExceptionFilter implements ExceptionFilter {
         ...(error.details ? { details: error.details } : {})
       }
     };
+    const newlyRecorded = this.metrics.recordRequestOnce(request, {
+      method: request.method,
+      path: request.originalUrl,
+      statusCode: status,
+      durationMs: 0
+    });
+    if (newlyRecorded && process.env.NODE_ENV !== "test") {
+      process.stdout.write(
+        JSON.stringify({
+          event: "http.request",
+          requestId,
+          method: request.method,
+          path: request.originalUrl,
+          statusCode: status,
+          durationMs: 0,
+          outcome: status >= 500 ? "error" : "rejected"
+        }) + "\n"
+      );
+    }
     response.status(status).setHeader("X-Request-Id", requestId).json(body);
   }
 }

@@ -9,7 +9,9 @@ COPY tsconfig.base.json ./
 COPY apps/web apps/web
 COPY packages/contracts packages/contracts
 COPY packages/ui packages/ui
-RUN npm run build --workspace=@fitos/contracts && npm run build --workspace=@fitos/web
+RUN npm run build --workspace=@fitos/contracts \
+    && npm run build --workspace=@fitos/ui \
+    && npm run build --workspace=@fitos/web
 
 FROM nginx:1.29-alpine
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html

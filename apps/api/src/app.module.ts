@@ -9,11 +9,13 @@ import { SessionGuard } from "./common/auth/session.guard.js";
 import { AuthService } from "./common/auth/auth.service.js";
 import { IdempotencyService } from "./common/idempotency/idempotency.service.js";
 import { RequestLoggingInterceptor } from "./common/logging/request-logging.interceptor.js";
+import { MetricsService } from "./common/metrics/metrics.service.js";
 import { FitosRepositoryToken } from "./ports/tokens.js";
 import type { FitosRepository } from "./ports/fitos-repository.js";
 import { InMemoryFitosRepository } from "./repositories/in-memory-fitos.repository.js";
 import { DrizzleFitosRepository } from "./repositories/drizzle-fitos.repository.js";
 import { HealthController } from "./modules/health/health.controller.js";
+import { MetricsController } from "./modules/metrics/metrics.controller.js";
 import { AuthController } from "./modules/auth/auth.controller.js";
 import { OrganizationsController } from "./modules/organizations/organizations.controller.js";
 import { BranchesController } from "./modules/branches/branches.controller.js";
@@ -22,7 +24,10 @@ import { UsersController } from "./modules/users/users.controller.js";
 import { AuditController } from "./modules/audit/audit.controller.js";
 import { LeadsController } from "./modules/leads/leads.controller.js";
 import { ServicesController } from "./modules/services/services.controller.js";
-import { ScheduleController } from "./modules/schedule/schedule.controller.js";
+import {
+  ScheduleController,
+  ScheduleTemplatesController
+} from "./modules/schedule/schedule.controller.js";
 import { BookingsController } from "./modules/bookings/bookings.controller.js";
 import { MembershipsController } from "./modules/memberships/memberships.controller.js";
 import { PaymentsController } from "./modules/payments/payments.controller.js";
@@ -58,6 +63,7 @@ const repositoryFactory = (): FitosRepository => {
 @Module({
   controllers: [
     HealthController,
+    MetricsController,
     AuthController,
     OrganizationsController,
     BranchesController,
@@ -67,6 +73,7 @@ const repositoryFactory = (): FitosRepository => {
     LeadsController,
     ServicesController,
     ScheduleController,
+    ScheduleTemplatesController,
     BookingsController,
     MembershipsController,
     PaymentsController,
@@ -80,6 +87,7 @@ const repositoryFactory = (): FitosRepository => {
     CoreService,
     IdempotencyService,
     RateLimitService,
+    MetricsService,
     { provide: APP_GUARD, useClass: SessionGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_FILTER, useClass: ApiExceptionFilter },

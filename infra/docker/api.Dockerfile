@@ -13,7 +13,11 @@ COPY packages/auth packages/auth
 COPY packages/contracts packages/contracts
 COPY packages/database packages/database
 COPY packages/shared packages/shared
-RUN npm run build --workspace=@fitos/api
+RUN npm run build --workspace=@fitos/contracts \
+    && npm run build --workspace=@fitos/shared \
+    && npm run build --workspace=@fitos/auth \
+    && npm run build --workspace=@fitos/database \
+    && npm run build --workspace=@fitos/api
 
 FROM node:24-alpine AS runtime
 WORKDIR /app

@@ -27,6 +27,10 @@ import type {
   ScheduleOccurrenceResponse,
   CreateScheduleOccurrenceRequest,
   ScheduleOccurrenceListResponse,
+  ScheduleTemplateResponse,
+  CreateScheduleTemplateRequest,
+  ScheduleTemplateMutationResponse,
+  OverrideScheduleOccurrenceRequest,
   BookingResponse,
   CreateBookingRequest,
   BookingListResponse,
@@ -227,6 +231,28 @@ export const api = {
     request<ScheduleOccurrenceResponse>(`/schedule/occurrences/${id}/cancel`, {
       method: "POST",
       body: json({ reason })
+    }),
+  overrideScheduleOccurrence: (id: string, payload: OverrideScheduleOccurrenceRequest) =>
+    request<ScheduleOccurrenceResponse>(`/schedule/occurrences/${id}/override`, {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  scheduleTemplates: (branchId?: string) =>
+    request<ScheduleTemplateResponse[]>(
+      branchId ? `/schedule/templates?branchId=${branchId}` : "/schedule/templates"
+    ),
+  createScheduleTemplate: (payload: CreateScheduleTemplateRequest) =>
+    request<ScheduleTemplateMutationResponse>("/schedule/templates", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  materializeScheduleTemplate: (id: string, throughDate: string) =>
+    request<ScheduleTemplateMutationResponse>(`/schedule/templates/${id}/materialize`, {
+      method: "POST",
+      body: json({ throughDate }),
+      headers: { "Idempotency-Key": idempotency() }
     }),
 
   // Bookings

@@ -122,6 +122,44 @@ test("owner completes the pilot operating river and reception is denied a refund
     }
   });
 
+  await test.step("create a bounded recurring schedule through the operator UI", async () => {
+    const recurringStart = localDateOffset(30);
+    const recurringThrough = localDateOffset(44);
+    const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+      new Date(`${recurringStart}T00:00:00`).getDay()
+    ]!;
+    await page.getByRole("button", { name: "Schedule session" }).click();
+    const dialog = page.getByRole("dialog", { name: "Schedule session" });
+    await dialog.getByLabel("Schedule type").selectOption("weekly");
+    await dialog.getByLabel("Service / Class").selectOption({ label: `${serviceName} (60 min)` });
+    await dialog.getByLabel("Branch").selectOption({ label: "Kilimani" });
+    await dialog.getByLabel("Effective start").fill(recurringStart);
+    await dialog.getByLabel("Start time").fill("15:00");
+    const weekdayBoxes = dialog
+      .getByRole("group", { name: "Recurring weekdays" })
+      .getByRole("checkbox");
+    for (let index = 0; index < (await weekdayBoxes.count()); index += 1) {
+      const checkbox = weekdayBoxes.nth(index);
+      if (await checkbox.isChecked()) await checkbox.uncheck();
+    }
+    await dialog.getByRole("checkbox", { name: weekday }).check();
+    await dialog.getByLabel("Generate sessions through").fill(recurringThrough);
+    await dialog.getByLabel("Room / Studio area").selectOption({ label: `${roomName} (max 8)` });
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        /\/api\/v1\/schedule\/templates$/.test(response.url())
+    );
+    await dialog.getByRole("button", { name: "Create recurring series" }).click();
+    const response = await responsePromise;
+    expect(response.status()).toBe(201);
+    const created = (await response.json()) as { occurrences: Array<{ templateId: string }> };
+    expect(created.occurrences).toHaveLength(3);
+    await expect(dialog).toBeHidden();
+    const recurringRow = page.getByRole("row").filter({ hasText: serviceName }).last();
+    await expect(recurringRow).toContainText(`Through ${recurringThrough}`);
+  });
+
   await test.step("create and activate a membership entitlement", async () => {
     await page.getByRole("link", { name: "Memberships", exact: true }).click();
     await page.getByRole("button", { name: "New membership plan" }).click();
@@ -215,6 +253,16 @@ test("owner completes the pilot operating river and reception is denied a refund
     await expect(page.getByRole("button", { name: "Mark attended" })).toBeVisible();
     await page.getByRole("button", { name: "Mark attended" }).click();
     await expect(page.getByText("Attended", { exact: true })).toBeVisible();
+
+    await page.goto(`/app/members/${memberId}`);
+    const bookingHistory = page.getByRole("heading", { name: "Booking History" }).locator("..");
+    const paymentHistory = page.getByRole("heading", { name: "Payment History" }).locator("..");
+    const attendanceHistory = page
+      .getByRole("heading", { name: "Attendance History" })
+      .locator("..");
+    await expect(bookingHistory.getByText(serviceName).first()).toBeVisible();
+    await expect(paymentHistory).toContainText("4,500.00");
+    await expect(attendanceHistory.getByText("Attended", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Sign out" }).click();
     await signIn(page, "reception@gym.fitos.test");

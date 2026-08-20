@@ -1,0 +1,80 @@
+groups:
+  - name: fitos-pilot
+    rules:
+      - alert: FitosTargetDown
+        expr: up{job=~"fitos-.+"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "FITOS monitoring target {{ $labels.job }} is down"
+
+      - alert: FitosApiErrorRateHigh
+        expr: |
+          sum(rate(fitos_http_requests_total{status_code=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(fitos_http_requests_total[5m])), 0.001)
+          > 0.02
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "FITOS API 5xx rate exceeds 2%"
+
+      - alert: FitosWorkerJobFailed
+        expr: increase(fitos_worker_jobs_total{outcome="failed"}[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "A FITOS background job failed"
+
+      - alert: FitosWorkerRedisUnavailable
+        expr: fitos_worker_redis_ready == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "FITOS worker lost Redis connectivity"
+
+      - alert: FitosBackupFailed
+        expr: fitos_backup_last_run_success == 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "The latest FITOS backup attempt failed"
+
+      - alert: FitosBackupMissing
+        expr: absent(fitos_backup_last_success_timestamp_seconds)
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No successful FITOS backup metric is visible"
+
+      - alert: FitosBackupStale
+        expr: time() - fitos_backup_last_success_timestamp_seconds > 90000
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "The latest successful FITOS backup is older than 25 hours"
+
+      - alert: FitosHostDiskLow
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+          /
+          node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+          < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "FITOS host filesystem {{ $labels.mountpoint }} has less than 15% free"
+
+      - alert: FitosHostMemoryLow
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "FITOS host has less than 10% memory available"

@@ -21,7 +21,10 @@ import type {
   BookingResponse,
   BranchResponse,
   CreateScheduleOccurrenceRequest,
+  CreateScheduleTemplateRequest,
   RoomResponse,
+  ScheduleOccurrenceResponse,
+  ScheduleTemplateResponse,
   ServiceResponse,
   StaffUserResponse
 } from "@fitos/contracts";
@@ -30,6 +33,7 @@ import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 type OccurrenceFormValues = {
+  scheduleType: "once" | "weekly";
   branchId: string;
   serviceId: string;
   trainerUserId: string;
@@ -38,7 +42,18 @@ type OccurrenceFormValues = {
   startTime: string;
   durationMinutes: number;
   capacity: number;
+  daysOfWeek: string[];
+  effectiveEndDate: string;
+  materializeThroughDate: string;
 };
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+function addLocalDays(value: string, days: number): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
 
 const calendarPlugins = [
   dayGridPlugin,
@@ -62,6 +77,10 @@ export function SchedulePage() {
   const rooms = useQuery({
     queryKey: ["rooms", selectedBranch],
     queryFn: () => api.rooms(selectedBranch || undefined)
+  });
+  const templatesQuery = useQuery({
+    queryKey: ["schedule-templates", selectedBranch],
+    queryFn: () => api.scheduleTemplates(selectedBranch || undefined)
   });
 
   const occurrencesQuery = useQuery({
@@ -100,6 +119,73 @@ export function SchedulePage() {
       };
     });
   }, [occurrencesQuery.data?.data, services.data, staff.data, rooms.data]);
+
+  const extendTemplate = useMutation({
+    mutationFn: (template: ScheduleTemplateResponse) => {
+      const startingPoint = template.materializedThrough ?? template.effectiveStartDate;
+      const requested = addLocalDays(startingPoint, 84);
+      const throughDate =
+        template.effectiveEndDate && template.effectiveEndDate < requested
+          ? template.effectiveEndDate
+          : requested;
+      return api.materializeScheduleTemplate(template.id, throughDate);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["schedule"] });
+      void queryClient.invalidateQueries({ queryKey: ["schedule-templates"] });
+    }
+  });
+
+  const templateColumns: DataTableColumn<ScheduleTemplateResponse>[] = [
+    {
+      id: "service",
+      header: "Recurring service",
+      cell: (template) => (
+        <div>
+          <strong className="fitos-data-table__primary">
+            {services.data?.find((service) => service.id === template.serviceId)?.name ?? "Service"}
+          </strong>
+          <span className="fitos-data-table__muted">
+            {template.daysOfWeek.map((day) => WEEKDAYS[day]).join(" / ")} at{" "}
+            {template.localStartTime}
+          </span>
+        </div>
+      )
+    },
+    {
+      id: "window",
+      header: "Materialized",
+      cell: (template) => (
+        <span>
+          Through {template.materializedThrough ?? "not yet"}
+          {template.effectiveEndDate ? ` · ends ${template.effectiveEndDate}` : ""}
+        </span>
+      )
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (template) => <StatusBadge status={template.isActive ? "active" : "inactive"} />
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: (template) =>
+        template.isActive &&
+        (!template.effectiveEndDate ||
+          template.materializedThrough !== template.effectiveEndDate) &&
+        can(auth, "schedule:manage") ? (
+          <Button
+            loading={extendTemplate.isPending && extendTemplate.variables?.id === template.id}
+            onClick={() => extendTemplate.mutate(template)}
+            size="small"
+            variant="secondary"
+          >
+            Extend 12 weeks
+          </Button>
+        ) : null
+    }
+  ];
 
   if (branches.isLoading || services.isLoading) return <PageLoading />;
 
@@ -186,6 +272,27 @@ export function SchedulePage() {
         </div>
       </Card>
 
+      <Card>
+        <div className="section-header-row">
+          <div>
+            <h2>Recurring schedule</h2>
+            <p className="muted">Weekly intent is kept separate from generated class sessions.</p>
+          </div>
+        </div>
+        <ErrorNotice error={templatesQuery.error ?? extendTemplate.error} />
+        {templatesQuery.isLoading ? (
+          <PageLoading />
+        ) : templatesQuery.data?.length ? (
+          <DataTable
+            columns={templateColumns}
+            data={templatesQuery.data}
+            label="Recurring schedules"
+          />
+        ) : (
+          <p className="muted">No recurring schedules have been created.</p>
+        )}
+      </Card>
+
       {/* Schedule Occurrence Modal */}
       {isCreating ? (
         <CreateOccurrenceModal
@@ -194,11 +301,13 @@ export function SchedulePage() {
           onClose={() => setIsCreating(false)}
           onSuccess={() => {
             void queryClient.invalidateQueries({ queryKey: ["schedule"] });
+            void queryClient.invalidateQueries({ queryKey: ["schedule-templates"] });
             setIsCreating(false);
           }}
           rooms={rooms.data ?? []}
           services={services.data ?? []}
           staff={staff.data ?? []}
+          tenantTimezone={auth?.tenant.timezone ?? "Africa/Nairobi"}
         />
       ) : null}
 
@@ -225,7 +334,8 @@ function CreateOccurrenceModal({
   services,
   staff,
   rooms,
-  onSuccess
+  onSuccess,
+  tenantTimezone
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -234,11 +344,13 @@ function CreateOccurrenceModal({
   staff: StaffUserResponse[];
   rooms: RoomResponse[];
   onSuccess: () => void;
+  tenantTimezone: string;
 }) {
   const [error, setError] = useState<unknown>(null);
   const now = new Date();
   const defaultDate = now.toISOString().split("T")[0] ?? "";
   const defaultTime = `${String(now.getHours() + 1).padStart(2, "0")}:00`;
+  const defaultThroughDate = addLocalDays(defaultDate, 83);
 
   const {
     register,
@@ -248,6 +360,7 @@ function CreateOccurrenceModal({
     formState: { errors, isSubmitting }
   } = useForm<OccurrenceFormValues>({
     defaultValues: {
+      scheduleType: "once",
       branchId: branches[0]?.id ?? "",
       serviceId: services[0]?.id ?? "",
       trainerUserId: "",
@@ -255,11 +368,15 @@ function CreateOccurrenceModal({
       startDate: defaultDate,
       startTime: defaultTime,
       durationMinutes: services[0]?.durationMinutes ?? 60,
-      capacity: services[0]?.defaultCapacity ?? 15
+      capacity: services[0]?.defaultCapacity ?? 15,
+      daysOfWeek: [String(new Date(`${defaultDate}T00:00:00`).getDay())],
+      effectiveEndDate: "",
+      materializeThroughDate: defaultThroughDate
     }
   });
 
   const selectedBranchId = watch("branchId");
+  const scheduleType = watch("scheduleType");
 
   const branchRooms = useMemo(() => {
     return rooms.filter((r) => !r.branchId || r.branchId === selectedBranchId);
@@ -278,6 +395,27 @@ function CreateOccurrenceModal({
   const onSubmit = async (values: OccurrenceFormValues) => {
     setError(null);
     try {
+      if (values.scheduleType === "weekly") {
+        const branch = branches.find((candidate) => candidate.id === values.branchId);
+        const payload: CreateScheduleTemplateRequest = {
+          branchId: values.branchId,
+          serviceId: values.serviceId,
+          trainerUserId: values.trainerUserId || null,
+          roomId: values.roomId || null,
+          timezone: branch?.timezone ?? tenantTimezone,
+          daysOfWeek: values.daysOfWeek.map(Number),
+          localStartTime: values.startTime,
+          durationMinutes: Number(values.durationMinutes),
+          capacity: Number(values.capacity),
+          effectiveStartDate: values.startDate,
+          effectiveEndDate: values.effectiveEndDate || null,
+          materializeThroughDate: values.materializeThroughDate
+        };
+        await api.createScheduleTemplate(payload);
+        onSuccess();
+        return;
+      }
+
       const startsAtDate = new Date(`${values.startDate}T${values.startTime}:00`);
       const endsAtDate = new Date(startsAtDate.getTime() + values.durationMinutes * 60000);
 
@@ -300,13 +438,20 @@ function CreateOccurrenceModal({
 
   return (
     <Modal
-      description="Schedule a class or appointment slot on the master timetable."
+      description="Create one class session or materialize a bounded weekly series."
       isOpen={isOpen}
       onClose={onClose}
       title="Schedule session"
     >
       <form className="form-stack" onSubmit={handleSubmit(onSubmit)}>
         <div className="form-grid">
+          <FormField htmlFor="occScheduleType" label="Schedule type">
+            <select className="fitos-control" id="occScheduleType" {...register("scheduleType")}>
+              <option value="once">One-off session</option>
+              <option value="weekly">Weekly recurring series</option>
+            </select>
+          </FormField>
+
           <FormField error={errors.serviceId?.message} htmlFor="occService" label="Service / Class">
             <select
               className="fitos-control"
@@ -342,7 +487,11 @@ function CreateOccurrenceModal({
             </select>
           </FormField>
 
-          <FormField error={errors.startDate?.message} htmlFor="occStartDate" label="Date">
+          <FormField
+            error={errors.startDate?.message}
+            htmlFor="occStartDate"
+            label={scheduleType === "weekly" ? "Effective start" : "Date"}
+          >
             <input
               className="fitos-control"
               id="occStartDate"
@@ -350,6 +499,55 @@ function CreateOccurrenceModal({
               {...register("startDate", { required: "Date is required" })}
             />
           </FormField>
+
+          {scheduleType === "weekly" ? (
+            <>
+              <FormField error={errors.daysOfWeek?.message} htmlFor="occWeekday0" label="Repeat on">
+                <div className="filter-row" role="group" aria-label="Recurring weekdays">
+                  {WEEKDAYS.map((label, day) => (
+                    <label className="fitos-checkbox" key={label}>
+                      <input
+                        id={`occWeekday${day}`}
+                        type="checkbox"
+                        value={day}
+                        {...register("daysOfWeek", {
+                          validate: (value) =>
+                            scheduleType !== "weekly" || value.length > 0 || "Select a weekday"
+                        })}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </FormField>
+
+              <FormField htmlFor="occEffectiveEnd" label="Effective end" optional>
+                <input
+                  className="fitos-control"
+                  id="occEffectiveEnd"
+                  min={defaultDate}
+                  type="date"
+                  {...register("effectiveEndDate")}
+                />
+              </FormField>
+
+              <FormField
+                error={errors.materializeThroughDate?.message}
+                htmlFor="occMaterializeThrough"
+                label="Generate sessions through"
+              >
+                <input
+                  className="fitos-control"
+                  id="occMaterializeThrough"
+                  min={defaultDate}
+                  type="date"
+                  {...register("materializeThroughDate", {
+                    required: "A bounded generation date is required"
+                  })}
+                />
+              </FormField>
+            </>
+          ) : null}
 
           <FormField error={errors.startTime?.message} htmlFor="occStartTime" label="Start time">
             <input
@@ -420,7 +618,7 @@ function CreateOccurrenceModal({
             Cancel
           </Button>
           <Button loading={isSubmitting} type="submit">
-            Schedule session
+            {scheduleType === "weekly" ? "Create recurring series" : "Schedule session"}
           </Button>
         </div>
       </form>
@@ -450,6 +648,7 @@ function OccurrenceDetailModal({
   const queryClient = useQueryClient();
   const [cancelReason, setCancelReason] = useState("");
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [isOverriding, setIsOverriding] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const occQuery = useQuery({
@@ -590,6 +789,34 @@ function OccurrenceDetailModal({
           <p className="muted">No members booked into this session yet.</p>
         )}
 
+        {occurrence.templateId &&
+        occurrence.status === "scheduled" &&
+        can(auth, "schedule:manage") ? (
+          isOverriding ? (
+            <OverrideOccurrenceForm
+              activeBookingCount={activeBookings.length}
+              occurrence={occurrence}
+              onCancel={() => setIsOverriding(false)}
+              onSuccess={() => {
+                void queryClient.invalidateQueries({ queryKey: ["schedule"] });
+                onClose();
+              }}
+              rooms={rooms.filter((candidate) => candidate.branchId === occurrence.branchId)}
+              staff={staff.filter((candidate) =>
+                candidate.branches.some(
+                  (candidateBranch) => candidateBranch.id === occurrence.branchId
+                )
+              )}
+            />
+          ) : (
+            <div className="form-actions">
+              <Button onClick={() => setIsOverriding(true)} variant="secondary">
+                Override this session
+              </Button>
+            </div>
+          )
+        ) : null}
+
         <hr className="divider" />
 
         {occurrence.status === "scheduled" && can(auth, "schedule:manage") ? (
@@ -633,5 +860,158 @@ function OccurrenceDetailModal({
         ) : null}
       </div>
     </Modal>
+  );
+}
+
+type OverrideFormValues = {
+  trainerUserId: string;
+  roomId: string;
+  startsAt: string;
+  durationMinutes: number;
+  capacity: number;
+  reason: string;
+};
+
+function localDateTimeInput(value: string): string {
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function OverrideOccurrenceForm({
+  occurrence,
+  activeBookingCount,
+  rooms,
+  staff,
+  onCancel,
+  onSuccess
+}: {
+  occurrence: ScheduleOccurrenceResponse;
+  activeBookingCount: number;
+  rooms: RoomResponse[];
+  staff: StaffUserResponse[];
+  onCancel: () => void;
+  onSuccess: () => void;
+}) {
+  const [error, setError] = useState<unknown>(null);
+  const durationMinutes = Math.round(
+    (new Date(occurrence.endsAt).getTime() - new Date(occurrence.startsAt).getTime()) / 60_000
+  );
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting }
+  } = useForm<OverrideFormValues>({
+    defaultValues: {
+      trainerUserId: occurrence.trainerUserId ?? "",
+      roomId: occurrence.roomId ?? "",
+      startsAt: localDateTimeInput(occurrence.startsAt),
+      durationMinutes,
+      capacity: occurrence.capacity,
+      reason: ""
+    }
+  });
+
+  const onSubmit = async (values: OverrideFormValues) => {
+    setError(null);
+    try {
+      const startsAt = new Date(values.startsAt);
+      await api.overrideScheduleOccurrence(occurrence.id, {
+        trainerUserId: values.trainerUserId || null,
+        roomId: values.roomId || null,
+        startsAt: startsAt.toISOString(),
+        endsAt: new Date(
+          startsAt.getTime() + Number(values.durationMinutes) * 60_000
+        ).toISOString(),
+        capacity: Number(values.capacity),
+        reason: values.reason.trim()
+      });
+      onSuccess();
+    } catch (cause) {
+      setError(cause);
+    }
+  };
+
+  return (
+    <form className="form-stack" onSubmit={handleSubmit(onSubmit)}>
+      <div>
+        <h3>One-off override</h3>
+        <p className="muted">The recurring template remains unchanged.</p>
+      </div>
+      <div className="form-grid">
+        <FormField error={errors.startsAt?.message} htmlFor="overrideStartsAt" label="Starts at">
+          <input
+            className="fitos-control"
+            id="overrideStartsAt"
+            type="datetime-local"
+            {...register("startsAt", { required: "Start date and time are required" })}
+          />
+        </FormField>
+        <FormField
+          error={errors.durationMinutes?.message}
+          htmlFor="overrideDuration"
+          label="Duration (minutes)"
+        >
+          <input
+            className="fitos-control"
+            id="overrideDuration"
+            min={1}
+            type="number"
+            {...register("durationMinutes", { required: true, min: 1 })}
+          />
+        </FormField>
+        <FormField error={errors.capacity?.message} htmlFor="overrideCapacity" label="Capacity">
+          <input
+            className="fitos-control"
+            id="overrideCapacity"
+            min={Math.max(1, activeBookingCount)}
+            type="number"
+            {...register("capacity", {
+              required: true,
+              min: {
+                value: Math.max(1, activeBookingCount),
+                message: "Capacity cannot be below confirmed bookings"
+              }
+            })}
+          />
+        </FormField>
+        <FormField htmlFor="overrideTrainer" label="Instructor" optional>
+          <select className="fitos-control" id="overrideTrainer" {...register("trainerUserId")}>
+            <option value="">No instructor assigned</option>
+            {staff.map((candidate) => (
+              <option key={candidate.user.id} value={candidate.user.id}>
+                {candidate.user.displayName}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField htmlFor="overrideRoom" label="Room" optional>
+          <select className="fitos-control" id="overrideRoom" {...register("roomId")}>
+            <option value="">No room assigned</option>
+            {rooms.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField error={errors.reason?.message} htmlFor="overrideReason" label="Reason">
+          <input
+            className="fitos-control"
+            id="overrideReason"
+            {...register("reason", { required: "An audit reason is required" })}
+          />
+        </FormField>
+      </div>
+      <ErrorNotice error={error} />
+      <div className="form-actions">
+        <Button onClick={onCancel} variant="ghost">
+          Back
+        </Button>
+        <Button loading={isSubmitting} type="submit">
+          Save one-off override
+        </Button>
+      </div>
+    </form>
   );
 }

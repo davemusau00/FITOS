@@ -19,4 +19,5 @@ RUN npm ci --omit=dev
 COPY --from=build /app/apps/worker/dist apps/worker/dist
 COPY --from=build /app/packages/contracts/dist packages/contracts/dist
 USER node
+EXPOSE 9464
 CMD ["node", "apps/worker/dist/main.js"]

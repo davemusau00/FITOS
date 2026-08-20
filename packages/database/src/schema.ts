@@ -365,6 +365,42 @@ export const rooms = pgTable(
   ]
 );
 
+export const scheduleTemplates = pgTable(
+  "schedule_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "restrict" }),
+    trainerUserId: uuid("trainer_user_id").references(() => users.id, { onDelete: "set null" }),
+    roomId: uuid("room_id").references(() => rooms.id, { onDelete: "set null" }),
+    timezone: varchar("timezone", { length: 80 }).notNull(),
+    daysOfWeek: integer("days_of_week").array().notNull(),
+    localStartTime: varchar("local_start_time", { length: 5 }).notNull(),
+    durationMinutes: integer("duration_minutes").notNull(),
+    capacity: integer("capacity").notNull(),
+    effectiveStartDate: date("effective_start_date").notNull(),
+    effectiveEndDate: date("effective_end_date"),
+    materializedThrough: date("materialized_through"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_schedule_templates_tenant_branch_active").on(
+      table.tenantId,
+      table.branchId,
+      table.isActive
+    )
+  ]
+);
+
 export const scheduleOccurrences = pgTable(
   "schedule_occurrences",
   {
@@ -375,6 +411,9 @@ export const scheduleOccurrences = pgTable(
     branchId: uuid("branch_id")
       .notNull()
       .references(() => branches.id, { onDelete: "restrict" }),
+    templateId: uuid("template_id").references(() => scheduleTemplates.id, {
+      onDelete: "restrict"
+    }),
     serviceId: uuid("service_id")
       .notNull()
       .references(() => services.id, { onDelete: "restrict" }),
@@ -398,6 +437,41 @@ export const scheduleOccurrences = pgTable(
       table.tenantId,
       table.serviceId,
       table.startsAt
+    ),
+    uniqueIndex("uq_occurrences_template_starts").on(table.templateId, table.startsAt)
+  ]
+);
+
+export const scheduleExceptions = pgTable(
+  "schedule_exceptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    templateId: uuid("template_id")
+      .notNull()
+      .references(() => scheduleTemplates.id, { onDelete: "restrict" }),
+    occurrenceId: uuid("occurrence_id")
+      .notNull()
+      .references(() => scheduleOccurrences.id, { onDelete: "restrict" }),
+    exceptionType: varchar("exception_type", { length: 30 }).notNull(),
+    reason: varchar("reason", { length: 255 }).notNull(),
+    originalStartsAt: timestamp("original_starts_at", { withTimezone: true }).notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_schedule_exceptions_tenant_template").on(
+      table.tenantId,
+      table.templateId,
+      table.createdAt
+    ),
+    uniqueIndex("uq_schedule_exceptions_occurrence_type").on(
+      table.occurrenceId,
+      table.exceptionType
     )
   ]
 );
@@ -732,7 +806,9 @@ export const schema = {
   leadNotes,
   services,
   rooms,
+  scheduleTemplates,
   scheduleOccurrences,
+  scheduleExceptions,
   bookings,
   membershipPlans,
   memberMemberships,

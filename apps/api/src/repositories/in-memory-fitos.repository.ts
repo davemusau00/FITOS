@@ -30,10 +30,14 @@ import type {
   CreateRoomRequest,
   UpdateRoomRequest,
   CreateScheduleOccurrenceRequest,
+  CreateScheduleTemplateRequest,
   CreateServiceRequest,
   RoomResponse,
   ScheduleOccurrenceFilters,
   ScheduleOccurrenceResponse,
+  ScheduleTemplateResponse,
+  ScheduleTemplateMutationResponse,
+  OverrideScheduleOccurrenceRequest,
   ServiceResponse,
   UpdateServiceRequest,
   BookingListFilters,
@@ -88,6 +92,18 @@ type StoredLeadTask = LeadTaskResponse & { tenantId: string; leadId: string };
 type StoredService = ServiceResponse;
 type StoredRoom = RoomResponse;
 type StoredOccurrence = ScheduleOccurrenceResponse & { cancellationReason: string | null };
+type StoredScheduleTemplate = ScheduleTemplateResponse;
+type StoredScheduleException = {
+  id: string;
+  tenantId: string;
+  templateId: string;
+  occurrenceId: string;
+  exceptionType: "cancelled" | "overridden";
+  reason: string;
+  originalStartsAt: string;
+  createdByUserId: string;
+  createdAt: string;
+};
 type StoredBooking = BookingResponse;
 type StoredMembershipPlan = MembershipPlanResponse;
 type StoredMemberMembership = MemberMembershipResponse;
@@ -121,7 +137,9 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly leadTasks = new Map<string, StoredLeadTask>();
   private readonly services = new Map<string, StoredService>();
   private readonly rooms = new Map<string, StoredRoom>();
+  private readonly scheduleTemplates = new Map<string, StoredScheduleTemplate>();
   private readonly occurrences = new Map<string, StoredOccurrence>();
+  private readonly scheduleExceptions = new Map<string, StoredScheduleException>();
   private readonly bookings = new Map<string, StoredBooking>();
   private readonly membershipPlans = new Map<string, StoredMembershipPlan>();
   private readonly memberMemberships = new Map<string, StoredMemberMembership>();
@@ -923,6 +941,103 @@ export class InMemoryFitosRepository implements FitosRepository {
     return { ...room };
   }
 
+  async createScheduleTemplate(
+    scope: TenantScope,
+    input: CreateScheduleTemplateRequest,
+    occurrences: CreateScheduleOccurrenceRequest[],
+    materializedThrough: string
+  ): Promise<ScheduleTemplateMutationResponse> {
+    this.assertOccurrenceDraftsNoConflict(scope, occurrences);
+    const timestamp = now();
+    const template: StoredScheduleTemplate = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      serviceId: input.serviceId,
+      trainerUserId: input.trainerUserId ?? null,
+      roomId: input.roomId ?? null,
+      timezone: input.timezone,
+      daysOfWeek: [...input.daysOfWeek],
+      localStartTime: input.localStartTime,
+      durationMinutes: input.durationMinutes,
+      capacity: input.capacity,
+      effectiveStartDate: input.effectiveStartDate,
+      effectiveEndDate: input.effectiveEndDate ?? null,
+      materializedThrough,
+      isActive: true,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    const created = occurrences.map((occurrence) =>
+      this.storeOccurrence(scope, occurrence, template.id, timestamp)
+    );
+    this.scheduleTemplates.set(template.id, template);
+    return { template: this.scheduleTemplateResponse(template), occurrences: created };
+  }
+
+  async findScheduleTemplateById(
+    scope: TenantScope,
+    templateId: string
+  ): Promise<ScheduleTemplateResponse | null> {
+    const template = this.scheduleTemplates.get(templateId);
+    return template &&
+      template.tenantId === scope.tenantId &&
+      scope.branchIds.includes(template.branchId)
+      ? this.scheduleTemplateResponse(template)
+      : null;
+  }
+
+  async listScheduleTemplates(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<ScheduleTemplateResponse[]> {
+    if (branchId && !scope.branchIds.includes(branchId)) return [];
+    return [...this.scheduleTemplates.values()]
+      .filter(
+        (template) =>
+          template.tenantId === scope.tenantId &&
+          scope.branchIds.includes(template.branchId) &&
+          (!branchId || template.branchId === branchId)
+      )
+      .sort((a, b) => a.localStartTime.localeCompare(b.localStartTime))
+      .map((template) => this.scheduleTemplateResponse(template));
+  }
+
+  async materializeScheduleTemplate(
+    scope: TenantScope,
+    templateId: string,
+    occurrences: CreateScheduleOccurrenceRequest[],
+    materializedThrough: string
+  ): Promise<ScheduleTemplateMutationResponse | null> {
+    const template = this.scheduleTemplates.get(templateId);
+    if (
+      !template ||
+      template.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(template.branchId)
+    ) {
+      return null;
+    }
+    const existingStarts = new Set(
+      [...this.occurrences.values()]
+        .filter((occurrence) => occurrence.templateId === templateId)
+        .map((occurrence) => occurrence.startsAt)
+    );
+    const newOccurrences = occurrences.filter(
+      (occurrence) => !existingStarts.has(new Date(occurrence.startsAt).toISOString())
+    );
+    this.assertOccurrenceDraftsNoConflict(scope, newOccurrences);
+    const timestamp = now();
+    const created = newOccurrences.map((occurrence) =>
+      this.storeOccurrence(scope, occurrence, template.id, timestamp)
+    );
+    template.materializedThrough =
+      template.materializedThrough && template.materializedThrough > materializedThrough
+        ? template.materializedThrough
+        : materializedThrough;
+    template.updatedAt = timestamp;
+    return { template: this.scheduleTemplateResponse(template), occurrences: created };
+  }
+
   async createScheduleOccurrence(
     scope: TenantScope,
     input: CreateScheduleOccurrenceRequest
@@ -938,37 +1053,8 @@ export class InMemoryFitosRepository implements FitosRepository {
     }
     if (input.trainerUserId && !(await this.findStaffByUserId(scope, input.trainerUserId)))
       throw new Error("Trainer unavailable.");
-    const startsAt = new Date(input.startsAt);
-    const endsAt = new Date(input.endsAt);
-    if (endsAt <= startsAt) throw new Error("Occurrence end must be after start.");
-    const clashes = [...this.occurrences.values()].some(
-      (occurrence) =>
-        occurrence.tenantId === scope.tenantId &&
-        occurrence.status === "scheduled" &&
-        new Date(occurrence.startsAt) < endsAt &&
-        startsAt < new Date(occurrence.endsAt) &&
-        ((input.roomId && occurrence.roomId === input.roomId) ||
-          (input.trainerUserId && occurrence.trainerUserId === input.trainerUserId))
-    );
-    if (clashes) throw new Error("Schedule conflict.");
-    const timestamp = now();
-    const occurrence: StoredOccurrence = {
-      id: randomUUID(),
-      tenantId: scope.tenantId,
-      branchId: input.branchId,
-      serviceId: input.serviceId,
-      trainerUserId: input.trainerUserId ?? null,
-      roomId: input.roomId ?? null,
-      startsAt: startsAt.toISOString(),
-      endsAt: endsAt.toISOString(),
-      capacity: input.capacity,
-      status: "scheduled",
-      cancellationReason: null,
-      createdAt: timestamp,
-      updatedAt: timestamp
-    };
-    this.occurrences.set(occurrence.id, occurrence);
-    return this.occurrenceResponse(occurrence);
+    this.assertOccurrenceDraftsNoConflict(scope, [input]);
+    return this.storeOccurrence(scope, input, null, now());
   }
 
   async findScheduleOccurrenceById(
@@ -1010,7 +1096,8 @@ export class InMemoryFitosRepository implements FitosRepository {
   async cancelScheduleOccurrence(
     scope: TenantScope,
     occurrenceId: string,
-    reason: string
+    reason: string,
+    actorUserId = scope.userId
   ): Promise<ScheduleOccurrenceResponse | null> {
     const occurrence = this.occurrences.get(occurrenceId);
     if (
@@ -1021,6 +1108,77 @@ export class InMemoryFitosRepository implements FitosRepository {
       return null;
     occurrence.status = "cancelled";
     occurrence.cancellationReason = reason;
+    occurrence.updatedAt = now();
+    if (occurrence.templateId) {
+      const key = `${occurrence.id}:cancelled`;
+      if (!this.scheduleExceptions.has(key)) {
+        this.scheduleExceptions.set(key, {
+          id: randomUUID(),
+          tenantId: scope.tenantId,
+          templateId: occurrence.templateId,
+          occurrenceId: occurrence.id,
+          exceptionType: "cancelled",
+          reason,
+          originalStartsAt: occurrence.startsAt,
+          createdByUserId: actorUserId,
+          createdAt: now()
+        });
+      }
+    }
+    return this.occurrenceResponse(occurrence);
+  }
+
+  async overrideScheduleOccurrence(
+    scope: TenantScope,
+    occurrenceId: string,
+    input: OverrideScheduleOccurrenceRequest,
+    actorUserId: string
+  ): Promise<ScheduleOccurrenceResponse | null> {
+    const occurrence = this.occurrences.get(occurrenceId);
+    if (
+      !occurrence ||
+      !occurrence.templateId ||
+      occurrence.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(occurrence.branchId)
+    ) {
+      return null;
+    }
+    const exceptionKey = `${occurrence.id}:overridden`;
+    if (this.scheduleExceptions.has(exceptionKey))
+      throw new Error("Occurrence already overridden.");
+    const draft: CreateScheduleOccurrenceRequest = {
+      branchId: occurrence.branchId,
+      serviceId: occurrence.serviceId,
+      trainerUserId:
+        input.trainerUserId === undefined ? occurrence.trainerUserId : input.trainerUserId,
+      roomId: input.roomId === undefined ? occurrence.roomId : input.roomId,
+      startsAt: input.startsAt ?? occurrence.startsAt,
+      endsAt: input.endsAt ?? occurrence.endsAt,
+      capacity: input.capacity ?? occurrence.capacity
+    };
+    const activeBookingCount = [...this.bookings.values()].filter(
+      (booking) => booking.occurrenceId === occurrence.id && booking.status === "confirmed"
+    ).length;
+    if (draft.capacity < activeBookingCount) {
+      throw new Error("Capacity cannot be lower than confirmed bookings.");
+    }
+    this.assertOccurrenceDraftsNoConflict(scope, [draft], occurrence.id);
+    this.scheduleExceptions.set(exceptionKey, {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      templateId: occurrence.templateId,
+      occurrenceId: occurrence.id,
+      exceptionType: "overridden",
+      reason: input.reason,
+      originalStartsAt: occurrence.startsAt,
+      createdByUserId: actorUserId,
+      createdAt: now()
+    });
+    occurrence.trainerUserId = draft.trainerUserId ?? null;
+    occurrence.roomId = draft.roomId ?? null;
+    occurrence.startsAt = new Date(draft.startsAt).toISOString();
+    occurrence.endsAt = new Date(draft.endsAt).toISOString();
+    occurrence.capacity = draft.capacity;
     occurrence.updatedAt = now();
     return this.occurrenceResponse(occurrence);
   }
@@ -2053,6 +2211,82 @@ export class InMemoryFitosRepository implements FitosRepository {
   private taskResponse(task: StoredLeadTask): LeadTaskResponse {
     const { tenantId: _tenantId, leadId: _leadId, ...response } = task;
     return response;
+  }
+
+  private scheduleTemplateResponse(template: StoredScheduleTemplate): ScheduleTemplateResponse {
+    return { ...template, daysOfWeek: [...template.daysOfWeek] };
+  }
+
+  private assertOccurrenceDraftsNoConflict(
+    scope: TenantScope,
+    drafts: CreateScheduleOccurrenceRequest[],
+    excludedOccurrenceId?: string
+  ): void {
+    const normalized = drafts.map((draft) => ({
+      ...draft,
+      startsAtDate: new Date(draft.startsAt),
+      endsAtDate: new Date(draft.endsAt)
+    }));
+    for (const draft of normalized) {
+      if (
+        Number.isNaN(draft.startsAtDate.getTime()) ||
+        Number.isNaN(draft.endsAtDate.getTime()) ||
+        draft.endsAtDate <= draft.startsAtDate
+      ) {
+        throw new Error("Occurrence end must be after start.");
+      }
+      const clashes = [...this.occurrences.values()].some(
+        (occurrence) =>
+          occurrence.id !== excludedOccurrenceId &&
+          occurrence.tenantId === scope.tenantId &&
+          occurrence.status === "scheduled" &&
+          new Date(occurrence.startsAt) < draft.endsAtDate &&
+          draft.startsAtDate < new Date(occurrence.endsAt) &&
+          ((draft.roomId && occurrence.roomId === draft.roomId) ||
+            (draft.trainerUserId && occurrence.trainerUserId === draft.trainerUserId))
+      );
+      if (clashes) throw new Error("Schedule conflict.");
+    }
+    for (let index = 0; index < normalized.length; index += 1) {
+      const left = normalized[index];
+      if (!left) continue;
+      for (let otherIndex = index + 1; otherIndex < normalized.length; otherIndex += 1) {
+        const right = normalized[otherIndex];
+        if (!right) continue;
+        const overlaps =
+          left.startsAtDate < right.endsAtDate && right.startsAtDate < left.endsAtDate;
+        const sharesResource =
+          Boolean(left.roomId && left.roomId === right.roomId) ||
+          Boolean(left.trainerUserId && left.trainerUserId === right.trainerUserId);
+        if (overlaps && sharesResource) throw new Error("Schedule conflict.");
+      }
+    }
+  }
+
+  private storeOccurrence(
+    scope: TenantScope,
+    input: CreateScheduleOccurrenceRequest,
+    templateId: string | null,
+    timestamp: string
+  ): ScheduleOccurrenceResponse {
+    const occurrence: StoredOccurrence = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      templateId,
+      serviceId: input.serviceId,
+      trainerUserId: input.trainerUserId ?? null,
+      roomId: input.roomId ?? null,
+      startsAt: new Date(input.startsAt).toISOString(),
+      endsAt: new Date(input.endsAt).toISOString(),
+      capacity: input.capacity,
+      status: "scheduled",
+      cancellationReason: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.occurrences.set(occurrence.id, occurrence);
+    return this.occurrenceResponse(occurrence);
   }
 
   private occurrenceResponse(occurrence: StoredOccurrence): ScheduleOccurrenceResponse {

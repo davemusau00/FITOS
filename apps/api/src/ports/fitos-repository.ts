@@ -28,10 +28,14 @@ import type {
   CreateRoomRequest,
   UpdateRoomRequest,
   CreateScheduleOccurrenceRequest,
+  CreateScheduleTemplateRequest,
   CreateServiceRequest,
   RoomResponse,
   ScheduleOccurrenceFilters,
   ScheduleOccurrenceResponse,
+  ScheduleTemplateResponse,
+  ScheduleTemplateMutationResponse,
+  OverrideScheduleOccurrenceRequest,
   ServiceResponse,
   UpdateServiceRequest,
   BookingListFilters,
@@ -206,6 +210,23 @@ export interface FitosRepository {
     roomId: string,
     input: UpdateRoomRequest
   ): Promise<RoomResponse | null>;
+  createScheduleTemplate(
+    scope: TenantScope,
+    input: CreateScheduleTemplateRequest,
+    occurrences: CreateScheduleOccurrenceRequest[],
+    materializedThrough: string
+  ): Promise<ScheduleTemplateMutationResponse>;
+  findScheduleTemplateById(
+    scope: TenantScope,
+    templateId: string
+  ): Promise<ScheduleTemplateResponse | null>;
+  listScheduleTemplates(scope: TenantScope, branchId?: string): Promise<ScheduleTemplateResponse[]>;
+  materializeScheduleTemplate(
+    scope: TenantScope,
+    templateId: string,
+    occurrences: CreateScheduleOccurrenceRequest[],
+    materializedThrough: string
+  ): Promise<ScheduleTemplateMutationResponse | null>;
   createScheduleOccurrence(
     scope: TenantScope,
     input: CreateScheduleOccurrenceRequest
@@ -221,7 +242,14 @@ export interface FitosRepository {
   cancelScheduleOccurrence(
     scope: TenantScope,
     occurrenceId: string,
-    reason: string
+    reason: string,
+    actorUserId?: string
+  ): Promise<ScheduleOccurrenceResponse | null>;
+  overrideScheduleOccurrence(
+    scope: TenantScope,
+    occurrenceId: string,
+    input: OverrideScheduleOccurrenceRequest,
+    actorUserId: string
   ): Promise<ScheduleOccurrenceResponse | null>;
 
   createBooking(

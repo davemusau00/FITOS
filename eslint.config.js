@@ -10,6 +10,8 @@ export default tseslint.config(
       "**/dist/**",
       "**/node_modules/**",
       "**/coverage/**",
+      "**/playwright-report/**",
+      "**/test-results/**",
       "FITOS_Developer_Guidelines/**",
       "**/*.config.js"
     ]
@@ -27,7 +29,10 @@ export default tseslint.config(
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
+      ],
       "react/react-in-jsx-scope": "off",
       ...reactHooks.configs.recommended.rules
     }

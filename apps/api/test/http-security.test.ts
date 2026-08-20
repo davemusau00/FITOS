@@ -69,6 +69,14 @@ describe("HTTP security boundary", () => {
     expect(response.status).toBe(401);
     expect(response.headers.get("x-request-id")).toBeTruthy();
     expect((await response.json()).error.code).toBe("UNAUTHENTICATED");
+
+    expect((await fetch(`${baseUrl}/api/v1/health/live`)).status).toBe(200);
+    const metrics = await fetch(`${baseUrl}/api/v1/metrics`);
+    expect(metrics.status).toBe(200);
+    const body = await metrics.text();
+    expect(body).toContain("fitos_http_requests_total");
+    expect(body).toContain('status_code="401"');
+    expect(body).toContain('path="/api/v1/health/live",status_code="200"');
   });
 
   it("requires signed CSRF, scopes writes, and prevents cross-tenant reads", async () => {
@@ -653,5 +661,136 @@ describe("HTTP security boundary", () => {
       });
       expect(response.status, `${resource} mutation leaked`).toBe(404);
     }
+  });
+
+  it("creates and operates a bounded recurring schedule without leaking its template", async () => {
+    const gym = await login("owner@gym.fitos.test");
+    const pilates = await login("owner@pilates.fitos.test");
+    const me = await fetch(`${baseUrl}/api/v1/auth/me`, {
+      headers: { cookie: `fitos_session=${gym.session}; fitos_csrf=${gym.csrf}` }
+    });
+    const branchId = (await me.json()).branches[0].id as string;
+    const tag = crypto.randomUUID().slice(0, 8);
+    const serviceResponse = await fetch(`${baseUrl}/api/v1/services`, {
+      method: "POST",
+      headers: protectedHeaders(gym),
+      body: JSON.stringify({
+        branchId,
+        name: `Recurring HTTP ${tag}`,
+        serviceType: "class",
+        durationMinutes: 45,
+        defaultCapacity: 9
+      })
+    });
+    expect(serviceResponse.status).toBe(201);
+    const service = await serviceResponse.json();
+    const roomResponse = await fetch(`${baseUrl}/api/v1/rooms`, {
+      method: "POST",
+      headers: protectedHeaders(gym),
+      body: JSON.stringify({ branchId, name: `Recurring room ${tag}`, capacity: 9 })
+    });
+    expect(roomResponse.status).toBe(201);
+    const room = await roomResponse.json();
+
+    const effectiveStart = new Date();
+    effectiveStart.setUTCDate(effectiveStart.getUTCDate() + 90);
+    const effectiveStartDate = effectiveStart.toISOString().slice(0, 10);
+    const through = new Date(effectiveStart);
+    through.setUTCDate(through.getUTCDate() + 14);
+    const throughDate = through.toISOString().slice(0, 10);
+    const createResponse = await fetch(`${baseUrl}/api/v1/schedule/templates`, {
+      method: "POST",
+      headers: protectedHeaders(gym),
+      body: JSON.stringify({
+        branchId,
+        serviceId: service.id,
+        roomId: room.id,
+        timezone: "Africa/Nairobi",
+        daysOfWeek: [effectiveStart.getUTCDay()],
+        localStartTime: "10:00",
+        durationMinutes: 45,
+        capacity: 9,
+        effectiveStartDate,
+        materializeThroughDate: throughDate
+      })
+    });
+    expect(createResponse.status).toBe(201);
+    const created = await createResponse.json();
+    expect(created.occurrences).toHaveLength(3);
+    expect(
+      created.occurrences.every(
+        (occurrence: { templateId: string }) => occurrence.templateId === created.template.id
+      )
+    ).toBe(true);
+
+    const leaked = await fetch(`${baseUrl}/api/v1/schedule/templates/${created.template.id}`, {
+      headers: { cookie: `fitos_session=${pilates.session}; fitos_csrf=${pilates.csrf}` }
+    });
+    expect(leaked.status).toBe(404);
+    const deniedMaterialization = await fetch(
+      `${baseUrl}/api/v1/schedule/templates/${created.template.id}/materialize`,
+      {
+        method: "POST",
+        headers: protectedHeaders(pilates),
+        body: JSON.stringify({ throughDate })
+      }
+    );
+    expect(deniedMaterialization.status).toBe(404);
+
+    const extension = new Date(effectiveStart);
+    extension.setUTCDate(extension.getUTCDate() + 28);
+    const extensionThroughDate = extension.toISOString().slice(0, 10);
+    const materialized = await fetch(
+      `${baseUrl}/api/v1/schedule/templates/${created.template.id}/materialize`,
+      {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({ throughDate: extensionThroughDate })
+      }
+    );
+    expect(materialized.status).toBe(200);
+    const materialization = await materialized.json();
+    expect(materialization.occurrences).toHaveLength(2);
+    expect(materialization.template.materializedThrough).toBe(extensionThroughDate);
+    const repeatedMaterialization = await fetch(
+      `${baseUrl}/api/v1/schedule/templates/${created.template.id}/materialize`,
+      {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({ throughDate: extensionThroughDate })
+      }
+    );
+    expect(repeatedMaterialization.status).toBe(200);
+    expect((await repeatedMaterialization.json()).occurrences).toHaveLength(0);
+
+    const second = created.occurrences[1];
+    const movedStart = new Date(new Date(second.startsAt).getTime() + 60 * 60 * 1000);
+    const override = await fetch(`${baseUrl}/api/v1/schedule/occurrences/${second.id}/override`, {
+      method: "POST",
+      headers: protectedHeaders(gym),
+      body: JSON.stringify({
+        startsAt: movedStart.toISOString(),
+        endsAt: new Date(movedStart.getTime() + 45 * 60 * 1000).toISOString(),
+        reason: "One-off instructor request"
+      })
+    });
+    expect(override.status).toBe(200);
+    expect((await override.json()).startsAt).toBe(movedStart.toISOString());
+
+    const cancellation = await fetch(
+      `${baseUrl}/api/v1/schedule/occurrences/${created.occurrences[0].id}/cancel`,
+      {
+        method: "POST",
+        headers: protectedHeaders(gym),
+        body: JSON.stringify({ reason: "Studio maintenance" })
+      }
+    );
+    expect(cancellation.status).toBe(201);
+    expect((await cancellation.json()).status).toBe("cancelled");
+    const storedTemplate = await fetch(
+      `${baseUrl}/api/v1/schedule/templates/${created.template.id}`,
+      { headers: { cookie: `fitos_session=${gym.session}; fitos_csrf=${gym.csrf}` } }
+    );
+    expect((await storedTemplate.json()).localStartTime).toBe("10:00");
   });
 });

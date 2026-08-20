@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { normalizePhone } from "@fitos/shared";
 import { DrizzleFitosRepository } from "../src/repositories/drizzle-fitos.repository.js";
+import { generateWeeklyOccurrences } from "../src/modules/schedule/recurrence.js";
 import type { LoginIdentity, TenantScope } from "../src/ports/fitos-repository.js";
 
 const databaseTests = process.env.RUN_DATABASE_TESTS === "true";
@@ -121,6 +122,95 @@ describeDatabase("Drizzle tenant isolation", () => {
     ).toBeNull();
     expect(await repository.findBookingById(pilatesScope, booking.id)).toBeNull();
     expect(await repository.cancelBooking(pilatesScope, booking.id, "Denied")).toBeNull();
+  });
+
+  it("atomically materializes tenant-scoped recurring schedules and preserves template intent", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const service = await repository.createService(gymScope, {
+      branchId: gym.branchIds[0],
+      name: `Database Recurrence ${suffix}`,
+      serviceType: "class",
+      durationMinutes: 50,
+      defaultCapacity: 8
+    });
+    const room = await repository.createRoom(gymScope, {
+      branchId: gym.branchIds[0]!,
+      name: `Database Recurrence Room ${suffix}`,
+      capacity: 8
+    });
+    const input = {
+      branchId: gym.branchIds[0]!,
+      serviceId: service.id,
+      roomId: room.id,
+      timezone: "Africa/Nairobi",
+      daysOfWeek: [1, 3],
+      localStartTime: "18:30",
+      durationMinutes: 50,
+      capacity: 8,
+      effectiveStartDate: "2040-01-01",
+      effectiveEndDate: "2040-01-31",
+      materializeThroughDate: "2040-01-15"
+    };
+    const occurrences = generateWeeklyOccurrences(input, "2040-01-01", "2040-01-15");
+    const created = await repository.createScheduleTemplate(
+      gymScope,
+      input,
+      occurrences,
+      "2040-01-15"
+    );
+
+    expect(created.occurrences.length).toBeGreaterThan(0);
+    expect(
+      created.occurrences.every((occurrence) => occurrence.templateId === created.template.id)
+    ).toBe(true);
+    expect(await repository.findScheduleTemplateById(pilatesScope, created.template.id)).toBeNull();
+    expect(
+      await repository.materializeScheduleTemplate(
+        pilatesScope,
+        created.template.id,
+        [],
+        "2040-01-31"
+      )
+    ).toBeNull();
+    await expect(
+      repository.createScheduleTemplate(
+        gymScope,
+        { ...input, effectiveEndDate: "2040-01-15" },
+        occurrences,
+        "2040-01-15"
+      )
+    ).rejects.toThrow();
+    expect(
+      (await repository.listScheduleTemplates(gymScope)).filter(
+        (template) => template.serviceId === service.id
+      )
+    ).toHaveLength(1);
+
+    const first = created.occurrences[0]!;
+    const movedStart = new Date(new Date(first.startsAt).getTime() + 60 * 60 * 1000);
+    const moved = await repository.overrideScheduleOccurrence(
+      gymScope,
+      first.id,
+      {
+        startsAt: movedStart.toISOString(),
+        endsAt: new Date(movedStart.getTime() + 50 * 60 * 1000).toISOString(),
+        reason: "Database one-off override"
+      },
+      gym.user.id
+    );
+    expect(moved?.startsAt).toBe(movedStart.toISOString());
+    expect(
+      (await repository.findScheduleTemplateById(gymScope, created.template.id))?.localStartTime
+    ).toBe("18:30");
+    const cancelled = await repository.cancelScheduleOccurrence(
+      gymScope,
+      created.occurrences[1]!.id,
+      "Database cancellation exception",
+      gym.user.id
+    );
+    expect(cancelled?.status).toBe("cancelled");
   });
 
   it("serializes the final member credit across concurrent bookings", async () => {

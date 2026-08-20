@@ -59,13 +59,23 @@ jobs:
       - run: npm run test:e2e
       - run: npm run build
       - name: Validate production Compose configuration
-        run: FITOS_ENV_FILE=.env.example docker compose -f compose.yaml -f compose.production.yaml config --quiet
+        run: |
+          FITOS_ENV_FILE=.env.example docker compose --env-file .env.example -f compose.yaml -f compose.production.yaml -f compose.monitoring.yaml config --quiet
+          FITOS_ENV_FILE=.env.example docker compose --env-file .env.example -f compose.yaml -f compose.production.yaml -f compose.monitoring.yaml config --format json | node infra/scripts/validate-production-compose.mjs
+      - name: Validate Prometheus configuration and alert rules
+        run: |
+          docker run --rm --entrypoint promtool -v "$PWD/infra/monitoring:/etc/prometheus:ro" prom/prometheus:v3.12.0 check config /etc/prometheus/prometheus.yml
+          docker run --rm --entrypoint promtool -v "$PWD/infra/monitoring:/etc/prometheus:ro" prom/prometheus:v3.12.0 check rules /etc/prometheus/alerts.yml
       - name: Build production images
         run: docker compose -f compose.yaml -f compose.production.yaml build api worker nginx backup
       - name: Validate backup and restore scripts
         run: >-
           docker run --rm --entrypoint sh fitos-backup:${FITOS_RELEASE_TAG}
           -n /usr/local/bin/fitos-backup /usr/local/bin/fitos-restore /usr/local/bin/fitos-verify-restore
+      - name: Smoke backup success and failure observability
+        run: sh infra/scripts/smoke-backup-observability.sh
+      - name: Smoke production API and worker images
+        run: sh infra/scripts/smoke-production-images.sh
       - name: Dependency audit
         run: npm audit --omit=dev --audit-level=high
       - name: Secret scan
