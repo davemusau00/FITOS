@@ -41,7 +41,6 @@ import type {
   MemberMembershipResponse,
   ActivateMembershipRequest,
   CreditLedgerEntryResponse,
-  CreditReason,
   PaymentTransactionResponse,
   CreatePaymentRequest,
   PaymentListFilters,
@@ -266,14 +265,6 @@ export interface FitosRepository {
   ): Promise<MemberMembershipResponse | null>;
   listCreditLedger(scope: TenantScope, memberId: string): Promise<CreditLedgerEntryResponse[]>;
   getCreditBalance(scope: TenantScope, memberId: string): Promise<number>;
-  applyBookingCredit(
-    scope: TenantScope,
-    bookingId: string,
-    memberId: string,
-    delta: number,
-    reason: CreditReason,
-    note?: string
-  ): Promise<CreditLedgerEntryResponse | null>;
 
   listStaff(scope: TenantScope): Promise<StaffUserResponse[]>;
   findStaffByUserId(scope: TenantScope, userId: string): Promise<StaffUserResponse | null>;

@@ -312,11 +312,7 @@ function CreateOccurrenceModal({
     >
       <form className="form-stack" onSubmit={handleSubmit(onSubmit)}>
         <div className="form-grid">
-          <FormField
-            error={errors.serviceId?.message}
-            htmlFor="occService"
-            label="Service / Class"
-          >
+          <FormField error={errors.serviceId?.message} htmlFor="occService" label="Service / Class">
             <select
               className="fitos-control"
               id="occService"
@@ -351,11 +347,7 @@ function CreateOccurrenceModal({
             </select>
           </FormField>
 
-          <FormField
-            error={errors.startDate?.message}
-            htmlFor="occStartDate"
-            label="Date"
-          >
+          <FormField error={errors.startDate?.message} htmlFor="occStartDate" label="Date">
             <input
               className="fitos-control"
               id="occStartDate"
@@ -364,11 +356,7 @@ function CreateOccurrenceModal({
             />
           </FormField>
 
-          <FormField
-            error={errors.startTime?.message}
-            htmlFor="occStartTime"
-            label="Start time"
-          >
+          <FormField error={errors.startTime?.message} htmlFor="occStartTime" label="Start time">
             <input
               className="fitos-control"
               id="occStartTime"
@@ -394,11 +382,7 @@ function CreateOccurrenceModal({
             />
           </FormField>
 
-          <FormField
-            error={errors.capacity?.message}
-            htmlFor="occCapacity"
-            label="Capacity limit"
-          >
+          <FormField error={errors.capacity?.message} htmlFor="occCapacity" label="Capacity limit">
             <input
               className="fitos-control"
               id="occCapacity"
@@ -569,9 +553,7 @@ function OccurrenceDetailModal({
           </Card>
           <Card className="kpi">
             <span>Instructor</span>
-            <strong style={{ fontSize: "1rem" }}>
-              {trainer?.user.displayName ?? "None"}
-            </strong>
+            <strong style={{ fontSize: "1rem" }}>{trainer?.user.displayName ?? "None"}</strong>
           </Card>
           <Card className="kpi">
             <span>Status</span>
@@ -608,11 +590,7 @@ function OccurrenceDetailModal({
         {occurrence.status === "scheduled" && can(auth, "schedule:manage") ? (
           <div className="danger-zone">
             {!isConfirmingCancel ? (
-              <Button
-                icon="warning"
-                onClick={() => setIsConfirmingCancel(true)}
-                variant="danger"
-              >
+              <Button icon="warning" onClick={() => setIsConfirmingCancel(true)} variant="danger">
                 Cancel this session
               </Button>
             ) : (

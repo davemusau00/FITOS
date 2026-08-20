@@ -10,7 +10,13 @@ export const MEMBERSHIP_STATUSES = [
 ] as const;
 export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
 
-export const CREDIT_REASONS = ["purchase", "booking", "cancellation", "manual_adjustment", "expiry"] as const;
+export const CREDIT_REASONS = [
+  "purchase",
+  "booking",
+  "cancellation",
+  "manual_adjustment",
+  "expiry"
+] as const;
 export type CreditReason = (typeof CREDIT_REASONS)[number];
 
 export interface MembershipPlanResponse {

@@ -43,7 +43,6 @@ import type {
   MemberMembershipResponse,
   ActivateMembershipRequest,
   CreditLedgerEntryResponse,
-  CreditReason,
   PaymentTransactionResponse,
   CreatePaymentRequest,
   PaymentListFilters,
@@ -1121,6 +1120,8 @@ export class InMemoryFitosRepository implements FitosRepository {
   ): Promise<MembershipPlanResponse[]> {
     return [...this.membershipPlans.values()]
       .filter((p) => p.tenantId === scope.tenantId)
+      .filter(() => scope.branchIds.length > 0)
+      .filter((p) => !p.branchId || scope.branchIds.includes(p.branchId))
       .filter((p) => !branchId || !p.branchId || p.branchId === branchId)
       .map((p) => ({ ...p }));
   }
@@ -1130,13 +1131,24 @@ export class InMemoryFitosRepository implements FitosRepository {
     planId: string
   ): Promise<MembershipPlanResponse | null> {
     const plan = this.membershipPlans.get(planId);
-    return plan && plan.tenantId === scope.tenantId ? { ...plan } : null;
+    return plan &&
+      plan.tenantId === scope.tenantId &&
+      scope.branchIds.length > 0 &&
+      (!plan.branchId || scope.branchIds.includes(plan.branchId))
+      ? { ...plan }
+      : null;
   }
 
   async createMembershipPlan(
     scope: TenantScope,
     input: CreateMembershipPlanRequest
   ): Promise<MembershipPlanResponse> {
+    if (input.includedCredits <= 0) {
+      throw new Error("Membership plan must grant at least one credit.");
+    }
+    if (input.branchId && !scope.branchIds.includes(input.branchId)) {
+      throw new Error("Membership plan branch is not accessible.");
+    }
     const timestamp = now();
     const plan: StoredMembershipPlan = {
       id: randomUUID(),
@@ -1162,9 +1174,22 @@ export class InMemoryFitosRepository implements FitosRepository {
     input: Partial<CreateMembershipPlanRequest> & { isActive?: boolean }
   ): Promise<MembershipPlanResponse | null> {
     const plan = this.membershipPlans.get(planId);
-    if (!plan || plan.tenantId !== scope.tenantId) return null;
+    if (
+      !plan ||
+      plan.tenantId !== scope.tenantId ||
+      (plan.branchId !== null && !scope.branchIds.includes(plan.branchId))
+    ) {
+      return null;
+    }
+    if (input.includedCredits !== undefined && input.includedCredits <= 0) {
+      throw new Error("Membership plan must grant at least one credit.");
+    }
+    if (input.branchId && !scope.branchIds.includes(input.branchId)) {
+      throw new Error("Membership plan branch is not accessible.");
+    }
     if (input.name !== undefined) plan.name = input.name;
     if (input.slug !== undefined) plan.slug = input.slug;
+    if (input.branchId !== undefined) plan.branchId = input.branchId;
     if (input.price !== undefined) plan.price = input.price;
     if (input.durationDays !== undefined) plan.durationDays = input.durationDays;
     if (input.includedCredits !== undefined) plan.includedCredits = input.includedCredits;
@@ -1198,11 +1223,25 @@ export class InMemoryFitosRepository implements FitosRepository {
     _actorUserId?: string
   ): Promise<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }> {
     const plan = this.membershipPlans.get(input.planId);
-    if (!plan || plan.tenantId !== scope.tenantId) {
+    if (
+      !plan ||
+      plan.tenantId !== scope.tenantId ||
+      scope.branchIds.length === 0 ||
+      !plan.isActive ||
+      (plan.branchId !== null && !scope.branchIds.includes(plan.branchId))
+    ) {
       throw new Error("Membership plan not found.");
     }
+    if (plan.includedCredits <= 0) {
+      throw new Error("Membership plan must grant at least one credit.");
+    }
     const member = this.members.get(input.memberId);
-    if (!member || member.tenantId !== scope.tenantId) {
+    if (
+      !member ||
+      member.tenantId !== scope.tenantId ||
+      member.status !== "active" ||
+      (member.homeBranchId !== null && !scope.branchIds.includes(member.homeBranchId))
+    ) {
       throw new Error("Member not found.");
     }
     const timestamp = now();
@@ -1218,7 +1257,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       tenantId: scope.tenantId,
       memberId: input.memberId,
       planId: plan.id,
-      planSnapshot: { ...plan },
+      planSnapshot: { ...plan, price: plan.price ? { ...plan.price } : null },
       status: "active",
       startsAt,
       endsAt,
@@ -1270,37 +1309,6 @@ export class InMemoryFitosRepository implements FitosRepository {
       (e) => e.tenantId === scope.tenantId && e.memberId === memberId
     );
     return entries.reduce((sum, e) => sum + e.delta, 0);
-  }
-
-  async applyBookingCredit(
-    scope: TenantScope,
-    bookingId: string,
-    memberId: string,
-    delta: number,
-    reason: CreditReason,
-    note?: string
-  ): Promise<CreditLedgerEntryResponse | null> {
-    const activeMemberships = [...this.memberMemberships.values()].filter(
-      (m) => m.tenantId === scope.tenantId && m.memberId === memberId && m.status === "active"
-    );
-    const membership = activeMemberships[0];
-    if (!membership) return null;
-
-    const timestamp = now();
-    const ledgerEntry: StoredCreditLedgerEntry = {
-      id: randomUUID(),
-      tenantId: scope.tenantId,
-      membershipId: membership.id,
-      memberId,
-      delta,
-      reason,
-      bookingId,
-      note: note ?? null,
-      createdAt: timestamp
-    };
-    this.creditLedger.set(ledgerEntry.id, ledgerEntry);
-    const { tenantId: _, ...response } = ledgerEntry;
-    return response;
   }
 
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {

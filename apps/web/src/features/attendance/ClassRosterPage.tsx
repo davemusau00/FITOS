@@ -65,7 +65,13 @@ export function ClassRosterPage() {
     }
   });
 
-  if (!occurrenceId) return <EmptyState description="Please navigate from a scheduled class occurrence." title="No occurrence selected" />;
+  if (!occurrenceId)
+    return (
+      <EmptyState
+        description="Please navigate from a scheduled class occurrence."
+        title="No occurrence selected"
+      />
+    );
   if (occurrence.isLoading || bookings.isLoading || attendance.isLoading) return <PageLoading />;
 
   const occ = occurrence.data;
@@ -77,7 +83,11 @@ export function ClassRosterPage() {
       <PageHeader
         eyebrow="Class Attendance"
         title="Class Roster & Check-in"
-        description={occ ? `Starts: ${formatDateTime(occ.startsAt)} — Capacity: ${bookingList.filter((b) => b.status === "confirmed").length} / ${occ.capacity}` : ""}
+        description={
+          occ
+            ? `Starts: ${formatDateTime(occ.startsAt)} — Capacity: ${bookingList.filter((b) => b.status === "confirmed").length} / ${occ.capacity}`
+            : ""
+        }
         actions={
           <Link className="fitos-button fitos-button--ghost" to="/app/schedule">
             Back to Schedule
@@ -98,7 +108,17 @@ export function ClassRosterPage() {
               {bookingList.map((b) => {
                 const attRecord = attendanceList.find((a) => a.memberId === b.memberId);
                 return (
-                  <div key={b.id} style={{ padding: "0.75rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                  <div
+                    key={b.id}
+                    style={{
+                      padding: "0.75rem 1rem",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-sm)"
+                    }}
+                  >
                     <div>
                       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                         <Link to={`/app/members/${b.memberId}`}>
@@ -135,19 +155,17 @@ export function ClassRosterPage() {
                             </select>
                           ) : null}
                         </>
-                      ) : (
-                        b.status === "confirmed" && can(auth, "attendance:checkin") ? (
-                          <Button
-                            icon="check"
-                            loading={checkInBookingMutation.isPending}
-                            onClick={() => checkInBookingMutation.mutate(b)}
-                            size="small"
-                            variant="primary"
-                          >
-                            Check In
-                          </Button>
-                        ) : null
-                      )}
+                      ) : b.status === "confirmed" && can(auth, "attendance:checkin") ? (
+                        <Button
+                          icon="check"
+                          loading={checkInBookingMutation.isPending}
+                          onClick={() => checkInBookingMutation.mutate(b)}
+                          size="small"
+                          variant="primary"
+                        >
+                          Check In
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 );

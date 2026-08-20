@@ -18,7 +18,9 @@ import { ErrorNotice, PageLoading, formatCurrency, formatDateTime } from "../sha
 export function UnmatchedPaymentsPage() {
   const { auth } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedTransaction, setSelectedTransaction] = useState<PaymentTransactionResponse | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<PaymentTransactionResponse | null>(
+    null
+  );
   const [memberSearch, setMemberSearch] = useState("");
 
   const unmatched = useQuery({
@@ -92,7 +94,13 @@ export function UnmatchedPaymentsPage() {
 
       <ErrorNotice error={unmatched.error} />
 
-      <div style={{ display: "grid", gridTemplateColumns: selectedTransaction ? "1fr 1fr" : "1fr", gap: "1.5rem" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: selectedTransaction ? "1fr 1fr" : "1fr",
+          gap: "1.5rem"
+        }}
+      >
         <Card>
           <h2>Unallocated / Unmatched Transactions</h2>
           {!unmatched.data?.data.length ? (
@@ -101,7 +109,11 @@ export function UnmatchedPaymentsPage() {
               title="No unmatched transactions"
             />
           ) : (
-            <DataTable columns={columns} data={unmatched.data.data} label="Unmatched Transactions" />
+            <DataTable
+              columns={columns}
+              data={unmatched.data.data}
+              label="Unmatched Transactions"
+            />
           )}
         </Card>
 
@@ -131,9 +143,21 @@ export function UnmatchedPaymentsPage() {
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {members.data?.data.map((m) => (
-                  <div key={m.id} style={{ padding: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                  <div
+                    key={m.id}
+                    style={{
+                      padding: "0.75rem",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-sm)"
+                    }}
+                  >
                     <div>
-                      <strong>{m.firstName} {m.lastName}</strong>
+                      <strong>
+                        {m.firstName} {m.lastName}
+                      </strong>
                       <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
                         {m.phone ?? m.email}
                       </p>

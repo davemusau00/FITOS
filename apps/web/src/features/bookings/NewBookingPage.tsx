@@ -61,9 +61,7 @@ export function NewBookingPage() {
   });
 
   const selectedMember = membersQuery.data?.data.find((m) => m.id === selectedMemberId);
-  const selectedOccurrence = occurrencesQuery.data?.data.find(
-    (o) => o.id === selectedOccurrenceId
-  );
+  const selectedOccurrence = occurrencesQuery.data?.data.find((o) => o.id === selectedOccurrenceId);
   const selectedService = servicesQuery.data?.find((s) => s.id === selectedOccurrence?.serviceId);
   const selectedBranch = branchesQuery.data?.find((b) => b.id === selectedOccurrence?.branchId);
   const selectedTrainer = staffQuery.data?.find(
@@ -136,7 +134,9 @@ export function NewBookingPage() {
                   <strong>
                     {selectedMember.firstName} {selectedMember.lastName}
                   </strong>
-                  <span>{selectedMember.phone ?? selectedMember.email ?? "No contact recorded"}</span>
+                  <span>
+                    {selectedMember.phone ?? selectedMember.email ?? "No contact recorded"}
+                  </span>
                 </div>
               </div>
               <Button onClick={() => setSelectedMemberId("")} size="small" variant="ghost">
@@ -224,9 +224,7 @@ export function NewBookingPage() {
                         </span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span
-                          className={`fitos-badge fitos-badge--${full ? "danger" : "success"}`}
-                        >
+                        <span className={`fitos-badge fitos-badge--${full ? "danger" : "success"}`}>
                           {booked}/{occ.capacity} booked
                         </span>
                         {!full ? (

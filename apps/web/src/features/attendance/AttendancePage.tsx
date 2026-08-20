@@ -23,7 +23,9 @@ export function AttendancePage() {
   const queryClient = useQueryClient();
   const [selectedBranch, setSelectedBranch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
-  const [checkingInMember, setCheckingInMember] = useState<{ id: string; name: string } | null>(null);
+  const [checkingInMember, setCheckingInMember] = useState<{ id: string; name: string } | null>(
+    null
+  );
   const [overrideReason, setOverrideReason] = useState("");
   const [checkInError, setCheckInError] = useState<unknown>(null);
 
@@ -102,8 +104,7 @@ export function AttendancePage() {
     {
       id: "branch",
       header: "Branch",
-      cell: (r) =>
-        branches.data?.find((b) => b.id === r.branchId)?.name ?? "Branch"
+      cell: (r) => branches.data?.find((b) => b.id === r.branchId)?.name ?? "Branch"
     },
     {
       id: "checkin_time",
@@ -187,11 +188,24 @@ export function AttendancePage() {
 
         {/* Member search dropdown */}
         {memberSearch.trim() ? (
-          <div style={{ marginTop: "0.75rem", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", maxHeight: "200px", overflowY: "auto", padding: "0.25rem" }}>
+          <div
+            style={{
+              marginTop: "0.75rem",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-sm)",
+              maxHeight: "200px",
+              overflowY: "auto",
+              padding: "0.25rem"
+            }}
+          >
             {members.isLoading ? (
-              <p className="muted" style={{ padding: "0.5rem" }}>Searching...</p>
+              <p className="muted" style={{ padding: "0.5rem" }}>
+                Searching...
+              </p>
             ) : !members.data?.data.length ? (
-              <p className="muted" style={{ padding: "0.5rem" }}>No matching members found.</p>
+              <p className="muted" style={{ padding: "0.5rem" }}>
+                No matching members found.
+              </p>
             ) : (
               members.data.data.map((m) => (
                 <div
@@ -205,14 +219,18 @@ export function AttendancePage() {
                   }}
                 >
                   <div>
-                    <strong>{m.firstName} {m.lastName}</strong>
+                    <strong>
+                      {m.firstName} {m.lastName}
+                    </strong>
                     <span className="muted" style={{ marginLeft: "0.5rem", fontSize: "0.85rem" }}>
                       ({m.phone ?? m.email ?? "No contact info"})
                     </span>
                   </div>
                   <Button
                     icon="check"
-                    onClick={() => setCheckingInMember({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() })}
+                    onClick={() =>
+                      setCheckingInMember({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() })
+                    }
                     size="small"
                     variant="primary"
                   >

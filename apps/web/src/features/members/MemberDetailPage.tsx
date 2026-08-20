@@ -243,11 +243,7 @@ export function MemberDetailPage() {
         {creditLedger.isLoading ? (
           <Skeleton height="6rem" />
         ) : creditLedger.data?.length ? (
-          <DataTable
-            columns={creditColumns}
-            data={creditLedger.data}
-            label="Credit Ledger"
-          />
+          <DataTable columns={creditColumns} data={creditLedger.data} label="Credit Ledger" />
         ) : (
           <p className="muted">No credit movements recorded yet.</p>
         )}
@@ -297,7 +293,9 @@ export function MemberDetailPage() {
           onSuccess={() => {
             void queryClient.invalidateQueries({ queryKey: ["member", memberId, "memberships"] });
             void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits"] });
-            void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits", "balance"] });
+            void queryClient.invalidateQueries({
+              queryKey: ["member", memberId, "credits", "balance"]
+            });
             setIsActivatingMembership(false);
           }}
           plans={plans.data?.filter((p) => p.isActive) ?? []}

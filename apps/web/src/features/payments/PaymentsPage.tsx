@@ -90,8 +90,7 @@ export function PaymentsPage() {
     {
       id: "branch",
       header: "Branch",
-      cell: (p) =>
-        branches.data?.find((b) => b.id === p.branchId)?.name ?? "Branch"
+      cell: (p) => branches.data?.find((b) => b.id === p.branchId)?.name ?? "Branch"
     },
     {
       id: "reference",
@@ -99,7 +98,11 @@ export function PaymentsPage() {
       cell: (p) => (
         <div>
           <span>{p.reference || "—"}</span>
-          {p.note ? <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>{p.note}</p> : null}
+          {p.note ? (
+            <p className="muted" style={{ margin: 0, fontSize: "0.75rem" }}>
+              {p.note}
+            </p>
+          ) : null}
         </div>
       )
     },
@@ -107,9 +110,7 @@ export function PaymentsPage() {
       id: "allocation",
       header: "Allocation",
       cell: (p) => (
-        <span style={{ textTransform: "capitalize" }}>
-          {p.allocationType || "Unallocated"}
-        </span>
+        <span style={{ textTransform: "capitalize" }}>{p.allocationType || "Unallocated"}</span>
       )
     },
     {
@@ -127,11 +128,7 @@ export function PaymentsPage() {
       header: "",
       cell: (p) =>
         p.status === "completed" && can(auth, "payment:refund") ? (
-          <Button
-            onClick={() => setVoidingPaymentId(p.id)}
-            size="small"
-            variant="ghost"
-          >
+          <Button onClick={() => setVoidingPaymentId(p.id)} size="small" variant="ghost">
             Void
           </Button>
         ) : null
@@ -354,11 +351,7 @@ function RecordPaymentModal({
     >
       <form className="form-stack" onSubmit={handleSubmit(onSubmit)}>
         <div className="form-grid">
-          <FormField
-            error={errors.branchId?.message}
-            htmlFor="payBranch"
-            label="Branch"
-          >
+          <FormField error={errors.branchId?.message} htmlFor="payBranch" label="Branch">
             <select
               className="fitos-control"
               id="payBranch"
@@ -426,7 +419,14 @@ function RecordPaymentModal({
 
         {/* Member selector */}
         <div style={{ marginTop: "0.5rem" }}>
-          <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.875rem", fontWeight: 600 }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "0.25rem",
+              fontSize: "0.875rem",
+              fontWeight: 600
+            }}
+          >
             Associated Member (optional)
           </label>
           {selectedMember ? (
@@ -447,13 +447,24 @@ function RecordPaymentModal({
                 value={memberSearch}
               />
               {memberSearch && members.data?.data.length ? (
-                <div style={{ maxHeight: "120px", overflowY: "auto", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "0.25rem" }}>
+                <div
+                  style={{
+                    maxHeight: "120px",
+                    overflowY: "auto",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: "0.25rem"
+                  }}
+                >
                   {members.data.data.map((m) => (
                     <button
                       key={m.id}
                       className="fitos-button fitos-button--ghost"
                       onClick={() => {
-                        setSelectedMember({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() });
+                        setSelectedMember({
+                          id: m.id,
+                          name: `${m.firstName} ${m.lastName}`.trim()
+                        });
                         setMemberSearch("");
                       }}
                       style={{ width: "100%", justifyContent: "flex-start", padding: "0.4rem" }}

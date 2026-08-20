@@ -39,9 +39,7 @@ const paymentListQuerySchema = z
     memberId: z.string().uuid().optional(),
     method: z.enum(["cash", "bank_transfer", "mpesa", "card", "other"]).optional(),
     status: z.enum(["pending", "completed", "refunded", "voided"]).optional(),
-    unmatched: z
-      .union([z.boolean(), z.string().transform((v) => v === "true")])
-      .optional(),
+    unmatched: z.union([z.boolean(), z.string().transform((v) => v === "true")]).optional(),
     cursor: z.string().min(1).max(512).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional()
   })

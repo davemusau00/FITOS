@@ -6,12 +6,7 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const PAYMENT_STATUSES = ["pending", "completed", "refunded", "voided"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-export const PAYMENT_ALLOCATION_TYPES = [
-  "membership",
-  "booking",
-  "walkIn",
-  "other"
-] as const;
+export const PAYMENT_ALLOCATION_TYPES = ["membership", "booking", "walkIn", "other"] as const;
 export type PaymentAllocationType = (typeof PAYMENT_ALLOCATION_TYPES)[number];
 
 // ---- Payment Transactions ----

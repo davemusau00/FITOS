@@ -93,7 +93,7 @@ export function MembershipsPage() {
       header: "Branch",
       cell: (p) =>
         p.branchId
-          ? branches.data?.find((b) => b.id === p.branchId)?.name ?? "Branch"
+          ? (branches.data?.find((b) => b.id === p.branchId)?.name ?? "Branch")
           : "All branches"
     },
     {
@@ -127,7 +127,15 @@ export function MembershipsPage() {
 
       <ErrorNotice error={plans.error} />
 
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", borderBottom: "1px solid var(--border)", paddingBottom: "0.5rem" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "1.25rem",
+          borderBottom: "1px solid var(--border)",
+          paddingBottom: "0.5rem"
+        }}
+      >
         <button
           className={`fitos-button ${activeTab === "plans" ? "fitos-button--primary" : "fitos-button--ghost"}`}
           onClick={() => setActiveTab("plans")}
@@ -198,10 +206,26 @@ export function MembershipsPage() {
             ) : (
               <div className="booking-stepper__grid">
                 {members.data.data.map((m) => (
-                  <div key={m.id} style={{ padding: "1rem", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", background: "var(--surface)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div
+                    key={m.id}
+                    style={{
+                      padding: "1rem",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-md)",
+                      background: "var(--surface)"
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start"
+                      }}
+                    >
                       <div>
-                        <strong style={{ fontSize: "1.05rem" }}>{m.firstName} {m.lastName}</strong>
+                        <strong style={{ fontSize: "1.05rem" }}>
+                          {m.firstName} {m.lastName}
+                        </strong>
                         <p className="muted" style={{ margin: "0.25rem 0", fontSize: "0.875rem" }}>
                           {m.phone ?? m.email ?? "No contact details"}
                         </p>
@@ -209,12 +233,20 @@ export function MembershipsPage() {
                       <StatusBadge status={m.status} />
                     </div>
                     <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                      <Link className="fitos-button fitos-button--ghost fitos-button--small" to={`/app/members/${m.id}`}>
+                      <Link
+                        className="fitos-button fitos-button--ghost fitos-button--small"
+                        to={`/app/members/${m.id}`}
+                      >
                         View Profile
                       </Link>
                       {can(auth, "membership:manage") ? (
                         <Button
-                          onClick={() => setAssigningMember({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() })}
+                          onClick={() =>
+                            setAssigningMember({
+                              id: m.id,
+                              name: `${m.firstName} ${m.lastName}`.trim()
+                            })
+                          }
                           size="small"
                           variant="secondary"
                         >
@@ -310,7 +342,8 @@ function AssignPlanModal({
           >
             {plans.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} — {p.includedCredits} credits ({p.durationDays ? `${p.durationDays} days` : "ongoing"})
+                {p.name} — {p.includedCredits} credits (
+                {p.durationDays ? `${p.durationDays} days` : "ongoing"})
               </option>
             ))}
           </select>
@@ -446,11 +479,11 @@ function CreatePlanModal({
             <input
               className="fitos-control"
               id="planCredits"
-              min={0}
+              min={1}
               type="number"
               {...register("includedCredits", {
                 required: "Credits required",
-                min: { value: 0, message: "Min 0" }
+                min: { value: 1, message: "At least one credit is required" }
               })}
             />
           </FormField>

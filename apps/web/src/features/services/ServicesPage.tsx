@@ -106,7 +106,7 @@ export function ServicesPage() {
       header: "Branch",
       cell: (service) =>
         service.branchId
-          ? branches.data?.find((b) => b.id === service.branchId)?.name ?? "Assigned"
+          ? (branches.data?.find((b) => b.id === service.branchId)?.name ?? "Assigned")
           : "All branches"
     },
     {
@@ -141,11 +141,7 @@ export function ServicesPage() {
         description="Configure class types, private training, appointments, and studio rooms."
         actions={
           <>
-            <Button
-              icon="building"
-              onClick={() => setIsManagingRooms(true)}
-              variant="secondary"
-            >
+            <Button icon="building" onClick={() => setIsManagingRooms(true)} variant="secondary">
               Rooms & Resources
             </Button>
             {can(auth, "service:manage") ? (

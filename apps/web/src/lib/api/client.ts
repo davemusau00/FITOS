@@ -247,10 +247,7 @@ export const api = {
     }),
   memberMemberships: (memberId: string) =>
     request<MemberMembershipResponse[]>(`/members/${memberId}/memberships`),
-  activateMembership: (
-    memberId: string,
-    payload: { planId: string; startsAt?: string }
-  ) =>
+  activateMembership: (memberId: string, payload: { planId: string; startsAt?: string }) =>
     request<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }>(
       `/members/${memberId}/memberships`,
       {
@@ -260,13 +257,10 @@ export const api = {
       }
     ),
   cancelMembership: (memberId: string, membershipId: string, reason?: string) =>
-    request<MemberMembershipResponse>(
-      `/members/${memberId}/memberships/${membershipId}/cancel`,
-      {
-        method: "POST",
-        body: json({ reason })
-      }
-    ),
+    request<MemberMembershipResponse>(`/members/${memberId}/memberships/${membershipId}/cancel`, {
+      method: "POST",
+      body: json({ reason })
+    }),
   creditLedger: (memberId: string) =>
     request<CreditLedgerEntryResponse[]>(`/members/${memberId}/credits`),
   creditBalance: (memberId: string) =>
@@ -296,7 +290,12 @@ export const api = {
       `/attendance${params ? `?${params.toString()}` : ""}`
     ),
   attendanceRecord: (id: string) => request<AttendanceRecordResponse>(`/attendance/${id}`),
-  checkIn: (payload: { branchId: string; memberId: string; occurrenceId?: string | null; overrideReason?: string | null }) =>
+  checkIn: (payload: {
+    branchId: string;
+    memberId: string;
+    occurrenceId?: string | null;
+    overrideReason?: string | null;
+  }) =>
     request<AttendanceRecordResponse>("/attendance/checkin", {
       method: "POST",
       body: json(payload),

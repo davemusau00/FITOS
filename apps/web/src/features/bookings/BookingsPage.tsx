@@ -52,8 +52,7 @@ export function BookingsPage() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      api.cancelBooking(id, reason),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.cancelBooking(id, reason),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["bookings"] });
       void queryClient.invalidateQueries({ queryKey: ["schedule"] });

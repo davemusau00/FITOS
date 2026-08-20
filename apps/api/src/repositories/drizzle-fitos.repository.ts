@@ -105,6 +105,11 @@ const serviceBranchAccessCondition = (scope: TenantScope) => {
   return or(isNull(services.branchId), inArray(services.branchId, scope.branchIds));
 };
 
+const membershipPlanBranchAccessCondition = (scope: TenantScope) => {
+  if (!scope.branchIds.length) return sql`false`;
+  return or(isNull(membershipPlans.branchId), inArray(membershipPlans.branchId, scope.branchIds));
+};
+
 const asRoleKey = (value: string | null): RoleKey | null =>
   value === "owner" ||
   value === "manager" ||
@@ -1303,7 +1308,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     scope: TenantScope,
     branchId?: string
   ): Promise<MembershipPlanResponse[]> {
-    const conditions = [eq(membershipPlans.tenantId, scope.tenantId)];
+    const conditions = [
+      eq(membershipPlans.tenantId, scope.tenantId),
+      membershipPlanBranchAccessCondition(scope)
+    ];
     if (branchId) {
       conditions.push(
         or(eq(membershipPlans.branchId, branchId), isNull(membershipPlans.branchId))!
@@ -1324,7 +1332,13 @@ export class DrizzleFitosRepository implements FitosRepository {
     const [row] = await this.db
       .select()
       .from(membershipPlans)
-      .where(and(eq(membershipPlans.id, planId), eq(membershipPlans.tenantId, scope.tenantId)))
+      .where(
+        and(
+          eq(membershipPlans.id, planId),
+          eq(membershipPlans.tenantId, scope.tenantId),
+          membershipPlanBranchAccessCondition(scope)
+        )
+      )
       .limit(1);
     return row ? this.membershipPlanResponse(row) : null;
   }
@@ -1333,6 +1347,12 @@ export class DrizzleFitosRepository implements FitosRepository {
     scope: TenantScope,
     input: CreateMembershipPlanRequest
   ): Promise<MembershipPlanResponse> {
+    if (input.includedCredits <= 0) {
+      throw new Error("Membership plan must grant at least one credit.");
+    }
+    if (input.branchId && !scope.branchIds.includes(input.branchId)) {
+      throw new Error("Membership plan branch is not accessible.");
+    }
     const [row] = await this.db
       .insert(membershipPlans)
       .values({
@@ -1356,9 +1376,16 @@ export class DrizzleFitosRepository implements FitosRepository {
     planId: string,
     input: Partial<CreateMembershipPlanRequest> & { isActive?: boolean }
   ): Promise<MembershipPlanResponse | null> {
+    if (input.includedCredits !== undefined && input.includedCredits <= 0) {
+      throw new Error("Membership plan must grant at least one credit.");
+    }
+    if (input.branchId && !scope.branchIds.includes(input.branchId)) {
+      throw new Error("Membership plan branch is not accessible.");
+    }
     const updates: Partial<typeof membershipPlans.$inferInsert> = { updatedAt: new Date() };
     if (input.name !== undefined) updates.name = input.name;
     if (input.slug !== undefined) updates.slug = this.slug(input.slug);
+    if (input.branchId !== undefined) updates.branchId = input.branchId;
     if (input.price !== undefined) {
       updates.amountMinor = input.price?.amountMinor ?? null;
       updates.currency = input.price?.currency ?? null;
@@ -1371,7 +1398,13 @@ export class DrizzleFitosRepository implements FitosRepository {
     const [row] = await this.db
       .update(membershipPlans)
       .set(updates)
-      .where(and(eq(membershipPlans.id, planId), eq(membershipPlans.tenantId, scope.tenantId)))
+      .where(
+        and(
+          eq(membershipPlans.id, planId),
+          eq(membershipPlans.tenantId, scope.tenantId),
+          membershipPlanBranchAccessCondition(scope)
+        )
+      )
       .returning();
     return row ? this.membershipPlanResponse(row) : null;
   }
@@ -1412,45 +1445,72 @@ export class DrizzleFitosRepository implements FitosRepository {
     input: ActivateMembershipRequest,
     _actorUserId?: string
   ): Promise<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }> {
-    const plan = await this.findMembershipPlanById(scope, input.planId);
-    if (!plan) throw new Error("Membership plan not found.");
-
-    const startsAt = input.startsAt ? new Date(input.startsAt) : new Date();
-    let endsAt: Date | null = null;
-    if (plan.durationDays) {
-      endsAt = new Date(startsAt.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
-    }
-
-    const [membership] = await this.db
-      .insert(memberMemberships)
-      .values({
-        tenantId: scope.tenantId,
-        memberId: input.memberId,
-        planId: plan.id,
-        planSnapshot: plan,
-        status: "active",
-        startsAt,
-        endsAt
-      })
-      .returning();
-
-    const [ledger] = await this.db
-      .insert(creditLedger)
-      .values({
-        tenantId: scope.tenantId,
-        membershipId: membership!.id,
-        memberId: input.memberId,
-        delta: plan.includedCredits,
-        reason: "purchase",
-        bookingId: null,
-        note: `Membership activated: ${plan.name}`
-      })
-      .returning();
-
-    return {
-      membership: this.memberMembershipResponse(membership!),
-      ledgerEntry: this.creditLedgerEntryResponse(ledger!)
-    };
+    return this.db.transaction(async (tx) => {
+      const [planRow] = await tx
+        .select()
+        .from(membershipPlans)
+        .where(
+          and(
+            eq(membershipPlans.id, input.planId),
+            eq(membershipPlans.tenantId, scope.tenantId),
+            membershipPlanBranchAccessCondition(scope),
+            eq(membershipPlans.isActive, true)
+          )
+        )
+        .limit(1);
+      if (!planRow) throw new Error("Membership plan not found.");
+      if (planRow.includedCredits <= 0) {
+        throw new Error("Membership plan must grant at least one credit.");
+      }
+      const [member] = await tx
+        .select({ id: members.id })
+        .from(members)
+        .where(
+          and(
+            eq(members.id, input.memberId),
+            eq(members.tenantId, scope.tenantId),
+            eq(members.status, "active"),
+            branchAccessCondition(scope)
+          )
+        )
+        .limit(1);
+      if (!member) throw new Error("Member not found.");
+      const plan = this.membershipPlanResponse(planRow);
+      const startsAt = input.startsAt ? new Date(input.startsAt) : new Date();
+      const endsAt = plan.durationDays
+        ? new Date(startsAt.getTime() + plan.durationDays * 24 * 60 * 60 * 1000)
+        : null;
+      const [membership] = await tx
+        .insert(memberMemberships)
+        .values({
+          tenantId: scope.tenantId,
+          memberId: member.id,
+          planId: plan.id,
+          planSnapshot: plan,
+          status: "active",
+          startsAt,
+          endsAt
+        })
+        .returning();
+      if (!membership) throw new Error("Unable to activate membership.");
+      const [ledger] = await tx
+        .insert(creditLedger)
+        .values({
+          tenantId: scope.tenantId,
+          membershipId: membership.id,
+          memberId: member.id,
+          delta: plan.includedCredits,
+          reason: "purchase",
+          bookingId: null,
+          note: `Membership activated: ${plan.name}`
+        })
+        .returning();
+      if (!ledger) throw new Error("Unable to grant membership credits.");
+      return {
+        membership: this.memberMembershipResponse(membership),
+        ledgerEntry: this.creditLedgerEntryResponse(ledger)
+      };
+    });
   }
 
   async cancelMembership(
@@ -1486,45 +1546,6 @@ export class DrizzleFitosRepository implements FitosRepository {
       .from(creditLedger)
       .where(and(eq(creditLedger.tenantId, scope.tenantId), eq(creditLedger.memberId, memberId)));
     return Number(result?.total ?? 0);
-  }
-
-  async applyBookingCredit(
-    scope: TenantScope,
-    bookingId: string,
-    memberId: string,
-    delta: number,
-    reason: CreditReason,
-    note?: string
-  ): Promise<CreditLedgerEntryResponse | null> {
-    const [activeMembership] = await this.db
-      .select()
-      .from(memberMemberships)
-      .where(
-        and(
-          eq(memberMemberships.tenantId, scope.tenantId),
-          eq(memberMemberships.memberId, memberId),
-          eq(memberMemberships.status, "active")
-        )
-      )
-      .orderBy(desc(memberMemberships.createdAt))
-      .limit(1);
-
-    if (!activeMembership) return null;
-
-    const [ledger] = await this.db
-      .insert(creditLedger)
-      .values({
-        tenantId: scope.tenantId,
-        membershipId: activeMembership.id,
-        memberId,
-        delta,
-        reason,
-        bookingId,
-        note: note ?? null
-      })
-      .returning();
-
-    return ledger ? this.creditLedgerEntryResponse(ledger) : null;
   }
 
   async listStaff(scope: TenantScope): Promise<StaffUserResponse[]> {

@@ -57,6 +57,19 @@ describe("Memberships and Booking Credits Integration", () => {
     expect(activation.membership.status).toBe("active");
     expect(activation.ledgerEntry.delta).toBe(10);
     expect(activation.ledgerEntry.reason).toBe("purchase");
+    expect(activation.membership.endsAt).toBe(
+      new Date(new Date(activation.membership.startsAt).getTime() + 30 * 86400000).toISOString()
+    );
+
+    await repository.updateMembershipPlan(gymScope, plan.id, {
+      name: "Updated 20-Class Strength Pack",
+      includedCredits: 20,
+      price: { amountMinor: "1000000", currency: "KES" }
+    });
+    const [storedMembership] = await repository.listMemberMemberships(gymScope, member.id);
+    expect(storedMembership?.planSnapshot.name).toBe("10-Class Strength Pack");
+    expect(storedMembership?.planSnapshot.includedCredits).toBe(10);
+    expect(storedMembership?.planSnapshot.price?.amountMinor).toBe("750000");
 
     // 4. Verify credit balance is 10
     const balanceBefore = await repository.getCreditBalance(gymScope, member.id);
@@ -134,5 +147,9 @@ describe("Memberships and Booking Credits Integration", () => {
 
     const pilatesCredits = await repository.listCreditLedger(pilatesScope, member.id);
     expect(pilatesCredits).toEqual([]);
+
+    const noBranchScope = { ...gymScope, branchIds: [] };
+    expect(await repository.listMembershipPlans(noBranchScope)).toEqual([]);
+    expect(await repository.findMembershipPlanById(noBranchScope, plan.id)).toBeNull();
   });
 });

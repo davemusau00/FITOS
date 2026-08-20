@@ -711,6 +711,7 @@ export class CoreService {
     actor: RequestActor,
     branchId?: string
   ): Promise<MembershipPlanResponse[]> {
+    if (branchId) this.assertBranchesAccessible(actor, [branchId]);
     return this.repository.listMembershipPlans(scopeOf(actor), branchId);
   }
 
@@ -750,6 +751,7 @@ export class CoreService {
     input: Partial<CreateMembershipPlanRequest> & { isActive?: boolean }
   ): Promise<MembershipPlanResponse> {
     await this.getMembershipPlan(actor, planId);
+    if (input.branchId) this.assertBranchesAccessible(actor, [input.branchId]);
     const updated = await this.repository.updateMembershipPlan(scopeOf(actor), planId, input);
     if (!updated) throw new DomainError("RESOURCE_NOT_FOUND", "Membership plan not found.", 404);
     await this.audit(

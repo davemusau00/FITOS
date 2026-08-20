@@ -37,7 +37,10 @@ export function formatDateTime(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
-export function formatCurrency(amountMinor: string | null | undefined, currency: string | null | undefined) {
+export function formatCurrency(
+  amountMinor: string | null | undefined,
+  currency: string | null | undefined
+) {
   if (!amountMinor || !currency) return "—";
   const amount = parseInt(amountMinor, 10) / 100;
   return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);

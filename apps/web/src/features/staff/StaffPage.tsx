@@ -1,5 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { Alert, DataTable, type DataTableColumn, EmptyState, PageHeader, StatusBadge } from "@fitos/ui";
+import {
+  Alert,
+  DataTable,
+  type DataTableColumn,
+  EmptyState,
+  PageHeader,
+  StatusBadge
+} from "@fitos/ui";
 import type { StaffUserResponse } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";

@@ -1,7 +1,15 @@
 import { useMemo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { DataTable, type DataTableColumn, EmptyState, Icon, PageHeader, SearchBar, StatusBadge } from "@fitos/ui";
+import {
+  DataTable,
+  type DataTableColumn,
+  EmptyState,
+  Icon,
+  PageHeader,
+  SearchBar,
+  StatusBadge
+} from "@fitos/ui";
 import type { MemberListItem } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
 import { PageLoading, ErrorNotice, formatDate } from "../shared";

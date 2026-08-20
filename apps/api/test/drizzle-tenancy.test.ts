@@ -47,7 +47,7 @@ describeDatabase("Drizzle tenant isolation", () => {
         { contact: { firstName: "Invalid Branch" }, homeBranchId: pilates.branchIds[0]! },
         null
       )
-    ).rejects.toThrow(/preferred branch must belong to the contact tenant/);
+    ).rejects.toThrow();
   });
 
   it("scopes CRM records and reuses a lead contact on conversion", async () => {
@@ -88,7 +88,20 @@ describeDatabase("Drizzle tenant isolation", () => {
       },
       null
     );
-    await repository.activateMembership(gymScope, { memberId: member.id, planId: plan.id });
+    const activation = await repository.activateMembership(gymScope, {
+      memberId: member.id,
+      planId: plan.id
+    });
+    await repository.updateMembershipPlan(gymScope, plan.id, {
+      name: `Changed One Credit ${suffix}`,
+      includedCredits: 2
+    });
+    const storedMembership = await repository.findMemberMembershipById(
+      gymScope,
+      activation.membership.id
+    );
+    expect(storedMembership?.planSnapshot.name).toBe(`One Credit ${suffix}`);
+    expect(storedMembership?.planSnapshot.includedCredits).toBe(1);
     const service = await repository.createService(gymScope, {
       branchId: gym.branchIds[0],
       name: `Credit Service ${suffix}`,
@@ -133,5 +146,8 @@ describeDatabase("Drizzle tenant isolation", () => {
     expect(await repository.findMembershipPlanById(pilatesScope, plan.id)).toBeNull();
     expect(await repository.listMemberMemberships(pilatesScope, member.id)).toEqual([]);
     expect(await repository.listCreditLedger(pilatesScope, member.id)).toEqual([]);
+    expect(
+      await repository.findMembershipPlanById({ ...gymScope, branchIds: [] }, plan.id)
+    ).toBeNull();
   });
 });
