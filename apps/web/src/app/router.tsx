@@ -3,12 +3,15 @@ import { useAuth } from "./auth";
 import { AppShell } from "./shell";
 import {
   AttendancePage,
+  AutomationsPage,
   BookingsPage,
   BranchesSettingsPage,
   ClassRosterPage,
+  InsightsPage,
   LeadsPage,
   LoginPage,
   MemberDetailPage,
+  MemberPortalPage,
   MembershipsPage,
   MembersPage,
   NewBookingPage,
@@ -18,11 +21,13 @@ import {
   OrganizationSettingsPage,
   OverviewPage,
   PaymentsPage,
+  ReceptionPage,
   SchedulePage,
   SecuritySettingsPage,
   ServicesPage,
   SettingsPage,
   StaffPage,
+  TenantPublicPage,
   UnmatchedPaymentsPage
 } from "../features";
 
@@ -42,21 +47,34 @@ export function AppRouter() {
         <Route element={<AppShell />} path="/app">
           <Route element={<Navigate replace to="overview" />} index />
           <Route element={<OverviewPage />} path="overview" />
+
+          {/* Operations */}
           <Route element={<SchedulePage />} path="schedule" />
           <Route element={<AttendancePage />} path="attendance" />
           <Route element={<ClassRosterPage />} path="attendance/roster/:occurrenceId" />
+          <Route element={<ReceptionPage />} path="reception" />
           <Route element={<BookingsPage />} path="bookings" />
           <Route element={<NewBookingPage />} path="bookings/new" />
-          <Route element={<ServicesPage />} path="services" />
-          <Route element={<MembershipsPage />} path="memberships" />
-          <Route element={<PaymentsPage />} path="payments" />
-          <Route element={<UnmatchedPaymentsPage />} path="payments/unmatched" />
+
+          {/* People */}
           <Route element={<MembersPage />} path="members" />
           <Route element={<NewMemberPage />} path="members/new" />
           <Route element={<MemberDetailPage />} path="members/:memberId" />
           <Route element={<LeadsPage />} path="leads" />
           <Route element={<NewLeadPage />} path="leads/new" />
           <Route element={<StaffPage />} path="staff" />
+
+          {/* Business */}
+          <Route element={<ServicesPage />} path="services" />
+          <Route element={<MembershipsPage />} path="memberships" />
+          <Route element={<PaymentsPage />} path="payments" />
+          <Route element={<UnmatchedPaymentsPage />} path="payments/unmatched" />
+
+          {/* Growth */}
+          <Route element={<InsightsPage />} path="insights" />
+          <Route element={<AutomationsPage />} path="automations" />
+
+          {/* Settings */}
           <Route element={<SettingsPage />} path="settings" />
           <Route element={<OrganizationSettingsPage />} path="settings/organization" />
           <Route element={<BranchesSettingsPage />} path="settings/branches" />
@@ -65,7 +83,11 @@ export function AppRouter() {
           <Route element={<SecuritySettingsPage />} path="settings/security" />
         </Route>
         <Route element={<OnboardingPage />} path="/onboarding" />
+        <Route element={<MemberPortalPage />} path="/member/*" />
       </Route>
+
+      {/* Public Tenant Website */}
+      <Route element={<TenantPublicPage />} path="/:tenantSlug" />
       <Route element={<Navigate replace to="/app/overview" />} path="*" />
     </Routes>
   );

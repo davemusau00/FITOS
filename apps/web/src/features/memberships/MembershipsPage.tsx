@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Card,
@@ -10,6 +10,7 @@ import {
   type DataTableColumn,
   EmptyState,
   FormField,
+  Icon,
   Modal,
   PageHeader,
   SearchBar,
@@ -18,11 +19,12 @@ import {
 import type {
   BranchResponse,
   CreateMembershipPlanRequest,
+  MemberListItem,
   MembershipPlanResponse
 } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
-import { ErrorNotice, PageLoading, formatCurrency } from "../shared";
+import { ErrorNotice, PageLoading, formatCurrency, formatDate } from "../shared";
 
 type PlanFormValues = {
   name: string;
@@ -37,8 +39,9 @@ type PlanFormValues = {
 
 export function MembershipsPage() {
   const { auth } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"plans" | "active">("plans");
+  const [activeTab, setActiveTab] = useState<"plans" | "retention" | "assign">("plans");
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [assigningMember, setAssigningMember] = useState<{ id: string; name: string } | null>(null);
   const [selectedBranch, setSelectedBranch] = useState("");
@@ -54,7 +57,7 @@ export function MembershipsPage() {
     queryFn: () =>
       api.members(
         new URLSearchParams({
-          limit: "50",
+          limit: "100",
           ...(memberSearch ? { query: memberSearch } : {})
         })
       )
@@ -107,14 +110,18 @@ export function MembershipsPage() {
     }
   ];
 
+  const allMembers = members.data?.data ?? [];
+  const activeMembers = allMembers.filter((m) => m.status === "active");
+  const inactiveMembers = allMembers.filter((m) => m.status === "inactive");
+
   if (plans.isLoading || branches.isLoading) return <PageLoading />;
 
   return (
     <>
       <PageHeader
         eyebrow="Commercial"
-        title="Memberships"
-        description="Define packages, monthly plans, punch passes, and track member entitlements."
+        title="Memberships &amp; Retention"
+        description="Configure recurring plans, assign entitlements, and monitor members requiring retention action."
         actions={
           can(auth, "membership:manage") ? (
             <Button icon="plus" onClick={() => setIsCreatingPlan(true)}>
@@ -126,32 +133,47 @@ export function MembershipsPage() {
 
       <ErrorNotice error={plans.error} />
 
-      <div
-        style={{
-          display: "flex",
-          gap: "0.5rem",
-          marginBottom: "1.25rem",
-          borderBottom: "1px solid var(--border)",
-          paddingBottom: "0.5rem"
-        }}
-      >
-        <button
-          className={`fitos-button ${activeTab === "plans" ? "fitos-button--primary" : "fitos-button--ghost"}`}
-          onClick={() => setActiveTab("plans")}
-          type="button"
-        >
-          Membership Plans ({plans.data?.length ?? 0})
-        </button>
-        <button
-          className={`fitos-button ${activeTab === "active" ? "fitos-button--primary" : "fitos-button--ghost"}`}
-          onClick={() => setActiveTab("active")}
-          type="button"
-        >
-          Assign & Member Entitlements
-        </button>
+      {/* KPI Stats */}
+      <div className="kpi-grid">
+        <Card className="kpi kpi--energy">
+          <span>Active Plans</span>
+          <strong>{plans.data?.filter((p) => p.isActive).length ?? 0}</strong>
+        </Card>
+        <Card className="kpi">
+          <span>Active Memberships</span>
+          <strong>{activeMembers.length}</strong>
+        </Card>
+        <Card className="kpi">
+          <span>Expiring / At Risk</span>
+          <strong>{inactiveMembers.length}</strong>
+        </Card>
+        <Card className="kpi">
+          <span>Total Plans</span>
+          <strong>{plans.data?.length ?? 0}</strong>
+        </Card>
       </div>
 
-      {activeTab === "plans" ? (
+      {/* Tab Navigation */}
+      <div className="member-tab-bar" style={{ marginBottom: "1.25rem" }}>
+        {[
+          { id: "plans", label: `Plans Catalog (${plans.data?.length ?? 0})`, icon: "shield" as const },
+          { id: "retention", label: `Retention Queue (${inactiveMembers.length})`, icon: "users" as const },
+          { id: "assign", label: "Assign Entitlements", icon: "plus" as const }
+        ].map((tab) => (
+          <button
+            className={`member-tab-bar__tab${activeTab === tab.id ? " member-tab-bar__tab--active" : ""}`}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as typeof activeTab)}
+            type="button"
+          >
+            <Icon name={tab.icon} size={15} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── PLANS CATALOG TAB ── */}
+      {activeTab === "plans" && (
         <>
           <section className="filter-row">
             <select
@@ -185,10 +207,68 @@ export function MembershipsPage() {
             <DataTable columns={planColumns} data={plans.data} label="Membership Plans" />
           )}
         </>
-      ) : (
+      )}
+
+      {/* ── RETENTION QUEUE TAB ── */}
+      {activeTab === "retention" && (
+        <div className="form-stack">
+          <Card>
+            <h2>Retention &amp; Renewal Queue</h2>
+            <p className="muted" style={{ fontSize: "0.85rem", marginBottom: "1rem" }}>
+              Members flagged for retention review due to inactivity or plan expiration.
+            </p>
+
+            {inactiveMembers.length ? (
+              <div className="form-stack">
+                {inactiveMembers.map((member) => (
+                  <div className="at-risk-row" key={member.id}>
+                    <div className="at-risk-row__avatar">
+                      {member.firstName[0]}
+                      {member.lastName?.[0]}
+                    </div>
+                    <div className="at-risk-row__info">
+                      <strong>
+                        {member.firstName} {member.lastName ?? ""}
+                      </strong>
+                      <span>
+                        {member.phone ?? member.email ?? "No contact recorded"} · Joined {formatDate(member.joinedAt)}
+                      </span>
+                    </div>
+                    <StatusBadge status={member.status} />
+                    <div className="form-actions">
+                      <Button
+                        onClick={() => setAssigningMember({ id: member.id, name: `${member.firstName} ${member.lastName ?? ""}`.trim() })}
+                        size="small"
+                        variant="secondary"
+                      >
+                        Re-activate Plan
+                      </Button>
+                      <Button
+                        onClick={() => navigate(`/app/members/${member.id}`)}
+                        size="small"
+                        variant="ghost"
+                      >
+                        Profile →
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="crm-followup-empty">
+                <Icon name="check" size={32} />
+                <p>Great job! All members are currently active with valid plans.</p>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ── ASSIGN ENTITLEMENTS TAB ── */}
+      {activeTab === "assign" && (
         <Card>
           <div className="section-header-row" style={{ marginTop: 0 }}>
-            <h2>Member Entitlement Management</h2>
+            <h2>Member Entitlement Assignment</h2>
             <SearchBar
               aria-label="Search members"
               onChange={(e) => setMemberSearch(e.target.value)}
@@ -198,74 +278,55 @@ export function MembershipsPage() {
           </div>
 
           <div style={{ marginTop: "1rem" }}>
-            {members.isLoading ? (
-              <PageLoading />
-            ) : !members.data?.data.length ? (
-              <EmptyState description="Try another search query" title="No members found" />
-            ) : (
-              <div className="booking-stepper__grid">
-                {members.data.data.map((m) => (
-                  <div
-                    key={m.id}
-                    style={{
-                      padding: "1rem",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      background: "var(--surface)"
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start"
-                      }}
-                    >
-                      <div>
-                        <strong style={{ fontSize: "1.05rem" }}>
-                          {m.firstName} {m.lastName}
-                        </strong>
-                        <p className="muted" style={{ margin: "0.25rem 0", fontSize: "0.875rem" }}>
-                          {m.phone ?? m.email ?? "No contact details"}
-                        </p>
-                      </div>
-                      <StatusBadge status={m.status} />
+            <div className="form-stack">
+              {allMembers.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0.75rem 1rem",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "0.625rem",
+                    background: "var(--surface-2)"
+                  }}
+                >
+                  <div className="table-member-cell">
+                    <div className="table-member-avatar">
+                      {m.firstName[0]}
+                      {m.lastName?.[0]}
                     </div>
-                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                      <Link
-                        className="fitos-button fitos-button--ghost fitos-button--small"
-                        to={`/app/members/${m.id}`}
-                      >
-                        View Profile
-                      </Link>
-                      {can(auth, "membership:manage") ? (
-                        <Button
-                          onClick={() =>
-                            setAssigningMember({
-                              id: m.id,
-                              name: `${m.firstName} ${m.lastName}`.trim()
-                            })
-                          }
-                          size="small"
-                          variant="secondary"
-                        >
-                          Assign Plan
-                        </Button>
-                      ) : null}
+                    <div>
+                      <strong>
+                        {m.firstName} {m.lastName ?? ""}
+                      </strong>
+                      <span className="muted" style={{ fontSize: "0.8rem", display: "block" }}>
+                        {m.phone ?? m.email ?? "No contact"}
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="form-actions">
+                    <StatusBadge status={m.status} />
+                    <Button
+                      onClick={() => setAssigningMember({ id: m.id, name: `${m.firstName} ${m.lastName ?? ""}`.trim() })}
+                      size="small"
+                      variant="primary"
+                    >
+                      Assign Plan
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </Card>
       )}
 
-      {/* Plan Creator Modal */}
+      {/* ── CREATE PLAN MODAL ── */}
       {isCreatingPlan ? (
         <CreatePlanModal
           branches={branches.data ?? []}
-          defaultCurrency={auth?.tenant.currency ?? "KES"}
           isOpen={true}
           onClose={() => setIsCreatingPlan(false)}
           onSuccess={() => {
@@ -275,11 +336,12 @@ export function MembershipsPage() {
         />
       ) : null}
 
-      {/* Quick Assign Membership Modal */}
+      {/* ── ASSIGN MEMBERSHIP MODAL ── */}
       {assigningMember ? (
         <AssignPlanModal
           isOpen={true}
-          member={assigningMember}
+          memberId={assigningMember.id}
+          memberName={assigningMember.name}
           onClose={() => setAssigningMember(null)}
           onSuccess={() => {
             void queryClient.invalidateQueries({ queryKey: ["members"] });
@@ -292,104 +354,31 @@ export function MembershipsPage() {
   );
 }
 
-function AssignPlanModal({
-  isOpen,
-  onClose,
-  member,
-  plans,
-  onSuccess
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  member: { id: string; name: string };
-  plans: MembershipPlanResponse[];
-  onSuccess: () => void;
-}) {
-  const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.id ?? "");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-
-  const handleActivate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPlanId) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await api.activateMembership(member.id, { planId: selectedPlanId });
-      onSuccess();
-    } catch (cause) {
-      setError(cause);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Modal
-      description={`Activate a membership package for ${member.name}.`}
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Assign membership plan"
-    >
-      <form className="form-stack" onSubmit={handleActivate}>
-        <FormField htmlFor="selectPlan" label="Membership Plan">
-          <select
-            className="fitos-control"
-            id="selectPlan"
-            onChange={(e) => setSelectedPlanId(e.target.value)}
-            value={selectedPlanId}
-          >
-            {plans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} — {p.includedCredits} credits (
-                {p.durationDays ? `${p.durationDays} days` : "ongoing"})
-              </option>
-            ))}
-          </select>
-        </FormField>
-
-        <ErrorNotice error={error} />
-
-        <div className="form-actions">
-          <Button onClick={onClose} variant="ghost">
-            Cancel
-          </Button>
-          <Button disabled={!selectedPlanId} loading={submitting} type="submit">
-            Confirm & Activate
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
 function CreatePlanModal({
   isOpen,
   onClose,
   branches,
-  defaultCurrency,
   onSuccess
 }: {
   isOpen: boolean;
   onClose: () => void;
   branches: BranchResponse[];
-  defaultCurrency: string;
   onSuccess: () => void;
 }) {
   const [error, setError] = useState<unknown>(null);
-
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm<PlanFormValues>({
     defaultValues: {
       name: "",
       slug: "",
-      priceAmount: "5000",
-      currency: defaultCurrency,
+      priceAmount: "",
+      currency: "KES",
       durationDays: "30",
-      includedCredits: 10,
+      includedCredits: 12,
       branchId: "",
       publicVisible: true
     }
@@ -398,23 +387,20 @@ function CreatePlanModal({
   const onSubmit = async (values: PlanFormValues) => {
     setError(null);
     try {
-      const price = values.priceAmount.trim()
-        ? {
-            amountMinor: String(Math.round(parseFloat(values.priceAmount) * 100)),
-            currency: values.currency.trim().toUpperCase()
-          }
-        : null;
-
       const payload: CreateMembershipPlanRequest = {
         name: values.name.trim(),
-        slug: values.slug.trim() || undefined,
-        price,
-        durationDays: values.durationDays ? Number(values.durationDays) : null,
+        slug: values.slug.trim(),
         includedCredits: Number(values.includedCredits),
+        durationDays: values.durationDays ? Number(values.durationDays) : null,
         branchId: values.branchId || null,
-        publicVisible: values.publicVisible
+        publicVisible: values.publicVisible,
+        price: values.priceAmount
+          ? {
+              amountMinor: String(Math.round(Number(values.priceAmount) * 100)),
+              currency: values.currency
+            }
+          : null
       };
-
       await api.createMembershipPlan(payload);
       onSuccess();
     } catch (cause) {
@@ -424,10 +410,10 @@ function CreatePlanModal({
 
   return (
     <Modal
-      description="Create a credit bundle or recurring membership tier."
+      description="Create a recurring pass or membership tier with credit allotments."
       isOpen={isOpen}
       onClose={onClose}
-      title="New membership plan"
+      title="Create membership plan"
     >
       <form className="form-stack" onSubmit={handleSubmit(onSubmit)}>
         <div className="form-grid">
@@ -435,61 +421,72 @@ function CreatePlanModal({
             <input
               className="fitos-control"
               id="planName"
-              placeholder="e.g. 10-Class Pack, Monthly Unlimited"
-              {...register("name", { required: "Name is required" })}
+              placeholder="e.g. Monthly Unlimited, 10-Class Punch Pass"
+              {...register("name", {
+                required: "Plan name is required",
+                onChange: (e) => {
+                  const val = e.target.value as string;
+                  setValue("slug", val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+                }
+              })}
             />
           </FormField>
 
-          <FormField htmlFor="planSlug" label="URL Slug" optional>
+          <FormField error={errors.slug?.message} htmlFor="planSlug" label="URL Slug">
             <input
               className="fitos-control"
               id="planSlug"
-              placeholder="e.g. 10-class-pack"
-              {...register("slug")}
+              placeholder="monthly-unlimited"
+              {...register("slug", { required: "Slug is required" })}
             />
           </FormField>
 
-          <FormField htmlFor="planPrice" label="Price (KES/amount)">
-            <input
-              className="fitos-control"
-              id="planPrice"
-              placeholder="e.g. 7500"
-              step="0.01"
-              type="number"
-              {...register("priceAmount")}
-            />
-          </FormField>
-
-          <FormField htmlFor="planDuration" label="Validity (days)" optional>
-            <input
-              className="fitos-control"
-              id="planDuration"
-              placeholder="e.g. 30 (leave blank for unlimited)"
-              type="number"
-              {...register("durationDays")}
-            />
-          </FormField>
-
-          <FormField
-            error={errors.includedCredits?.message}
-            htmlFor="planCredits"
-            label="Included class credits"
-          >
+          <FormField error={errors.includedCredits?.message} htmlFor="planCredits" label="Included class credits">
             <input
               className="fitos-control"
               id="planCredits"
               min={1}
               type="number"
               {...register("includedCredits", {
-                required: "Credits required",
-                min: { value: 1, message: "At least one credit is required" }
+                required: "Credits allotment is required",
+                valueAsNumber: true,
+                min: { value: 1, message: "Min 1 credit" }
               })}
             />
           </FormField>
 
-          <FormField htmlFor="planBranch" label="Branch limitation" optional>
+          <FormField htmlFor="planDuration" label="Plan duration (days)" optional>
+            <input
+              className="fitos-control"
+              id="planDuration"
+              placeholder="30 (leave blank for ongoing)"
+              type="number"
+              {...register("durationDays")}
+            />
+          </FormField>
+
+          <FormField htmlFor="planPrice" label="Price amount" optional>
+            <input
+              className="fitos-control"
+              id="planPrice"
+              placeholder="5000"
+              type="number"
+              {...register("priceAmount")}
+            />
+          </FormField>
+
+          <FormField htmlFor="planCurrency" label="Currency">
+            <select className="fitos-control" id="planCurrency" {...register("currency")}>
+              <option value="KES">KES (Kenyan Shilling)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+            </select>
+          </FormField>
+
+          <FormField htmlFor="planBranch" label="Branch availability" optional>
             <select className="fitos-control" id="planBranch" {...register("branchId")}>
-              <option value="">Organization-wide (All branches)</option>
+              <option value="">All accessible branches</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -499,11 +496,88 @@ function CreatePlanModal({
           </FormField>
         </div>
 
-        <div className="checkbox-stack">
-          <label className="fitos-checkbox-row">
-            <Checkbox {...register("publicVisible")} />
-            <span>Available for public online purchase</span>
-          </label>
+        <label className="fitos-checkbox" style={{ marginTop: "0.5rem" }}>
+          <input type="checkbox" {...register("publicVisible")} />
+          Show on public website / member self-service catalog
+        </label>
+
+        <ErrorNotice error={error} />
+
+        <div className="form-actions">
+          <Button onClick={onClose} variant="ghost">
+            Cancel
+          </Button>
+          <Button loading={isSubmitting} type="submit">
+            Create plan
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function AssignPlanModal({
+  isOpen,
+  onClose,
+  memberId,
+  memberName,
+  plans,
+  onSuccess
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  memberId: string;
+  memberName: string;
+  plans: MembershipPlanResponse[];
+  onSuccess: () => void;
+}) {
+  const [error, setError] = useState<unknown>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { isSubmitting }
+  } = useForm<{ planId: string; startsAt: string }>({
+    defaultValues: {
+      planId: plans[0]?.id ?? "",
+      startsAt: new Date().toISOString().split("T")[0] ?? ""
+    }
+  });
+
+  const onSubmit = async (values: { planId: string; startsAt: string }) => {
+    setError(null);
+    try {
+      await api.activateMembership(memberId, {
+        planId: values.planId,
+        startsAt: values.startsAt ? new Date(values.startsAt).toISOString() : undefined
+      });
+      onSuccess();
+    } catch (cause) {
+      setError(cause);
+    }
+  };
+
+  return (
+    <Modal
+      description={`Grant class credits to ${memberName} by activating a plan.`}
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Assign membership plan"
+    >
+      <form className="form-stack" onSubmit={handleSubmit(onSubmit)}>
+        <div className="form-grid">
+          <FormField htmlFor="assignPlanId" label="Select plan">
+            <select className="fitos-control" id="assignPlanId" {...register("planId", { required: true })}>
+              {plans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.includedCredits} credits · {p.durationDays ? `${p.durationDays}d` : "ongoing"})
+                </option>
+              ))}
+            </select>
+          </FormField>
+
+          <FormField htmlFor="assignStartsAt" label="Start date">
+            <input className="fitos-control" id="assignStartsAt" type="date" {...register("startsAt", { required: true })} />
+          </FormField>
         </div>
 
         <ErrorNotice error={error} />
@@ -513,7 +587,7 @@ function CreatePlanModal({
             Cancel
           </Button>
           <Button loading={isSubmitting} type="submit">
-            Create membership plan
+            Activate &amp; Grant Credits
           </Button>
         </div>
       </form>

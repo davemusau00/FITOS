@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, FormField, PageHeader, StatusBadge } from "@fitos/ui";
+import { Button, Card, FormField, Icon, PageHeader, StatusBadge } from "@fitos/ui";
 import { api } from "../../lib/api/client";
-import { PageLoading, ErrorNotice } from "../shared";
+import { PageLoading, ErrorNotice, useToast } from "../shared";
 
 export function BranchesSettingsPage() {
   const queryClient = useQueryClient();
+  const { success } = useToast();
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
+
   const {
     register,
     handleSubmit,
@@ -16,36 +19,70 @@ export function BranchesSettingsPage() {
   } = useForm<{ name: string; city: string; timezone: string }>({
     defaultValues: { name: "", city: "Nairobi", timezone: "Africa/Nairobi" }
   });
+
   const [error, setError] = useState<unknown>(null);
+
   if (branches.isLoading) return <PageLoading />;
+
   return (
     <>
+      <div style={{ marginBottom: "1rem" }}>
+        <Link className="text-link" to="/app/settings">
+          <Icon name="arrow-left" size={14} /> Back to Settings
+        </Link>
+      </div>
+
       <PageHeader
-        eyebrow="Settings"
-        title="Branches"
-        description="Locations anchor schedules, memberships, attendance, and branch-level reporting."
+        eyebrow="Settings • Facilities"
+        title="Branch Locations"
+        description="Locations anchor schedules, memberships, attendance, and branch-level reporting across your fitness system."
       />
+
       <section className="detail-grid">
+        {/* Left: Branch List */}
         <Card>
-          <h2>Accessible branches</h2>
+          <div className="card-header">
+            <h2>Active Branches ({branches.data?.length ?? 0})</h2>
+          </div>
+
           {branches.data?.length ? (
             <ul className="branch-list">
               {branches.data.map((branch) => (
                 <li key={branch.id}>
-                  <div>
-                    <strong>{branch.name}</strong>
-                    <span>
-                      {branch.city ?? "No city"} · {branch.timezone ?? "Organization timezone"}
-                    </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <div
+                      style={{
+                        background: "var(--surface-3)",
+                        borderRadius: "var(--radius-control)",
+                        color: "var(--fitos-energy)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "2.25rem",
+                        width: "2.25rem"
+                      }}
+                    >
+                      <Icon name="building" size={16} />
+                    </div>
+                    <div>
+                      <strong style={{ color: "var(--text-primary)", fontSize: "0.9rem", display: "block" }}>
+                        {branch.name}
+                      </strong>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                        {branch.city ?? "Primary"} · {branch.timezone ?? "Default Timezone"}
+                      </span>
+                    </div>
                   </div>
                   <StatusBadge status={branch.isActive ? "active" : "inactive"} />
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="muted">No branch access.</p>
+            <p className="muted">No branches configured yet.</p>
           )}
         </Card>
+
+        {/* Right: Add Branch Form */}
         <form
           className="form-card form-stack"
           onSubmit={handleSubmit(async (values) => {
@@ -57,34 +94,47 @@ export function BranchesSettingsPage() {
                 timezone: values.timezone || null
               });
               await queryClient.invalidateQueries({ queryKey: ["branches"] });
+              success("Branch added", `Successfully added "${values.name}" to your locations.`);
               reset();
             } catch (cause) {
               setError(cause);
             }
           })}
         >
-          <h2>Add branch</h2>
-          <FormField htmlFor="branchName" label="Branch name">
+          <div className="card-header">
+            <h2>Add New Branch</h2>
+          </div>
+
+          <FormField hint="Location or facility title (e.g. Downtown Studio, Westlands Hub)." htmlFor="branchName" label="Branch Name">
             <input
               className="fitos-control"
               id="branchName"
+              placeholder="e.g. Kilimani Branch"
               {...register("name", { required: true })}
             />
           </FormField>
-          <FormField htmlFor="branchCity" label="City" optional>
-            <input className="fitos-control" id="branchCity" {...register("city")} />
+
+          <FormField hint="City or locality where this facility is based." htmlFor="branchCity" label="City" optional>
+            <input className="fitos-control" id="branchCity" placeholder="e.g. Nairobi" {...register("city")} />
           </FormField>
-          <FormField htmlFor="branchTimezone" label="Timezone">
+
+          <FormField hint="Local operational timezone." htmlFor="branchTimezone" label="Timezone">
             <input
               className="fitos-control"
               id="branchTimezone"
+              placeholder="Africa/Nairobi"
               {...register("timezone", { required: true })}
             />
           </FormField>
+
           <ErrorNotice error={error} />
-          <Button loading={isSubmitting} type="submit">
-            Create branch
-          </Button>
+
+          <div className="form-actions">
+            <Button loading={isSubmitting} type="submit">
+              <Icon name="plus" size={16} />
+              Create Branch
+            </Button>
+          </div>
         </form>
       </section>
     </>

@@ -7,6 +7,8 @@ import "./styles/app.css";
 import { AuthProvider } from "./app/auth";
 import { AppRouter } from "./app/router";
 
+import { ToastProvider } from "./features/shared";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -21,9 +23,11 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <AppRouter />
-        </BrowserRouter>
+        <ToastProvider>
+          <BrowserRouter>
+            <AppRouter />
+          </BrowserRouter>
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>

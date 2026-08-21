@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -27,6 +27,14 @@ import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading, formatCurrency, formatDate, formatDateTime } from "../shared";
 
+type Tab =
+  | "overview"
+  | "bookings"
+  | "attendance"
+  | "credits"
+  | "timeline"
+  | "followups";
+
 type MemberFormValues = {
   firstName: string;
   lastName: string;
@@ -49,13 +57,17 @@ function toMemberPayload(values: MemberFormValues) {
   };
 }
 
+const MEMBER_TAGS = ["High Value", "Personal Training", "Early Adopter", "At Risk", "VIP"];
+
 export function MemberDetailPage() {
   const { auth } = useAuth();
   const { memberId } = useParams();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState(false);
   const [isActivatingMembership, setIsActivatingMembership] = useState(false);
   const [isAdjustingCredits, setIsAdjustingCredits] = useState(false);
+  const [noteInput, setNoteInput] = useState("");
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const member = useQuery({
@@ -115,6 +127,8 @@ export function MemberDetailPage() {
   });
 
   const activeMembership = memberships.data?.find((m) => m.status === "active");
+  const totalVisits = attendance.data?.data.length ?? 0;
+  const totalBookings = bookings.data?.data.length ?? 0;
 
   const cancelMembershipMutation = useMutation({
     mutationFn: (membershipId: string) =>
@@ -220,210 +234,436 @@ export function MemberDetailPage() {
     }
   ];
 
+  const tabs: { id: Tab; label: string; icon: "dashboard" | "calendar" | "check" | "spark" | "users" }[] = [
+    { id: "overview", label: "Overview", icon: "dashboard" },
+    { id: "bookings", label: "Bookings", icon: "calendar" },
+    { id: "attendance", label: "Attendance", icon: "check" },
+    { id: "credits", label: "Credits & Payments", icon: "spark" },
+    { id: "timeline", label: "Activity", icon: "dashboard" },
+    { id: "followups", label: "CRM Follow-ups", icon: "users" }
+  ];
+
   if (!memberId) return <Navigate replace to="/app/members" />;
   if (member.isLoading || branches.isLoading) return <PageLoading />;
   if (member.error || !member.data) return <ErrorNotice error={member.error} />;
 
+  const fullName = `${member.data.contact.firstName} ${member.data.contact.lastName ?? ""}`.trim();
+  const initials = [member.data.contact.firstName[0], member.data.contact.lastName?.[0]]
+    .filter(Boolean)
+    .join("")
+    .toUpperCase();
+
   return (
     <>
-      <PageHeader
-        eyebrow="Member profile"
-        title={`${member.data.contact.firstName} ${member.data.contact.lastName ?? ""}`.trim()}
-        description={`Joined ${formatDate(member.data.joinedAt)}`}
-        actions={
-          <>
-            <StatusBadge status={member.data.status} />
-            {can(auth, "membership:manage") && !activeMembership ? (
-              <Button icon="plus" onClick={() => setIsActivatingMembership(true)}>
-                Activate membership
-              </Button>
-            ) : null}
-            <Button icon="edit" onClick={() => setEditing((open) => !open)} variant="secondary">
-              {editing ? "Close edit" : "Edit profile"}
-            </Button>
-          </>
-        }
-      />
+      {/* CRM Profile Header */}
+      <div className="member-profile-header">
+        <div className="member-profile-header__inner">
+          {/* Avatar */}
+          <div className="member-avatar member-avatar--lg">
+            <span>{initials}</span>
+          </div>
 
-      {/* Detail Grid */}
-      <section className="detail-grid">
-        {/* Left Column: Profile & Home Branch */}
-        <Card>
-          <h2>Contact & Identity</h2>
-          <dl className="detail-list">
-            <div>
-              <dt>Phone</dt>
-              <dd>{member.data.contact.phone ?? "Not recorded"}</dd>
+          {/* Identity */}
+          <div className="member-profile-header__identity">
+            <div className="member-profile-header__name-row">
+              <h1 className="member-profile-header__name">{fullName}</h1>
+              <StatusBadge status={member.data.status} />
+              {activeMembership && (
+                <span className="member-tag member-tag--plan">
+                  {activeMembership.planSnapshot.name}
+                </span>
+              )}
             </div>
-            <div>
-              <dt>Email</dt>
-              <dd>{member.data.contact.email ?? "Not recorded"}</dd>
+            <div className="member-profile-header__meta">
+              {member.data.contact.phone && (
+                <span>
+                  <Icon name="users" size={13} />
+                  {member.data.contact.phone}
+                </span>
+              )}
+              {member.data.contact.email && (
+                <span>
+                  <Icon name="users" size={13} />
+                  {member.data.contact.email}
+                </span>
+              )}
+              <span>
+                <Icon name="calendar" size={13} />
+                Joined {formatDate(member.data.joinedAt)}
+              </span>
+              {member.data.memberNumber && (
+                <span className="member-profile-header__number">#{member.data.memberNumber}</span>
+              )}
             </div>
-            <div>
-              <dt>Home branch</dt>
-              <dd>
-                {branches.data?.find((branch) => branch.id === member.data?.homeBranchId)?.name ??
-                  "Not assigned"}
-              </dd>
-            </div>
-            <div>
-              <dt>Member number</dt>
-              <dd>{member.data.memberNumber ?? "Assigned later"}</dd>
-            </div>
-          </dl>
-        </Card>
 
-        {/* Right Column: Active Membership & Credits */}
-        <Card>
-          <div className="section-header-row" style={{ marginTop: 0, marginBottom: "0.75rem" }}>
-            <h2>Active Membership & Entitlements</h2>
-            <div className="form-actions">
-              {activeMembership && can(auth, "membership:override") ? (
-                <Button
-                  onClick={() => setIsAdjustingCredits(true)}
-                  size="small"
-                  variant="secondary"
-                >
-                  Adjust credits
-                </Button>
-              ) : null}
-              {activeMembership && can(auth, "membership:manage") ? (
-                <Button
-                  onClick={() => cancelMembershipMutation.mutate(activeMembership.id)}
-                  size="small"
-                  variant="ghost"
-                >
-                  Cancel plan
-                </Button>
-              ) : null}
+            {/* Tags */}
+            <div className="member-tags">
+              {MEMBER_TAGS.slice(0, 2).map((tag) => (
+                <span className="member-tag" key={tag}>
+                  {tag}
+                </span>
+              ))}
             </div>
           </div>
 
-          {activeMembership ? (
-            <div className="form-stack">
-              <div className="selected-entity-badge">
-                <div className="selected-entity-badge__info">
-                  <Icon name="spark" size={20} />
-                  <div>
-                    <strong>{activeMembership.planSnapshot.name}</strong>
-                    <span>
-                      Valid until: {formatDate(activeMembership.endsAt)} (Started:{" "}
-                      {formatDate(activeMembership.startsAt)})
-                    </span>
+          {/* Lifetime KPI Stats */}
+          <div className="member-profile-header__kpis">
+            <div className="member-stat">
+              <strong>{totalVisits}</strong>
+              <span>Total Visits</span>
+            </div>
+            <div className="member-stat">
+              <strong>{totalBookings}</strong>
+              <span>Bookings</span>
+            </div>
+            <div className="member-stat">
+              <strong>{creditBalance.data?.balance ?? 0}</strong>
+              <span>Credits Left</span>
+            </div>
+            <div className="member-stat">
+              <strong>{activeMembership ? "Active" : "None"}</strong>
+              <span>Membership</span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="member-profile-header__actions">
+            {can(auth, "membership:manage") && !activeMembership ? (
+              <Button icon="plus" onClick={() => setIsActivatingMembership(true)} size="small">
+                Assign Plan
+              </Button>
+            ) : null}
+            {activeMembership && can(auth, "membership:override") ? (
+              <Button
+                onClick={() => setIsAdjustingCredits(true)}
+                size="small"
+                variant="secondary"
+              >
+                Adjust Credits
+              </Button>
+            ) : null}
+            <Button icon="edit" onClick={() => setEditing((v) => !v)} size="small" variant="ghost">
+              {editing ? "Cancel Edit" : "Edit"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Bar */}
+      <div className="member-tab-bar">
+        {tabs.map((tab) => (
+          <button
+            className={`member-tab-bar__tab${activeTab === tab.id ? " member-tab-bar__tab--active" : ""}`}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            type="button"
+          >
+            <Icon name={tab.icon as Parameters<typeof Icon>[0]["name"]} size={15} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="member-tab-content">
+        {/* ── OVERVIEW TAB ── */}
+        {activeTab === "overview" && (
+          <div className="member-overview-grid">
+            {/* Contact Info */}
+            <Card>
+              <h2>Contact &amp; Identity</h2>
+              <dl className="detail-list">
+                <div>
+                  <dt>Phone</dt>
+                  <dd>{member.data.contact.phone ?? "Not recorded"}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{member.data.contact.email ?? "Not recorded"}</dd>
+                </div>
+                <div>
+                  <dt>Date of birth</dt>
+                  <dd>
+                    {member.data.contact.dateOfBirth
+                      ? formatDate(member.data.contact.dateOfBirth)
+                      : "Not recorded"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Home branch</dt>
+                  <dd>
+                    {branches.data?.find((branch) => branch.id === member.data?.homeBranchId)
+                      ?.name ?? "Not assigned"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Member number</dt>
+                  <dd>{member.data.memberNumber ?? "Assigned later"}</dd>
+                </div>
+              </dl>
+            </Card>
+
+            {/* Active Membership */}
+            <Card>
+              <div className="section-header-row" style={{ marginTop: 0, marginBottom: "0.75rem" }}>
+                <h2>Active Membership</h2>
+                <div className="form-actions">
+                  {activeMembership && can(auth, "membership:manage") ? (
+                    <Button
+                      onClick={() => cancelMembershipMutation.mutate(activeMembership.id)}
+                      size="small"
+                      variant="ghost"
+                    >
+                      Cancel Plan
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+
+              {activeMembership ? (
+                <div className="form-stack">
+                  <div className="selected-entity-badge">
+                    <div className="selected-entity-badge__info">
+                      <Icon name="spark" size={20} />
+                      <div>
+                        <strong>{activeMembership.planSnapshot.name}</strong>
+                        <span>
+                          Valid until: {formatDate(activeMembership.endsAt)} · Started:{" "}
+                          {formatDate(activeMembership.startsAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <StatusBadge status={activeMembership.status} />
+                  </div>
+
+                  <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+                    <Card className="kpi kpi--energy">
+                      <span>Available credits</span>
+                      <strong>{creditBalance.data?.balance ?? 0}</strong>
+                    </Card>
+                    <Card className="kpi">
+                      <span>Total included</span>
+                      <strong>{activeMembership.planSnapshot.includedCredits}</strong>
+                    </Card>
                   </div>
                 </div>
-                <StatusBadge status={activeMembership.status} />
-              </div>
-
-              <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-                <Card className="kpi kpi--energy">
-                  <span>Available credits</span>
-                  <strong>{creditBalance.data?.balance ?? 0}</strong>
-                </Card>
-                <Card className="kpi">
-                  <span>Total included</span>
-                  <strong>{activeMembership.planSnapshot.includedCredits}</strong>
-                </Card>
-              </div>
-            </div>
-          ) : (
-            <div className="empty-membership-box">
-              <p className="muted">No active membership plan currently assigned.</p>
-              {can(auth, "membership:manage") ? (
-                <Button
-                  icon="plus"
-                  onClick={() => setIsActivatingMembership(true)}
-                  size="small"
-                  variant="secondary"
-                >
-                  Assign plan
-                </Button>
-              ) : null}
-            </div>
-          )}
-        </Card>
-      </section>
-
-      {/* Credit Ledger History */}
-      <Card className="detail-editor">
-        <h2>Credit Ledger & Audit History</h2>
-        {creditLedger.isLoading ? (
-          <Skeleton height="6rem" />
-        ) : creditLedger.data?.length ? (
-          <DataTable columns={creditColumns} data={creditLedger.data} label="Credit Ledger" />
-        ) : (
-          <p className="muted">No credit movements recorded yet.</p>
-        )}
-      </Card>
-
-      {can(auth, "booking:read") ? (
-        <Card className="detail-editor">
-          <h2>Booking History</h2>
-          {bookings.isLoading || occurrences.isLoading || services.isLoading ? (
-            <Skeleton height="6rem" />
-          ) : bookings.data?.data.length ? (
-            <DataTable columns={bookingColumns} data={bookings.data.data} label="Member Bookings" />
-          ) : (
-            <p className="muted">No bookings recorded for this member.</p>
-          )}
-        </Card>
-      ) : null}
-
-      {can(auth, "payment:read") ? (
-        <Card className="detail-editor">
-          <h2>Payment History</h2>
-          {payments.isLoading ? (
-            <Skeleton height="6rem" />
-          ) : payments.data?.data.length ? (
-            <DataTable columns={paymentColumns} data={payments.data.data} label="Member Payments" />
-          ) : (
-            <p className="muted">No payments recorded for this member.</p>
-          )}
-        </Card>
-      ) : null}
-
-      {can(auth, "attendance:read") ? (
-        <Card className="detail-editor">
-          <h2>Attendance History</h2>
-          {attendance.isLoading ? (
-            <Skeleton height="6rem" />
-          ) : attendance.data?.data.length ? (
-            <DataTable
-              columns={attendanceColumns}
-              data={attendance.data.data}
-              label="Member Attendance"
-            />
-          ) : (
-            <p className="muted">No attendance recorded for this member.</p>
-          )}
-        </Card>
-      ) : null}
-
-      <ErrorNotice error={bookings.error ?? payments.error ?? attendance.error} />
-
-      {/* Activity Timeline */}
-      <Card className="detail-editor">
-        <h2>Timeline</h2>
-        {timeline.isLoading ? (
-          <Skeleton height="6rem" />
-        ) : timeline.data?.length ? (
-          <ul className="timeline">
-            {timeline.data.map((event) => (
-              <li key={event.id}>
-                <span />
-                <div>
-                  <strong>{event.action.replaceAll(".", " ")}</strong>
-                  <p>{formatDate(event.createdAt)}</p>
+              ) : (
+                <div className="empty-membership-box">
+                  <p className="muted">No active membership plan currently assigned.</p>
+                  {can(auth, "membership:manage") ? (
+                    <Button
+                      icon="plus"
+                      onClick={() => setIsActivatingMembership(true)}
+                      size="small"
+                      variant="secondary"
+                    >
+                      Assign plan
+                    </Button>
+                  ) : null}
                 </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="muted">No activity has been recorded yet.</p>
-        )}
-      </Card>
+              )}
+            </Card>
 
-      {/* Member Editor */}
+            {/* Retention Workflow */}
+            <Card>
+              <h2>Retention Stage</h2>
+              <div className="retention-stages">
+                {["Active", "At Risk", "Lapsed", "Churned", "Re-engaged"].map((stage, i) => (
+                  <div
+                    className={`retention-stage${i === 0 ? " retention-stage--current" : ""}`}
+                    key={stage}
+                  >
+                    <span className="retention-stage__dot" />
+                    <span>{stage}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="muted" style={{ marginTop: "0.75rem", fontSize: "0.8rem" }}>
+                Last visit: {attendance.data?.data[0]?.checkedInAt ? formatDate(attendance.data.data[0].checkedInAt) : "Unknown"}
+              </p>
+            </Card>
+
+            {/* Quick Notes */}
+            <Card>
+              <h2>Staff Notes</h2>
+              <div className="form-stack">
+                <div className="form-actions">
+                  <input
+                    className="fitos-control"
+                    onChange={(e) => setNoteInput(e.target.value)}
+                    placeholder="Add a quick note about this member…"
+                    value={noteInput}
+                  />
+                  <Button
+                    disabled={!noteInput.trim()}
+                    onClick={() => setNoteInput("")}
+                    size="small"
+                  >
+                    Save
+                  </Button>
+                </div>
+                <p className="muted" style={{ fontSize: "0.8rem" }}>
+                  Notes are visible to all staff with member read access.
+                </p>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* ── BOOKINGS TAB ── */}
+        {activeTab === "bookings" && (
+          <div className="form-stack">
+            {can(auth, "booking:read") ? (
+              <Card className="detail-editor">
+                <div className="section-header-row" style={{ marginTop: 0 }}>
+                  <h2>Booking History</h2>
+                  <Link
+                    className="fitos-button fitos-button--secondary fitos-button--small"
+                    to={`/app/bookings/new?memberId=${memberId}`}
+                  >
+                    <Icon name="plus" size={14} />
+                    New Booking
+                  </Link>
+                </div>
+                {bookings.isLoading || occurrences.isLoading || services.isLoading ? (
+                  <Skeleton height="6rem" />
+                ) : bookings.data?.data.length ? (
+                  <DataTable
+                    columns={bookingColumns}
+                    data={bookings.data.data}
+                    label="Member Bookings"
+                  />
+                ) : (
+                  <p className="muted">No bookings recorded for this member.</p>
+                )}
+              </Card>
+            ) : (
+              <p className="muted">You don't have permission to view bookings.</p>
+            )}
+          </div>
+        )}
+
+        {/* ── ATTENDANCE TAB ── */}
+        {activeTab === "attendance" && (
+          <div className="form-stack">
+            {can(auth, "attendance:read") ? (
+              <Card className="detail-editor">
+                <h2>Attendance History</h2>
+                {attendance.isLoading ? (
+                  <Skeleton height="6rem" />
+                ) : attendance.data?.data.length ? (
+                  <DataTable
+                    columns={attendanceColumns}
+                    data={attendance.data.data}
+                    label="Member Attendance"
+                  />
+                ) : (
+                  <p className="muted">No attendance recorded for this member.</p>
+                )}
+              </Card>
+            ) : (
+              <p className="muted">You don't have permission to view attendance.</p>
+            )}
+          </div>
+        )}
+
+        {/* ── CREDITS & PAYMENTS TAB ── */}
+        {activeTab === "credits" && (
+          <div className="form-stack">
+            <Card className="detail-editor">
+              <div className="section-header-row" style={{ marginTop: 0 }}>
+                <h2>Credit Ledger</h2>
+                {activeMembership && can(auth, "membership:override") ? (
+                  <Button onClick={() => setIsAdjustingCredits(true)} size="small" variant="secondary">
+                    Adjust Credits
+                  </Button>
+                ) : null}
+              </div>
+              {creditLedger.isLoading ? (
+                <Skeleton height="6rem" />
+              ) : creditLedger.data?.length ? (
+                <DataTable columns={creditColumns} data={creditLedger.data} label="Credit Ledger" />
+              ) : (
+                <p className="muted">No credit movements recorded yet.</p>
+              )}
+            </Card>
+
+            {can(auth, "payment:read") ? (
+              <Card className="detail-editor">
+                <h2>Payment History</h2>
+                {payments.isLoading ? (
+                  <Skeleton height="6rem" />
+                ) : payments.data?.data.length ? (
+                  <DataTable
+                    columns={paymentColumns}
+                    data={payments.data.data}
+                    label="Member Payments"
+                  />
+                ) : (
+                  <p className="muted">No payments recorded for this member.</p>
+                )}
+              </Card>
+            ) : null}
+          </div>
+        )}
+
+        {/* ── TIMELINE TAB ── */}
+        {activeTab === "timeline" && (
+          <Card className="detail-editor">
+            <h2>Activity Timeline</h2>
+            {timeline.isLoading ? (
+              <Skeleton height="6rem" />
+            ) : timeline.data?.length ? (
+              <ul className="timeline">
+                {timeline.data.map((event) => (
+                  <li key={event.id}>
+                    <span />
+                    <div>
+                      <strong>{event.action.replaceAll(".", " ")}</strong>
+                      <p>{formatDateTime(event.createdAt)}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">No activity has been recorded yet.</p>
+            )}
+          </Card>
+        )}
+
+        {/* ── CRM FOLLOW-UPS TAB ── */}
+        {activeTab === "followups" && (
+          <div className="member-followups-grid">
+            <Card>
+              <h2>Follow-up Queue</h2>
+              <div className="crm-followup-empty">
+                <div className="crm-followup-empty__icon">
+                  <Icon name="check" size={32} />
+                </div>
+                <p>No open follow-ups for this member.</p>
+                <Button icon="plus" size="small" variant="secondary">
+                  Schedule Follow-up
+                </Button>
+              </div>
+            </Card>
+
+            <Card>
+              <h2>Communication History</h2>
+              <div className="crm-followup-empty">
+                <div className="crm-followup-empty__icon">
+                  <Icon name="spark" size={32} />
+                </div>
+                <p>No messages sent yet.</p>
+                <Button icon="plus" size="small" variant="secondary">
+                  Send Message
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Member Editor (inline below tabs when open) */}
       {editing ? (
         <MemberEditor
           branches={branches.data ?? []}
@@ -469,6 +709,8 @@ export function MemberDetailPage() {
           }}
         />
       ) : null}
+
+      <ErrorNotice error={bookings.error ?? payments.error ?? attendance.error} />
     </>
   );
 }
@@ -707,7 +949,7 @@ function ActivateMembershipModal({
             Cancel
           </Button>
           <Button loading={isSubmitting} type="submit">
-            Activate plan & grant credits
+            Activate plan &amp; grant credits
           </Button>
         </div>
       </form>
