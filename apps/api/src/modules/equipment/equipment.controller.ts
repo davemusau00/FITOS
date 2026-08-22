@@ -152,4 +152,16 @@ export class EquipmentController {
     const input = createMaintenanceSchema.parse(body) as CreateMaintenanceRecordRequest;
     return this.repository.createEquipmentMaintenance(toScope(actor), input);
   }
+
+  @Get("allocations/:occurrenceId")
+  @RequirePermission("schedule:read")
+  listAllocations(@Actor() actor: RequestActor, @Param("occurrenceId") occurrenceId: string) { return this.repository.listOccurrenceEquipmentAllocations(toScope(actor), z.string().uuid().parse(occurrenceId)); }
+
+  @Post("allocations/:occurrenceId/:assetId")
+  @RequirePermission("schedule:manage")
+  reserveAllocation(@Actor() actor: RequestActor, @Param("occurrenceId") occurrenceId: string, @Param("assetId") assetId: string) { return this.repository.reserveOccurrenceEquipment(toScope(actor), z.string().uuid().parse(occurrenceId), z.string().uuid().parse(assetId)); }
+
+  @Post("allocations/:allocationId/release")
+  @RequirePermission("schedule:manage")
+  async releaseAllocation(@Actor() actor: RequestActor, @Param("allocationId") allocationId: string) { const result = await this.repository.releaseOccurrenceEquipment(toScope(actor), z.string().uuid().parse(allocationId)); if (!result) throw new NotFoundException("Equipment allocation not found."); return result; }
 }

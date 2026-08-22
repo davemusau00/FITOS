@@ -103,3 +103,5 @@ export interface CreateMaintenanceRecordRequest {
   notes: string;
   nextDueAt?: string | null;
 }
+
+export interface EquipmentAllocationResponse { id: string; tenantId: string; occurrenceId: string; assetId: string; status: "reserved" | "released"; createdAt: string; }

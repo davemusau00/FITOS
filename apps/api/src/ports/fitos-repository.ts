@@ -475,6 +475,9 @@ export interface FitosRepository {
   createEquipmentPool(scope: TenantScope, input: CreateEquipmentPoolRequest): Promise<EquipmentPoolResponse>;
   listEquipmentMaintenance(scope: TenantScope, assetId?: string): Promise<EquipmentMaintenanceRecordResponse[]>;
   createEquipmentMaintenance(scope: TenantScope, input: CreateMaintenanceRecordRequest): Promise<EquipmentMaintenanceRecordResponse>;
+  listOccurrenceEquipmentAllocations(scope: TenantScope, occurrenceId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse[]>;
+  reserveOccurrenceEquipment(scope: TenantScope, occurrenceId: string, assetId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse>;
+  releaseOccurrenceEquipment(scope: TenantScope, allocationId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse | null>;
   listServiceEquipmentRequirements(scope: TenantScope, serviceId: string): Promise<ServiceEquipmentRequirement[]>;
   replaceServiceEquipmentRequirements(scope: TenantScope, serviceId: string, requirements: ServiceEquipmentRequirement[]): Promise<ServiceEquipmentRequirement[]>;
 

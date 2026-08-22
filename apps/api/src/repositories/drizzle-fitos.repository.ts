@@ -4166,6 +4166,20 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
+  async listOccurrenceEquipmentAllocations(scope: TenantScope, occurrenceId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse[]> { const rows = await this.db.select().from(occurrenceEquipmentAllocations).where(and(eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId), eq(occurrenceEquipmentAllocations.occurrenceId, occurrenceId))); return rows.map((row) => ({ id: row.id, tenantId: row.tenantId, occurrenceId: row.occurrenceId, assetId: row.assetId, status: row.status as any, createdAt: row.createdAt.toISOString() })); }
+  async reserveOccurrenceEquipment(scope: TenantScope, occurrenceId: string, assetId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse> {
+    return this.db.transaction(async (tx) => {
+      const [occurrence] = await tx.select().from(scheduleOccurrences).where(and(eq(scheduleOccurrences.id, occurrenceId), eq(scheduleOccurrences.tenantId, scope.tenantId)));
+      const [asset] = await tx.select().from(equipmentAssets).where(and(eq(equipmentAssets.id, assetId), eq(equipmentAssets.tenantId, scope.tenantId)));
+      if (!occurrence || !asset || occurrence.branchId !== asset.branchId || asset.status !== "available") throw new Error("Equipment asset is unavailable for this occurrence.");
+      const [conflict] = await tx.select({ id: occurrenceEquipmentAllocations.id }).from(occurrenceEquipmentAllocations).innerJoin(scheduleOccurrences, eq(occurrenceEquipmentAllocations.occurrenceId, scheduleOccurrences.id)).where(and(eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId), eq(occurrenceEquipmentAllocations.assetId, assetId), eq(occurrenceEquipmentAllocations.status, "reserved"), lt(scheduleOccurrences.startsAt, occurrence.endsAt), gt(scheduleOccurrences.endsAt, occurrence.startsAt))).limit(1);
+      if (conflict) throw new Error("Equipment asset is already reserved for an overlapping occurrence.");
+      const [created] = await tx.insert(occurrenceEquipmentAllocations).values({ tenantId: scope.tenantId, occurrenceId, assetId, status: "reserved" }).returning();
+      if (!created) throw new Error("Unable to reserve equipment asset."); return { id: created.id, tenantId: created.tenantId, occurrenceId: created.occurrenceId, assetId: created.assetId, status: created.status as any, createdAt: created.createdAt.toISOString() };
+    });
+  }
+  async releaseOccurrenceEquipment(scope: TenantScope, allocationId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse | null> { const [row] = await this.db.update(occurrenceEquipmentAllocations).set({ status: "released" }).where(and(eq(occurrenceEquipmentAllocations.id, allocationId), eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId))).returning(); return row ? { id: row.id, tenantId: row.tenantId, occurrenceId: row.occurrenceId, assetId: row.assetId, status: row.status as any, createdAt: row.createdAt.toISOString() } : null; }
+
   /** Resource conflicts are operator warnings; they never change booking capacity. */
   private async withResourceWarnings(
     occurrences: Array<typeof scheduleOccurrences.$inferSelect>
