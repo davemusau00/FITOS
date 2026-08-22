@@ -226,6 +226,27 @@ export const members = pgTable(
   ]
 );
 
+export const memberIdentities = pgTable("member_identities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  memberId: uuid("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  passwordHash: text("password_hash").notNull(),
+  passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [uniqueIndex("uq_member_identity_member").on(table.tenantId, table.memberId)]);
+
+export const memberSessions = pgTable("member_sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  memberId: uuid("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [uniqueIndex("uq_member_sessions_token").on(table.tokenHash)]);
+
 export const leads = pgTable(
   "leads",
   {
@@ -475,6 +496,22 @@ export const scheduleExceptions = pgTable(
     )
   ]
 );
+
+export const publicReservations = pgTable("public_reservations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+  branchId: uuid("branch_id").references(() => branches.id, { onDelete: "restrict" }),
+  occurrenceId: uuid("occurrence_id").references(() => scheduleOccurrences.id, { onDelete: "restrict" }),
+  serviceId: uuid("service_id").references(() => services.id, { onDelete: "restrict" }),
+  reservationType: varchar("reservation_type", { length: 40 }).notNull(),
+  status: varchar("status", { length: 30 }).notNull().default("requested"),
+  firstName: varchar("first_name", { length: 120 }).notNull(),
+  lastName: varchar("last_name", { length: 120 }),
+  phone: varchar("phone", { length: 60 }),
+  email: varchar("email", { length: 255 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [index("idx_public_reservations_tenant_status").on(table.tenantId, table.branchId, table.status)]);
 
 export const bookings = pgTable(
   "bookings",
@@ -1213,6 +1250,8 @@ export const schema = {
   sessions,
   contacts,
   members,
+  memberIdentities,
+  memberSessions,
   leads,
   leadEvents,
   leadTasks,
@@ -1222,6 +1261,7 @@ export const schema = {
   scheduleTemplates,
   scheduleOccurrences,
   scheduleExceptions,
+  publicReservations,
   bookings,
   membershipPlans,
   memberMemberships,

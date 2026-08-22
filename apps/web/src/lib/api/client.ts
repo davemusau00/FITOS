@@ -55,6 +55,8 @@ import type {
   PublicServiceResponse,
   PublicCoachResponse,
   PublicScheduleOccurrenceResponse,
+  CreatePublicReservationRequest,
+  PublicReservationResponse,
   MemberProfileResponse,
   MemberPortalOverviewResponse,
   // Platform / SaaS
@@ -462,12 +464,14 @@ export const api = {
     slug: string,
     payload: { firstName: string; lastName?: string; phone?: string; email?: string; interest?: string }
   ) => request<LeadResponse>(`/public/${slug}/leads`, { method: "POST", body: json(payload) }),
+  publicCreateReservation: (slug: string, payload: CreatePublicReservationRequest) =>
+    request<PublicReservationResponse>(`/public/${encodeURIComponent(slug)}/reservations`, { method: "POST", body: json(payload) }),
 
   // ── Member Portal ─────────────────────────────────────────────────────────
-  memberLogin: (identifier: string, pin: string) =>
+  memberLogin: (identifier: string, password: string) =>
     request<{ ok: boolean; memberId: string }>("/member-auth/login", {
       method: "POST",
-      body: json({ identifier, pin })
+      body: json({ identifier, password })
     }),
   memberLogout: () => request<{ ok: boolean }>("/member-auth/logout", { method: "POST" }),
   memberMe: () => request<MemberProfileResponse>("/member-auth/me"),
@@ -607,4 +611,3 @@ export const api = {
   createTherapySession: (payload: CreateTherapySessionRequest) =>
     request<TherapySessionResponse>("/therapy/sessions", { method: "POST", body: json(payload) })
 };
-

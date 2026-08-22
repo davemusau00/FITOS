@@ -14,7 +14,7 @@ export function MemberPortalPage() {
 
   // Login form state for unauthenticated members
   const [identifier, setIdentifier] = useState("");
-  const [pin, setPin] = useState("");
+  const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<unknown>(null);
 
   // Check if member is logged in via dedicated member session
@@ -39,7 +39,7 @@ export function MemberPortalPage() {
   const services = useQuery({ queryKey: ["services"], queryFn: api.services });
 
   const loginMutation = useMutation({
-    mutationFn: () => api.memberLogin(identifier.trim(), pin.trim()),
+    mutationFn: () => api.memberLogin(identifier.trim(), password),
     onSuccess: () => {
       setLoginError(null);
       void queryClient.invalidateQueries({ queryKey: ["member-auth"] });
@@ -52,7 +52,7 @@ export function MemberPortalPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["member-auth"] });
       setIdentifier("");
-      setPin("");
+      setPassword("");
     }
   });
 
@@ -89,7 +89,7 @@ export function MemberPortalPage() {
               Member Portal Sign In
             </h1>
             <p className="muted" style={{ fontSize: "0.85rem" }}>
-              Enter your phone number, member number, or email with your PIN.
+              Enter your phone number, member number, or email with your password.
             </p>
           </div>
 
@@ -117,18 +117,18 @@ export function MemberPortalPage() {
               </div>
 
               <div className="form-group">
-                <label className="fitos-label" htmlFor="member-pin">
-                  Security PIN (Last 4 digits of phone)
+                <label className="fitos-label" htmlFor="member-password">
+                  Password
                 </label>
                 <input
                   className="fitos-control"
-                  id="member-pin"
-                  maxLength={10}
-                  onChange={(e) => setPin(e.target.value)}
-                  placeholder="e.g. 4444"
+                  id="member-password"
+                  autoComplete="current-password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password"
                   required
                   type="password"
-                  value={pin}
+                  value={password}
                 />
               </div>
 
@@ -142,7 +142,7 @@ export function MemberPortalPage() {
 
           <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
             <p className="muted" style={{ fontSize: "0.8rem" }}>
-              Default development demo PIN: <strong>last 4 digits of phone number</strong> or <strong>1234</strong>
+              Use the password created for your member account.
             </p>
           </div>
         </div>

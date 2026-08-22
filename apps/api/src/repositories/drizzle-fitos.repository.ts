@@ -13,8 +13,11 @@ import {
   leads,
   memberMemberships,
   members,
+  memberIdentities,
+  memberSessions,
   membershipPlans,
   paymentTransactions,
+  publicReservations,
   attendanceRecords,
   rolePermissions,
   roles,
@@ -1191,7 +1194,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       })
       .returning();
     if (!occurrence) throw new Error("Unable to create schedule occurrence.");
-    return this.occurrenceResponse(occurrence);
+    return (await this.withResourceWarnings([occurrence]))[0]!;
   }
 
   async findScheduleOccurrenceById(
@@ -1242,7 +1245,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .limit(Math.min(Math.max(filters.limit ?? 50, 1), 100) + 1);
     const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
     return {
-      data: rows.slice(0, limit).map((occurrence) => this.occurrenceResponse(occurrence)),
+      data: await this.withResourceWarnings(rows.slice(0, limit)),
       page: { hasMore: rows.length > limit, nextCursor: null }
     };
   }
@@ -3255,21 +3258,29 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   // ─── Member Portal & Auth ────────────────────────────────────────────────────
-  async findMemberByIdentifier(_identifier: string): Promise<import("@fitos/contracts").MemberResponse | null> {
+  async findMemberByIdentifier(identifier: string): Promise<import("@fitos/contracts").MemberResponse | null> {
     // Full Drizzle implementation deferred — members table mapping not yet in this layer.
-    return null;
+    const [row] = await this.db.select({ member: members, contact: contacts }).from(members).innerJoin(contacts, eq(members.contactId, contacts.id)).where(or(eq(contacts.email, identifier), eq(contacts.phoneE164, identifier), eq(members.memberNumber, identifier))).limit(1);
+    return row ? this.memberResponse(row.member, row.contact) : null;
   }
 
   async createMemberSession(input: { memberId: string; tokenHash: string; expiresAt: string }): Promise<{ id: string }> {
-    return { id: input.memberId + "-session" };
+    const [member] = await this.db.select().from(members).where(eq(members.id, input.memberId));
+    if (!member) throw new Error("Member not found.");
+    const [created] = await this.db.insert(memberSessions).values({ tenantId: member.tenantId, memberId: member.id, tokenHash: input.tokenHash, expiresAt: new Date(input.expiresAt) }).returning({ id: memberSessions.id });
+    if (!created) throw new Error("Unable to create member session.");
+    return created;
   }
 
-  async resolveMemberSession(_tokenHash: string, _currentTime: string): Promise<import("@fitos/contracts").MemberProfileResponse | null> {
-    return null;
+  async resolveMemberSession(tokenHash: string, currentTime: string): Promise<import("@fitos/contracts").MemberProfileResponse | null> {
+    const [row] = await this.db.select({ member: members, contact: contacts, tenant: tenants, branch: branches }).from(memberSessions).innerJoin(members, eq(memberSessions.memberId, members.id)).innerJoin(contacts, eq(members.contactId, contacts.id)).innerJoin(tenants, eq(members.tenantId, tenants.id)).leftJoin(branches, eq(members.homeBranchId, branches.id)).where(and(eq(memberSessions.tokenHash, tokenHash), isNull(memberSessions.revokedAt), gt(memberSessions.expiresAt, new Date(currentTime)))).limit(1);
+    if (!row) return null;
+    await this.db.update(memberSessions).set({ lastSeenAt: new Date(currentTime) }).where(eq(memberSessions.tokenHash, tokenHash));
+    return { id: row.member.id, tenantId: row.member.tenantId, tenantName: row.tenant.name, tenantSlug: row.tenant.slug, homeBranchId: row.member.homeBranchId, homeBranchName: row.branch?.name ?? null, memberNumber: row.member.memberNumber, firstName: row.contact.firstName, lastName: row.contact.lastName, phone: row.contact.phoneE164, email: row.contact.email, status: row.member.status as "active" | "inactive", joinedAt: row.member.joinedAt?.toISOString() ?? null, creditBalance: 0, activePlan: null };
   }
 
-  async revokeMemberSession(_tokenHash: string, _at: string): Promise<void> {
-    // no-op stub
+  async revokeMemberSession(tokenHash: string, at: string): Promise<void> {
+    await this.db.update(memberSessions).set({ revokedAt: new Date(at) }).where(eq(memberSessions.tokenHash, tokenHash));
   }
 
   async getMemberPortalOverview(_memberId: string): Promise<import("@fitos/contracts").MemberPortalOverviewResponse | null> {
@@ -4121,6 +4132,59 @@ export class DrizzleFitosRepository implements FitosRepository {
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString()
     }));
+  }
+
+  /** Resource conflicts are operator warnings; they never change booking capacity. */
+  private async withResourceWarnings(
+    occurrences: Array<typeof scheduleOccurrences.$inferSelect>
+  ): Promise<ScheduleOccurrenceResponse[]> {
+    if (!occurrences.length) return [];
+    const tenantId = occurrences[0]!.tenantId;
+    const serviceIds = [...new Set(occurrences.map((item) => item.serviceId))];
+    const requirements = await this.db.select().from(serviceEquipmentRequirements).where(and(
+      eq(serviceEquipmentRequirements.tenantId, tenantId), inArray(serviceEquipmentRequirements.serviceId, serviceIds)
+    ));
+    if (!requirements.length) return occurrences.map((item) => this.occurrenceResponse(item));
+    const poolIds = [...new Set(requirements.map((item) => item.poolId))];
+    const [pools, assets, tenantOccurrences] = await Promise.all([
+      this.db.select().from(equipmentPools).where(and(eq(equipmentPools.tenantId, tenantId), inArray(equipmentPools.id, poolIds))),
+      this.db.select().from(equipmentAssets).where(and(eq(equipmentAssets.tenantId, tenantId), inArray(equipmentAssets.poolId, poolIds))),
+      this.db.select().from(scheduleOccurrences).where(and(eq(scheduleOccurrences.tenantId, tenantId), eq(scheduleOccurrences.status, "scheduled")))
+    ]);
+    const reqByService = new Map<string, typeof requirements>();
+    for (const requirement of requirements) reqByService.set(requirement.serviceId, [...(reqByService.get(requirement.serviceId) ?? []), requirement]);
+    const poolById = new Map(pools.map((pool) => [pool.id, pool]));
+    return occurrences.map((occurrence) => {
+      const warnings = (reqByService.get(occurrence.serviceId) ?? []).map((requirement) => {
+        const pool = poolById.get(requirement.poolId);
+        const available = assets.filter((asset) => asset.poolId === requirement.poolId && asset.branchId === occurrence.branchId && asset.status === "available").length;
+        const overlappingDemand = tenantOccurrences.filter((other) => other.branchId === occurrence.branchId && other.id !== occurrence.id && other.startsAt < occurrence.endsAt && other.endsAt > occurrence.startsAt)
+          .flatMap((other) => reqByService.get(other.serviceId) ?? []).filter((otherRequirement) => otherRequirement.poolId === requirement.poolId)
+          .reduce((total, otherRequirement) => total + otherRequirement.quantityRequired, 0);
+        const shortage = Math.max(0, requirement.quantityRequired + overlappingDemand - available);
+        return { poolId: requirement.poolId, poolName: pool?.name ?? "Equipment pool", required: requirement.quantityRequired, available, overlappingDemand, shortage };
+      }).filter((warning) => warning.shortage > 0);
+      return { ...this.occurrenceResponse(occurrence), resourceWarnings: warnings };
+    });
+  }
+
+  async createPublicReservation(tenantSlug: string, input: import("@fitos/contracts").CreatePublicReservationRequest): Promise<import("@fitos/contracts").PublicReservationResponse> {
+    const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug));
+    if (!tenant) throw new Error("Tenant not found.");
+    const [created] = await this.db.insert(publicReservations).values({ tenantId: tenant.id, branchId: input.branchId ?? null, occurrenceId: input.occurrenceId ?? null, serviceId: input.serviceId ?? null, reservationType: input.reservationType, firstName: input.firstName, lastName: input.lastName ?? null, phone: input.phone ?? null, email: input.email ?? null, notes: input.notes ?? null }).returning();
+    if (!created) throw new Error("Unable to create reservation.");
+    return { id: created.id, tenantId: created.tenantId, branchId: created.branchId ?? undefined, occurrenceId: created.occurrenceId ?? undefined, serviceId: created.serviceId ?? undefined, reservationType: created.reservationType as any, firstName: created.firstName, lastName: created.lastName ?? undefined, phone: created.phone ?? undefined, email: created.email ?? undefined, notes: created.notes ?? undefined, status: created.status as any, createdAt: created.createdAt.toISOString() };
+  }
+
+  async setMemberPassword(memberId: string, passwordHash: string): Promise<void> {
+    const [member] = await this.db.select().from(members).where(eq(members.id, memberId));
+    if (!member) throw new Error("Member not found.");
+    await this.db.insert(memberIdentities).values({ tenantId: member.tenantId, memberId, passwordHash }).onConflictDoUpdate({ target: [memberIdentities.tenantId, memberIdentities.memberId], set: { passwordHash, passwordChangedAt: new Date(), updatedAt: new Date() } });
+  }
+
+  async verifyMemberPassword(memberId: string, password: string): Promise<boolean> {
+    const [identity] = await this.db.select().from(memberIdentities).where(eq(memberIdentities.memberId, memberId));
+    return identity ? new (await import("@fitos/auth")).ScryptPasswordHasher().verify(password, identity.passwordHash) : false;
   }
 
   async listServiceEquipmentRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {

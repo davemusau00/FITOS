@@ -427,9 +427,12 @@ export interface FitosRepository {
   listPublicCoaches(tenantSlug: string): Promise<PublicCoachResponse[]>;
   listPublicSchedule(tenantSlug: string, daysAhead?: number): Promise<PublicScheduleOccurrenceResponse[]>;
   createPublicLead(tenantSlug: string, input: CreatePublicLeadRequest): Promise<LeadResponse>;
+  createPublicReservation(tenantSlug: string, input: import("@fitos/contracts").CreatePublicReservationRequest): Promise<import("@fitos/contracts").PublicReservationResponse>;
 
   // Member Portal & Auth
   findMemberByIdentifier(identifier: string): Promise<MemberResponse | null>;
+  setMemberPassword(memberId: string, passwordHash: string): Promise<void>;
+  verifyMemberPassword(memberId: string, password: string): Promise<boolean>;
   createMemberSession(input: { memberId: string; tokenHash: string; expiresAt: string }): Promise<{ id: string }>;
   resolveMemberSession(tokenHash: string, currentTime: string): Promise<MemberProfileResponse | null>;
   revokeMemberSession(tokenHash: string, at: string): Promise<void>;

@@ -63,3 +63,22 @@ export interface CreatePublicLeadRequest {
   interest?: string | null;
   notes?: string | null;
 }
+
+export type PublicReservationType = "class" | "assessment" | "therapy" | "recovery" | "consultation" | "facility";
+export interface CreatePublicReservationRequest {
+  branchId?: string;
+  occurrenceId?: string;
+  serviceId?: string;
+  reservationType: PublicReservationType;
+  firstName: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+}
+export interface PublicReservationResponse extends CreatePublicReservationRequest {
+  id: string;
+  tenantId: string;
+  status: "requested" | "confirmed" | "cancelled";
+  createdAt: string;
+}

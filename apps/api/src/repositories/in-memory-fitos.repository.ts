@@ -220,6 +220,8 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly featureFlags = new Map<string, FeatureFlagResponse[]>();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
+  private readonly memberPasswords = new Map<string, string>();
+  private readonly publicReservations: import("@fitos/contracts").PublicReservationResponse[] = [];
   private readonly domainEvents: DomainEvent[] = [];
 
   async ping(): Promise<boolean> {
@@ -3656,6 +3658,14 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
   }
 
+  async createPublicReservation(tenantSlug: string, input: import("@fitos/contracts").CreatePublicReservationRequest): Promise<import("@fitos/contracts").PublicReservationResponse> {
+    const tenant = [...this.tenants.values()].find((t) => t.slug === tenantSlug);
+    if (!tenant) throw new Error("Tenant not found.");
+    const reservation = { id: randomUUID(), tenantId: tenant.id, ...input, status: "requested" as const, createdAt: now() };
+    this.publicReservations.push(reservation);
+    return reservation;
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
   // Member Portal Authentication & Self-Service
   // ───────────────────────────────────────────────────────────────────────────
@@ -3672,6 +3682,12 @@ export class InMemoryFitosRepository implements FitosRepository {
       }
     }
     return null;
+  }
+
+  async setMemberPassword(memberId: string, passwordHash: string): Promise<void> { this.memberPasswords.set(memberId, passwordHash); }
+  async verifyMemberPassword(memberId: string, password: string): Promise<boolean> {
+    const hash = this.memberPasswords.get(memberId);
+    return hash ? new (await import("@fitos/auth")).ScryptPasswordHasher().verify(password, hash) : false;
   }
 
   async createMemberSession(input: { memberId: string; tokenHash: string; expiresAt: string }): Promise<{ id: string }> {

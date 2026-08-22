@@ -1,13 +1,14 @@
 import { Body, Controller, Get, Inject, Post, UnauthorizedException } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
-import { hashSessionToken } from "@fitos/auth";
+import { hashSessionToken, ScryptPasswordHasher } from "@fitos/auth";
 import { Public } from "../../common/auth/public.decorator.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository } from "../../ports/fitos-repository.js";
 import type { FitosRequest } from "../../common/request-context/request-context.js";
 import { Req, Res } from "@nestjs/common";
 import type { Response } from "express";
+import { RateLimitService } from "../../common/auth/rate-limit.service.js";
 
 const SESSION_COOKIE = "fitos_member_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -15,7 +16,7 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const loginSchema = z
   .object({
     identifier: z.string().trim().min(1).max(255),
-    pin: z.string().trim().min(4).max(20)
+    password: z.string().min(10).max(255)
   })
   .strict();
 
@@ -24,23 +25,22 @@ const loginSchema = z
 @Controller("member-auth")
 export class MemberAuthController {
   constructor(
-    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
+    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository,
+    @Inject(RateLimitService) private readonly rateLimit: RateLimitService
   ) {}
 
   @Post("login")
   async login(
     @Body() body: unknown,
+    @Req() req: FitosRequest,
     @Res({ passthrough: true }) res: Response
   ) {
-    const { identifier, pin } = loginSchema.parse(body);
+    this.rateLimit.consume(`member-login:${req.ip ?? "unknown"}`, 10, 15 * 60 * 1_000);
+    const { identifier, password } = loginSchema.parse(body);
     const member = await this.repository.findMemberByIdentifier(identifier);
-    if (!member) throw new UnauthorizedException("Member not found.");
+    if (!member) throw new UnauthorizedException("Invalid credentials.");
 
-    // Simple PIN check: last 4 digits of phone or "1234" default for dev
-    const expectedPin =
-      member.contact.phone?.replace(/\D/g, "").slice(-4) ?? "1234";
-    if (pin !== expectedPin)
-      throw new UnauthorizedException("Incorrect PIN.");
+    if (!(await this.repository.verifyMemberPassword(member.id, password))) throw new UnauthorizedException("Invalid credentials.");
 
     const rawToken = crypto.randomUUID();
     const tokenHash = hashSessionToken(rawToken);
@@ -50,10 +50,22 @@ export class MemberAuthController {
     res.cookie(SESSION_COOKIE, rawToken, {
       httpOnly: true,
       sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
       maxAge: SESSION_TTL_MS
     });
 
     return { ok: true, memberId: member.id };
+  }
+
+  @Post("set-password")
+  async setPassword(@Body() body: unknown, @Req() req: FitosRequest) {
+    const { currentPassword, password } = z.object({ currentPassword: z.string().min(10).max(255), password: z.string().min(10).max(255) }).strict().parse(body);
+    const token = (req.cookies as Record<string, string>)?.[SESSION_COOKIE];
+    const profile = token ? await this.repository.resolveMemberSession(hashSessionToken(token), new Date().toISOString()) : null;
+    if (!profile || !(await this.repository.verifyMemberPassword(profile.id, currentPassword))) throw new UnauthorizedException("Invalid credentials.");
+    await this.repository.setMemberPassword(profile.id, await new ScryptPasswordHasher().hash(password));
+    await this.repository.revokeMemberSession(hashSessionToken(token!), new Date().toISOString());
+    return { ok: true };
   }
 
   @Post("logout")
@@ -63,7 +75,7 @@ export class MemberAuthController {
       const hash = hashSessionToken(token);
       await this.repository.revokeMemberSession(hash, new Date().toISOString());
     }
-    res.clearCookie(SESSION_COOKIE);
+    res.clearCookie(SESSION_COOKIE, { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production" });
     return { ok: true };
   }
 
