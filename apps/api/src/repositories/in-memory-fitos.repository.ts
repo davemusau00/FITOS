@@ -94,7 +94,12 @@ import type {
   InventoryMovementResponse,
   CreateInventoryMovementRequest,
   PurchaseOrderResponse,
-  CreatePurchaseOrderRequest
+  CreatePurchaseOrderRequest,
+  AssessmentDefinitionResponse,
+  CreateAssessmentDefinitionRequest,
+  AssessmentSessionResponse,
+  CreateAssessmentSessionRequest,
+  MemberPerformanceProfileResponse
 } from "@fitos/contracts";
 import { DEFAULT_ROLE_PERMISSIONS } from "@fitos/contracts";
 import { decodeCursor, encodeCursor } from "@fitos/shared";
@@ -200,6 +205,8 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly inventoryItems = new Map<string, InventoryItemResponse>();
   private readonly inventoryMovements: InventoryMovementResponse[] = [];
   private readonly purchaseOrders = new Map<string, PurchaseOrderResponse>();
+  private readonly assessmentDefinitions = new Map<string, AssessmentDefinitionResponse>();
+  private readonly assessmentSessions = new Map<string, AssessmentSessionResponse>();
   private readonly tenantSubscriptions = new Map<string, TenantSubscriptionResponse>();
   private readonly featureFlags = new Map<string, FeatureFlagResponse[]>();
   private readonly auditEvents: AuditEventResponse[] = [];
@@ -997,6 +1004,194 @@ export class InMemoryFitosRepository implements FitosRepository {
       createdAt: daysAgo(65),
       updatedAt: daysAgo(60)
     });
+
+    // ── Seed Assessment Definitions & Sessions (FITOS Assess) ──
+    const defInBody: AssessmentDefinitionResponse = {
+      id: randomUUID(),
+      tenantId,
+      name: "InBody 970 Multi-Frequency Full Body Composition Scan",
+      category: "body_composition",
+      description: "Direct Segmental Multi-frequency Bioelectrical Impedance Analysis measuring 6 frequencies across 5 body segments.",
+      deviceVendor: "lookinbody_inbody",
+      metrics: [
+        { key: "weightKg", name: "Total Body Weight", unit: "kg", optimalMin: 50, optimalMax: 95 },
+        { key: "skeletalMuscleMassKg", name: "Skeletal Muscle Mass", unit: "kg", optimalMin: 28, optimalMax: 45 },
+        { key: "bodyFatPercentage", name: "Percent Body Fat", unit: "%", optimalMin: 12, optimalMax: 22 },
+        { key: "visceralFatLevel", name: "Visceral Fat Level", unit: "lvl", optimalMin: 1, optimalMax: 9 },
+        { key: "ecwRatio", name: "Extracellular Water Ratio", unit: "ratio", optimalMin: 0.36, optimalMax: 0.39 },
+        { key: "bmrKcal", name: "Basal Metabolic Rate", unit: "kcal", optimalMin: 1400, optimalMax: 2200 }
+      ],
+      isActive: true,
+      createdAt: daysAgo(120),
+      updatedAt: daysAgo(120)
+    };
+
+    const defForce: AssessmentDefinitionResponse = {
+      id: randomUUID(),
+      tenantId,
+      name: "VALD ForceDecks Bilateral Countermovement Jump (CMJ)",
+      category: "neuromuscular_force",
+      description: "Dual force plate kinetic analysis for explosive power, eccentric deceleration, and neuromuscular asymmetry.",
+      deviceVendor: "vald_forcedecks",
+      metrics: [
+        { key: "jumpHeightCm", name: "Jump Height (Flight Time)", unit: "cm", optimalMin: 35, optimalMax: 65 },
+        { key: "peakPowerWatts", name: "Peak Concentric Power", unit: "W", optimalMin: 3500, optimalMax: 6000 },
+        { key: "rsiModified", name: "Reactive Strength Index (mRSI)", unit: "m/s", optimalMin: 0.45, optimalMax: 0.85 },
+        { key: "concentricAsymmetryPct", name: "Concentric Force Asymmetry", unit: "%", optimalMin: 0, optimalMax: 8 },
+        { key: "landingAsymmetryPct", name: "Landing Impact Asymmetry", unit: "%", optimalMin: 0, optimalMax: 10 }
+      ],
+      isActive: true,
+      createdAt: daysAgo(120),
+      updatedAt: daysAgo(120)
+    };
+
+    const defVO2: AssessmentDefinitionResponse = {
+      id: randomUUID(),
+      tenantId,
+      name: "VO2 Max & Metabolic Threshold Ramp Protocol",
+      category: "cardiovascular_vo2",
+      description: "Direct breath-by-breath gas exchange spirometry testing aerobic capacity and metabolic crossover points.",
+      deviceVendor: "cosmed_k5",
+      metrics: [
+        { key: "vo2MaxMlKgMin", name: "Maximal Oxygen Uptake (VO2 Max)", unit: "ml/kg/min", optimalMin: 42, optimalMax: 60 },
+        { key: "aerobicThresholdHr", name: "Aerobic Threshold (VT1)", unit: "bpm", optimalMin: 130, optimalMax: 155 },
+        { key: "anaerobicThresholdHr", name: "Anaerobic Threshold (VT2)", unit: "bpm", optimalMin: 165, optimalMax: 185 },
+        { key: "maxHeartRateBpm", name: "Peak Heart Rate", unit: "bpm", optimalMin: 175, optimalMax: 198 }
+      ],
+      isActive: true,
+      createdAt: daysAgo(120),
+      updatedAt: daysAgo(120)
+    };
+
+    this.assessmentDefinitions.set(defInBody.id, defInBody);
+    this.assessmentDefinitions.set(defForce.id, defForce);
+    this.assessmentDefinitions.set(defVO2.id, defVO2);
+
+    // Seed historical sessions for Amina Otieno (storedMembers[0]) and Daniel Wekesa (storedMembers[1])
+    const amina = storedMembers[0];
+    const daniel = storedMembers[1];
+    const aminaContact = amina ? this.contacts.get(amina.contactId) : null;
+    const aminaName = aminaContact ? `${aminaContact.firstName} ${aminaContact.lastName}` : "Amina Otieno";
+    const danielContact = daniel ? this.contacts.get(daniel.contactId) : null;
+    const danielName = danielContact ? `${danielContact.firstName} ${danielContact.lastName}` : "Daniel Wekesa";
+
+    if (amina) {
+      const sess1: AssessmentSessionResponse = {
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        branchName: "Kilimani",
+        memberId: amina.id,
+        memberName: aminaName,
+        assessorStaffId: trainerUserId ?? ownerTenantUserId,
+        assessorName: "Dr. Dennis Kiprop",
+        definitionId: defInBody.id,
+        definitionName: defInBody.name,
+        category: "body_composition",
+        status: "completed",
+        conductedAt: daysAgo(45),
+        summary: "Baseline InBody scan. Healthy ECW ratio, good muscle distribution with slight right-leg dominance.",
+        metrics: {
+          weightKg: 64.2,
+          skeletalMuscleMassKg: 27.8,
+          bodyFatPercentage: 21.4,
+          visceralFatLevel: 5,
+          ecwRatio: 0.375,
+          bmrKcal: 1485
+        },
+        notes: "Targeting +1.5kg SMM over 8-week periodized hyper-strength block.",
+        createdAt: daysAgo(45),
+        updatedAt: daysAgo(45)
+      };
+
+      const sess2: AssessmentSessionResponse = {
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        branchName: "Kilimani",
+        memberId: amina.id,
+        memberName: aminaName,
+        assessorStaffId: trainerUserId ?? ownerTenantUserId,
+        assessorName: "Dr. Dennis Kiprop",
+        definitionId: defInBody.id,
+        definitionName: defInBody.name,
+        category: "body_composition",
+        status: "completed",
+        conductedAt: daysAgo(5),
+        summary: "Follow-up scan showing +0.9kg muscle mass gain and 1.2% reduction in body fat.",
+        metrics: {
+          weightKg: 64.5,
+          skeletalMuscleMassKg: 28.7,
+          bodyFatPercentage: 20.2,
+          visceralFatLevel: 4,
+          ecwRatio: 0.372,
+          bmrKcal: 1512
+        },
+        notes: "Excellent progress on nutrition adherence and progressive overload.",
+        createdAt: daysAgo(5),
+        updatedAt: daysAgo(5)
+      };
+
+      const sessForce: AssessmentSessionResponse = {
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        branchName: "Kilimani",
+        memberId: amina.id,
+        memberName: aminaName,
+        assessorStaffId: trainerUserId ?? ownerTenantUserId,
+        assessorName: "Coach Peter Kamau",
+        definitionId: defForce.id,
+        definitionName: defForce.name,
+        category: "neuromuscular_force",
+        status: "completed",
+        conductedAt: daysAgo(10),
+        summary: "Bilateral CMJ force test. 38.2cm jump height with 3.8% concentric symmetry (within elite bounds).",
+        metrics: {
+          jumpHeightCm: 38.2,
+          peakPowerWatts: 4120,
+          rsiModified: 0.58,
+          concentricAsymmetryPct: 3.8,
+          landingAsymmetryPct: 5.2
+        },
+        notes: "Triple extension power is strong. Minimal left-right asymmetry on force absorption.",
+        createdAt: daysAgo(10),
+        updatedAt: daysAgo(10)
+      };
+
+      this.assessmentSessions.set(sess1.id, sess1);
+      this.assessmentSessions.set(sess2.id, sess2);
+      this.assessmentSessions.set(sessForce.id, sessForce);
+    }
+
+    if (daniel) {
+      const sessDaniel: AssessmentSessionResponse = {
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        branchName: "Kilimani",
+        memberId: daniel.id,
+        memberName: danielName,
+        assessorStaffId: trainerUserId ?? ownerTenantUserId,
+        assessorName: "Dr. Dennis Kiprop",
+        definitionId: defVO2.id,
+        definitionName: defVO2.name,
+        category: "cardiovascular_vo2",
+        status: "completed",
+        conductedAt: daysAgo(14),
+        summary: "Full ramp aerobic test. VO2 max reached 52.4 ml/kg/min with VT2 at 172 bpm.",
+        metrics: {
+          vo2MaxMlKgMin: 52.4,
+          aerobicThresholdHr: 144,
+          anaerobicThresholdHr: 172,
+          maxHeartRateBpm: 191
+        },
+        notes: "Threshold 2 is solid. Zone 2 training recommended to expand aerobic base.",
+        createdAt: daysAgo(14),
+        updatedAt: daysAgo(14)
+      };
+      this.assessmentSessions.set(sessDaniel.id, sessDaniel);
+    }
   }
 
   private async createDemoTenant(input: {
@@ -4245,5 +4440,96 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
     this.purchaseOrders.set(id, po);
     return po;
+  }
+
+  // ─── FITOS Assess & Performance Profiles ────────────────────────────────────
+  async listAssessmentDefinitions(scope: TenantScope): Promise<AssessmentDefinitionResponse[]> {
+    return [...this.assessmentDefinitions.values()].filter((d) => d.tenantId === scope.tenantId);
+  }
+
+  async createAssessmentDefinition(scope: TenantScope, input: CreateAssessmentDefinitionRequest): Promise<AssessmentDefinitionResponse> {
+    const id = randomUUID();
+    const ts = now();
+    const def: AssessmentDefinitionResponse = {
+      id,
+      tenantId: scope.tenantId,
+      name: input.name,
+      category: input.category,
+      description: input.description,
+      deviceVendor: input.deviceVendor,
+      metrics: input.metrics,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
+    };
+    this.assessmentDefinitions.set(id, def);
+    return def;
+  }
+
+  async listAssessmentSessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<AssessmentSessionResponse[]> {
+    return [...this.assessmentSessions.values()].filter((s) => {
+      if (s.tenantId !== scope.tenantId) return false;
+      if (memberId && s.memberId !== memberId) return false;
+      if (branchId && s.branchId !== branchId) return false;
+      if (scope.branchIds.length && !scope.branchIds.includes(s.branchId)) return false;
+      return true;
+    });
+  }
+
+  async createAssessmentSession(scope: TenantScope, input: CreateAssessmentSessionRequest, assessorStaffId: string): Promise<AssessmentSessionResponse> {
+    const def = this.assessmentDefinitions.get(input.definitionId);
+    if (!def || def.tenantId !== scope.tenantId) throw new Error("Assessment definition not found.");
+    const member = this.members.get(input.memberId);
+    if (!member || member.tenantId !== scope.tenantId) throw new Error("Member not found.");
+    const contact = this.contacts.get(member.contactId);
+    const branch = this.branches.get(input.branchId);
+    const assessor = this.users.get(assessorStaffId);
+
+    const id = randomUUID();
+    const ts = now();
+    const session: AssessmentSessionResponse = {
+      id,
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      branchName: branch?.name ?? null,
+      memberId: input.memberId,
+      memberName: contact ? `${contact.firstName} ${contact.lastName}` : "Member",
+      assessorStaffId,
+      assessorName: assessor?.displayName ?? "Staff Assessor",
+      definitionId: def.id,
+      definitionName: def.name,
+      category: def.category,
+      status: "completed",
+      conductedAt: input.conductedAt || ts,
+      summary: input.summary,
+      metrics: input.metrics,
+      notes: input.notes ?? null,
+      createdAt: ts,
+      updatedAt: ts
+    };
+    this.assessmentSessions.set(id, session);
+    return session;
+  }
+
+  async getMemberPerformanceProfile(scope: TenantScope, memberId: string): Promise<MemberPerformanceProfileResponse> {
+    const member = this.members.get(memberId);
+    if (!member || member.tenantId !== scope.tenantId) throw new Error("Member not found.");
+    const contact = this.contacts.get(member.contactId);
+    const memberName = contact ? `${contact.firstName} ${contact.lastName}` : "Member";
+
+    const sessions = [...this.assessmentSessions.values()]
+      .filter((s) => s.tenantId === scope.tenantId && s.memberId === memberId)
+      .sort((a, b) => new Date(a.conductedAt).getTime() - new Date(b.conductedAt).getTime());
+
+    const latestSession = sessions[sessions.length - 1];
+
+    return {
+      memberId,
+      memberName,
+      totalAssessments: sessions.length,
+      lastAssessedAt: latestSession?.conductedAt ?? null,
+      latestMetrics: latestSession?.metrics ?? {},
+      timeline: sessions
+    };
   }
 }

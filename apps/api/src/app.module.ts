@@ -39,6 +39,7 @@ import { AutomationsController } from "./modules/automations/automations.control
 import { PlatformController } from "./modules/platform/signup.controller.js";
 import { EquipmentController } from "./modules/equipment/equipment.controller.js";
 import { InventoryController } from "./modules/inventory/inventory.controller.js";
+import { AssessmentsController } from "./modules/assessments/assessments.controller.js";
 import { CoreService } from "./modules/core/core.service.js";
 
 class DevelopmentSeedService implements OnModuleInit {
@@ -91,7 +92,8 @@ const repositoryFactory = (): FitosRepository => {
     AutomationsController,
     PlatformController,
     EquipmentController,
-    InventoryController
+    InventoryController,
+    AssessmentsController
   ],
   providers: [
     { provide: FitosRepositoryToken, useFactory: repositoryFactory },

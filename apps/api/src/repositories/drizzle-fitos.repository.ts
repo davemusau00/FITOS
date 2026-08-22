@@ -3543,4 +3543,63 @@ export class DrizzleFitosRepository implements FitosRepository {
       updatedAt: now
     };
   }
+
+  // ─── FITOS Assess & Performance Profiles ────────────────────────────────────
+  async listAssessmentDefinitions(_scope: TenantScope): Promise<import("@fitos/contracts").AssessmentDefinitionResponse[]> {
+    return [];
+  }
+
+  async createAssessmentDefinition(scope: TenantScope, input: import("@fitos/contracts").CreateAssessmentDefinitionRequest): Promise<import("@fitos/contracts").AssessmentDefinitionResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      name: input.name,
+      category: input.category,
+      description: input.description,
+      deviceVendor: input.deviceVendor,
+      metrics: input.metrics,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
+  async listAssessmentSessions(_scope: TenantScope, _memberId?: string, _branchId?: string): Promise<import("@fitos/contracts").AssessmentSessionResponse[]> {
+    return [];
+  }
+
+  async createAssessmentSession(scope: TenantScope, input: import("@fitos/contracts").CreateAssessmentSessionRequest, assessorStaffId: string): Promise<import("@fitos/contracts").AssessmentSessionResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      memberId: input.memberId,
+      memberName: "Member",
+      assessorStaffId,
+      assessorName: "Staff Assessor",
+      definitionId: input.definitionId,
+      definitionName: "Assessment",
+      category: "body_composition",
+      status: "completed",
+      conductedAt: input.conductedAt || now,
+      summary: input.summary,
+      metrics: input.metrics,
+      notes: input.notes ?? null,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
+  async getMemberPerformanceProfile(_scope: TenantScope, memberId: string): Promise<import("@fitos/contracts").MemberPerformanceProfileResponse> {
+    return {
+      memberId,
+      memberName: "Member",
+      totalAssessments: 0,
+      lastAssessedAt: null,
+      latestMetrics: {},
+      timeline: []
+    };
+  }
 }
