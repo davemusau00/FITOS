@@ -572,6 +572,9 @@ export const api = {
       method: "POST",
       body: json(payload)
     }),
+  serviceInventoryBom: (serviceId: string) => request<import("@fitos/contracts").ServiceInventoryRequirement[]>(`/inventory/bom/${serviceId}`),
+  replaceServiceInventoryBom: (serviceId: string, requirements: import("@fitos/contracts").ServiceInventoryRequirement[]) => request<import("@fitos/contracts").ServiceInventoryRequirement[]>(`/inventory/bom/${serviceId}`, { method: "POST", body: json({ requirements }) }),
+  consumeInventory: (payload: { branchId: string; serviceId?: string; referenceType: string; referenceId: string; items: import("@fitos/contracts").ServiceInventoryRequirement[] }) => request<import("@fitos/contracts").InventoryConsumptionResponse[]>("/inventory/consume", { method: "POST", body: json(payload) }),
 
   // ── FITOS Assess & Performance Profiles ─────────────────────────────────
   assessmentDefinitions: () =>

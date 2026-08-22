@@ -82,6 +82,8 @@ const createPOSchema = z
     notes: z.string().trim().max(1000).optional()
   })
   .strict();
+const bomSchema = z.object({ requirements: z.array(z.object({ itemId: z.string().uuid(), quantityPerSession: z.number().int().positive() })).max(100) }).strict();
+const consumeSchema = z.object({ branchId: z.string().uuid(), serviceId: z.string().uuid().optional(), referenceType: z.string().trim().min(1).max(40), referenceId: z.string().uuid(), items: z.array(z.object({ itemId: z.string().uuid(), quantityPerSession: z.number().int().positive() })).min(1).max(100) }).strict();
 
 const toScope = (actor: RequestActor) => ({
   tenantId: actor.tenantId,
@@ -156,4 +158,16 @@ export class InventoryController {
     const input = createPOSchema.parse(body) as CreatePurchaseOrderRequest;
     return this.repository.createPurchaseOrder(toScope(actor), input);
   }
+
+  @Get("bom/:serviceId")
+  @RequirePermission("service:read")
+  listBom(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string) { return this.repository.listServiceInventoryRequirements(toScope(actor), z.string().uuid().parse(serviceId)); }
+
+  @Post("bom/:serviceId")
+  @RequirePermission("service:manage")
+  replaceBom(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string, @Body() body: unknown) { return this.repository.replaceServiceInventoryRequirements(toScope(actor), z.string().uuid().parse(serviceId), bomSchema.parse(body).requirements); }
+
+  @Post("consume")
+  @RequirePermission("tenant:settings")
+  consume(@Actor() actor: RequestActor, @Body() body: unknown) { return this.repository.consumeInventory(toScope(actor), consumeSchema.parse(body)); }
 }
