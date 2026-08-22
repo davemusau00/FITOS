@@ -40,6 +40,11 @@ export function TenantPublicPage() {
     queryFn: () => api.publicSchedule(slug, 14)
   });
 
+  const publishedSite = useQuery({
+    queryKey: ["public", slug, "site", "home"],
+    queryFn: () => api.publicSitePage(slug, "home")
+  });
+
   const leadMutation = useMutation({
     mutationFn: (data: typeof leadForm) => {
       return api.publicCreateLead(slug, {
@@ -61,6 +66,10 @@ export function TenantPublicPage() {
 
   const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const gymName = tenantSlug ? tenantSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) : "Apex Fitness Club";
+
+  if (publishedSite.data) {
+    return <PublishedSitePage site={publishedSite.data} gymName={tenantInfo.data?.name ?? gymName} />;
+  }
 
   const handleOpenTrial = (serviceName?: string) => {
     setLeadForm((prev) => ({ ...prev, interest: serviceName ?? "General Membership" }));
@@ -430,4 +439,8 @@ export function TenantPublicPage() {
       )}
     </div>
   );
+}
+
+function PublishedSitePage({ site, gymName }: { site: import("@fitos/contracts").SitePageResponse; gymName: string }) {
+  return <div className="public-portal"><header className="public-nav"><div className="public-nav__inner"><div className="public-nav__brand"><FitosLogo height={24} /><span className="public-nav__tenant-badge">{gymName}</span></div><Link className="fitos-button fitos-button--primary fitos-button--small" to="/member">Member Sign In</Link></div></header>{site.sections.map((section, index) => { const heading = typeof section.heading === "string" ? section.heading : ""; const body = typeof section.body === "string" ? section.body : ""; const label = typeof section.label === "string" ? section.label : "Learn more"; return <section className={section.type === "hero" ? "public-hero" : "public-section"} key={`${section.type}-${index}`}><div className="public-section__header"><span className="public-section__eyebrow">{section.type.replace(/_/g, " ").toUpperCase()}</span><h1 className="public-section__title">{heading || site.title}</h1>{body && <p className="public-section__desc">{body}</p>}{section.type === "cta" && <Link className="fitos-button fitos-button--primary" to="/member">{label}</Link>}</div></section>; })}<footer className="public-footer"><div className="public-footer__inner"><p>© {new Date().getFullYear()} {gymName}. Powered by FITOS OS.</p></div></footer></div>;
 }
