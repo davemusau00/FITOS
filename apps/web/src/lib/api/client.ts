@@ -83,7 +83,13 @@ import type {
   CreateAssessmentDefinitionRequest,
   AssessmentSessionResponse,
   CreateAssessmentSessionRequest,
-  MemberPerformanceProfileResponse
+  MemberPerformanceProfileResponse,
+  // Therapy
+  TherapyModalityResponse,
+  TherapyProtocolResponse,
+  CreateTherapyProtocolRequest,
+  TherapySessionResponse,
+  CreateTherapySessionRequest
 } from "@fitos/contracts";
 
 
@@ -562,7 +568,24 @@ export const api = {
       body: json(payload)
     }),
   memberPerformanceProfile: (memberId: string) =>
-    request<MemberPerformanceProfileResponse>(`/assessments/members/${memberId}/profile`)
+    request<MemberPerformanceProfileResponse>(`/assessments/members/${memberId}/profile`),
+
+  // ── FITOS Therapy & Recovery ─────────────────────────────────────────────
+  therapyModalities: () =>
+    request<TherapyModalityResponse[]>("/therapy/modalities"),
+  therapyProtocols: (modalityCode?: string) =>
+    request<TherapyProtocolResponse[]>(`/therapy/protocols${modalityCode ? `?modalityCode=${modalityCode}` : ""}`),
+  createTherapyProtocol: (payload: CreateTherapyProtocolRequest) =>
+    request<TherapyProtocolResponse>("/therapy/protocols", { method: "POST", body: json(payload) }),
+  therapySessions: (memberId?: string, branchId?: string) => {
+    const params = new URLSearchParams();
+    if (memberId) params.set("memberId", memberId);
+    if (branchId) params.set("branchId", branchId);
+    const qs = params.toString();
+    return request<TherapySessionResponse[]>(`/therapy/sessions${qs ? `?${qs}` : ""}`);
+  },
+  createTherapySession: (payload: CreateTherapySessionRequest) =>
+    request<TherapySessionResponse>("/therapy/sessions", { method: "POST", body: json(payload) })
 };
 
 

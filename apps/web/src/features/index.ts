@@ -30,4 +30,5 @@ export * from "./member-portal/MemberPortalPage";
 export { default as EquipmentPage } from "./equipment/EquipmentPage";
 export { default as InventoryPage } from "./inventory/InventoryPage";
 export { default as AssessmentsPage } from "./assessments/AssessmentsPage";
+export { default as TherapyPage } from "./therapy/TherapyPage";
 export * from "./shared";

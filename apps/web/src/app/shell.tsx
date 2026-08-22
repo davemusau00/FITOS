@@ -40,6 +40,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: "/app/members", label: "Members", icon: "users", permission: "member:read" },
       { to: "/app/assessments", label: "FITOS Assess", icon: "spark", permission: "assessment:read" },
+      { to: "/app/therapy", label: "FITOS Therapy", icon: "spark", permission: "service:read" },
       { to: "/app/memberships", label: "Memberships", icon: "shield", permission: "membership:read" }
     ]
   },

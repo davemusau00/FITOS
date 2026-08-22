@@ -33,6 +33,7 @@ import {
   EquipmentPage,
   InventoryPage,
   AssessmentsPage,
+  TherapyPage,
   AccountSubscriptionPage
 } from "../features";
 
@@ -84,6 +85,7 @@ export function AppRouter() {
           <Route element={<EquipmentPage />} path="equipment" />
           <Route element={<InventoryPage />} path="inventory" />
           <Route element={<AssessmentsPage />} path="assessments" />
+          <Route element={<TherapyPage />} path="therapy" />
 
           {/* Settings */}
           <Route element={<SettingsPage />} path="settings" />
