@@ -67,6 +67,8 @@ import type {
   FeatureFlagResponse,
   ImplementationInquiryDraft,
   ImplementationInquiryResponse,
+  ImplementationInquiryStatus,
+  TenantSeedManifest,
   // Equipment
   EquipmentAssetResponse,
   CreateEquipmentAssetRequest,
@@ -490,6 +492,10 @@ export const api = {
   featureFlags: () => request<FeatureFlagResponse[]>("/platform/feature-flags"),
   saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) => request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", { method: "POST", body: json(payload) }),
   submitImplementationInquiry: (payload: ImplementationInquiryDraft) => request<ImplementationInquiryResponse>("/platform/implementation-inquiries/submit", { method: "POST", body: json(payload) }),
+  implementationInquiries: (status?: ImplementationInquiryStatus) => request<ImplementationInquiryResponse[]>(`/platform/implementation-inquiries${status ? `?status=${status}` : ""}`),
+  implementationInquiry: (id: string) => request<ImplementationInquiryResponse | null>(`/platform/implementation-inquiries/${id}`),
+  updateImplementationInquiryStatus: (id: string, status: ImplementationInquiryStatus) => request<ImplementationInquiryResponse | null>(`/platform/implementation-inquiries/${id}/status`, { method: "PATCH", body: json({ status }) }),
+  implementationSeedManifest: (id: string) => request<TenantSeedManifest | null>(`/platform/implementation-inquiries/${id}/seed-manifest`),
 
   // ── Equipment & Resource Scheduling ─────────────────────────────────────
   equipmentAssets: (branchId?: string) =>

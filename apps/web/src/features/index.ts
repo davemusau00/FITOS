@@ -28,6 +28,7 @@ export * from "./onboarding/OnboardingPage";
 export * from "./public/TenantPublicPage";
 export * from "./public/FitosLandingPage";
 export * from "./public/ConfigureFitosPage";
+export * from "./platform/ImplementationInquiriesPage";
 export * from "./member-portal/MemberPortalPage";
 export { default as EquipmentPage } from "./equipment/EquipmentPage";
 export { default as InventoryPage } from "./inventory/InventoryPage";
