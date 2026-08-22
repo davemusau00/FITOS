@@ -39,6 +39,7 @@ import {
   ,ConfigureFitosPage
   ,ImplementationInquiriesPage
   ,ImplementationInquiryDetailPage
+  ,SitesPage
 } from "../features";
 
 function ProtectedRoute() {
@@ -103,6 +104,7 @@ export function AppRouter() {
           <Route element={<AccountSubscriptionPage />} path="settings/subscription" />
           <Route element={<ImplementationInquiriesPage />} path="platform/inquiries" />
           <Route element={<ImplementationInquiryDetailPage />} path="platform/inquiries/:inquiryId" />
+          <Route element={<SitesPage />} path="sites" />
         </Route>
         <Route element={<OnboardingPage />} path="/onboarding" />
         <Route element={<MemberPortalPage />} path="/member/*" />

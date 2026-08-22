@@ -223,6 +223,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly memberPasswords = new Map<string, string>();
   private readonly publicReservations: import("@fitos/contracts").PublicReservationResponse[] = [];
   private readonly implementationInquiries = new Map<string, import("@fitos/contracts").ImplementationInquiryResponse>();
+  private readonly sitePages = new Map<string, import("@fitos/contracts").SitePageResponse>();
   private readonly domainEvents: DomainEvent[] = [];
 
   async ping(): Promise<boolean> {
@@ -4338,6 +4339,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     const item = this.implementationInquiries.get(id); if (!item) return null; const payload = item.payload as Record<string, any>;
     return { schemaVersion: 1, sourceInquiryId: id, generatedAt: now(), business: { contactName: item.contactName, businessName: item.businessName, country: item.country, businessType: item.businessType }, branches: payload.locations ?? [], services: payload.services ?? [], team: payload.team ?? [], equipment: payload.equipment ?? [], assessments: payload.assessments ?? [], therapy: payload.therapy ?? [], inventory: payload.inventory ?? [], website: payload.website ?? {}, customRequirements: payload.customRequirements ?? [] };
   }
+
+  async listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]> { return [...this.sitePages.values()].filter((page) => page.tenantId === scope.tenantId); }
+  async saveSitePage(scope: TenantScope, input: import("@fitos/contracts").SaveSitePageRequest): Promise<import("@fitos/contracts").SitePageResponse> { const existing = [...this.sitePages.values()].find((page) => page.tenantId === scope.tenantId && page.slug === input.slug); const ts = now(); const page = { id: existing?.id ?? randomUUID(), tenantId: scope.tenantId, slug: input.slug, title: input.title, status: "draft" as const, sections: input.sections, seo: input.seo ?? {}, version: (existing?.version ?? 0) + 1, publishedAt: existing?.publishedAt ?? null, createdAt: existing?.createdAt ?? ts, updatedAt: ts }; this.sitePages.set(page.id, page); return page; }
+  async publishSitePage(scope: TenantScope, pageId: string): Promise<import("@fitos/contracts").SitePageResponse | null> { const page = this.sitePages.get(pageId); if (!page || page.tenantId !== scope.tenantId) return null; const published = { ...page, status: "published" as const, publishedAt: now(), updatedAt: now() }; this.sitePages.set(pageId, published); return published; }
+  async getPublicSitePage(tenantSlug: string, pageSlug = "home"): Promise<import("@fitos/contracts").SitePageResponse | null> { const tenant = [...this.tenants.values()].find((item) => item.slug === tenantSlug); return tenant ? [...this.sitePages.values()].find((page) => page.tenantId === tenant.id && page.slug === pageSlug && page.status === "published") ?? null : null; }
 
   // ─── Equipment & Resource Scheduling ─────────────────────────────────────────
   async listEquipmentAssets(scope: TenantScope, branchId?: string): Promise<EquipmentAssetResponse[]> {

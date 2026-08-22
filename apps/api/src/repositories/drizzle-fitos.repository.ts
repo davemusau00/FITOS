@@ -28,6 +28,7 @@ import {
   scheduleOccurrences,
   scheduleTemplates,
   sessions,
+  sitePages,
   services,
   tenantUsers,
   tenants,
@@ -3438,6 +3439,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     ];
   }
 
+  private sitePageResponse(page: typeof sitePages.$inferSelect): import("@fitos/contracts").SitePageResponse {
+    return { id: page.id, tenantId: page.tenantId, slug: page.slug, title: page.title, status: page.status as any, sections: page.sectionsJson as any, seo: page.seoJson as Record<string, unknown>, version: page.version, publishedAt: page.publishedAt?.toISOString() ?? null, createdAt: page.createdAt.toISOString(), updatedAt: page.updatedAt.toISOString() };
+  }
+
   async saveImplementationInquiry(input: import("@fitos/contracts").ImplementationInquiryDraft, submit: boolean): Promise<import("@fitos/contracts").ImplementationInquiryResponse> {
     const current = new Date();
     const values = { contactName: input.contactName ?? null, businessName: input.businessName ?? null, email: input.email ?? null, phone: input.phone ?? null, country: input.country ?? null, businessType: input.businessType ?? null, status: submit ? "submitted" : "draft", submittedAt: submit ? current : null, updatedAt: current };
@@ -3446,6 +3451,14 @@ export class DrizzleFitosRepository implements FitosRepository {
     await this.db.insert(implementationInquiryPayloads).values({ inquiryId: inquiry.id, schemaVersion: 1, payloadJson: input.payload, updatedAt: current }).onConflictDoUpdate({ target: implementationInquiryPayloads.inquiryId, set: { payloadJson: input.payload, updatedAt: current } });
     return { id: inquiry.id, contactName: inquiry.contactName ?? undefined, businessName: inquiry.businessName ?? undefined, email: inquiry.email ?? undefined, phone: inquiry.phone ?? undefined, country: inquiry.country ?? undefined, businessType: inquiry.businessType ?? undefined, payload: input.payload, status: inquiry.status as any, schemaVersion: 1, submittedAt: inquiry.submittedAt?.toISOString() ?? null, createdAt: inquiry.createdAt.toISOString(), updatedAt: inquiry.updatedAt.toISOString() };
   }
+
+  async listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]> { const rows = await this.db.select().from(sitePages).where(eq(sitePages.tenantId, scope.tenantId)).orderBy(sitePages.slug); return rows.map((page) => this.sitePageResponse(page)); }
+  async saveSitePage(scope: TenantScope, input: import("@fitos/contracts").SaveSitePageRequest): Promise<import("@fitos/contracts").SitePageResponse> {
+    const [page] = await this.db.insert(sitePages).values({ tenantId: scope.tenantId, slug: input.slug, title: input.title, sectionsJson: input.sections, seoJson: input.seo ?? {} }).onConflictDoUpdate({ target: [sitePages.tenantId, sitePages.slug], set: { title: input.title, sectionsJson: input.sections, seoJson: input.seo ?? {}, status: "draft", version: sql`${sitePages.version} + 1`, updatedAt: new Date() } }).returning();
+    if (!page) throw new Error("Unable to save site page."); return this.sitePageResponse(page);
+  }
+  async publishSitePage(scope: TenantScope, pageId: string): Promise<import("@fitos/contracts").SitePageResponse | null> { const [page] = await this.db.update(sitePages).set({ status: "published", publishedAt: new Date(), updatedAt: new Date() }).where(and(eq(sitePages.tenantId, scope.tenantId), eq(sitePages.id, pageId))).returning(); return page ? this.sitePageResponse(page) : null; }
+  async getPublicSitePage(tenantSlug: string, pageSlug = "home"): Promise<import("@fitos/contracts").SitePageResponse | null> { const [row] = await this.db.select({ page: sitePages }).from(sitePages).innerJoin(tenants, eq(sitePages.tenantId, tenants.id)).where(and(eq(tenants.slug, tenantSlug), eq(sitePages.slug, pageSlug), eq(sitePages.status, "published"))).limit(1); return row ? this.sitePageResponse(row.page) : null; }
 
   async listImplementationInquiries(status?: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse[]> {
     const rows = await this.db.select({ inquiry: implementationInquiries, payload: implementationInquiryPayloads }).from(implementationInquiries).leftJoin(implementationInquiryPayloads, eq(implementationInquiryPayloads.inquiryId, implementationInquiries.id)).where(status ? eq(implementationInquiries.status, status) : undefined).orderBy(desc(implementationInquiries.updatedAt));

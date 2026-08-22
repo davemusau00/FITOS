@@ -461,6 +461,10 @@ export interface FitosRepository {
   getImplementationInquiry(id: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null>;
   updateImplementationInquiryStatus(id: string, status: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null>;
   buildTenantSeedManifest(id: string): Promise<import("@fitos/contracts").TenantSeedManifest | null>;
+  listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]>;
+  saveSitePage(scope: TenantScope, input: import("@fitos/contracts").SaveSitePageRequest): Promise<import("@fitos/contracts").SitePageResponse>;
+  publishSitePage(scope: TenantScope, pageId: string): Promise<import("@fitos/contracts").SitePageResponse | null>;
+  getPublicSitePage(tenantSlug: string, pageSlug?: string): Promise<import("@fitos/contracts").SitePageResponse | null>;
 
   // Equipment & Resource Scheduling
   listEquipmentAssets(scope: TenantScope, branchId?: string): Promise<EquipmentAssetResponse[]>;

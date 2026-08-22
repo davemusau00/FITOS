@@ -58,6 +58,13 @@ export class PublicController {
     return this.repository.listPublicSchedule(slug, daysAhead);
   }
 
+  @Get("site/:pageSlug")
+  async sitePage(@Param("tenantSlug") slug: string, @Param("pageSlug") pageSlug: string) {
+    const page = await this.repository.getPublicSitePage(slug, pageSlug);
+    if (!page) throw new NotFoundException("Published page not found.");
+    return page;
+  }
+
   @Post("leads")
   createLead(@Param("tenantSlug") slug: string, @Body() body: unknown, @Req() req: FitosRequest) {
     this.rateLimit.consume(`public-lead:${slug}:${req.ip ?? "unknown"}`, 10, 60 * 60 * 1_000);

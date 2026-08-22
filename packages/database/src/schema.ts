@@ -1238,6 +1238,10 @@ export const therapySessions = pgTable(
   ]
 );
 
+export const sitePages = pgTable("site_pages", {
+  id: uuid("id").defaultRandom().primaryKey(), tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }), slug: varchar("slug", { length: 120 }).notNull(), title: varchar("title", { length: 160 }).notNull(), status: varchar("status", { length: 20 }).notNull().default("draft"), sectionsJson: jsonb("sections_json").notNull().default(sql`'[]'::jsonb`), seoJson: jsonb("seo_json").notNull().default(sql`'{}'::jsonb`), version: integer("version").notNull().default(1), publishedAt: timestamp("published_at", { withTimezone: true }), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [uniqueIndex("uq_site_pages_tenant_slug").on(table.tenantId, table.slug)]);
+
 export const implementationInquiries = pgTable("implementation_inquiries", {
   id: uuid("id").defaultRandom().primaryKey(),
   status: varchar("status", { length: 40 }).notNull().default("draft"),
@@ -1262,6 +1266,7 @@ export const implementationInquiryPayloads = pgTable("implementation_inquiry_pay
 
 export const schema = {
   tenants,
+  sitePages,
   implementationInquiries,
   implementationInquiryPayloads,
   branches,

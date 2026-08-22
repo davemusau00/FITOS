@@ -69,6 +69,8 @@ import type {
   ImplementationInquiryResponse,
   ImplementationInquiryStatus,
   TenantSeedManifest,
+  SitePageResponse,
+  SaveSitePageRequest,
   // Equipment
   EquipmentAssetResponse,
   CreateEquipmentAssetRequest,
@@ -496,6 +498,10 @@ export const api = {
   implementationInquiry: (id: string) => request<ImplementationInquiryResponse | null>(`/platform/implementation-inquiries/${id}`),
   updateImplementationInquiryStatus: (id: string, status: ImplementationInquiryStatus) => request<ImplementationInquiryResponse | null>(`/platform/implementation-inquiries/${id}/status`, { method: "PATCH", body: json({ status }) }),
   implementationSeedManifest: (id: string) => request<TenantSeedManifest | null>(`/platform/implementation-inquiries/${id}/seed-manifest`),
+  sitePages: () => request<SitePageResponse[]>("/sites/pages"),
+  saveSitePage: (payload: SaveSitePageRequest) => request<SitePageResponse>("/sites/pages", { method: "POST", body: json(payload) }),
+  publishSitePage: (id: string) => request<SitePageResponse>(`/sites/pages/${id}/publish`, { method: "POST", body: json({}) }),
+  publicSitePage: (tenantSlug: string, pageSlug = "home") => request<SitePageResponse>(`/public/${encodeURIComponent(tenantSlug)}/site/${encodeURIComponent(pageSlug)}`),
 
   // ── Equipment & Resource Scheduling ─────────────────────────────────────
   equipmentAssets: (branchId?: string) =>

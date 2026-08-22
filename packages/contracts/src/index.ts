@@ -13,6 +13,7 @@ export * from "./memberships.js";
 export * from "./payments.js";
 export * from "./permissions.js";
 export * from "./platform.js";
+export * from "./sites.js";
 export * from "./equipment.js";
 export * from "./inventory.js";
 export * from "./assessments.js";
