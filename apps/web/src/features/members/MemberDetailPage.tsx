@@ -34,7 +34,9 @@ type Tab =
   | "credits"
   | "timeline"
   | "followups"
-  | "performance";
+  | "performance"
+  | "assessments"
+  | "therapy";
 
 type MemberFormValues = {
   firstName: string;
@@ -240,7 +242,9 @@ export function MemberDetailPage() {
     { id: "bookings", label: "Bookings", icon: "calendar" },
     { id: "attendance", label: "Attendance", icon: "check" },
     { id: "credits", label: "Credits & Payments", icon: "spark" },
-    { id: "performance", label: "Performance & Therapy", icon: "spark" },
+    { id: "performance", label: "Performance", icon: "spark" },
+    { id: "assessments", label: "Assessments", icon: "spark" },
+    { id: "therapy", label: "Therapy", icon: "spark" },
     { id: "timeline", label: "Activity", icon: "dashboard" },
     { id: "followups", label: "CRM Follow-ups", icon: "users" }
   ];
@@ -665,8 +669,8 @@ export function MemberDetailPage() {
         )}
 
         {/* ── PERFORMANCE & THERAPY TAB ── */}
-        {activeTab === "performance" && memberId && (
-          <PerformanceProfileTab memberId={memberId} />
+        {(activeTab === "performance" || activeTab === "assessments" || activeTab === "therapy") && memberId && (
+          <PerformanceProfileTab memberId={memberId} section={activeTab} />
         )}
       </div>
 
@@ -965,7 +969,7 @@ function ActivateMembershipModal({
 }
 
 // ── Performance & Therapy Inline Tab ────────────────────────────────────────
-function PerformanceProfileTab({ memberId }: { memberId: string }) {
+function PerformanceProfileTab({ memberId, section }: { memberId: string; section: "performance" | "assessments" | "therapy" }) {
   const profileQ = useQuery({
     queryKey: ["member-performance", memberId],
     queryFn: () => api.memberPerformanceProfile(memberId),
@@ -984,7 +988,7 @@ function PerformanceProfileTab({ memberId }: { memberId: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       {/* ── Performance Profile Summary ── */}
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "1.25rem" }}>
+      {section !== "therapy" && <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "1.25rem" }}>
         <h3 style={{ fontSize: ".9rem", fontWeight: 800, color: "white", marginBottom: ".75rem" }}>
           ⚡ Performance Profile
         </h3>
@@ -1051,10 +1055,10 @@ function PerformanceProfileTab({ memberId }: { memberId: string }) {
         ) : (
           <p style={{ color: "rgba(255,255,255,0.35)", fontSize: ".85rem" }}>No performance data available. Complete an assessment scan first.</p>
         )}
-      </div>
+      </div>}
 
       {/* ── Therapy Sessions ── */}
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "1.25rem" }}>
+      {section !== "performance" && <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "1.25rem" }}>
         <h3 style={{ fontSize: ".9rem", fontWeight: 800, color: "white", marginBottom: ".75rem" }}>
           🛠 Therapy & Recovery Sessions
         </h3>
@@ -1087,7 +1091,7 @@ function PerformanceProfileTab({ memberId }: { memberId: string }) {
             })}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

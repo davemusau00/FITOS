@@ -12,6 +12,8 @@ import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { IdempotencyService } from "../../common/idempotency/idempotency.service.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
 import { CoreService } from "../core/core.service.js";
+import { FitosRepositoryToken } from "../../ports/tokens.js";
+import type { FitosRepository } from "../../ports/fitos-repository.js";
 
 const serviceTypes = ["class", "appointment", "facility", "access"] as const;
 const moneySchema = z
@@ -71,13 +73,15 @@ const updateRoomSchema = z
     isActive: z.boolean().optional()
   })
   .strict();
+const equipmentRequirementsSchema = z.object({ requirements: z.array(z.object({ poolId: z.string().uuid(), quantityRequired: z.number().int().min(1).max(1000) })).max(30) }).strict();
 
 @ApiTags("services")
 @Controller()
 export class ServicesController {
   constructor(
     @Inject(CoreService) private readonly core: CoreService,
-    @Inject(IdempotencyService) private readonly idempotency: IdempotencyService
+    @Inject(IdempotencyService) private readonly idempotency: IdempotencyService,
+    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
   ) {}
 
   @Get("services")
@@ -109,6 +113,19 @@ export class ServicesController {
   @RequirePermission("service:read")
   getService(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string) {
     return this.core.getService(actor, z.string().uuid().parse(serviceId));
+  }
+
+  @Get("services/:serviceId/equipment-requirements")
+  @RequirePermission("service:read")
+  listEquipmentRequirements(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string) {
+    return this.repository.listServiceEquipmentRequirements({ tenantId: actor.tenantId, tenantUserId: actor.tenantUserId, userId: actor.userId, branchIds: actor.branchIds }, z.string().uuid().parse(serviceId));
+  }
+
+  @Post("services/:serviceId/equipment-requirements")
+  @RequirePermission("service:manage")
+  replaceEquipmentRequirements(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string, @Body() body: unknown) {
+    const input = equipmentRequirementsSchema.parse(body);
+    return this.repository.replaceServiceEquipmentRequirements({ tenantId: actor.tenantId, tenantUserId: actor.tenantUserId, userId: actor.userId, branchIds: actor.branchIds }, z.string().uuid().parse(serviceId), input.requirements);
   }
 
   @Patch("services/:serviceId")

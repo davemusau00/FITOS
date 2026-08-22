@@ -21,6 +21,7 @@ import type {
   ServiceResponse,
   CreateServiceRequest,
   UpdateServiceRequest,
+  ServiceEquipmentRequirement,
   RoomResponse,
   CreateRoomRequest,
   UpdateRoomRequest,
@@ -86,6 +87,7 @@ import type {
   MemberPerformanceProfileResponse,
   // Therapy
   TherapyModalityResponse,
+  CreateTherapyModalityRequest,
   TherapyProtocolResponse,
   CreateTherapyProtocolRequest,
   TherapySessionResponse,
@@ -512,6 +514,10 @@ export const api = {
       method: "POST",
       body: json(payload)
     }),
+  serviceEquipmentRequirements: (serviceId: string) =>
+    request<ServiceEquipmentRequirement[]>(`/services/${serviceId}/equipment-requirements`),
+  replaceServiceEquipmentRequirements: (serviceId: string, requirements: ServiceEquipmentRequirement[]) =>
+    request<ServiceEquipmentRequirement[]>(`/services/${serviceId}/equipment-requirements`, { method: "POST", body: json({ requirements }) }),
 
   // ── Inventory & Consumables ─────────────────────────────────────────────
   inventoryItems: (branchId?: string) =>
@@ -585,6 +591,8 @@ export const api = {
   // ── FITOS Therapy & Recovery ─────────────────────────────────────────────
   therapyModalities: () =>
     request<TherapyModalityResponse[]>("/therapy/modalities"),
+  createTherapyModality: (payload: CreateTherapyModalityRequest) =>
+    request<TherapyModalityResponse>("/therapy/modalities", { method: "POST", body: json(payload) }),
   therapyProtocols: (modalityCode?: string) =>
     request<TherapyProtocolResponse[]>(`/therapy/protocols${modalityCode ? `?modalityCode=${modalityCode}` : ""}`),
   createTherapyProtocol: (payload: CreateTherapyProtocolRequest) =>
@@ -599,5 +607,4 @@ export const api = {
   createTherapySession: (payload: CreateTherapySessionRequest) =>
     request<TherapySessionResponse>("/therapy/sessions", { method: "POST", body: json(payload) })
 };
-
 

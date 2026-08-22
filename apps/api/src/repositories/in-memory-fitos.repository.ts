@@ -207,6 +207,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly equipmentAssets = new Map<string, EquipmentAssetResponse>();
   private readonly equipmentPools = new Map<string, EquipmentPoolResponse>();
   private readonly equipmentMaintenance = new Map<string, EquipmentMaintenanceRecordResponse>();
+  private readonly serviceEquipmentRequirements = new Map<string, import("@fitos/contracts").ServiceEquipmentRequirement[]>();
   private readonly inventoryItems = new Map<string, InventoryItemResponse>();
   private readonly inventoryMovements: InventoryMovementResponse[] = [];
   private readonly purchaseOrders = new Map<string, PurchaseOrderResponse>();
@@ -2385,21 +2386,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     const service = this.services.get(occurrence.serviceId);
     if (!service || service.tenantId !== scope.tenantId) throw new Error("Service unavailable.");
 
-    const branchAssets = [...this.equipmentAssets.values()].filter(
-      (a) => a.tenantId === scope.tenantId && a.branchId === occurrence.branchId
-    );
-    const serviceMatchingAssets = branchAssets.filter(
-      (a) => a.category.toLowerCase() === (service.category ?? "").toLowerCase()
-    );
-    let effectiveCapacity = occurrence.capacity;
-    if (serviceMatchingAssets.length > 0) {
-      const operationalCount = serviceMatchingAssets.filter(
-        (a) => a.status === "available" || a.status === "operational"
-      ).length;
-      effectiveCapacity = Math.min(occurrence.capacity, operationalCount);
-    }
-
-    if (activeBookings.length >= effectiveCapacity) throw new Error("Occurrence is full.");
+    if (activeBookings.length >= occurrence.capacity) throw new Error("Occurrence is full.");
     const creditsRequired = service.creditsRequired;
     const eligibleMemberships = [...this.memberMemberships.values()]
       .filter(
@@ -4458,6 +4445,20 @@ export class InMemoryFitosRepository implements FitosRepository {
     return record;
   }
 
+  async listServiceEquipmentRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
+    const service = this.services.get(serviceId);
+    if (!service || service.tenantId !== scope.tenantId) return [];
+    return this.serviceEquipmentRequirements.get(serviceId) ?? [];
+  }
+
+  async replaceServiceEquipmentRequirements(scope: TenantScope, serviceId: string, requirements: import("@fitos/contracts").ServiceEquipmentRequirement[]): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
+    const service = this.services.get(serviceId);
+    if (!service || service.tenantId !== scope.tenantId) throw new Error("Service not found.");
+    for (const r of requirements) { const pool = this.equipmentPools.get(r.poolId); if (!pool || pool.tenantId !== scope.tenantId || (service.branchId && pool.branchId !== service.branchId)) throw new Error("Equipment pool is not available for this service."); }
+    this.serviceEquipmentRequirements.set(serviceId, requirements);
+    return requirements;
+  }
+
   // ─── Inventory & Consumables ────────────────────────────────────────────────
   async listInventoryItems(scope: TenantScope, branchId?: string): Promise<InventoryItemResponse[]> {
     return [...this.inventoryItems.values()].filter((item) => {
@@ -4683,6 +4684,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       conductedAt: input.conductedAt || ts,
       summary: input.summary,
       metrics: input.metrics,
+      provenance: input.provenance ?? { source: "manual" },
       notes: input.notes ?? null,
       createdAt: ts,
       updatedAt: ts
@@ -4716,6 +4718,13 @@ export class InMemoryFitosRepository implements FitosRepository {
   // ─── FITOS Therapy & Recovery ───────────────────────────────────────────────
   async listTherapyModalities(scope: TenantScope): Promise<TherapyModalityResponse[]> {
     return [...this.therapyModalities.values()].filter((m) => m.tenantId === scope.tenantId);
+  }
+
+  async createTherapyModality(scope: TenantScope, input: import("@fitos/contracts").CreateTherapyModalityRequest): Promise<TherapyModalityResponse> {
+    const ts = now();
+    const modality: TherapyModalityResponse = { id: randomUUID(), tenantId: scope.tenantId, ...input, isActive: true, createdAt: ts, updatedAt: ts };
+    this.therapyModalities.set(modality.id, modality);
+    return modality;
   }
 
   async listTherapyProtocols(scope: TenantScope, modalityCode?: string): Promise<TherapyProtocolResponse[]> {

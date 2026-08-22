@@ -38,6 +38,7 @@ import {
   purchaseOrders,
   assessmentDefinitions,
   assessmentSessions,
+  assessmentMetricResults,
   assessmentDeviceImports,
   therapyModalities,
   therapyProtocols,
@@ -1429,26 +1430,8 @@ export class DrizzleFitosRepository implements FitosRepository {
           )
         );
 
-      const branchAssets = await tx
-        .select()
-        .from(equipmentAssets)
-        .where(
-          and(
-            eq(equipmentAssets.tenantId, scope.tenantId),
-            eq(equipmentAssets.branchId, occurrence.branchId)
-          )
-        );
-      const serviceMatchingAssets = branchAssets.filter(
-        (a) => a.category.toLowerCase() === (service.category ?? "").toLowerCase()
-      );
-      let effectiveCapacity = occurrence.capacity;
-      if (serviceMatchingAssets.length > 0) {
-        const operationalCount = serviceMatchingAssets.filter(
-          (a) => a.status === "available" || a.status === "operational"
-        ).length;
-        effectiveCapacity = Math.min(occurrence.capacity, operationalCount);
-      }
-      if ((capacity?.count ?? 0) >= effectiveCapacity) throw new Error("Occurrence is full.");
+      // Equipment availability is advisory: booking capacity remains the occurrence capacity.
+      if ((capacity?.count ?? 0) >= occurrence.capacity) throw new Error("Occurrence is full.");
 
       let creditMembership: typeof memberMemberships.$inferSelect | null = null;
       if (service.creditsRequired > 0) {
@@ -3834,33 +3817,31 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   async createInventoryMovement(scope: TenantScope, input: CreateInventoryMovementRequest, recordedByUserId: string): Promise<InventoryMovementResponse> {
-    const [item] = await this.db
-      .select()
-      .from(inventoryItems)
-      .where(and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, input.itemId)));
-    if (!item) throw new Error("Inventory item not found.");
-    const isIncoming = input.movementType === "purchase_in" || input.movementType === "adjustment";
-    const newStock = isIncoming ? item.currentStock + input.quantity : Math.max(0, item.currentStock - input.quantity);
-    await this.db
-      .update(inventoryItems)
-      .set({ currentStock: newStock, updatedAt: new Date() })
-      .where(eq(inventoryItems.id, item.id));
-
-    const [mov] = await this.db
-      .insert(inventoryMovements)
-      .values({
+    const { item, mov } = await this.db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT id FROM inventory_items WHERE id = ${input.itemId} FOR UPDATE`);
+      const [lockedItem] = await tx.select().from(inventoryItems).where(
+        and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, input.itemId), eq(inventoryItems.branchId, input.branchId))
+      );
+      if (!lockedItem) throw new Error("Inventory item not found in branch.");
+      const delta = input.movementType === "purchase_in" ? input.quantity :
+        input.movementType === "adjustment" ? input.quantity : -input.quantity;
+      const newStock = lockedItem.currentStock + delta;
+      if (newStock < 0) throw new Error("Inventory movement would make stock negative.");
+      await tx.update(inventoryItems).set({ currentStock: newStock, updatedAt: new Date() }).where(eq(inventoryItems.id, lockedItem.id));
+      const [created] = await tx.insert(inventoryMovements).values({
         tenantId: scope.tenantId,
-        branchId: item.branchId,
-        itemId: item.id,
+        branchId: lockedItem.branchId,
+        itemId: lockedItem.id,
         type: input.movementType,
         quantity: input.quantity,
         balanceAfter: newStock,
         reason: input.notes ?? input.movementType,
         referenceId: input.referenceId ?? null,
         recordedByUserId
-      })
-      .returning();
-    if (!mov) throw new Error("Failed to record inventory movement.");
+      }).returning();
+      if (!created) throw new Error("Failed to record inventory movement.");
+      return { item: lockedItem, mov: created };
+    });
 
     const [user] = await this.db.select().from(users).where(eq(users.id, recordedByUserId));
     return {
@@ -4050,9 +4031,8 @@ export class DrizzleFitosRepository implements FitosRepository {
       .where(and(eq(members.tenantId, scope.tenantId), eq(members.id, input.memberId)));
     const [assessor] = await this.db.select().from(users).where(eq(users.id, assessorStaffId));
 
-    const [sess] = await this.db
-      .insert(assessmentSessions)
-      .values({
+    const sess = await this.db.transaction(async (tx) => {
+      const [created] = await tx.insert(assessmentSessions).values({
         tenantId: scope.tenantId,
         branchId: input.branchId,
         memberId: input.memberId,
@@ -4063,10 +4043,22 @@ export class DrizzleFitosRepository implements FitosRepository {
         conductedAt: input.conductedAt ? new Date(input.conductedAt) : new Date(),
         summary: input.summary,
         metricsJson: input.metrics,
-        provenanceJson: {},
+        provenanceJson: input.provenance ?? { source: "manual" },
         notes: input.notes ?? null
-      })
-      .returning();
+      }).returning();
+      if (!created) return undefined;
+      await tx.insert(assessmentMetricResults).values(
+        Object.entries(input.metrics).map(([metricKey, value]) => ({
+          tenantId: scope.tenantId,
+          assessmentSessionId: created.id,
+          metricKey,
+          valueNumeric: typeof value === "number" ? String(value) : null,
+          valueText: typeof value === "string" ? value : null,
+          provenanceJson: input.provenance ?? { source: "manual" }
+        }))
+      );
+      return created;
+    });
     if (!sess) throw new Error("Failed to record assessment session.");
 
     return {
@@ -4085,6 +4077,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       conductedAt: sess.conductedAt.toISOString(),
       summary: sess.summary,
       metrics: input.metrics,
+      provenance: (sess.provenanceJson as any) ?? null,
       notes: sess.notes,
       createdAt: sess.createdAt.toISOString(),
       updatedAt: sess.updatedAt.toISOString()
@@ -4128,6 +4121,38 @@ export class DrizzleFitosRepository implements FitosRepository {
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString()
     }));
+  }
+
+  async listServiceEquipmentRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
+    const rows = await this.db.select().from(serviceEquipmentRequirements).where(and(eq(serviceEquipmentRequirements.tenantId, scope.tenantId), eq(serviceEquipmentRequirements.serviceId, serviceId)));
+    return rows.map((row) => ({ poolId: row.poolId, quantityRequired: row.quantityRequired }));
+  }
+
+  async replaceServiceEquipmentRequirements(scope: TenantScope, serviceId: string, requirements: import("@fitos/contracts").ServiceEquipmentRequirement[]): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
+    await this.db.transaction(async (tx) => {
+      const [service] = await tx.select().from(services).where(and(eq(services.tenantId, scope.tenantId), eq(services.id, serviceId)));
+      if (!service) throw new Error("Service not found.");
+      for (const requirement of requirements) {
+        const [pool] = await tx.select().from(equipmentPools).where(and(eq(equipmentPools.tenantId, scope.tenantId), eq(equipmentPools.id, requirement.poolId)));
+        if (!pool || (service.branchId && pool.branchId !== service.branchId)) throw new Error("Equipment pool is not available for this service.");
+      }
+      await tx.delete(serviceEquipmentRequirements).where(and(eq(serviceEquipmentRequirements.tenantId, scope.tenantId), eq(serviceEquipmentRequirements.serviceId, serviceId)));
+      if (requirements.length) await tx.insert(serviceEquipmentRequirements).values(requirements.map((r) => ({ tenantId: scope.tenantId, serviceId, poolId: r.poolId, quantityRequired: r.quantityRequired })));
+    });
+    return requirements;
+  }
+
+  async createTherapyModality(scope: TenantScope, input: import("@fitos/contracts").CreateTherapyModalityRequest): Promise<TherapyModalityResponse> {
+    const [created] = await this.db.insert(therapyModalities).values({
+      tenantId: scope.tenantId, code: input.code, name: input.name, category: input.category,
+      defaultDurationMinutes: input.defaultDurationMinutes, contraindicationsJson: input.contraindications,
+      description: input.description, isActive: true
+    }).returning();
+    if (!created) throw new Error("Failed to create therapy modality.");
+    return { id: created.id, tenantId: created.tenantId, code: created.code as any, name: created.name,
+      category: created.category as any, defaultDurationMinutes: created.defaultDurationMinutes,
+      contraindications: created.contraindicationsJson as string[], description: created.description,
+      isActive: created.isActive, createdAt: created.createdAt.toISOString(), updatedAt: created.updatedAt.toISOString() };
   }
 
   async listTherapyProtocols(scope: TenantScope, modalityCode?: string): Promise<TherapyProtocolResponse[]> {

@@ -28,6 +28,15 @@ export interface TherapyModalityResponse {
   updatedAt: string;
 }
 
+export interface CreateTherapyModalityRequest {
+  code: ModalityCode;
+  name: string;
+  category: ModalityCategory;
+  defaultDurationMinutes: number;
+  contraindications: string[];
+  description: string;
+}
+
 export interface TherapyProtocolResponse {
   id: string;
   tenantId: string;

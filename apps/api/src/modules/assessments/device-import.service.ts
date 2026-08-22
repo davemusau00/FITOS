@@ -3,16 +3,15 @@ import { createHash } from "node:crypto";
 import type {
   AssessmentCategory,
   AssessmentSessionResponse,
-  DeviceVendorIntegration,
-  TenantScope
+  DeviceVendor
 } from "@fitos/contracts";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
-import type { FitosRepository } from "../../ports/fitos-repository.js";
+import type { FitosRepository, TenantScope } from "../../ports/fitos-repository.js";
 
 export interface DeviceImportInput {
   branchId: string;
   memberId: string;
-  deviceVendor: DeviceVendorIntegration;
+  deviceVendor: DeviceVendor;
   deviceSerial?: string;
   fileName?: string;
   fileContent: string;
@@ -64,6 +63,14 @@ export class DeviceImportService {
         definitionId: def.id,
         summary: parsed.summary,
         metrics: parsed.metrics,
+        provenance: {
+          source: "device_import",
+          deviceVendor: input.deviceVendor,
+          deviceSerial: input.deviceSerial,
+          checksum: rawChecksum,
+          parserVersion: "csv-json-v1",
+          importedAt: new Date().toISOString()
+        },
         notes: `Device import from ${input.fileName ?? input.deviceVendor}. Serial: ${input.deviceSerial ?? "N/A"}. Checksum: ${rawChecksum.slice(0, 12)}…`
       },
       assessorStaffId
@@ -77,7 +84,7 @@ export class DeviceImportService {
   }
 
   private parseDevicePayload(
-    vendor: DeviceVendorIntegration,
+    vendor: DeviceVendor,
     content: string
   ): {
     category: AssessmentCategory;
@@ -117,7 +124,7 @@ export class DeviceImportService {
   }
 
   private normalizeParsedData(
-    vendor: DeviceVendorIntegration,
+    vendor: DeviceVendor,
     raw: Record<string, unknown>
   ): {
     category: AssessmentCategory;
@@ -132,56 +139,36 @@ export class DeviceImportService {
       }
     }
 
+    if (Object.keys(metrics).length === 0) {
+      throw new Error("The uploaded device file contains no usable metric values.");
+    }
+
     switch (vendor) {
       case "lookinbody_inbody": {
-        const weight = metrics["weightKg"] ?? metrics["Weight"] ?? 75.0;
-        const smm = metrics["skeletalMuscleMassKg"] ?? metrics["SMM"] ?? 34.2;
-        const pbf = metrics["percentBodyFat"] ?? metrics["PBF"] ?? 16.5;
-        const vfl = metrics["visceralFatLevel"] ?? metrics["VFL"] ?? 4;
         return {
           category: "body_composition",
           defaultDefinitionName: "InBody 970 Multi-Frequency Segmental BIA Scan",
-          summary: `Body Composition Scan. Weight: ${weight}kg, SMM: ${smm}kg, Body Fat: ${pbf}%, Visceral Fat Level: ${vfl}.`,
-          metrics: {
-            weightKg: typeof weight === "number" ? weight : parseFloat(String(weight)) || 75.0,
-            skeletalMuscleMassKg: typeof smm === "number" ? smm : parseFloat(String(smm)) || 34.2,
-            percentBodyFat: typeof pbf === "number" ? pbf : parseFloat(String(pbf)) || 16.5,
-            visceralFatLevel: typeof vfl === "number" ? vfl : parseFloat(String(vfl)) || 4,
-            ...metrics
-          }
+          summary: "Imported InBody body-composition assessment.",
+          metrics
         };
       }
 
       case "vald_forcedecks": {
-        const jumpHeight = metrics["jumpHeightCm"] ?? metrics["JumpHeight"] ?? 42.5;
-        const rsi = metrics["rsiModified"] ?? metrics["RSI"] ?? 0.44;
-        const asymmetry = metrics["asymmetryPct"] ?? metrics["Asymmetry"] ?? 3.2;
         return {
           category: "neuromuscular_force",
           defaultDefinitionName: "VALD ForceDecks CMJ Power & Kinetic Analysis",
-          summary: `Dual Force Plate Scan. Jump Height: ${jumpHeight}cm, RSI-modified: ${rsi}, Peak ground asymmetry: ${asymmetry}%.`,
-          metrics: {
-            jumpHeightCm: typeof jumpHeight === "number" ? jumpHeight : parseFloat(String(jumpHeight)) || 42.5,
-            rsiModified: typeof rsi === "number" ? rsi : parseFloat(String(rsi)) || 0.44,
-            asymmetryPct: typeof asymmetry === "number" ? asymmetry : parseFloat(String(asymmetry)) || 3.2,
-            ...metrics
-          }
+          summary: "Imported VALD ForceDecks assessment.",
+          metrics
         };
       }
 
       case "cosmed_k5":
       case "pnoe": {
-        const vo2 = metrics["vo2MaxMlKgMin"] ?? metrics["VO2Max"] ?? 51.8;
-        const vt2 = metrics["anaerobicThresholdHr"] ?? metrics["VT2"] ?? 170;
         return {
           category: "cardiovascular_vo2",
           defaultDefinitionName: `${vendor.toUpperCase()} Metabolic VO2 Max Spirometry`,
-          summary: `Aerobic Capacity Scan. VO2 Max: ${vo2} ml/kg/min, Anaerobic Threshold (VT2): ${vt2} bpm.`,
-          metrics: {
-            vo2MaxMlKgMin: typeof vo2 === "number" ? vo2 : parseFloat(String(vo2)) || 51.8,
-            anaerobicThresholdHr: typeof vt2 === "number" ? vt2 : parseFloat(String(vt2)) || 170,
-            ...metrics
-          }
+          summary: `Imported ${vendor.toUpperCase()} metabolic assessment.`,
+          metrics
         };
       }
 

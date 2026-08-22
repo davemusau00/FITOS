@@ -92,10 +92,12 @@ import type {
   CreateAssessmentSessionRequest,
   MemberPerformanceProfileResponse,
   TherapyModalityResponse,
+  CreateTherapyModalityRequest,
   TherapyProtocolResponse,
   CreateTherapyProtocolRequest,
   TherapySessionResponse,
   CreateTherapySessionRequest
+  ,ServiceEquipmentRequirement
 } from "@fitos/contracts";
 
 export interface TenantScope {
@@ -461,6 +463,8 @@ export interface FitosRepository {
   createEquipmentPool(scope: TenantScope, input: CreateEquipmentPoolRequest): Promise<EquipmentPoolResponse>;
   listEquipmentMaintenance(scope: TenantScope, assetId?: string): Promise<EquipmentMaintenanceRecordResponse[]>;
   createEquipmentMaintenance(scope: TenantScope, input: CreateMaintenanceRecordRequest): Promise<EquipmentMaintenanceRecordResponse>;
+  listServiceEquipmentRequirements(scope: TenantScope, serviceId: string): Promise<ServiceEquipmentRequirement[]>;
+  replaceServiceEquipmentRequirements(scope: TenantScope, serviceId: string, requirements: ServiceEquipmentRequirement[]): Promise<ServiceEquipmentRequirement[]>;
 
   // Inventory & Consumables
   listInventoryItems(scope: TenantScope, branchId?: string): Promise<InventoryItemResponse[]>;
@@ -481,6 +485,7 @@ export interface FitosRepository {
 
   // FITOS Therapy & Recovery
   listTherapyModalities(scope: TenantScope): Promise<TherapyModalityResponse[]>;
+  createTherapyModality(scope: TenantScope, input: CreateTherapyModalityRequest): Promise<TherapyModalityResponse>;
   listTherapyProtocols(scope: TenantScope, modalityCode?: string): Promise<TherapyProtocolResponse[]>;
   createTherapyProtocol(scope: TenantScope, input: CreateTherapyProtocolRequest): Promise<TherapyProtocolResponse>;
   listTherapySessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<TherapySessionResponse[]>;

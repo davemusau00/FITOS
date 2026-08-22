@@ -58,9 +58,19 @@ export interface AssessmentSessionResponse {
   conductedAt: string;
   summary: string;
   metrics: Record<string, number | string>;
+  provenance?: AssessmentProvenance | null;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AssessmentProvenance {
+  source: "manual" | "device_import";
+  deviceVendor?: DeviceVendor;
+  deviceSerial?: string;
+  checksum?: string;
+  parserVersion?: string;
+  importedAt?: string;
 }
 
 export interface CreateAssessmentSessionRequest {
@@ -70,6 +80,7 @@ export interface CreateAssessmentSessionRequest {
   conductedAt?: string;
   summary: string;
   metrics: Record<string, number | string>;
+  provenance?: AssessmentProvenance;
   notes?: string;
 }
 

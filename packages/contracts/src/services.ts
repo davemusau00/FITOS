@@ -30,6 +30,20 @@ export interface ServiceResponse {
   updatedAt: string;
 }
 
+export interface ServiceEquipmentRequirement {
+  poolId: string;
+  quantityRequired: number;
+}
+
+export interface ServiceResourceWarning {
+  poolId: string;
+  poolName: string;
+  required: number;
+  available: number;
+  overlappingDemand: number;
+  shortage: number;
+}
+
 export interface CreateServiceRequest {
   branchId?: string | null;
   name: string;
@@ -91,6 +105,7 @@ export interface ScheduleOccurrenceResponse {
   startsAt: string;
   endsAt: string;
   capacity: number;
+  resourceWarnings?: ServiceResourceWarning[];
   status: OccurrenceStatus;
   createdAt: string;
   updatedAt: string;

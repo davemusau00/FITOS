@@ -1001,6 +1001,21 @@ export const purchaseOrders = pgTable(
   ]
 );
 
+export const purchaseOrderLines = pgTable(
+  "purchase_order_lines",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id").notNull().references(() => branches.id, { onDelete: "restrict" }),
+    purchaseOrderId: uuid("purchase_order_id").notNull().references(() => purchaseOrders.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "restrict" }),
+    quantity: integer("quantity").notNull(),
+    unitCostMinor: integer("unit_cost_minor").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [uniqueIndex("uq_purchase_order_line_item").on(table.purchaseOrderId, table.itemId)]
+);
+
 // ─── FITOS Assess & Diagnostics ─────────────────────────────────────────────
 export const assessmentDefinitions = pgTable(
   "assessment_definitions",
@@ -1057,6 +1072,22 @@ export const assessmentSessions = pgTable(
   ]
 );
 
+export const assessmentMetricResults = pgTable(
+  "assessment_metric_results",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    assessmentSessionId: uuid("assessment_session_id").notNull().references(() => assessmentSessions.id, { onDelete: "cascade" }),
+    metricKey: varchar("metric_key", { length: 80 }).notNull(),
+    valueNumeric: numeric("value_numeric"),
+    valueText: text("value_text"),
+    unit: varchar("unit", { length: 30 }),
+    provenanceJson: jsonb("provenance_json").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [uniqueIndex("uq_assessment_metric_result").on(table.assessmentSessionId, table.metricKey)]
+);
+
 export const assessmentDeviceImports = pgTable(
   "assessment_device_imports",
   {
@@ -1071,11 +1102,15 @@ export const assessmentDeviceImports = pgTable(
     deviceSerial: varchar("device_serial", { length: 120 }),
     fileName: varchar("file_name", { length: 255 }),
     rawChecksum: varchar("raw_checksum", { length: 64 }).notNull(),
-    rawPayload: text("raw_payload").notNull(),
+    rawPayload: text("raw_payload"),
     parsedRecordsCount: integer("parsed_records_count").notNull().default(0),
     status: varchar("status", { length: 40 }).notNull().default("processed"),
+    parserVersion: varchar("parser_version", { length: 80 }).notNull().default("legacy"),
+    contentType: varchar("content_type", { length: 100 }),
+    errorJson: jsonb("error_json").notNull().default(sql`'[]'::jsonb`),
     importedByUserId: uuid("imported_by_user_id").references(() => users.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true })
   },
   (table) => [
     index("idx_device_imports_tenant_branch").on(table.tenantId, table.branchId)
@@ -1205,9 +1240,11 @@ export const schema = {
   inventoryItems,
   inventoryMovements,
   purchaseOrders,
+  purchaseOrderLines,
   // Assessments
   assessmentDefinitions,
   assessmentSessions,
+  assessmentMetricResults,
   assessmentDeviceImports,
   // Therapy
   therapyModalities,
@@ -1216,4 +1253,3 @@ export const schema = {
 };
 
 export type DatabaseSchema = typeof schema;
-

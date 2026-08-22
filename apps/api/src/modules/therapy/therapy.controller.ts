@@ -3,6 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type {
   CreateTherapyProtocolRequest,
+  CreateTherapyModalityRequest,
   CreateTherapySessionRequest,
   ModalityCode,
   RequestActor
@@ -33,6 +34,13 @@ const createProtocolSchema = z
     clinicalNotes: z.string().trim().max(2000)
   })
   .strict();
+
+const createModalitySchema = z.object({
+  code: z.enum(modalityCodes), name: z.string().trim().min(1).max(150),
+  category: z.enum(["neuromuscular", "unweighted_gait", "pneumatic_compression", "thermal_cryo"]),
+  defaultDurationMinutes: z.number().int().min(1).max(240), contraindications: z.array(z.string().trim().min(1)),
+  description: z.string().trim().min(1).max(2000)
+}).strict();
 
 const createSessionSchema = z
   .object({
@@ -67,6 +75,12 @@ export class TherapyController {
   @RequirePermission("service:read")
   listModalities(@Actor() actor: RequestActor) {
     return this.repository.listTherapyModalities(toScope(actor));
+  }
+
+  @Post("modalities")
+  @RequirePermission("service:manage")
+  createModality(@Actor() actor: RequestActor, @Body() body: unknown) {
+    return this.repository.createTherapyModality(toScope(actor), createModalitySchema.parse(body) as CreateTherapyModalityRequest);
   }
 
   @Get("protocols")

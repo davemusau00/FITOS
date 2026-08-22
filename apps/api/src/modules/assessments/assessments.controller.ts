@@ -57,6 +57,16 @@ const createSessionSchema = z
     conductedAt: z.string().optional(),
     summary: z.string().trim().min(1).max(1000),
     metrics: z.record(z.union([z.number(), z.string()])),
+    provenance: z
+      .object({
+        source: z.enum(["manual", "device_import"]),
+        deviceVendor: z.enum(vendors).optional(),
+        deviceSerial: z.string().max(120).optional(),
+        checksum: z.string().length(64).optional(),
+        parserVersion: z.string().max(80).optional(),
+        importedAt: z.string().optional()
+      })
+      .optional(),
     notes: z.string().trim().max(1000).optional()
   })
   .strict();
