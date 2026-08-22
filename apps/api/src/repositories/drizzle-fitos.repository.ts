@@ -3495,6 +3495,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         notes: input.notes ?? null
       })
       .returning();
+    if (!created) throw new Error("Failed to create equipment asset.");
     return {
       id: created.id,
       tenantId: created.tenantId,
@@ -3583,6 +3584,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         isActive: true
       })
       .returning();
+    if (!created) throw new Error("Failed to create equipment pool.");
     return {
       id: created.id,
       tenantId: created.tenantId,
@@ -3639,6 +3641,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         nextServiceDueAt: input.nextDueAt ? new Date(input.nextDueAt) : null
       })
       .returning();
+    if (!rec) throw new Error("Failed to create maintenance record.");
     return {
       id: rec.id,
       tenantId: rec.tenantId,
@@ -3724,6 +3727,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         isActive: true
       })
       .returning();
+    if (!created) throw new Error("Failed to create inventory item.");
     return {
       id: created.id,
       tenantId: created.tenantId,
@@ -3789,7 +3793,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .leftJoin(inventoryItems, eq(inventoryMovements.itemId, inventoryItems.id))
       .leftJoin(users, eq(inventoryMovements.recordedByUserId, users.id))
       .where(and(...conditions));
-    return rows.map(({ mov, itemName, userName }) => ({
+    return rows.filter((r) => r.mov !== undefined).map(({ mov, itemName, userName }) => ({
       id: mov.id,
       tenantId: mov.tenantId,
       branchId: mov.branchId,
@@ -3833,6 +3837,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         recordedByUserId
       })
       .returning();
+    if (!mov) throw new Error("Failed to record inventory movement.");
 
     const [user] = await this.db.select().from(users).where(eq(users.id, recordedByUserId));
     return {
@@ -3877,7 +3882,7 @@ export class DrizzleFitosRepository implements FitosRepository {
 
   async createPurchaseOrder(scope: TenantScope, input: CreatePurchaseOrderRequest): Promise<PurchaseOrderResponse> {
     let totalMinor = 0;
-    const items = input.items.map((i) => {
+    const items = input.items.map((i: { itemId: string; quantity: number; unitCostMinor: number }) => {
       const lineTotal = i.quantity * i.unitCostMinor;
       totalMinor += lineTotal;
       return {
@@ -3902,6 +3907,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         issuedAt: new Date()
       })
       .returning();
+    if (!created) throw new Error("Failed to create purchase order.");
     return {
       id: created.id,
       tenantId: created.tenantId,
@@ -3954,6 +3960,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         isActive: true
       })
       .returning();
+    if (!created) throw new Error("Failed to create assessment definition.");
     return {
       id: created.id,
       tenantId: created.tenantId,
@@ -3986,7 +3993,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .leftJoin(contacts, eq(members.contactId, contacts.id))
       .leftJoin(users, eq(assessmentSessions.assessorStaffId, users.id))
       .where(and(...conditions));
-    return rows.map(({ sess, defName, contactFirst, contactLast, assessorName }) => ({
+    return rows.filter((r) => r.sess !== undefined).map(({ sess, defName, contactFirst, contactLast, assessorName }) => ({
       id: sess.id,
       tenantId: sess.tenantId,
       branchId: sess.branchId,
@@ -4037,6 +4044,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         notes: input.notes ?? null
       })
       .returning();
+    if (!sess) throw new Error("Failed to record assessment session.");
 
     return {
       id: sess.id,
@@ -4136,6 +4144,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         isActive: true
       })
       .returning();
+    if (!created) throw new Error("Failed to create therapy protocol.");
     return {
       id: created.id,
       tenantId: created.tenantId,
@@ -4171,7 +4180,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .leftJoin(users, eq(therapySessions.staffUserId, users.id))
       .leftJoin(equipmentAssets, eq(therapySessions.assetId, equipmentAssets.id))
       .where(and(...conditions));
-    return rows.map(({ sess, contactFirst, contactLast, staffName, assetName }) => ({
+    return rows.filter((r) => r.sess !== undefined).map(({ sess, contactFirst, contactLast, staffName, assetName }) => ({
       id: sess.id,
       tenantId: sess.tenantId,
       branchId: sess.branchId,
@@ -4234,6 +4243,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         sessionNotes: input.sessionNotes ?? null
       })
       .returning();
+    if (!sess) throw new Error("Failed to record therapy session.");
 
     return {
       id: sess.id,
