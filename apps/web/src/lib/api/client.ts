@@ -77,7 +77,13 @@ import type {
   InventoryMovementResponse,
   CreateInventoryMovementRequest,
   PurchaseOrderResponse,
-  CreatePurchaseOrderRequest
+  CreatePurchaseOrderRequest,
+  // Assessments
+  AssessmentDefinitionResponse,
+  CreateAssessmentDefinitionRequest,
+  AssessmentSessionResponse,
+  CreateAssessmentSessionRequest,
+  MemberPerformanceProfileResponse
 } from "@fitos/contracts";
 
 
@@ -533,7 +539,30 @@ export const api = {
     request<PurchaseOrderResponse>("/inventory/purchase-orders", {
       method: "POST",
       body: json(payload)
-    })
+    }),
+
+  // ── FITOS Assess & Performance Profiles ─────────────────────────────────
+  assessmentDefinitions: () =>
+    request<AssessmentDefinitionResponse[]>("/assessments/definitions"),
+  createAssessmentDefinition: (payload: CreateAssessmentDefinitionRequest) =>
+    request<AssessmentDefinitionResponse>("/assessments/definitions", {
+      method: "POST",
+      body: json(payload)
+    }),
+  assessmentSessions: (memberId?: string, branchId?: string) => {
+    const params = new URLSearchParams();
+    if (memberId) params.set("memberId", memberId);
+    if (branchId) params.set("branchId", branchId);
+    const qs = params.toString();
+    return request<AssessmentSessionResponse[]>(`/assessments/sessions${qs ? `?${qs}` : ""}`);
+  },
+  createAssessmentSession: (payload: CreateAssessmentSessionRequest) =>
+    request<AssessmentSessionResponse>("/assessments/sessions", {
+      method: "POST",
+      body: json(payload)
+    }),
+  memberPerformanceProfile: (memberId: string) =>
+    request<MemberPerformanceProfileResponse>(`/assessments/members/${memberId}/profile`)
 };
 
 

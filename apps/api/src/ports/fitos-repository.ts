@@ -90,7 +90,12 @@ import type {
   CreateAssessmentDefinitionRequest,
   AssessmentSessionResponse,
   CreateAssessmentSessionRequest,
-  MemberPerformanceProfileResponse
+  MemberPerformanceProfileResponse,
+  TherapyModalityResponse,
+  TherapyProtocolResponse,
+  CreateTherapyProtocolRequest,
+  TherapySessionResponse,
+  CreateTherapySessionRequest
 } from "@fitos/contracts";
 
 export interface TenantScope {
@@ -473,6 +478,13 @@ export interface FitosRepository {
   listAssessmentSessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<AssessmentSessionResponse[]>;
   createAssessmentSession(scope: TenantScope, input: CreateAssessmentSessionRequest, assessorStaffId: string): Promise<AssessmentSessionResponse>;
   getMemberPerformanceProfile(scope: TenantScope, memberId: string): Promise<MemberPerformanceProfileResponse>;
+
+  // FITOS Therapy & Recovery
+  listTherapyModalities(scope: TenantScope): Promise<TherapyModalityResponse[]>;
+  listTherapyProtocols(scope: TenantScope, modalityCode?: string): Promise<TherapyProtocolResponse[]>;
+  createTherapyProtocol(scope: TenantScope, input: CreateTherapyProtocolRequest): Promise<TherapyProtocolResponse>;
+  listTherapySessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<TherapySessionResponse[]>;
+  createTherapySession(scope: TenantScope, input: CreateTherapySessionRequest, staffUserId: string): Promise<TherapySessionResponse>;
 
   acquireIdempotency(record: IdempotencyRecord): Promise<IdempotencyAcquireResult>;
   completeIdempotency(

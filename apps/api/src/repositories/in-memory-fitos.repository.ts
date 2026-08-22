@@ -99,7 +99,12 @@ import type {
   CreateAssessmentDefinitionRequest,
   AssessmentSessionResponse,
   CreateAssessmentSessionRequest,
-  MemberPerformanceProfileResponse
+  MemberPerformanceProfileResponse,
+  TherapyModalityResponse,
+  TherapyProtocolResponse,
+  CreateTherapyProtocolRequest,
+  TherapySessionResponse,
+  CreateTherapySessionRequest
 } from "@fitos/contracts";
 import { DEFAULT_ROLE_PERMISSIONS } from "@fitos/contracts";
 import { decodeCursor, encodeCursor } from "@fitos/shared";
@@ -207,6 +212,9 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly purchaseOrders = new Map<string, PurchaseOrderResponse>();
   private readonly assessmentDefinitions = new Map<string, AssessmentDefinitionResponse>();
   private readonly assessmentSessions = new Map<string, AssessmentSessionResponse>();
+  private readonly therapyModalities = new Map<string, TherapyModalityResponse>();
+  private readonly therapyProtocols = new Map<string, TherapyProtocolResponse>();
+  private readonly therapySessions = new Map<string, TherapySessionResponse>();
   private readonly tenantSubscriptions = new Map<string, TenantSubscriptionResponse>();
   private readonly featureFlags = new Map<string, FeatureFlagResponse[]>();
   private readonly auditEvents: AuditEventResponse[] = [];
@@ -1191,6 +1199,165 @@ export class InMemoryFitosRepository implements FitosRepository {
         updatedAt: daysAgo(14)
       };
       this.assessmentSessions.set(sessDaniel.id, sessDaniel);
+    }
+
+    // ── Seed Therapy & Recovery Modalities & Protocols (FITOS Therapy) ──
+    const modNeubie: TherapyModalityResponse = {
+      id: randomUUID(),
+      tenantId,
+      code: "neubie_direct_current",
+      name: "NEUBIE Pulsed Direct Current Neuromuscular Stimulation",
+      category: "neuromuscular",
+      defaultDurationMinutes: 45,
+      contraindications: ["Pacemaker", "Pregnancy", "Active DVT / Blood Clots", "Recent seizure"],
+      description: "Direct current stimulation designed to reset neurological tone, promote tissue regeneration, and accelerate pain-free movement.",
+      isActive: true,
+      createdAt: daysAgo(120),
+      updatedAt: daysAgo(120)
+    };
+
+    const modAlterG: TherapyModalityResponse = {
+      id: randomUUID(),
+      tenantId,
+      code: "alterg_anti_gravity",
+      name: "AlterG Anti-Gravity Treadmill Differential Air Pressure",
+      category: "unweighted_gait",
+      defaultDurationMinutes: 30,
+      contraindications: ["Unstable fracture", "Severe DVT", "Severe open wound at waist"],
+      description: "NASA-patented differential air pressure system allowing precision bodyweight unloading from 100% down to 20% in 1% increments.",
+      isActive: true,
+      createdAt: daysAgo(120),
+      updatedAt: daysAgo(120)
+    };
+
+    const modNormatec: TherapyModalityResponse = {
+      id: randomUUID(),
+      tenantId,
+      code: "normatec_compression",
+      name: "Normatec 3 Dynamic Air Compression System",
+      category: "pneumatic_compression",
+      defaultDurationMinutes: 30,
+      contraindications: ["Acute pulmonary edema", "Acute thrombophlebitis", "Severe atherosclerosis"],
+      description: "Biomimicking peristaltic pulse pneumatic compression for rapid lymphatic drainage, venous return, and DOMS reduction.",
+      isActive: true,
+      createdAt: daysAgo(120),
+      updatedAt: daysAgo(120)
+    };
+
+    this.therapyModalities.set(modNeubie.id, modNeubie);
+    this.therapyModalities.set(modAlterG.id, modAlterG);
+    this.therapyModalities.set(modNormatec.id, modNormatec);
+
+    // Protocols
+    const proto1: TherapyProtocolResponse = {
+      id: randomUUID(),
+      tenantId,
+      modalityCode: "neubie_direct_current",
+      modalityName: modNeubie.name,
+      name: "Acute Patellar Tendinopathy Neuromuscular Reset",
+      indication: "Patellofemoral pain syndrome, jumper's knee, chronic tendinopathy",
+      targetArea: "Quadriceps, VMO & Infrapatellar Tendon",
+      parameters: { frequencyHz: 45, intensitymA: 3.8, polarity: "positive_proximal", durationMinutes: 30 },
+      safetyChecklist: ["Verify no metallic implants in knee", "Test skin sensation before pulse ramping", "Maintain active quad eccentric contraction during pulse"],
+      clinicalNotes: "Target motor points on vastus medialis and rectus femoris. Apply direct current during active terminal knee extension.",
+      isActive: true,
+      createdAt: daysAgo(120),
+      updatedAt: daysAgo(120)
+    };
+
+    const proto2: TherapyProtocolResponse = {
+      id: randomUUID(),
+      tenantId,
+      modalityCode: "alterg_anti_gravity",
+      modalityName: modAlterG.name,
+      name: "Lower Body Return-to-Run (70% BW Unloading)",
+      indication: "Post-op meniscus/ACL rehab, bone stress injury return-to-load",
+      targetArea: "Lower Extremities & Gait Kinetic Chain",
+      parameters: { bodyweightPct: 70, speedKmh: 8.5, inclinePct: 0, durationMinutes: 25 },
+      safetyChecklist: ["Calibrate air pressure seal", "Confirm zero pain at 70% unweighted baseline", "Monitor bilateral ground reaction symmetry"],
+      clinicalNotes: "Assess cadence and heel-strike symmetry. Increase load by 5% every 3 successful pain-free sessions.",
+      isActive: true,
+      createdAt: daysAgo(120),
+      updatedAt: daysAgo(120)
+    };
+
+    const proto3: TherapyProtocolResponse = {
+      id: randomUUID(),
+      tenantId,
+      modalityCode: "normatec_compression",
+      modalityName: modNormatec.name,
+      name: "Full-Leg Post-Endurance Recovery Flush (Level 5)",
+      indication: "Post-competition recovery, high-volume leg day DOMS prevention",
+      targetArea: "Bilateral Lower Limbs (Feet to Hips)",
+      parameters: { pressureLevel: 5, zoneHoldTimeSec: 30, durationMinutes: 30 },
+      safetyChecklist: ["Check for peripheral circulation before session", "Ensure zippered sleeves are fully fastened"],
+      clinicalNotes: "ZoneBoost enabled on calf and hamstring chambers for maximal metabolic clearance.",
+      isActive: true,
+      createdAt: daysAgo(120),
+      updatedAt: daysAgo(120)
+    };
+
+    this.therapyProtocols.set(proto1.id, proto1);
+    this.therapyProtocols.set(proto2.id, proto2);
+    this.therapyProtocols.set(proto3.id, proto3);
+
+    // Seed Therapy Sessions
+    if (amina) {
+      const sessTh1: TherapySessionResponse = {
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        branchName: "Kilimani",
+        memberId: amina.id,
+        memberName: aminaName,
+        staffUserId: trainerUserId ?? ownerTenantUserId,
+        staffName: "Dr. Dennis Kiprop",
+        protocolId: proto1.id,
+        protocolName: proto1.name,
+        modalityCode: "neubie_direct_current",
+        assetId: null,
+        assetName: "NEUBIE DC Unit 01",
+        status: "completed",
+        startedAt: daysAgo(3, 10, 0),
+        completedAt: daysAgo(3, 10, 45),
+        prePainScore: 6,
+        postPainScore: 1,
+        actualDosage: { frequencyHz: 45, intensitymA: 3.5, durationMinutes: 30 },
+        adverseReaction: false,
+        sessionNotes: "Patient reported immediate reduction in patellar tendon pressure upon eccentric loading post-session.",
+        createdAt: daysAgo(3),
+        updatedAt: daysAgo(3)
+      };
+      this.therapySessions.set(sessTh1.id, sessTh1);
+    }
+
+    if (daniel) {
+      const sessTh2: TherapySessionResponse = {
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        branchName: "Kilimani",
+        memberId: daniel.id,
+        memberName: danielName,
+        staffUserId: trainerUserId ?? ownerTenantUserId,
+        staffName: "Coach Peter Kamau",
+        protocolId: proto3.id,
+        protocolName: proto3.name,
+        modalityCode: "normatec_compression",
+        assetId: null,
+        assetName: "Normatec 3 Leg Sleeves",
+        status: "completed",
+        startedAt: daysAgo(2, 16, 0),
+        completedAt: daysAgo(2, 16, 30),
+        prePainScore: 4,
+        postPainScore: 0,
+        actualDosage: { pressureLevel: 5, durationMinutes: 30 },
+        adverseReaction: false,
+        sessionNotes: "Post-hyrox training flush. Lower extremity stiffness resolved.",
+        createdAt: daysAgo(2),
+        updatedAt: daysAgo(2)
+      };
+      this.therapySessions.set(sessTh2.id, sessTh2);
     }
   }
 
@@ -4531,5 +4698,91 @@ export class InMemoryFitosRepository implements FitosRepository {
       latestMetrics: latestSession?.metrics ?? {},
       timeline: sessions
     };
+  }
+
+  // ─── FITOS Therapy & Recovery ───────────────────────────────────────────────
+  async listTherapyModalities(scope: TenantScope): Promise<TherapyModalityResponse[]> {
+    return [...this.therapyModalities.values()].filter((m) => m.tenantId === scope.tenantId);
+  }
+
+  async listTherapyProtocols(scope: TenantScope, modalityCode?: string): Promise<TherapyProtocolResponse[]> {
+    return [...this.therapyProtocols.values()].filter((p) => {
+      if (p.tenantId !== scope.tenantId) return false;
+      if (modalityCode && p.modalityCode !== modalityCode) return false;
+      return true;
+    });
+  }
+
+  async createTherapyProtocol(scope: TenantScope, input: CreateTherapyProtocolRequest): Promise<TherapyProtocolResponse> {
+    const id = randomUUID();
+    const ts = now();
+    const proto: TherapyProtocolResponse = {
+      id,
+      tenantId: scope.tenantId,
+      modalityCode: input.modalityCode,
+      modalityName: input.modalityName,
+      name: input.name,
+      indication: input.indication,
+      targetArea: input.targetArea,
+      parameters: input.parameters,
+      safetyChecklist: input.safetyChecklist,
+      clinicalNotes: input.clinicalNotes,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
+    };
+    this.therapyProtocols.set(id, proto);
+    return proto;
+  }
+
+  async listTherapySessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<TherapySessionResponse[]> {
+    return [...this.therapySessions.values()].filter((s) => {
+      if (s.tenantId !== scope.tenantId) return false;
+      if (memberId && s.memberId !== memberId) return false;
+      if (branchId && s.branchId !== branchId) return false;
+      if (scope.branchIds.length && !scope.branchIds.includes(s.branchId)) return false;
+      return true;
+    });
+  }
+
+  async createTherapySession(scope: TenantScope, input: CreateTherapySessionRequest, staffUserId: string): Promise<TherapySessionResponse> {
+    const proto = this.therapyProtocols.get(input.protocolId);
+    if (!proto || proto.tenantId !== scope.tenantId) throw new Error("Therapy protocol not found.");
+    const member = this.members.get(input.memberId);
+    if (!member || member.tenantId !== scope.tenantId) throw new Error("Member not found.");
+    const contact = this.contacts.get(member.contactId);
+    const branch = this.branches.get(input.branchId);
+    const staff = this.users.get(staffUserId);
+    const asset = input.assetId ? this.equipmentAssets.get(input.assetId) : null;
+
+    const id = randomUUID();
+    const ts = now();
+    const session: TherapySessionResponse = {
+      id,
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      branchName: branch?.name ?? null,
+      memberId: input.memberId,
+      memberName: contact ? `${contact.firstName} ${contact.lastName}` : "Member",
+      staffUserId,
+      staffName: staff?.displayName ?? "Clinical Staff",
+      protocolId: proto.id,
+      protocolName: proto.name,
+      modalityCode: proto.modalityCode,
+      assetId: input.assetId ?? null,
+      assetName: asset?.name ?? null,
+      status: input.status ?? "completed",
+      startedAt: ts,
+      completedAt: ts,
+      prePainScore: input.prePainScore ?? null,
+      postPainScore: input.postPainScore ?? null,
+      actualDosage: input.actualDosage,
+      adverseReaction: input.adverseReaction ?? false,
+      sessionNotes: input.sessionNotes ?? null,
+      createdAt: ts,
+      updatedAt: ts
+    };
+    this.therapySessions.set(id, session);
+    return session;
   }
 }

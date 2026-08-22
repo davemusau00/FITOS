@@ -32,6 +32,7 @@ import {
   TenantSignupPage,
   EquipmentPage,
   InventoryPage,
+  AssessmentsPage,
   AccountSubscriptionPage
 } from "../features";
 
@@ -82,6 +83,7 @@ export function AppRouter() {
           {/* Equipment & Resources */}
           <Route element={<EquipmentPage />} path="equipment" />
           <Route element={<InventoryPage />} path="inventory" />
+          <Route element={<AssessmentsPage />} path="assessments" />
 
           {/* Settings */}
           <Route element={<SettingsPage />} path="settings" />

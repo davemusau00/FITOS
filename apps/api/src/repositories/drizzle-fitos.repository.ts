@@ -3602,4 +3602,64 @@ export class DrizzleFitosRepository implements FitosRepository {
       timeline: []
     };
   }
+
+  // ─── FITOS Therapy & Recovery ───────────────────────────────────────────────
+  async listTherapyModalities(_scope: TenantScope): Promise<import("@fitos/contracts").TherapyModalityResponse[]> {
+    return [];
+  }
+
+  async listTherapyProtocols(_scope: TenantScope, _modalityCode?: string): Promise<import("@fitos/contracts").TherapyProtocolResponse[]> {
+    return [];
+  }
+
+  async createTherapyProtocol(scope: TenantScope, input: import("@fitos/contracts").CreateTherapyProtocolRequest): Promise<import("@fitos/contracts").TherapyProtocolResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      modalityCode: input.modalityCode,
+      modalityName: input.modalityName,
+      name: input.name,
+      indication: input.indication,
+      targetArea: input.targetArea,
+      parameters: input.parameters,
+      safetyChecklist: input.safetyChecklist,
+      clinicalNotes: input.clinicalNotes,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
+  async listTherapySessions(_scope: TenantScope, _memberId?: string, _branchId?: string): Promise<import("@fitos/contracts").TherapySessionResponse[]> {
+    return [];
+  }
+
+  async createTherapySession(scope: TenantScope, input: import("@fitos/contracts").CreateTherapySessionRequest, staffUserId: string): Promise<import("@fitos/contracts").TherapySessionResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      memberId: input.memberId,
+      memberName: "Member",
+      staffUserId,
+      staffName: "Clinical Staff",
+      protocolId: input.protocolId,
+      protocolName: "Therapy Protocol",
+      modalityCode: "neubie_direct_current",
+      assetId: input.assetId ?? null,
+      assetName: null,
+      status: input.status ?? "completed",
+      startedAt: now,
+      completedAt: now,
+      prePainScore: input.prePainScore ?? null,
+      postPainScore: input.postPainScore ?? null,
+      actualDosage: input.actualDosage,
+      adverseReaction: input.adverseReaction ?? false,
+      sessionNotes: input.sessionNotes ?? null,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
 }
