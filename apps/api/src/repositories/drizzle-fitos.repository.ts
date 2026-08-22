@@ -97,6 +97,8 @@ import type {
   CreditReason,
   PaymentTransactionResponse,
   CreatePaymentRequest,
+  PaymentListFilters,
+  ReconcilePaymentRequest,
   AttendanceRecordResponse,
   CheckInRequest,
   UpdateRosterStatusRequest,
@@ -3817,7 +3819,8 @@ export class DrizzleFitosRepository implements FitosRepository {
       .from(inventoryItems)
       .where(and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, input.itemId)));
     if (!item) throw new Error("Inventory item not found.");
-    const newStock = input.movementType === "receipt" ? item.currentStock + input.quantity : item.currentStock - input.quantity;
+    const isIncoming = input.movementType === "purchase_in" || input.movementType === "adjustment";
+    const newStock = isIncoming ? item.currentStock + input.quantity : Math.max(0, item.currentStock - input.quantity);
     await this.db
       .update(inventoryItems)
       .set({ currentStock: newStock, updatedAt: new Date() })
