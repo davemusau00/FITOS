@@ -35,6 +35,8 @@ import {
   AssessmentsPage,
   TherapyPage,
   AccountSubscriptionPage
+  ,FitosLandingPage
+  ,ConfigureFitosPage
 } from "../features";
 
 function ProtectedRoute() {
@@ -48,6 +50,8 @@ function ProtectedRoute() {
 export function AppRouter() {
   return (
     <Routes>
+      <Route element={<FitosLandingPage />} path="/" />
+      <Route element={<ConfigureFitosPage />} path="/configure" />
       <Route element={<LoginPage />} path="/login" />
       <Route element={<TenantSignupPage />} path="/signup" />
       <Route element={<ProtectedRoute />}>

@@ -222,6 +222,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly memberPasswords = new Map<string, string>();
   private readonly publicReservations: import("@fitos/contracts").PublicReservationResponse[] = [];
+  private readonly implementationInquiries = new Map<string, import("@fitos/contracts").ImplementationInquiryResponse>();
   private readonly domainEvents: DomainEvent[] = [];
 
   async ping(): Promise<boolean> {
@@ -4317,6 +4318,25 @@ export class InMemoryFitosRepository implements FitosRepository {
       { key: "feature.sites", enabled: true, name: "FITOS Sites Website Builder", description: "Modular block-based website CMS and publisher", category: "advanced" },
       { key: "feature.integrations", enabled: true, name: "Vendor Hardware Integrations", description: "LookinBody, VALD Hub, COSMED and PNOE import adapters", category: "beta" }
     ];
+  }
+
+  async saveImplementationInquiry(input: import("@fitos/contracts").ImplementationInquiryDraft, submit: boolean): Promise<import("@fitos/contracts").ImplementationInquiryResponse> {
+    const existing = input.id ? this.implementationInquiries.get(input.id) : undefined;
+    const ts = now(); const id = existing?.id ?? randomUUID();
+    const inquiry = { id, contactName: input.contactName, businessName: input.businessName, email: input.email, phone: input.phone, country: input.country, businessType: input.businessType, payload: input.payload, status: submit ? "submitted" : "draft", schemaVersion: 1, submittedAt: submit ? ts : null, createdAt: existing?.createdAt ?? ts, updatedAt: ts } as import("@fitos/contracts").ImplementationInquiryResponse;
+    this.implementationInquiries.set(id, inquiry); return inquiry;
+  }
+
+  async listImplementationInquiries(status?: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse[]> {
+    return [...this.implementationInquiries.values()].filter((item) => !status || item.status === status).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+  async getImplementationInquiry(id: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> { return this.implementationInquiries.get(id) ?? null; }
+  async updateImplementationInquiryStatus(id: string, status: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
+    const item = this.implementationInquiries.get(id); if (!item) return null; const updated = { ...item, status, updatedAt: now() }; this.implementationInquiries.set(id, updated); return updated;
+  }
+  async buildTenantSeedManifest(id: string): Promise<import("@fitos/contracts").TenantSeedManifest | null> {
+    const item = this.implementationInquiries.get(id); if (!item) return null; const payload = item.payload as Record<string, any>;
+    return { schemaVersion: 1, sourceInquiryId: id, generatedAt: now(), business: { contactName: item.contactName, businessName: item.businessName, country: item.country, businessType: item.businessType }, branches: payload.locations ?? [], services: payload.services ?? [], team: payload.team ?? [], equipment: payload.equipment ?? [], assessments: payload.assessments ?? [], therapy: payload.therapy ?? [], inventory: payload.inventory ?? [], website: payload.website ?? {}, customRequirements: payload.customRequirements ?? [] };
   }
 
   // ─── Equipment & Resource Scheduling ─────────────────────────────────────────

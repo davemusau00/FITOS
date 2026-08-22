@@ -1238,8 +1238,32 @@ export const therapySessions = pgTable(
   ]
 );
 
+export const implementationInquiries = pgTable("implementation_inquiries", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  status: varchar("status", { length: 40 }).notNull().default("draft"),
+  contactName: varchar("contact_name", { length: 160 }),
+  businessName: varchar("business_name", { length: 160 }),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 60 }),
+  country: varchar("country", { length: 80 }),
+  businessType: varchar("business_type", { length: 80 }),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  assignedToUserId: uuid("assigned_to_user_id").references(() => users.id, { onDelete: "set null" }),
+  convertedTenantId: uuid("converted_tenant_id").references(() => tenants.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+});
+export const implementationInquiryPayloads = pgTable("implementation_inquiry_payloads", {
+  inquiryId: uuid("inquiry_id").primaryKey().references(() => implementationInquiries.id, { onDelete: "cascade" }),
+  schemaVersion: integer("schema_version").notNull().default(1),
+  payloadJson: jsonb("payload_json").notNull().default(sql`'{}'::jsonb`),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+});
+
 export const schema = {
   tenants,
+  implementationInquiries,
+  implementationInquiryPayloads,
   branches,
   users,
   roles,

@@ -456,6 +456,11 @@ export interface FitosRepository {
   getTenantSubscription(tenantId: string): Promise<TenantSubscriptionResponse>;
   getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
   listFeatureFlags(tenantId: string): Promise<FeatureFlagResponse[]>;
+  saveImplementationInquiry(input: import("@fitos/contracts").ImplementationInquiryDraft, submit: boolean): Promise<import("@fitos/contracts").ImplementationInquiryResponse>;
+  listImplementationInquiries(status?: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse[]>;
+  getImplementationInquiry(id: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null>;
+  updateImplementationInquiryStatus(id: string, status: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null>;
+  buildTenantSeedManifest(id: string): Promise<import("@fitos/contracts").TenantSeedManifest | null>;
 
   // Equipment & Resource Scheduling
   listEquipmentAssets(scope: TenantScope, branchId?: string): Promise<EquipmentAssetResponse[]>;

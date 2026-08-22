@@ -7,6 +7,8 @@ import {
   createDatabase,
   creditLedger,
   idempotencyKeys,
+  implementationInquiries,
+  implementationInquiryPayloads,
   leadEvents,
   leadNotes,
   leadTasks,
@@ -3435,6 +3437,23 @@ export class DrizzleFitosRepository implements FitosRepository {
       { key: "feature.integrations", enabled: true, name: "Vendor Hardware Integrations", description: "LookinBody, VALD Hub, COSMED and PNOE import adapters", category: "beta" }
     ];
   }
+
+  async saveImplementationInquiry(input: import("@fitos/contracts").ImplementationInquiryDraft, submit: boolean): Promise<import("@fitos/contracts").ImplementationInquiryResponse> {
+    const current = new Date();
+    const values = { contactName: input.contactName ?? null, businessName: input.businessName ?? null, email: input.email ?? null, phone: input.phone ?? null, country: input.country ?? null, businessType: input.businessType ?? null, status: submit ? "submitted" : "draft", submittedAt: submit ? current : null, updatedAt: current };
+    const [inquiry] = input.id ? await this.db.update(implementationInquiries).set(values).where(eq(implementationInquiries.id, input.id)).returning() : await this.db.insert(implementationInquiries).values(values).returning();
+    if (!inquiry) throw new Error("Implementation inquiry not found.");
+    await this.db.insert(implementationInquiryPayloads).values({ inquiryId: inquiry.id, schemaVersion: 1, payloadJson: input.payload, updatedAt: current }).onConflictDoUpdate({ target: implementationInquiryPayloads.inquiryId, set: { payloadJson: input.payload, updatedAt: current } });
+    return { id: inquiry.id, contactName: inquiry.contactName ?? undefined, businessName: inquiry.businessName ?? undefined, email: inquiry.email ?? undefined, phone: inquiry.phone ?? undefined, country: inquiry.country ?? undefined, businessType: inquiry.businessType ?? undefined, payload: input.payload, status: inquiry.status as any, schemaVersion: 1, submittedAt: inquiry.submittedAt?.toISOString() ?? null, createdAt: inquiry.createdAt.toISOString(), updatedAt: inquiry.updatedAt.toISOString() };
+  }
+
+  async listImplementationInquiries(status?: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse[]> {
+    const rows = await this.db.select({ inquiry: implementationInquiries, payload: implementationInquiryPayloads }).from(implementationInquiries).leftJoin(implementationInquiryPayloads, eq(implementationInquiryPayloads.inquiryId, implementationInquiries.id)).where(status ? eq(implementationInquiries.status, status) : undefined).orderBy(desc(implementationInquiries.updatedAt));
+    return rows.map(({ inquiry, payload }) => ({ id: inquiry.id, contactName: inquiry.contactName ?? undefined, businessName: inquiry.businessName ?? undefined, email: inquiry.email ?? undefined, phone: inquiry.phone ?? undefined, country: inquiry.country ?? undefined, businessType: inquiry.businessType ?? undefined, payload: (payload?.payloadJson as Record<string, unknown>) ?? {}, status: inquiry.status as any, schemaVersion: payload?.schemaVersion ?? 1, submittedAt: inquiry.submittedAt?.toISOString() ?? null, createdAt: inquiry.createdAt.toISOString(), updatedAt: inquiry.updatedAt.toISOString() }));
+  }
+  async getImplementationInquiry(id: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> { return (await this.listImplementationInquiries()).find((item) => item.id === id) ?? null; }
+  async updateImplementationInquiryStatus(id: string, status: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> { const [row] = await this.db.update(implementationInquiries).set({ status, updatedAt: new Date() }).where(eq(implementationInquiries.id, id)).returning(); return row ? this.getImplementationInquiry(row.id) : null; }
+  async buildTenantSeedManifest(id: string): Promise<import("@fitos/contracts").TenantSeedManifest | null> { const item = await this.getImplementationInquiry(id); if (!item) return null; const payload = item.payload as Record<string, any>; return { schemaVersion: 1, sourceInquiryId: id, generatedAt: new Date().toISOString(), business: { contactName: item.contactName, businessName: item.businessName, country: item.country, businessType: item.businessType }, branches: payload.locations ?? [], services: payload.services ?? [], team: payload.team ?? [], equipment: payload.equipment ?? [], assessments: payload.assessments ?? [], therapy: payload.therapy ?? [], inventory: payload.inventory ?? [], website: payload.website ?? {}, customRequirements: payload.customRequirements ?? [] }; }
 
   // ─── Equipment & Resource Scheduling ─────────────────────────────────────────
   async listEquipmentAssets(scope: TenantScope, branchId?: string): Promise<EquipmentAssetResponse[]> {

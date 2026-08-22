@@ -65,6 +65,8 @@ import type {
   TenantSubscriptionResponse,
   UsageQuotaMetricsResponse,
   FeatureFlagResponse,
+  ImplementationInquiryDraft,
+  ImplementationInquiryResponse,
   // Equipment
   EquipmentAssetResponse,
   CreateEquipmentAssetRequest,
@@ -486,6 +488,8 @@ export const api = {
   tenantSubscription: () => request<TenantSubscriptionResponse>("/platform/subscription"),
   tenantUsageQuotas: () => request<UsageQuotaMetricsResponse>("/platform/usage"),
   featureFlags: () => request<FeatureFlagResponse[]>("/platform/feature-flags"),
+  saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) => request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", { method: "POST", body: json(payload) }),
+  submitImplementationInquiry: (payload: ImplementationInquiryDraft) => request<ImplementationInquiryResponse>("/platform/implementation-inquiries/submit", { method: "POST", body: json(payload) }),
 
   // ── Equipment & Resource Scheduling ─────────────────────────────────────
   equipmentAssets: (branchId?: string) =>

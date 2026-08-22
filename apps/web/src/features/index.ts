@@ -26,6 +26,8 @@ export * from "./settings/SecuritySettingsPage";
 export { default as AccountSubscriptionPage } from "./settings/AccountSubscriptionPage";
 export * from "./onboarding/OnboardingPage";
 export * from "./public/TenantPublicPage";
+export * from "./public/FitosLandingPage";
+export * from "./public/ConfigureFitosPage";
 export * from "./member-portal/MemberPortalPage";
 export { default as EquipmentPage } from "./equipment/EquipmentPage";
 export { default as InventoryPage } from "./inventory/InventoryPage";
