@@ -49,12 +49,48 @@ import type {
   ManualCreditAdjustmentRequest,
   PaymentTransactionResponse,
   CreatePaymentRequest,
-  PaymentListFilters,
   ReconcilePaymentRequest,
+  PaymentListFilters,
   AttendanceRecordResponse,
   CheckInRequest,
   UpdateRosterStatusRequest,
-  AttendanceListFilters
+  AttendanceListFilters,
+  PublicTenantInfoResponse,
+  PublicServiceResponse,
+  PublicCoachResponse,
+  PublicScheduleOccurrenceResponse,
+  CreatePublicLeadRequest,
+  MemberProfileResponse,
+  MemberPortalOverviewResponse,
+  InsightsOverviewResponse,
+  AutomationRuleResponse,
+  CreateAutomationRuleRequest,
+  UpdateAutomationRuleRequest,
+  AutomationExecutionLogResponse,
+  SaaSTenantSignupRequest,
+  SaaSTenantSignupResponse,
+  TenantSubscriptionResponse,
+  UsageQuotaMetricsResponse,
+  FeatureFlagResponse,
+  EquipmentAssetResponse,
+  CreateEquipmentAssetRequest,
+  UpdateEquipmentAssetRequest,
+  EquipmentPoolResponse,
+  CreateEquipmentPoolRequest,
+  EquipmentMaintenanceRecordResponse,
+  CreateMaintenanceRecordRequest,
+  InventoryItemResponse,
+  CreateInventoryItemRequest,
+  UpdateInventoryItemRequest,
+  InventoryMovementResponse,
+  CreateInventoryMovementRequest,
+  PurchaseOrderResponse,
+  CreatePurchaseOrderRequest,
+  AssessmentDefinitionResponse,
+  CreateAssessmentDefinitionRequest,
+  AssessmentSessionResponse,
+  CreateAssessmentSessionRequest,
+  MemberPerformanceProfileResponse
 } from "@fitos/contracts";
 
 export interface TenantScope {
@@ -377,6 +413,66 @@ export interface FitosRepository {
     input: UpdateRosterStatusRequest,
     allowOverride: boolean
   ): Promise<AttendanceRecordResponse | null>;
+
+  // Public Tenant
+  getPublicTenantInfo(tenantSlug: string): Promise<PublicTenantInfoResponse | null>;
+  listPublicServices(tenantSlug: string): Promise<PublicServiceResponse[]>;
+  listPublicCoaches(tenantSlug: string): Promise<PublicCoachResponse[]>;
+  listPublicSchedule(tenantSlug: string, daysAhead?: number): Promise<PublicScheduleOccurrenceResponse[]>;
+  createPublicLead(tenantSlug: string, input: CreatePublicLeadRequest): Promise<LeadResponse>;
+
+  // Member Portal & Auth
+  findMemberByIdentifier(identifier: string): Promise<MemberResponse | null>;
+  createMemberSession(input: { memberId: string; tokenHash: string; expiresAt: string }): Promise<{ id: string }>;
+  resolveMemberSession(tokenHash: string, currentTime: string): Promise<MemberProfileResponse | null>;
+  revokeMemberSession(tokenHash: string, at: string): Promise<void>;
+  getMemberPortalOverview(memberId: string): Promise<MemberPortalOverviewResponse | null>;
+  memberSelfBook(memberId: string, occurrenceId: string): Promise<BookingResponse>;
+  memberSelfCancel(memberId: string, bookingId: string, reason: string): Promise<BookingResponse>;
+
+  // Insights Analytics
+  getInsightsOverview(scope: TenantScope, branchId?: string): Promise<InsightsOverviewResponse>;
+
+  // Automations
+  listAutomations(scope: TenantScope): Promise<AutomationRuleResponse[]>;
+  createAutomation(scope: TenantScope, input: CreateAutomationRuleRequest): Promise<AutomationRuleResponse>;
+  updateAutomation(scope: TenantScope, ruleId: string, input: UpdateAutomationRuleRequest): Promise<AutomationRuleResponse | null>;
+  deleteAutomation(scope: TenantScope, ruleId: string): Promise<boolean>;
+  listAutomationLogs(scope: TenantScope): Promise<AutomationExecutionLogResponse[]>;
+  triggerAutomation(scope: TenantScope, ruleId: string): Promise<AutomationExecutionLogResponse>;
+
+  // Platform & Self-Service SaaS
+  signupTenant(input: SaaSTenantSignupRequest, passwordHash: string): Promise<SaaSTenantSignupResponse>;
+  getTenantSubscription(tenantId: string): Promise<TenantSubscriptionResponse>;
+  getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
+  listFeatureFlags(tenantId: string): Promise<FeatureFlagResponse[]>;
+
+  // Equipment & Resource Scheduling
+  listEquipmentAssets(scope: TenantScope, branchId?: string): Promise<EquipmentAssetResponse[]>;
+  findEquipmentAssetById(scope: TenantScope, assetId: string): Promise<EquipmentAssetResponse | null>;
+  createEquipmentAsset(scope: TenantScope, input: CreateEquipmentAssetRequest): Promise<EquipmentAssetResponse>;
+  updateEquipmentAsset(scope: TenantScope, assetId: string, input: UpdateEquipmentAssetRequest): Promise<EquipmentAssetResponse | null>;
+  listEquipmentPools(scope: TenantScope, branchId?: string): Promise<EquipmentPoolResponse[]>;
+  createEquipmentPool(scope: TenantScope, input: CreateEquipmentPoolRequest): Promise<EquipmentPoolResponse>;
+  listEquipmentMaintenance(scope: TenantScope, assetId?: string): Promise<EquipmentMaintenanceRecordResponse[]>;
+  createEquipmentMaintenance(scope: TenantScope, input: CreateMaintenanceRecordRequest): Promise<EquipmentMaintenanceRecordResponse>;
+
+  // Inventory & Consumables
+  listInventoryItems(scope: TenantScope, branchId?: string): Promise<InventoryItemResponse[]>;
+  findInventoryItemById(scope: TenantScope, itemId: string): Promise<InventoryItemResponse | null>;
+  createInventoryItem(scope: TenantScope, input: CreateInventoryItemRequest): Promise<InventoryItemResponse>;
+  updateInventoryItem(scope: TenantScope, itemId: string, input: UpdateInventoryItemRequest): Promise<InventoryItemResponse | null>;
+  listInventoryMovements(scope: TenantScope, itemId?: string): Promise<InventoryMovementResponse[]>;
+  createInventoryMovement(scope: TenantScope, input: CreateInventoryMovementRequest, recordedByUserId: string): Promise<InventoryMovementResponse>;
+  listPurchaseOrders(scope: TenantScope, branchId?: string): Promise<PurchaseOrderResponse[]>;
+  createPurchaseOrder(scope: TenantScope, input: CreatePurchaseOrderRequest): Promise<PurchaseOrderResponse>;
+
+  // FITOS Assess & Performance Profiles
+  listAssessmentDefinitions(scope: TenantScope): Promise<AssessmentDefinitionResponse[]>;
+  createAssessmentDefinition(scope: TenantScope, input: CreateAssessmentDefinitionRequest): Promise<AssessmentDefinitionResponse>;
+  listAssessmentSessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<AssessmentSessionResponse[]>;
+  createAssessmentSession(scope: TenantScope, input: CreateAssessmentSessionRequest, assessorStaffId: string): Promise<AssessmentSessionResponse>;
+  getMemberPerformanceProfile(scope: TenantScope, memberId: string): Promise<MemberPerformanceProfileResponse>;
 
   acquireIdempotency(record: IdempotencyRecord): Promise<IdempotencyAcquireResult>;
   completeIdempotency(

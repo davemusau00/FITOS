@@ -487,11 +487,14 @@
   }
   .fitos-data-table__primary {
     color: var(--color-text-primary);
+    display: block;
     font-weight: 750;
   }
   .fitos-data-table__muted {
     color: var(--color-text-muted);
+    display: block;
     font-size: 0.8125rem;
+    margin-top: 0.125rem;
   }
 
   .fitos-overlay {
@@ -510,9 +513,13 @@
     border-radius: var(--radius-panel);
     box-shadow: var(--shadow-panel);
     max-height: calc(100dvh - 2rem);
-    max-width: 34rem;
+    max-width: 36rem;
     overflow: auto;
     width: 100%;
+  }
+  .fitos-modal:has(.fitos-data-table),
+  .fitos-modal:has(.session-detail-grid) {
+    max-width: 44rem;
   }
   .fitos-modal__header {
     align-items: flex-start;

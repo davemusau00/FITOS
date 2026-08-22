@@ -501,6 +501,35 @@ html, body {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-bottom: 1.25rem;
 }
+/* KPI card — label stacked above value, no inline merge */
+.kpi {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.3rem;
+  padding: 1rem 1.25rem !important;
+}
+.kpi > span,
+.kpi > label {
+  color: var(--text-muted);
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.kpi > strong {
+  color: var(--text-primary);
+  display: block;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.kpi--energy > strong { color: var(--fitos-energy); }
+/* kpi-grid with fewer than 6 items — auto-fit */
+.kpi-grid:has(.kpi) {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
 .stat-card {
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
@@ -3038,4 +3067,387 @@ html, body {
   width: 2.25rem;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   SESSION DETAIL MODAL & DRAWER STYLES (Screen 4)
+   ───────────────────────────────────────────────────────────────────────── */
+.session-detail-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 640px) {
+  .session-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.session-detail-stat-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.625rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem 1rem;
+}
+.session-detail-stat-card__label {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.session-detail-stat-card__value {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.session-detail-stat-card__value strong {
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.session-detail-stat-card__value .muted {
+  font-size: 0.82rem;
+}
+.session-detail-stat-card__sub {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.session-cap-bar {
+  background: var(--surface-3);
+  border-radius: 9999px;
+  height: 6px;
+  margin: 0.35rem 0;
+  overflow: hidden;
+  width: 100%;
+}
+.session-cap-bar__fill {
+  border-radius: 9999px;
+  height: 100%;
+  transition: width 0.3s ease;
+}
 
+/* Modal KPI safety overrides */
+.fitos-modal .kpi-grid,
+.fitos-drawer .kpi-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.625rem !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FULLCALENDAR THEME & CUSTOM EVENT CARDS (Screen 4)
+   ───────────────────────────────────────────────────────────────────────── */
+.calendar-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 1.25rem;
+}
+.fitos-calendar-wrapper {
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+/* FullCalendar Container & Grid */
+.fc {
+  --fc-border-color: var(--border-subtle);
+  --fc-button-bg-color: var(--surface-2);
+  --fc-button-border-color: var(--border-subtle);
+  --fc-button-text-color: var(--text-primary);
+  --fc-button-hover-bg-color: var(--surface-3);
+  --fc-button-hover-border-color: var(--border-strong);
+  --fc-button-active-bg-color: var(--surface-3);
+  --fc-button-active-border-color: var(--fitos-energy);
+  --fc-today-bg-color: rgba(198, 255, 0, 0.03);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--surface-2);
+  --fc-list-event-hover-bg-color: var(--surface-2);
+}
+
+/* FullCalendar Toolbar Header */
+.fc .fc-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin-bottom: 1.25rem !important;
+}
+.fc .fc-toolbar-title {
+  color: var(--text-primary);
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+}
+.fc .fc-button {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+  color: var(--text-primary) !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+  padding: 0.45rem 0.85rem !important;
+  text-transform: capitalize !important;
+  transition: all 0.15s ease !important;
+}
+.fc .fc-button:hover {
+  background: var(--surface-3) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-primary) !important;
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: var(--surface-3) !important;
+  border-color: var(--fitos-energy) !important;
+  color: var(--fitos-energy) !important;
+}
+.fc .fc-button-group {
+  gap: 0.25rem;
+}
+.fc .fc-button-group > .fc-button {
+  border-radius: 0.5rem !important;
+  margin: 0 !important;
+}
+
+/* Column Header Cells */
+.fc-theme-standard th {
+  background: var(--surface-2);
+  border-color: var(--border-subtle) !important;
+  padding: 0.625rem 0.25rem !important;
+}
+.fc-col-header-cell-cushion {
+  color: var(--text-secondary) !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+  text-decoration: none !important;
+}
+.fc-day-today .fc-col-header-cell-cushion {
+  color: var(--fitos-energy) !important;
+  font-weight: 800 !important;
+}
+
+/* Time Grid Slot Lines */
+.fc .fc-timegrid-slot {
+  border-color: rgba(255, 255, 255, 0.04) !important;
+  height: 2.5rem !important;
+}
+.fc .fc-timegrid-slot-minor {
+  border-top-style: dotted !important;
+  border-color: rgba(255, 255, 255, 0.03) !important;
+}
+.fc .fc-timegrid-slot-label-cushion {
+  color: var(--text-muted) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+.fc-theme-standard td, .fc-theme-standard th {
+  border-color: var(--border-subtle) !important;
+}
+
+/* Now Indicator */
+.fc .fc-timegrid-now-indicator-line {
+  border-color: var(--fitos-energy) !important;
+  border-width: 2px !important;
+  box-shadow: 0 0 8px rgba(198, 255, 0, 0.4);
+}
+.fc .fc-timegrid-now-indicator-arrow {
+  border-color: var(--fitos-energy) !important;
+}
+
+/* Custom Calendar Event Cards */
+.fc-timegrid-event-harness {
+  margin: 1px 2px !important;
+}
+.fc-event {
+  background: rgba(25, 28, 32, 0.95) !important;
+  border: 1px solid rgba(198, 255, 0, 0.25) !important;
+  border-left: 3px solid var(--fitos-energy) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0 !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.fc-event:hover {
+  border-color: var(--fitos-energy) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5) !important;
+  transform: translateY(-1px) scale(1.01);
+  z-index: 10 !important;
+}
+.fc-event.fc-event--cancelled,
+.fc-event[style*="3a1d1d"] {
+  background: rgba(58, 29, 29, 0.95) !important;
+  border-color: rgba(255, 100, 100, 0.3) !important;
+  border-left: 3px solid var(--danger) !important;
+}
+
+/* Inside Event Card Content */
+.fitos-cal-event {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+  justify-content: flex-start;
+  padding: 4px 6px;
+  width: 100%;
+}
+.fitos-cal-event__time {
+  color: var(--fitos-energy);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.fitos-cal-event--cancelled .fitos-cal-event__time {
+  color: var(--danger);
+}
+.fitos-cal-event__title {
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fitos-cal-event__meta {
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.68rem;
+  gap: 0.35rem;
+  line-height: 1.2;
+}
+.fitos-cal-event__meta span {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BOOKING STEPPER & INTERACTIVE SELECTORS (Screen 4 & Flow)
+   ───────────────────────────────────────────────────────────────────────── */
+.booking-stepper-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 900px) {
+  .booking-stepper-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card-header-step {
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+}
+.card-header-step h2 {
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.step-badge {
+  align-items: center;
+  background: var(--fitos-energy);
+  border-radius: 50%;
+  color: #000;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 800;
+  height: 1.5rem;
+  justify-content: center;
+  width: 1.5rem;
+}
+
+.selected-entity-badge {
+  align-items: center;
+  background: rgba(198, 255, 0, 0.05);
+  border: 1px solid rgba(198, 255, 0, 0.25);
+  border-radius: var(--radius-sm, 6px);
+  display: flex;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+}
+.selected-entity-badge__info {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+.selected-entity-badge__info strong {
+  color: var(--text-primary);
+  display: block;
+  font-size: 0.9rem;
+}
+.selected-entity-badge__info span {
+  color: var(--text-secondary);
+  display: block;
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
+.clickable-list-item {
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  transition: background 0.15s ease;
+}
+.clickable-list-item:hover:not(.is-disabled) {
+  background: var(--surface-2);
+}
+.clickable-list-item.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.confirmation-summary-card {
+  border-top: 2px solid var(--fitos-energy) !important;
+  margin-top: 1.25rem;
+}
+.confirmation-summary-card h2 {
+  font-size: 1.125rem;
+  font-weight: 800;
+  margin-top: 0;
+}
+
+.summary-details-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin: 1.25rem 0;
+  padding: 1rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-subtle);
+}
+.summary-details-grid > div strong {
+  color: var(--text-primary);
+  display: block;
+  font-size: 0.95rem;
+  margin: 0.2rem 0;
+}
+.summary-details-grid > div span {
+  color: var(--text-secondary);
+  display: block;
+  font-size: 0.8rem;
+}

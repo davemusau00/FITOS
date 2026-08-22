@@ -1,4 +1,5 @@
 export * from "./auth/LoginPage";
+export { default as TenantSignupPage } from "./auth/TenantSignupPage";
 export * from "./overview/OverviewPage";
 export * from "./members/MembersPage";
 export * from "./members/NewMemberPage";
@@ -22,7 +23,10 @@ export * from "./settings/SettingsPage";
 export * from "./settings/OrganizationSettingsPage";
 export * from "./settings/BranchesSettingsPage";
 export * from "./settings/SecuritySettingsPage";
+export { default as AccountSubscriptionPage } from "./settings/AccountSubscriptionPage";
 export * from "./onboarding/OnboardingPage";
 export * from "./public/TenantPublicPage";
 export * from "./member-portal/MemberPortalPage";
+export { default as EquipmentPage } from "./equipment/EquipmentPage";
+export { default as InventoryPage } from "./inventory/InventoryPage";
 export * from "./shared";

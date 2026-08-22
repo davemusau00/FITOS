@@ -4,6 +4,7 @@ import { Icon, IconButton, type IconName } from "@fitos/ui";
 import { can, useAuth } from "./auth";
 import { FitosLogo } from "./logo";
 import { CommandPalette } from "./command-palette";
+import { BranchProvider, useBranch } from "./branch-context";
 
 type NavItem = {
   to: string;
@@ -53,6 +54,9 @@ const navGroups: NavGroup[] = [
     group: "Business",
     items: [
       { to: "/app/services", label: "Services & Classes", icon: "spark", permission: "service:read" },
+      { to: "/app/payments", label: "Payments", icon: "shield", permission: "payment:read" },
+      { to: "/app/equipment", label: "Equipment & Assets", icon: "check", permission: "schedule:read" },
+      { to: "/app/inventory", label: "Inventory & Stock", icon: "check", permission: "tenant:read" },
       { to: "/app/staff", label: "Team & Staff", icon: "team", permission: "staff:read" }
     ]
   },
@@ -64,14 +68,14 @@ const navGroups: NavGroup[] = [
   }
 ];
 
-export function AppShell() {
+function AppShellInner() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
 
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const { activeBranchId, activeBranch: ctxBranch, setActiveBranch, branches: ctxBranches } = useBranch();
 
   const { auth, signOut } = useAuth();
   const navigate = useNavigate();
@@ -115,8 +119,7 @@ export function AppShell() {
 
   if (!auth) return null;
 
-  const currentBranch =
-    auth.branches.find((b) => b.id === selectedBranchId) ?? auth.branches[0];
+  const currentBranch = ctxBranch ?? auth.branches[0];
 
   const logout = async () => {
     await signOut();
@@ -168,14 +171,14 @@ export function AppShell() {
               <Icon className="branch-switcher__chevron" name="chevron-down" size={14} />
             </button>
 
-            {branchMenuOpen && auth.branches.length > 0 ? (
+            {branchMenuOpen && (ctxBranches.length > 0 || auth.branches.length > 0) ? (
               <ul className="branch-dropdown">
-                {auth.branches.map((b) => (
+                {(ctxBranches.length > 0 ? ctxBranches : auth.branches).map((b) => (
                   <li key={b.id}>
                     <button
-                      className={b.id === currentBranch?.id ? "is-active" : ""}
+                      className={b.id === (activeBranchId || currentBranch?.id) ? "is-active" : ""}
                       onClick={() => {
-                        setSelectedBranchId(b.id);
+                        setActiveBranch(b.id);
                         setBranchMenuOpen(false);
                       }}
                       type="button"
@@ -420,5 +423,13 @@ export function AppShell() {
       {/* Command Palette Modal */}
       <CommandPalette isOpen={cmdOpen} onClose={() => setCmdOpen(false)} />
     </div>
+  );
+}
+
+export function AppShell() {
+  return (
+    <BranchProvider>
+      <AppShellInner />
+    </BranchProvider>
   );
 }

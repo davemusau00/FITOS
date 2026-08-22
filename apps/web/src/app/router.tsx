@@ -28,7 +28,11 @@ import {
   SettingsPage,
   StaffPage,
   TenantPublicPage,
-  UnmatchedPaymentsPage
+  UnmatchedPaymentsPage,
+  TenantSignupPage,
+  EquipmentPage,
+  InventoryPage,
+  AccountSubscriptionPage
 } from "../features";
 
 function ProtectedRoute() {
@@ -43,6 +47,7 @@ export function AppRouter() {
   return (
     <Routes>
       <Route element={<LoginPage />} path="/login" />
+      <Route element={<TenantSignupPage />} path="/signup" />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />} path="/app">
           <Route element={<Navigate replace to="overview" />} index />
@@ -74,6 +79,10 @@ export function AppRouter() {
           <Route element={<InsightsPage />} path="insights" />
           <Route element={<AutomationsPage />} path="automations" />
 
+          {/* Equipment & Resources */}
+          <Route element={<EquipmentPage />} path="equipment" />
+          <Route element={<InventoryPage />} path="inventory" />
+
           {/* Settings */}
           <Route element={<SettingsPage />} path="settings" />
           <Route element={<OrganizationSettingsPage />} path="settings/organization" />
@@ -81,6 +90,7 @@ export function AppRouter() {
           <Route element={<BranchesSettingsPage />} path="settings/branches/new" />
           <Route element={<StaffPage />} path="settings/team" />
           <Route element={<SecuritySettingsPage />} path="settings/security" />
+          <Route element={<AccountSubscriptionPage />} path="settings/subscription" />
         </Route>
         <Route element={<OnboardingPage />} path="/onboarding" />
         <Route element={<MemberPortalPage />} path="/member/*" />

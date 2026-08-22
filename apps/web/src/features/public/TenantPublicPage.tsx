@@ -10,6 +10,7 @@ export function TenantPublicPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
   const [trialModalOpen, setTrialModalOpen] = useState(false);
+  const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [leadForm, setLeadForm] = useState({
     firstName: "",
     lastName: "",
@@ -17,40 +18,36 @@ export function TenantPublicPage() {
     email: "",
     interest: ""
   });
-  const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const slug = tenantSlug || "apex-fitness-nairobi";
 
-  const services = useQuery({ queryKey: ["services", "public"], queryFn: api.services });
-  const branches = useQuery({ queryKey: ["branches", "public"], queryFn: api.branches });
-  const staff = useQuery({ queryKey: ["staff", "public"], queryFn: api.staff });
-  const occurrences = useQuery({
-    queryKey: ["schedule", "public"],
-    queryFn: () => {
-      const today = new Date();
-      const nextWeek = new Date();
-      nextWeek.setDate(today.getDate() + 7);
-      return api.scheduleOccurrences(
-        new URLSearchParams({
-          from: today.toISOString().split("T")[0]!,
-          to: nextWeek.toISOString().split("T")[0]!,
-          limit: "100"
-        })
-      );
-    }
+  const tenantInfo = useQuery({
+    queryKey: ["public", slug, "info"],
+    queryFn: () => api.publicTenantInfo(slug)
+  });
+
+  const services = useQuery({
+    queryKey: ["public", slug, "services"],
+    queryFn: () => api.publicServices(slug)
+  });
+
+  const coaches = useQuery({
+    queryKey: ["public", slug, "coaches"],
+    queryFn: () => api.publicCoaches(slug)
+  });
+
+  const schedule = useQuery({
+    queryKey: ["public", slug, "schedule"],
+    queryFn: () => api.publicSchedule(slug, 14)
   });
 
   const leadMutation = useMutation({
     mutationFn: (data: typeof leadForm) => {
-      const branchId = branches.data?.[0]?.id ?? "";
-      return api.createLead({
-        contact: {
-          firstName: data.firstName.trim(),
-          lastName: data.lastName.trim() || undefined,
-          phone: data.phone.trim() || undefined,
-          email: data.email.trim() || undefined
-        },
-        source: "website",
-        interest: data.interest || undefined,
-        branchId
+      return api.publicCreateLead(slug, {
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim() || undefined,
+        phone: data.phone.trim() || undefined,
+        email: data.email.trim() || undefined,
+        interest: data.interest || undefined
       });
     },
     onSuccess: () => {
@@ -58,9 +55,9 @@ export function TenantPublicPage() {
     }
   });
 
-  const publicServices = services.data?.filter((s) => s.isActive && s.publicVisible) ?? services.data ?? [];
-  const scheduleItems = occurrences.data?.data ?? [];
-  const activeStaff = staff.data ?? [];
+  const publicServices = services.data ?? [];
+  const scheduleItems = schedule.data ?? [];
+  const activeCoaches = coaches.data ?? [];
 
   const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const gymName = tenantSlug ? tenantSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) : "Apex Fitness Club";
@@ -161,7 +158,7 @@ export function TenantPublicPage() {
               <h3 className="public-class-card__name">{svc.name}</h3>
               <p className="public-class-card__meta">
                 <span>{svc.serviceType.toUpperCase()}</span> ·{" "}
-                <span>{svc.defaultCapacity ? `Up to ${svc.defaultCapacity} spots` : "Open capacity"}</span>
+                <span>{svc.creditsRequired} Credit{svc.creditsRequired > 1 ? "s" : ""}</span>
               </p>
               <div className="public-class-card__footer">
                 <button
@@ -204,7 +201,6 @@ export function TenantPublicPage() {
           {scheduleItems.length ? (
             scheduleItems.map((occ) => {
               const svc = services.data?.find((s) => s.id === occ.serviceId);
-              const trainer = staff.data?.find((u) => u.user.id === occ.trainerUserId);
               const start = new Date(occ.startsAt);
               const end = new Date(occ.endsAt);
               return (
@@ -214,9 +210,9 @@ export function TenantPublicPage() {
                     <span>{end.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
                   <div className="public-timetable-item__details">
-                    <h4>{svc?.name ?? "Class Session"}</h4>
+                    <h4>{svc?.name ?? occ.serviceName ?? "Class Session"}</h4>
                     <p>
-                      Coach: {trainer?.user.displayName ?? "Head Coach"} · {svc?.durationMinutes ?? 45} mins
+                      Coach: {occ.trainerName ?? "Head Coach"} · {svc?.durationMinutes ?? 45} mins · {occ.availableSpots} spots left
                     </p>
                   </div>
                   <div className="public-timetable-item__action">
@@ -248,19 +244,19 @@ export function TenantPublicPage() {
         </div>
 
         <div className="public-coaches-grid">
-          {activeStaff.map((staffItem) => (
-            <Card className="public-coach-card" key={staffItem.user.id}>
+          {activeCoaches.map((coach) => (
+            <Card className="public-coach-card" key={coach.id}>
               <div className="public-coach-avatar">
-                {staffItem.user.displayName[0]}
+                {coach.displayName[0]}
               </div>
-              <h3>{staffItem.user.displayName}</h3>
-              <span className="public-coach-role">{staffItem.role.name}</span>
+              <h3>{coach.displayName}</h3>
+              <span className="public-coach-role">{coach.roleName}</span>
               <p className="muted" style={{ fontSize: "0.82rem", marginTop: "0.5rem" }}>
-                Specializes in functional movement, metabolic conditioning, and athletic development.
+                {coach.bio}
               </p>
             </Card>
           ))}
-          {activeStaff.length === 0 && (
+          {activeCoaches.length === 0 && (
             <Card className="public-coach-card">
               <div className="public-coach-avatar">M</div>
               <h3>Coach Marcus</h3>
@@ -281,13 +277,13 @@ export function TenantPublicPage() {
         </div>
 
         <div className="public-location-cards">
-          {(branches.data?.length ? branches.data : [{ id: "b1", name: "Main Facility", timezone: "Africa/Nairobi" }]).map((branch) => (
+          {(tenantInfo.data?.branches?.length ? tenantInfo.data.branches : [{ id: "b1", name: "Main Studio", addressLine1: "Kilimani Road", city: "Nairobi", phone: "+254 700 000 000" }]).map((branch) => (
             <Card className="public-location-card" key={branch.id}>
               <div className="public-location-card__icon">
                 <Icon name="building" size={24} />
               </div>
               <h3>{branch.name}</h3>
-              <p>Central Facility, Main Avenue · {branch.timezone ?? "EAT"}</p>
+              <p>Central Facility, Main Avenue · {tenantInfo.data?.timezone ?? "EAT"}</p>
               <div className="public-location-hours">
                 <div>
                   <span>Mon – Fri:</span>

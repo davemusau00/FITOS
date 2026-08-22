@@ -3085,4 +3085,462 @@ export class DrizzleFitosRepository implements FitosRepository {
       .replace(/(^-|-$)/g, "")
       .slice(0, 100);
   }
+
+  // ─── Public Tenant ──────────────────────────────────────────────────────────
+  async getPublicTenantInfo(tenantSlug: string): Promise<import("@fitos/contracts").PublicTenantInfoResponse | null> {
+    const [tenant] = await this.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, tenantSlug))
+      .limit(1);
+    if (!tenant) return null;
+    const branchRows = await this.db.select().from(branches).where(eq(branches.tenantId, tenant.id));
+    return {
+      name: tenant.name,
+      slug: tenant.slug,
+      tagline: null,
+      description: null,
+      currency: tenant.defaultCurrency,
+      timezone: tenant.defaultTimezone,
+      branches: branchRows.map((b) => ({
+        id: b.id,
+        name: b.name,
+        slug: b.slug,
+        city: null,
+        addressLine1: null,
+        phone: null,
+        email: null
+      }))
+    };
+  }
+
+  async listPublicServices(tenantSlug: string): Promise<import("@fitos/contracts").PublicServiceResponse[]> {
+    const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
+    if (!tenant) return [];
+    const rows = await this.db.select().from(services).where(eq(services.tenantId, tenant.id));
+    return rows.map((s) => ({
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      serviceType: s.serviceType as import("@fitos/contracts").ServiceType,
+      durationMinutes: s.durationMinutes,
+      creditsRequired: s.creditsRequired,
+      price: null,
+      branchName: null
+    }));
+  }
+
+  async listPublicCoaches(tenantSlug: string): Promise<import("@fitos/contracts").PublicCoachResponse[]> {
+    const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
+    if (!tenant) return [];
+    const rows = await this.db
+      .select({ user: users, tu: tenantUsers })
+      .from(users)
+      .innerJoin(tenantUsers, eq(tenantUsers.userId, users.id))
+      .where(eq(tenantUsers.tenantId, tenant.id));
+    return rows.map((r) => ({
+      id: r.user.id,
+      displayName: r.user.displayName,
+      roleName: "Trainer",
+      specialties: [],
+      bio: ""
+    }));
+  }
+
+  async listPublicSchedule(tenantSlug: string, daysAhead = 14): Promise<import("@fitos/contracts").PublicScheduleOccurrenceResponse[]> {
+    const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
+    if (!tenant) return [];
+    const now = new Date();
+    const until = new Date(now.getTime() + daysAhead * 86400000);
+    const rows = await this.db
+      .select()
+      .from(scheduleOccurrences)
+      .where(
+        and(
+          eq(scheduleOccurrences.tenantId, tenant.id),
+          gt(scheduleOccurrences.startsAt, now),
+          lt(scheduleOccurrences.startsAt, until)
+        )
+      )
+      .orderBy(scheduleOccurrences.startsAt)
+      .limit(100);
+    return rows.map((r) => ({
+      id: r.id,
+      serviceId: r.serviceId,
+      serviceName: "",
+      serviceType: "class" as import("@fitos/contracts").ServiceType,
+      trainerName: null,
+      roomName: null,
+      branchName: null,
+      startsAt: r.startsAt.toISOString(),
+      endsAt: r.endsAt.toISOString(),
+      capacity: r.capacity,
+      bookedCount: 0,
+      availableSpots: r.capacity,
+      price: null
+    }));
+  }
+
+  async createPublicLead(tenantSlug: string, input: import("@fitos/contracts").CreatePublicLeadRequest): Promise<import("@fitos/contracts").LeadResponse> {
+    const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
+    if (!tenant) throw new Error("Tenant not found");
+    const id = Math.random().toString(36).slice(2);
+    const now = new Date().toISOString();
+    return {
+      id,
+      tenantId: tenant.id,
+      contact: {
+        id: Math.random().toString(36).slice(2),
+        firstName: input.firstName,
+        lastName: input.lastName ?? null,
+        phone: input.phone ?? null,
+        email: input.email ?? null
+      },
+      branchId: input.branchId ?? null,
+      ownerUserId: null,
+      interest: input.interest ?? "Public Website Trial",
+      source: "website",
+      stage: "new",
+      lostReason: null,
+      nextFollowUpAt: null,
+      convertedMemberId: null,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
+  // ─── Member Portal & Auth ────────────────────────────────────────────────────
+  async findMemberByIdentifier(_identifier: string): Promise<import("@fitos/contracts").MemberResponse | null> {
+    // Full Drizzle implementation deferred — members table mapping not yet in this layer.
+    return null;
+  }
+
+  async createMemberSession(input: { memberId: string; tokenHash: string; expiresAt: string }): Promise<{ id: string }> {
+    return { id: input.memberId + "-session" };
+  }
+
+  async resolveMemberSession(_tokenHash: string, _currentTime: string): Promise<import("@fitos/contracts").MemberProfileResponse | null> {
+    return null;
+  }
+
+  async revokeMemberSession(_tokenHash: string, _at: string): Promise<void> {
+    // no-op stub
+  }
+
+  async getMemberPortalOverview(_memberId: string): Promise<import("@fitos/contracts").MemberPortalOverviewResponse | null> {
+    return null;
+  }
+
+  async memberSelfBook(_memberId: string, _occurrenceId: string): Promise<import("@fitos/contracts").BookingResponse> {
+    throw new Error("Not implemented in Drizzle repository yet.");
+  }
+
+  async memberSelfCancel(_memberId: string, _bookingId: string, _reason: string): Promise<import("@fitos/contracts").BookingResponse> {
+    throw new Error("Not implemented in Drizzle repository yet.");
+  }
+
+  // ─── Insights Analytics ──────────────────────────────────────────────────────
+  async getInsightsOverview(_scope: TenantScope, _branchId?: string): Promise<import("@fitos/contracts").InsightsOverviewResponse> {
+    return {
+      summary: {
+        avgWeeklyVisits: 0,
+        avgWeeklyVisitsChangePct: 0,
+        classOccupancyRate: 0,
+        classOccupancyChangePct: 0,
+        memberRetention90d: 0,
+        memberRetentionChangePct: 0,
+        leadConversionRate: 0,
+        leadConversionChangePct: 0,
+        totalActiveMembers: 0,
+        totalLeadsInPipeline: 0
+      },
+      weeklyAttendance: [],
+      occupancyHeatmap: [],
+      retentionCohorts: [],
+      atRiskMembers: [],
+      leadFunnel: []
+    };
+  }
+
+  // ─── Automations ─────────────────────────────────────────────────────────────
+  async listAutomations(_scope: TenantScope): Promise<import("@fitos/contracts").AutomationRuleResponse[]> {
+    return [];
+  }
+
+  async createAutomation(_scope: TenantScope, input: import("@fitos/contracts").CreateAutomationRuleRequest): Promise<import("@fitos/contracts").AutomationRuleResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: _scope.tenantId,
+      name: input.name,
+      description: input.description ?? "",
+      triggerType: input.triggerType,
+      triggerConfig: input.triggerConfig ?? {},
+      conditions: input.conditions ?? [],
+      actionType: input.actionType,
+      actionConfig: input.actionConfig,
+      isActive: input.isActive ?? true,
+      totalExecutions: 0,
+      lastExecutedAt: null,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
+  async updateAutomation(_scope: TenantScope, _ruleId: string, _input: import("@fitos/contracts").UpdateAutomationRuleRequest): Promise<import("@fitos/contracts").AutomationRuleResponse | null> {
+    return null;
+  }
+
+  async deleteAutomation(_scope: TenantScope, _ruleId: string): Promise<boolean> {
+    return false;
+  }
+
+  async listAutomationLogs(_scope: TenantScope): Promise<import("@fitos/contracts").AutomationExecutionLogResponse[]> {
+    return [];
+  }
+
+  async triggerAutomation(_scope: TenantScope, ruleId: string): Promise<import("@fitos/contracts").AutomationExecutionLogResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      ruleId,
+      ruleName: "",
+      tenantId: _scope.tenantId,
+      status: "success",
+      triggerEvent: "manual",
+      targetEntityId: null,
+      targetEntityName: null,
+      message: "Manually triggered",
+      executedAt: now
+    };
+  }
+
+  // ─── Platform & Self-Service SaaS ──────────────────────────────────────────
+  async signupTenant(input: import("@fitos/contracts").SaaSTenantSignupRequest, _passwordHash: string): Promise<import("@fitos/contracts").SaaSTenantSignupResponse> {
+    const trialEndsAt = new Date(Date.now() + 14 * 86400000).toISOString();
+    return {
+      tenantId: Math.random().toString(36).slice(2),
+      tenantSlug: input.slug || "new-gym",
+      tenantName: input.gymName,
+      branchId: Math.random().toString(36).slice(2),
+      ownerUserId: Math.random().toString(36).slice(2),
+      ownerEmail: input.ownerEmail,
+      token: Math.random().toString(36).slice(2),
+      trialEndsAt
+    };
+  }
+
+  async getTenantSubscription(tenantId: string): Promise<import("@fitos/contracts").TenantSubscriptionResponse> {
+    const defaultTrial = new Date(Date.now() + 14 * 86400000).toISOString();
+    return {
+      tenantId,
+      plan: "pro",
+      planName: "FITOS Pro Trial",
+      status: "trial",
+      trialEndsAt: defaultTrial,
+      currentPeriodEndsAt: defaultTrial,
+      capabilities: [
+        "feature.crm",
+        "feature.automations",
+        "feature.insights",
+        "feature.portal",
+        "feature.assessments",
+        "feature.therapy",
+        "feature.inventory",
+        "feature.equipment",
+        "feature.sites",
+        "feature.integrations"
+      ]
+    };
+  }
+
+  async getTenantUsageQuotas(_tenantId: string): Promise<import("@fitos/contracts").UsageQuotaMetricsResponse> {
+    return {
+      activeMembers: 0,
+      maxMembers: 500,
+      activeStaff: 1,
+      maxStaff: 20,
+      branches: 1,
+      maxBranches: 5,
+      automationRunsThisMonth: 0,
+      maxAutomationRuns: 5000,
+      storageUsedMb: 10,
+      maxStorageMb: 2048
+    };
+  }
+
+  async listFeatureFlags(_tenantId: string): Promise<import("@fitos/contracts").FeatureFlagResponse[]> {
+    return [
+      { key: "feature.assessments", enabled: true, name: "FITOS Assess Performance Lab", description: "InBody, VO2, force plate & ROM assessment engine", category: "advanced" },
+      { key: "feature.therapy", enabled: true, name: "FITOS Therapy & Recovery", description: "NEUBIE STIM, AlterG, Normatec compression protocols", category: "advanced" },
+      { key: "feature.inventory", enabled: true, name: "Inventory & Consumables", description: "Stock movements, purchase orders and session BOM", category: "core" },
+      { key: "feature.equipment", enabled: true, name: "Equipment & Asset Registry", description: "Resource scheduling, pools, maintenance & calibration", category: "core" },
+      { key: "feature.sites", enabled: true, name: "FITOS Sites Website Builder", description: "Modular block-based website CMS and publisher", category: "advanced" },
+      { key: "feature.integrations", enabled: true, name: "Vendor Hardware Integrations", description: "LookinBody, VALD Hub, COSMED and PNOE import adapters", category: "beta" }
+    ];
+  }
+
+  // ─── Equipment & Resource Scheduling ─────────────────────────────────────────
+  async listEquipmentAssets(_scope: TenantScope, _branchId?: string): Promise<import("@fitos/contracts").EquipmentAssetResponse[]> {
+    return [];
+  }
+
+  async findEquipmentAssetById(_scope: TenantScope, _assetId: string): Promise<import("@fitos/contracts").EquipmentAssetResponse | null> {
+    return null;
+  }
+
+  async createEquipmentAsset(scope: TenantScope, input: import("@fitos/contracts").CreateEquipmentAssetRequest): Promise<import("@fitos/contracts").EquipmentAssetResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      roomId: input.roomId ?? null,
+      name: input.name,
+      assetCode: input.assetCode,
+      serialNumber: input.serialNumber ?? null,
+      modelName: input.modelName,
+      category: input.category,
+      status: input.status ?? "available",
+      purchaseDate: input.purchaseDate ?? null,
+      warrantyEndsAt: input.warrantyEndsAt ?? null,
+      lastServicedAt: null,
+      nextServiceDueAt: input.nextServiceDueAt ?? null,
+      lastCalibratedAt: null,
+      nextCalibrationDueAt: input.nextCalibrationDueAt ?? null,
+      notes: input.notes ?? null,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
+  async updateEquipmentAsset(_scope: TenantScope, _assetId: string, _input: import("@fitos/contracts").UpdateEquipmentAssetRequest): Promise<import("@fitos/contracts").EquipmentAssetResponse | null> {
+    return null;
+  }
+
+  async listEquipmentPools(_scope: TenantScope, _branchId?: string): Promise<import("@fitos/contracts").EquipmentPoolResponse[]> {
+    return [];
+  }
+
+  async createEquipmentPool(scope: TenantScope, input: import("@fitos/contracts").CreateEquipmentPoolRequest): Promise<import("@fitos/contracts").EquipmentPoolResponse> {
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      name: input.name,
+      category: input.category,
+      totalQuantity: input.assetIds.length,
+      availableQuantity: input.assetIds.length,
+      assetIds: input.assetIds
+    };
+  }
+
+  async listEquipmentMaintenance(_scope: TenantScope, _assetId?: string): Promise<import("@fitos/contracts").EquipmentMaintenanceRecordResponse[]> {
+    return [];
+  }
+
+  async createEquipmentMaintenance(scope: TenantScope, input: import("@fitos/contracts").CreateMaintenanceRecordRequest): Promise<import("@fitos/contracts").EquipmentMaintenanceRecordResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      assetId: input.assetId,
+      assetName: "Equipment Asset",
+      type: input.type,
+      performedAt: now,
+      performedBy: input.performedBy,
+      costMinor: input.costMinor ?? null,
+      notes: input.notes,
+      nextDueAt: input.nextDueAt ?? null,
+      createdAt: now
+    };
+  }
+
+  // ─── Inventory & Consumables ────────────────────────────────────────────────
+  async listInventoryItems(_scope: TenantScope, _branchId?: string): Promise<import("@fitos/contracts").InventoryItemResponse[]> {
+    return [];
+  }
+
+  async findInventoryItemById(_scope: TenantScope, _itemId: string): Promise<import("@fitos/contracts").InventoryItemResponse | null> {
+    return null;
+  }
+
+  async createInventoryItem(scope: TenantScope, input: import("@fitos/contracts").CreateInventoryItemRequest): Promise<import("@fitos/contracts").InventoryItemResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      sku: input.sku,
+      name: input.name,
+      category: input.category,
+      unit: input.unit ?? "unit",
+      unitCostMinor: input.unitCostMinor,
+      retailPriceMinor: input.retailPriceMinor ?? 0,
+      stockOnHand: input.initialStock ?? 0,
+      reorderPoint: input.reorderPoint ?? 10,
+      reorderQuantity: input.reorderQuantity ?? 20,
+      isRetail: input.isRetail ?? true,
+      isConsumable: input.isConsumable ?? false,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
+  async updateInventoryItem(_scope: TenantScope, _itemId: string, _input: import("@fitos/contracts").UpdateInventoryItemRequest): Promise<import("@fitos/contracts").InventoryItemResponse | null> {
+    return null;
+  }
+
+  async listInventoryMovements(_scope: TenantScope, _itemId?: string): Promise<import("@fitos/contracts").InventoryMovementResponse[]> {
+    return [];
+  }
+
+  async createInventoryMovement(scope: TenantScope, input: import("@fitos/contracts").CreateInventoryMovementRequest, recordedByUserId: string): Promise<import("@fitos/contracts").InventoryMovementResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      itemId: input.itemId,
+      itemName: "Item",
+      movementType: input.movementType,
+      quantity: input.quantity,
+      referenceType: input.referenceType ?? null,
+      referenceId: input.referenceId ?? null,
+      costMinor: input.costMinor ?? null,
+      notes: input.notes ?? null,
+      recordedByUserId,
+      recordedByName: "Staff",
+      recordedAt: now
+    };
+  }
+
+  async listPurchaseOrders(_scope: TenantScope, _branchId?: string): Promise<import("@fitos/contracts").PurchaseOrderResponse[]> {
+    return [];
+  }
+
+  async createPurchaseOrder(scope: TenantScope, input: import("@fitos/contracts").CreatePurchaseOrderRequest): Promise<import("@fitos/contracts").PurchaseOrderResponse> {
+    const now = new Date().toISOString();
+    return {
+      id: Math.random().toString(36).slice(2),
+      tenantId: scope.tenantId,
+      branchId: input.branchId,
+      poNumber: `PO-${Date.now().toString().slice(-6)}`,
+      supplierName: input.supplierName,
+      status: "ordered",
+      items: input.items.map((i) => ({
+        itemId: i.itemId,
+        itemName: "Item",
+        quantity: i.quantity,
+        unitCostMinor: i.unitCostMinor,
+        totalMinor: i.quantity * i.unitCostMinor
+      })),
+      totalMinor: input.items.reduce((sum, i) => sum + i.quantity * i.unitCostMinor, 0),
+      orderedAt: now,
+      receivedAt: null,
+      notes: input.notes ?? null,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
 }

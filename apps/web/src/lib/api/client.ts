@@ -43,8 +43,43 @@ import type {
   CreatePaymentRequest,
   ReconcilePaymentRequest,
   AttendanceRecordResponse,
-  UpdateRosterStatusRequest
+  UpdateRosterStatusRequest,
+  // New: insights, automations, public, member portal
+  InsightsOverviewResponse,
+  AutomationRuleResponse,
+  CreateAutomationRuleRequest,
+  UpdateAutomationRuleRequest,
+  AutomationExecutionLogResponse,
+  PublicTenantInfoResponse,
+  PublicServiceResponse,
+  PublicCoachResponse,
+  PublicScheduleOccurrenceResponse,
+  MemberProfileResponse,
+  MemberPortalOverviewResponse,
+  // Platform / SaaS
+  SaaSTenantSignupRequest,
+  SaaSTenantSignupResponse,
+  TenantSubscriptionResponse,
+  UsageQuotaMetricsResponse,
+  FeatureFlagResponse,
+  // Equipment
+  EquipmentAssetResponse,
+  CreateEquipmentAssetRequest,
+  UpdateEquipmentAssetRequest,
+  EquipmentPoolResponse,
+  CreateEquipmentPoolRequest,
+  EquipmentMaintenanceRecordResponse,
+  CreateMaintenanceRecordRequest,
+  // Inventory
+  InventoryItemResponse,
+  CreateInventoryItemRequest,
+  UpdateInventoryItemRequest,
+  InventoryMovementResponse,
+  CreateInventoryMovementRequest,
+  PurchaseOrderResponse,
+  CreatePurchaseOrderRequest
 } from "@fitos/contracts";
+
 
 export class ApiClientError extends Error {
   constructor(
@@ -369,5 +404,136 @@ export const api = {
     request<AttendanceRecordResponse>(`/attendance/${id}`, {
       method: "PATCH",
       body: json(payload)
+    }),
+
+  // ── Insights ──────────────────────────────────────────────────────────────
+  insightsOverview: (branchId?: string) =>
+    request<InsightsOverviewResponse>(
+      `/insights/overview${branchId ? `?branchId=${branchId}` : ""}`
+    ),
+
+  // ── Automations ───────────────────────────────────────────────────────────
+  automations: () => request<AutomationRuleResponse[]>("/automations"),
+  automationLogs: () => request<AutomationExecutionLogResponse[]>("/automations/logs"),
+  createAutomation: (payload: CreateAutomationRuleRequest) =>
+    request<AutomationRuleResponse>("/automations", {
+      method: "POST",
+      body: json(payload)
+    }),
+  updateAutomation: (id: string, payload: UpdateAutomationRuleRequest) =>
+    request<AutomationRuleResponse>(`/automations/${id}`, {
+      method: "PATCH",
+      body: json(payload)
+    }),
+  deleteAutomation: (id: string) =>
+    request<{ deleted: boolean }>(`/automations/${id}`, { method: "DELETE" }),
+  triggerAutomation: (id: string) =>
+    request<AutomationExecutionLogResponse>(`/automations/${id}/trigger`, {
+      method: "POST",
+      body: json({})
+    }),
+
+  // ── Public Tenant (unauthenticated) ───────────────────────────────────────
+  publicTenantInfo: (slug: string) =>
+    request<PublicTenantInfoResponse>(`/public/${slug}`),
+  publicServices: (slug: string) =>
+    request<PublicServiceResponse[]>(`/public/${slug}/services`),
+  publicCoaches: (slug: string) =>
+    request<PublicCoachResponse[]>(`/public/${slug}/coaches`),
+  publicSchedule: (slug: string, daysAhead?: number) =>
+    request<PublicScheduleOccurrenceResponse[]>(
+      `/public/${slug}/schedule${daysAhead ? `?daysAhead=${daysAhead}` : ""}`
+    ),
+  publicCreateLead: (
+    slug: string,
+    payload: { firstName: string; lastName?: string; phone?: string; email?: string; interest?: string }
+  ) => request<LeadResponse>(`/public/${slug}/leads`, { method: "POST", body: json(payload) }),
+
+  // ── Member Portal ─────────────────────────────────────────────────────────
+  memberLogin: (identifier: string, pin: string) =>
+    request<{ ok: boolean; memberId: string }>("/member-auth/login", {
+      method: "POST",
+      body: json({ identifier, pin })
+    }),
+  memberLogout: () => request<{ ok: boolean }>("/member-auth/logout", { method: "POST" }),
+  memberMe: () => request<MemberProfileResponse>("/member-auth/me"),
+  memberPortalOverview: () => request<MemberPortalOverviewResponse>("/member-auth/overview"),
+
+  // ── Platform / SaaS Self-Service ─────────────────────────────────────────
+  signupTenant: (payload: SaaSTenantSignupRequest) =>
+    request<SaaSTenantSignupResponse>("/platform/signup", {
+      method: "POST",
+      body: json(payload)
+    }),
+  tenantSubscription: () => request<TenantSubscriptionResponse>("/platform/subscription"),
+  tenantUsageQuotas: () => request<UsageQuotaMetricsResponse>("/platform/usage"),
+  featureFlags: () => request<FeatureFlagResponse[]>("/platform/feature-flags"),
+
+  // ── Equipment & Resource Scheduling ─────────────────────────────────────
+  equipmentAssets: (branchId?: string) =>
+    request<EquipmentAssetResponse[]>(`/equipment/assets${branchId ? `?branchId=${branchId}` : ""}`),
+  equipmentAsset: (assetId: string) =>
+    request<EquipmentAssetResponse>(`/equipment/assets/${assetId}`),
+  createEquipmentAsset: (payload: CreateEquipmentAssetRequest) =>
+    request<EquipmentAssetResponse>("/equipment/assets", {
+      method: "POST",
+      body: json(payload)
+    }),
+  updateEquipmentAsset: (assetId: string, payload: UpdateEquipmentAssetRequest) =>
+    request<EquipmentAssetResponse>(`/equipment/assets/${assetId}`, {
+      method: "PATCH",
+      body: json(payload)
+    }),
+  equipmentPools: (branchId?: string) =>
+    request<EquipmentPoolResponse[]>(`/equipment/pools${branchId ? `?branchId=${branchId}` : ""}`),
+  createEquipmentPool: (payload: CreateEquipmentPoolRequest) =>
+    request<EquipmentPoolResponse>("/equipment/pools", {
+      method: "POST",
+      body: json(payload)
+    }),
+  equipmentMaintenance: (assetId?: string) =>
+    request<EquipmentMaintenanceRecordResponse[]>(
+      `/equipment/maintenance${assetId ? `?assetId=${assetId}` : ""}`
+    ),
+  createEquipmentMaintenance: (payload: CreateMaintenanceRecordRequest) =>
+    request<EquipmentMaintenanceRecordResponse>("/equipment/maintenance", {
+      method: "POST",
+      body: json(payload)
+    }),
+
+  // ── Inventory & Consumables ─────────────────────────────────────────────
+  inventoryItems: (branchId?: string) =>
+    request<InventoryItemResponse[]>(`/inventory/items${branchId ? `?branchId=${branchId}` : ""}`),
+  inventoryItem: (itemId: string) =>
+    request<InventoryItemResponse>(`/inventory/items/${itemId}`),
+  createInventoryItem: (payload: CreateInventoryItemRequest) =>
+    request<InventoryItemResponse>("/inventory/items", {
+      method: "POST",
+      body: json(payload)
+    }),
+  updateInventoryItem: (itemId: string, payload: UpdateInventoryItemRequest) =>
+    request<InventoryItemResponse>(`/inventory/items/${itemId}`, {
+      method: "PATCH",
+      body: json(payload)
+    }),
+  inventoryMovements: (itemId?: string) =>
+    request<InventoryMovementResponse[]>(
+      `/inventory/movements${itemId ? `?itemId=${itemId}` : ""}`
+    ),
+  createInventoryMovement: (payload: CreateInventoryMovementRequest) =>
+    request<InventoryMovementResponse>("/inventory/movements", {
+      method: "POST",
+      body: json(payload)
+    }),
+  purchaseOrders: (branchId?: string) =>
+    request<PurchaseOrderResponse[]>(
+      `/inventory/purchase-orders${branchId ? `?branchId=${branchId}` : ""}`
+    ),
+  createPurchaseOrder: (payload: CreatePurchaseOrderRequest) =>
+    request<PurchaseOrderResponse>("/inventory/purchase-orders", {
+      method: "POST",
+      body: json(payload)
     })
 };
+
+

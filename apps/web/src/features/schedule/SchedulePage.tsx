@@ -104,17 +104,18 @@ export function SchedulePage() {
       const isCancelled = occ.status === "cancelled";
       return {
         id: occ.id,
-        title: `${service?.name ?? "Class"}${trainer ? ` · ${trainer.user.displayName}` : ""}${room ? ` (${room.name})` : ""}`,
+        title: service?.name ?? "Class",
         start: occ.startsAt,
         end: occ.endsAt,
-        backgroundColor: isCancelled ? "#3a1d1d" : "#191c20",
-        borderColor: isCancelled ? "#ff6464" : "#c6ff00",
+        backgroundColor: isCancelled ? "rgba(58, 29, 29, 0.95)" : "rgba(25, 28, 32, 0.95)",
+        borderColor: isCancelled ? "#ff6464" : "rgba(198, 255, 0, 0.4)",
         textColor: isCancelled ? "#ff6464" : "#ffffff",
         extendedProps: {
           occurrence: occ,
           service,
           trainer,
-          room
+          room,
+          isCancelled
         }
       };
     });
@@ -255,6 +256,24 @@ export function SchedulePage() {
             aspectRatio={1.75}
             eventClick={(info) => {
               if (info.event.id) setSelectedOccurrenceId(info.event.id);
+            }}
+            eventContent={(eventInfo) => {
+              const { service, trainer, room, isCancelled } = eventInfo.event.extendedProps as {
+                service?: ServiceResponse;
+                trainer?: StaffUserResponse;
+                room?: RoomResponse;
+                isCancelled?: boolean;
+              };
+              return (
+                <div className={`fitos-cal-event ${isCancelled ? "fitos-cal-event--cancelled" : ""}`}>
+                  <div className="fitos-cal-event__time">{eventInfo.timeText}</div>
+                  <div className="fitos-cal-event__title">{service?.name ?? eventInfo.event.title}</div>
+                  <div className="fitos-cal-event__meta">
+                    {trainer ? <span>{trainer.user.displayName}</span> : null}
+                    {room ? <span>{room.name}</span> : null}
+                  </div>
+                </div>
+              );
             }}
             eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
             events={calendarEvents}
@@ -695,11 +714,16 @@ function OccurrenceDetailModal({
       cell: (b) => {
         const member = membersQuery.data?.data.find((m) => m.id === b.memberId);
         return (
-          <div>
-            <strong className="fitos-data-table__primary">
-              {member ? `${member.firstName} ${member.lastName}` : b.memberId.slice(0, 8)}
-            </strong>
-            <span className="fitos-data-table__muted">{member?.phone ?? "No phone"}</span>
+          <div className="table-member-cell">
+            <div className="table-member-avatar" style={{ width: "1.875rem", height: "1.875rem", fontSize: "0.75rem" }}>
+              {member ? `${member.firstName[0]}${member.lastName?.[0] ?? ""}` : "M"}
+            </div>
+            <div>
+              <strong className="fitos-data-table__primary">
+                {member ? `${member.firstName} ${member.lastName ?? ""}`.trim() : b.memberId.slice(0, 8)}
+              </strong>
+              <span className="fitos-data-table__muted">{member?.phone ?? "No phone"}</span>
+            </div>
           </div>
         );
       }
@@ -724,6 +748,12 @@ function OccurrenceDetailModal({
   if (occQuery.isLoading) return <PageLoading />;
   if (!occurrence) return null;
 
+  const fillPercent = Math.min(
+    100,
+    Math.round((activeBookings.length / (occurrence.capacity || 1)) * 100)
+  );
+  const spotsLeft = Math.max(0, occurrence.capacity - activeBookings.length);
+
   return (
     <Modal
       description={`${formatDateTime(occurrence.startsAt)} – ${formatDateTime(occurrence.endsAt)}`}
@@ -732,28 +762,55 @@ function OccurrenceDetailModal({
       title={service?.name ?? "Class session"}
     >
       <div className="form-stack">
-        <section className="kpi-grid">
-          <Card className="kpi">
-            <span>Roster</span>
-            <strong>
-              {activeBookings.length} / {occurrence.capacity}
-            </strong>
-          </Card>
-          <Card className="kpi">
-            <span>Location</span>
-            <strong style={{ fontSize: "1rem" }}>
-              {branch?.name ?? "Branch"} {room ? `· ${room.name}` : ""}
-            </strong>
-          </Card>
-          <Card className="kpi">
-            <span>Instructor</span>
-            <strong style={{ fontSize: "1rem" }}>{trainer?.user.displayName ?? "None"}</strong>
-          </Card>
-          <Card className="kpi">
-            <span>Status</span>
-            <StatusBadge status={occurrence.status} />
-          </Card>
-        </section>
+        <div className="session-detail-grid">
+          <div className="session-detail-stat-card">
+            <span className="session-detail-stat-card__label">ROSTER &amp; CAPACITY</span>
+            <div className="session-detail-stat-card__value">
+              <strong>{activeBookings.length}</strong>
+              <span className="muted">/ {occurrence.capacity} booked</span>
+            </div>
+            <div className="session-cap-bar">
+              <div
+                className="session-cap-bar__fill"
+                style={{
+                  width: `${fillPercent}%`,
+                  background: fillPercent >= 100 ? "var(--danger)" : "var(--fitos-energy)"
+                }}
+              />
+            </div>
+            <span className="session-detail-stat-card__sub">
+              {spotsLeft === 0 ? "Session full" : `${spotsLeft} spots available`}
+            </span>
+          </div>
+
+          <div className="session-detail-stat-card">
+            <span className="session-detail-stat-card__label">LOCATION</span>
+            <div className="session-detail-stat-card__value">
+              <strong>{room?.name ?? "Main Floor"}</strong>
+            </div>
+            <span className="session-detail-stat-card__sub">{branch?.name ?? "Main Branch"}</span>
+          </div>
+
+          <div className="session-detail-stat-card">
+            <span className="session-detail-stat-card__label">INSTRUCTOR</span>
+            <div className="session-detail-stat-card__value">
+              <strong>{trainer?.user.displayName ?? "No instructor"}</strong>
+            </div>
+            <span className="session-detail-stat-card__sub">
+              {trainer ? `${trainer.role.name} Coach` : "Staff unassigned"}
+            </span>
+          </div>
+
+          <div className="session-detail-stat-card">
+            <span className="session-detail-stat-card__label">SESSION STATUS</span>
+            <div style={{ marginTop: "0.25rem" }}>
+              <StatusBadge status={occurrence.status} />
+            </div>
+            <span className="session-detail-stat-card__sub" style={{ marginTop: "0.4rem" }}>
+              {occurrence.templateId ? "Weekly recurring series" : "One-off session"}
+            </span>
+          </div>
+        </div>
 
         <div className="section-header-row">
           <h3>Attending members ({activeBookings.length})</h3>

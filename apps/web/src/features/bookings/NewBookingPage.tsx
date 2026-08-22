@@ -27,7 +27,8 @@ export function NewBookingPage() {
     queryKey: ["members", memberSearch],
     queryFn: () => {
       const p = new URLSearchParams();
-      if (memberSearch) p.set("query", memberSearch);
+      if (memberSearch.trim()) p.set("query", memberSearch.trim());
+      p.set("limit", "50");
       return api.members(p);
     }
   });
@@ -37,6 +38,7 @@ export function NewBookingPage() {
     queryFn: () => {
       const p = new URLSearchParams();
       p.set("status", "scheduled");
+      p.set("limit", "100");
       return api.scheduleOccurrences(p);
     }
   });
@@ -143,7 +145,7 @@ export function NewBookingPage() {
                 value={memberSearch}
               />
 
-              <ul className="activity-list" style={{ maxHeight: "18rem", overflowY: "auto" }}>
+              <ul className="activity-list" style={{ maxHeight: "20rem", overflowY: "auto" }}>
                 {membersQuery.data?.data.map((m: MemberListItem) => (
                   <li
                     className="clickable-list-item"
@@ -155,7 +157,7 @@ export function NewBookingPage() {
                         {m.firstName} {m.lastName}
                       </strong>
                       <span className="fitos-data-table__muted">
-                        {m.phone ?? m.email ?? "No contact"} · {m.status}
+                        {m.phone ?? m.email ?? "No contact"} · #{m.memberNumber ?? "—"} · {m.status}
                       </span>
                     </div>
                     <Button size="small" variant="secondary">
@@ -164,8 +166,8 @@ export function NewBookingPage() {
                   </li>
                 ))}
               </ul>
-              {!membersQuery.data?.data.length ? (
-                <p className="muted">No members found matching "{memberSearch}".</p>
+              {!membersQuery.data?.data.length && memberSearch.trim() ? (
+                <p className="muted">No members found matching &quot;{memberSearch}&quot;.</p>
               ) : null}
             </div>
           )}
@@ -211,7 +213,7 @@ export function NewBookingPage() {
                       <div>
                         <strong>{srv?.name ?? "Session"}</strong>
                         <span className="fitos-data-table__muted">
-                          {formatDateTime(occ.startsAt)} · {br?.name}
+                          {formatDateTime(occ.startsAt)} · {br?.name ?? "Main Branch"}
                         </span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>

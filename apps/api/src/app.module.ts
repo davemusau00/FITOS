@@ -32,6 +32,13 @@ import { BookingsController } from "./modules/bookings/bookings.controller.js";
 import { MembershipsController } from "./modules/memberships/memberships.controller.js";
 import { PaymentsController } from "./modules/payments/payments.controller.js";
 import { AttendanceController } from "./modules/attendance/attendance.controller.js";
+import { PublicController } from "./modules/public/public.controller.js";
+import { MemberAuthController } from "./modules/auth/member-auth.controller.js";
+import { InsightsController } from "./modules/insights/insights.controller.js";
+import { AutomationsController } from "./modules/automations/automations.controller.js";
+import { PlatformController } from "./modules/platform/signup.controller.js";
+import { EquipmentController } from "./modules/equipment/equipment.controller.js";
+import { InventoryController } from "./modules/inventory/inventory.controller.js";
 import { CoreService } from "./modules/core/core.service.js";
 
 class DevelopmentSeedService implements OnModuleInit {
@@ -77,7 +84,14 @@ const repositoryFactory = (): FitosRepository => {
     BookingsController,
     MembershipsController,
     PaymentsController,
-    AttendanceController
+    AttendanceController,
+    PublicController,
+    MemberAuthController,
+    InsightsController,
+    AutomationsController,
+    PlatformController,
+    EquipmentController,
+    InventoryController
   ],
   providers: [
     { provide: FitosRepositoryToken, useFactory: repositoryFactory },

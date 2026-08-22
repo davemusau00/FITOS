@@ -1,99 +1,196 @@
 import { useState } from "react";
-import { Card, Icon, PageHeader } from "@fitos/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Card, Icon, PageHeader } from "@fitos/ui";
+import type {
+  AutomationActionType,
+  AutomationRuleResponse,
+  AutomationTriggerType,
+  CreateAutomationRuleRequest
+} from "@fitos/contracts";
+import { api } from "../../lib/api/client";
+import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
-type AutomationTab = "active" | "templates" | "builder";
+type AutomationTab = "active" | "templates" | "builder" | "logs";
 
-const TRIGGER_OPTIONS: { id: string; label: string; icon: "calendar" | "spark" | "users" | "check" | "plus" | "warning" }[] = [
-  { id: "class_booked", label: "Class Booked", icon: "calendar" },
-  { id: "membership_expiring", label: "Membership Expiring in 3 Days", icon: "spark" },
-  { id: "no_visit_14", label: "No Visit in 14 Days", icon: "users" },
-  { id: "trial_completed", label: "Trial Completed", icon: "check" },
+const TRIGGER_OPTIONS: { id: AutomationTriggerType; label: string; icon: "calendar" | "spark" | "users" | "check" | "plus" | "warning" }[] = [
   { id: "member_joined", label: "New Member Joined", icon: "plus" },
+  { id: "trial_completed", label: "Trial Completed / New Inquiry", icon: "spark" },
+  { id: "booking_created", label: "Class Booked", icon: "calendar" },
+  { id: "booking_cancelled", label: "Booking Cancelled", icon: "check" },
+  { id: "membership_expiring_soon", label: "Membership Expiring Soon", icon: "warning" },
+  { id: "member_inactive", label: "Inactive Member (At-Risk)", icon: "users" },
   { id: "payment_failed", label: "Payment Failed", icon: "warning" }
 ];
 
-const ACTION_OPTIONS: { id: string; label: string; icon: "edit" | "users" | "check" | "spark" }[] = [
-  { id: "send_email", label: "Send Email", icon: "edit" },
-  { id: "send_sms", label: "Send SMS / WhatsApp", icon: "users" },
-  { id: "create_task", label: "Create Staff Task", icon: "check" },
-  { id: "update_crm", label: "Update CRM Stage", icon: "spark" }
+const ACTION_OPTIONS: { id: AutomationActionType; label: string; icon: "edit" | "users" | "check" | "spark" }[] = [
+  { id: "send_email", label: "Send Automated Email", icon: "edit" },
+  { id: "send_whatsapp", label: "Send WhatsApp Notification", icon: "users" },
+  { id: "send_sms", label: "Send SMS Notification", icon: "spark" },
+  { id: "create_staff_task", label: "Create Staff Follow-up Task", icon: "check" },
+  { id: "update_crm_stage", label: "Update CRM Funnel Stage", icon: "spark" }
 ];
 
-const TEMPLATE_AUTOMATIONS = [
+const TEMPLATE_AUTOMATIONS: Array<{
+  name: string;
+  description: string;
+  triggerType: AutomationTriggerType;
+  triggerLabel: string;
+  actionType: AutomationActionType;
+  actionLabel: string;
+  icon: "calendar" | "spark" | "users" | "check" | "plus";
+}> = [
   {
-    id: "booking-confirm",
-    name: "Booking Confirmation",
-    trigger: "Class Booked",
-    action: "Send Email",
-    active: true,
-    runs: 1247,
-    icon: "calendar" as const
+    name: "Welcome Onboarding Email",
+    description: "Sends gym welcome pack, schedule link, and coach introduction immediately upon member registration.",
+    triggerType: "member_joined",
+    triggerLabel: "New Member Joined",
+    actionType: "send_email",
+    actionLabel: "Send Welcome Email",
+    icon: "plus"
   },
   {
-    id: "class-reminder",
-    name: "Class Reminder (24h)",
-    trigger: "Class Booked",
-    action: "Send SMS",
-    active: true,
-    runs: 983,
-    icon: "calendar" as const
+    name: "Lead 15-Minute WhatsApp Fast Response",
+    description: "Triggers instant greeting via WhatsApp when a new inquiry submits the website contact or trial form.",
+    triggerType: "trial_completed",
+    triggerLabel: "New Lead / Trial",
+    actionType: "send_whatsapp",
+    actionLabel: "Send WhatsApp Greeting",
+    icon: "spark"
   },
   {
-    id: "trial-followup",
-    name: "Trial Follow-up",
-    trigger: "Trial Completed",
-    action: "Create Task + Send Email",
-    active: true,
-    runs: 40,
-    icon: "spark" as const
+    name: "Class Booking Confirmation & Calendar Invite",
+    description: "Sends instant booking confirmation with class start time, instructor info, and arrival guidelines.",
+    triggerType: "booking_created",
+    triggerLabel: "Class Booked",
+    actionType: "send_email",
+    actionLabel: "Send Booking Confirmation",
+    icon: "calendar"
   },
   {
-    id: "winback",
-    name: "Win-back Nudge (14d inactive)",
-    trigger: "No Visit in 14 Days",
-    action: "Send WhatsApp",
-    active: false,
-    runs: 89,
-    icon: "users" as const
+    name: "3-Day Membership Renewal Nudge",
+    description: "Notifies member 72 hours before their pass expires with a 1-click renewal link to prevent lapse.",
+    triggerType: "membership_expiring_soon",
+    triggerLabel: "Membership Expiring Soon",
+    actionType: "send_whatsapp",
+    actionLabel: "Send Renewal SMS / WhatsApp",
+    icon: "spark"
   },
   {
-    id: "membership-expiry",
-    name: "Membership Expiry Warning",
-    trigger: "Membership Expiring in 3 Days",
-    action: "Send Email + SMS",
-    active: true,
-    runs: 312,
-    icon: "check" as const
+    name: "21-Day Inactive Member Winback Task",
+    description: "Creates an urgent high-priority task for front desk staff to call inactive members at risk of churning.",
+    triggerType: "member_inactive",
+    triggerLabel: "No Visit in 21 Days",
+    actionType: "create_staff_task",
+    actionLabel: "Create Staff Phone Call Task",
+    icon: "users"
   }
 ];
 
 export function AutomationsPage() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<AutomationTab>("active");
-  const [builderStep, setBuilderStep] = useState<"trigger" | "condition" | "action" | "review">(
-    "trigger"
-  );
-  const [selectedTrigger, setSelectedTrigger] = useState("");
-  const [selectedAction, setSelectedAction] = useState("");
-  const [automations, setAutomations] = useState(TEMPLATE_AUTOMATIONS);
 
-  const toggleAutomation = (id: string) => {
-    setAutomations((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, active: !a.active } : a))
-    );
+  // Builder form state
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedTrigger, setSelectedTrigger] = useState<AutomationTriggerType>("member_joined");
+  const [selectedAction, setSelectedAction] = useState<AutomationActionType>("send_email");
+  const [formError, setFormError] = useState<unknown>(null);
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  const automationsQuery = useQuery({
+    queryKey: ["automations"],
+    queryFn: api.automations
+  });
+
+  const logsQuery = useQuery({
+    queryKey: ["automation-logs"],
+    queryFn: api.automationLogs,
+    enabled: activeTab === "logs"
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateAutomationRuleRequest) => api.createAutomation(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["automations"] });
+      setActiveTab("active");
+      setName("");
+      setDescription("");
+      setFormError(null);
+    },
+    onError: (err) => setFormError(err)
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      api.updateAutomation(id, { isActive }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["automations"] });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteAutomation(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["automations"] });
+    }
+  });
+
+  const triggerMutation = useMutation({
+    mutationFn: (id: string) => api.triggerAutomation(id),
+    onSuccess: (res) => {
+      setTestResult(`Test run succeeded: ${res.message}`);
+      void queryClient.invalidateQueries({ queryKey: ["automations"] });
+      void queryClient.invalidateQueries({ queryKey: ["automation-logs"] });
+    },
+    onError: (err) => setFormError(err)
+  });
+
+  const handleCreateCustom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    createMutation.mutate({
+      name: name.trim(),
+      description: description.trim() || undefined,
+      triggerType: selectedTrigger,
+      triggerConfig: {},
+      conditions: [],
+      actionType: selectedAction,
+      actionConfig: { template: selectedAction, recipientType: "member" },
+      isActive: true
+    });
+  };
+
+  const handleApplyTemplate = (tmpl: typeof TEMPLATE_AUTOMATIONS[number]) => {
+    createMutation.mutate({
+      name: tmpl.name,
+      description: tmpl.description,
+      triggerType: tmpl.triggerType,
+      triggerConfig: {},
+      conditions: [],
+      actionType: tmpl.actionType,
+      actionConfig: { template: tmpl.actionType, recipientType: "member" },
+      isActive: true
+    });
   };
 
   const tabs: { id: AutomationTab; label: string; icon: string }[] = [
-    { id: "active", label: "Active Automations", icon: "spark" },
+    { id: "active", label: `Active Workflows (${automationsQuery.data?.length ?? 0})`, icon: "spark" },
     { id: "templates", label: "Template Library", icon: "dashboard" },
-    { id: "builder", label: "Build New", icon: "plus" }
+    { id: "builder", label: "Workflow Builder", icon: "plus" },
+    { id: "logs", label: "Execution History", icon: "check" }
   ];
+
+  if (automationsQuery.isLoading) return <PageLoading />;
+
+  const rules = automationsQuery.data ?? [];
 
   return (
     <>
       <PageHeader
         eyebrow="Growth"
         title="Automations"
-        description="Automate member communications, follow-ups, and staff tasks using visual workflow rules."
+        description="Automate member lifecycle communications, WhatsApp / SMS notifications, retention nudges, and staff tasks."
         actions={
           <button
             className="fitos-button fitos-button--primary"
@@ -101,10 +198,18 @@ export function AutomationsPage() {
             type="button"
           >
             <Icon name="plus" size={16} />
-            New Automation
+            Build New Workflow
           </button>
         }
       />
+
+      <ErrorNotice error={automationsQuery.error || formError} />
+      {testResult ? (
+        <div className="fitos-alert fitos-alert--success" style={{ marginBottom: "1rem" }}>
+          <Icon name="check" size={16} />
+          <span>{testResult}</span>
+        </div>
+      ) : null}
 
       {/* Tab Bar */}
       <div className="member-tab-bar">
@@ -112,7 +217,10 @@ export function AutomationsPage() {
           <button
             className={`member-tab-bar__tab${activeTab === tab.id ? " member-tab-bar__tab--active" : ""}`}
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              setTestResult(null);
+            }}
             type="button"
           >
             <Icon name={tab.icon as Parameters<typeof Icon>[0]["name"]} size={15} />
@@ -122,318 +230,272 @@ export function AutomationsPage() {
       </div>
 
       <div className="member-tab-content">
-        {/* ── ACTIVE ── */}
+        {/* ── ACTIVE WORKFLOWS ── */}
         {activeTab === "active" && (
           <div className="form-stack">
             <div className="automation-list">
-              {automations.map((automation) => (
-                <div
-                  className={`automation-card${automation.active ? " automation-card--active" : " automation-card--paused"}`}
-                  key={automation.id}
-                >
+              {rules.map((rule: AutomationRuleResponse) => {
+                return (
                   <div
-                    className="automation-card__icon"
-                    style={{
-                      background: automation.active
-                        ? "rgba(198,255,0,0.12)"
-                        : "rgba(255,255,255,0.05)"
-                    }}
+                    className={`automation-card${rule.isActive ? " automation-card--active" : " automation-card--paused"}`}
+                    key={rule.id}
                   >
-                    <Icon
-                      name={automation.icon as Parameters<typeof Icon>[0]["name"]}
-                      size={20}
-                    />
-                  </div>
-                  <div className="automation-card__info">
-                    <div className="automation-card__name">{automation.name}</div>
-                    <div className="automation-card__flow">
-                      <span className="automation-flow-node automation-flow-node--trigger">
-                        ⚡ {automation.trigger}
-                      </span>
-                      <span className="automation-flow-arrow">→</span>
-                      <span className="automation-flow-node automation-flow-node--action">
-                        ✉ {automation.action}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="automation-card__stats">
-                    <div className="automation-card__runs">{automation.runs.toLocaleString()} runs</div>
                     <div
-                      className={`automation-card__status${automation.active ? " automation-card__status--on" : ""}`}
+                      className="automation-card__icon"
+                      style={{
+                        background: rule.isActive ? "rgba(198,255,0,0.12)" : "rgba(255,255,255,0.05)"
+                      }}
                     >
-                      {automation.active ? "Active" : "Paused"}
+                      <Icon name="spark" size={20} />
+                    </div>
+
+                    <div className="automation-card__info">
+                      <div className="automation-card__name">{rule.name}</div>
+                      {rule.description ? (
+                        <p className="muted" style={{ fontSize: "0.8rem", margin: "0.2rem 0" }}>
+                          {rule.description}
+                        </p>
+                      ) : null}
+                      <div className="automation-card__flow">
+                        <span className="automation-flow-node automation-flow-node--trigger">
+                          ⚡ {rule.triggerType}
+                        </span>
+                        <span className="automation-flow-arrow">→</span>
+                        <span className="automation-flow-node automation-flow-node--action">
+                          ✉ {rule.actionType}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="automation-card__stats">
+                      <div className="automation-card__runs">{rule.totalExecutions.toLocaleString()} runs</div>
+                      <div className="automation-card__last-run">
+                        {rule.lastExecutedAt ? `Last: ${formatDateTime(rule.lastExecutedAt)}` : "Not triggered yet"}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <Button
+                        loading={triggerMutation.isPending}
+                        onClick={() => triggerMutation.mutate(rule.id)}
+                        size="small"
+                        variant="secondary"
+                      >
+                        Test Run
+                      </Button>
+
+                      <button
+                        aria-checked={rule.isActive}
+                        aria-label={`Toggle ${rule.name}`}
+                        className={`automation-toggle${rule.isActive ? " is-on" : ""}`}
+                        onClick={() => toggleMutation.mutate({ id: rule.id, isActive: !rule.isActive })}
+                        role="switch"
+                        type="button"
+                      >
+                        <span className="automation-toggle__thumb" />
+                      </button>
+
+                      <button
+                        aria-label="Delete rule"
+                        className="fitos-button fitos-button--ghost fitos-button--small"
+                        onClick={() => {
+                          if (confirm(`Delete automation rule "${rule.name}"?`)) {
+                            deleteMutation.mutate(rule.id);
+                          }
+                        }}
+                        style={{ color: "var(--danger)" }}
+                        type="button"
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
-                  <label className="automation-toggle" title={automation.active ? "Pause" : "Activate"}>
-                    <input
-                      checked={automation.active}
-                      onChange={() => toggleAutomation(automation.id)}
-                      type="checkbox"
-                    />
-                    <span className="automation-toggle__track">
-                      <span className="automation-toggle__thumb" />
-                    </span>
-                  </label>
-                </div>
-              ))}
+                );
+              })}
+
+              {!rules.length ? (
+                <Card>
+                  <div style={{ textAlign: "center", padding: "2rem" }}>
+                    <Icon name="spark" size={32} />
+                    <h3 style={{ marginTop: "0.5rem" }}>No automations active yet</h3>
+                    <p className="muted" style={{ marginBottom: "1rem" }}>
+                      Choose a pre-configured template from our library or build a custom workflow.
+                    </p>
+                    <Button onClick={() => setActiveTab("templates")} variant="primary">
+                      Browse Template Library
+                    </Button>
+                  </div>
+                </Card>
+              ) : null}
             </div>
           </div>
         )}
 
-        {/* ── TEMPLATES ── */}
+        {/* ── TEMPLATES LIBRARY ── */}
         {activeTab === "templates" && (
-          <div className="automation-templates-grid">
-            {[
-              {
-                name: "Booking Confirmation",
-                desc: "Send an email immediately after a class is booked.",
-                trigger: "Class Booked",
-                action: "Send Email",
-                category: "Bookings"
-              },
-              {
-                name: "Class Reminder",
-                desc: "Text the member 24h before their scheduled class.",
-                trigger: "Class Booked",
-                action: "Send SMS",
-                category: "Bookings"
-              },
-              {
-                name: "Win-back Nudge",
-                desc: "WhatsApp message to members inactive for 14+ days.",
-                trigger: "No Visit in 14 Days",
-                action: "Send WhatsApp",
-                category: "Retention"
-              },
-              {
-                name: "Membership Expiry Warning",
-                desc: "Notify members 3 days before their plan expires.",
-                trigger: "Membership Expiring",
-                action: "Send Email + SMS",
-                category: "Retention"
-              },
-              {
-                name: "Trial Follow-up",
-                desc: "Create a staff task + send an offer email after trial completion.",
-                trigger: "Trial Completed",
-                action: "Create Task + Email",
-                category: "Leads"
-              },
-              {
-                name: "New Member Welcome",
-                desc: "Welcome email series starting on the day a member joins.",
-                trigger: "New Member Joined",
-                action: "Send Email",
-                category: "Onboarding"
-              }
-            ].map((tmpl) => (
-              <Card className="automation-template-card" key={tmpl.name}>
-                <div className="automation-template-card__category">{tmpl.category}</div>
-                <div className="automation-template-card__name">{tmpl.name}</div>
-                <p className="muted" style={{ fontSize: "0.82rem", margin: "0.5rem 0 1rem" }}>
-                  {tmpl.desc}
-                </p>
-                <div className="automation-flow-node automation-flow-node--trigger" style={{ marginBottom: "0.3rem" }}>
-                  ⚡ {tmpl.trigger}
-                </div>
-                <div className="automation-flow-node automation-flow-node--action">
-                  ✉ {tmpl.action}
-                </div>
-                <button
-                  className="fitos-button fitos-button--secondary fitos-button--small"
-                  onClick={() => setActiveTab("builder")}
-                  style={{ marginTop: "1rem" }}
-                  type="button"
-                >
-                  Use Template
-                </button>
-              </Card>
-            ))}
+          <div className="form-stack">
+            <p className="muted">
+              Pre-built gym automation workflows designed for high conversion, attendance reminders, and winback retention.
+            </p>
+            <div className="templates-grid">
+              {TEMPLATE_AUTOMATIONS.map((tmpl) => (
+                <Card className="template-card" key={tmpl.name}>
+                  <div className="template-card__header">
+                    <div className="template-card__icon">
+                      <Icon name={tmpl.icon} size={20} />
+                    </div>
+                    <h3>{tmpl.name}</h3>
+                  </div>
+                  <p className="template-card__desc">{tmpl.description}</p>
+                  <div className="template-card__flow">
+                    <span className="automation-flow-node automation-flow-node--trigger">
+                      ⚡ {tmpl.triggerLabel}
+                    </span>
+                    <span className="automation-flow-arrow">→</span>
+                    <span className="automation-flow-node automation-flow-node--action">
+                      ✉ {tmpl.actionLabel}
+                    </span>
+                  </div>
+                  <div className="template-card__footer">
+                    <Button
+                      fullWidth
+                      loading={createMutation.isPending}
+                      onClick={() => handleApplyTemplate(tmpl)}
+                      variant="secondary"
+                    >
+                      Use Template
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* ── BUILDER ── */}
+        {/* ── WORKFLOW BUILDER ── */}
         {activeTab === "builder" && (
-          <div className="automation-builder">
-            {/* Progress Steps */}
-            <div className="automation-builder__steps">
-              {(["trigger", "condition", "action", "review"] as const).map((step, i) => (
-                <div
-                  className={`automation-builder__step${builderStep === step ? " automation-builder__step--active" : ""} ${["trigger", "condition", "action", "review"].indexOf(builderStep) > i ? "automation-builder__step--done" : ""}`}
-                  key={step}
-                  onClick={() => setBuilderStep(step)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === "Enter" && setBuilderStep(step)}
-                >
-                  <div className="automation-builder__step-num">{i + 1}</div>
-                  <span>{step.charAt(0).toUpperCase() + step.slice(1)}</span>
+          <form className="form-stack" onSubmit={handleCreateCustom}>
+            <Card>
+              <h2>1. Workflow Details</h2>
+              <div className="form-row">
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="fitos-label" htmlFor="rule-name">Workflow Name *</label>
+                  <input
+                    className="fitos-control"
+                    id="rule-name"
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. VIP Member 10th Class Celebration"
+                    required
+                    value={name}
+                  />
                 </div>
-              ))}
+              </div>
+              <div className="form-row" style={{ marginTop: "1rem" }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="fitos-label" htmlFor="rule-desc">Description (optional)</label>
+                  <input
+                    className="fitos-control"
+                    id="rule-desc"
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Explain what this automation does..."
+                    value={description}
+                  />
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <h2>2. Select Trigger Event</h2>
+              <p className="muted" style={{ fontSize: "0.82rem", marginBottom: "1rem" }}>
+                When this event happens in FITOS, trigger the workflow:
+              </p>
+              <div className="builder-trigger-grid">
+                {TRIGGER_OPTIONS.map((opt) => (
+                  <div
+                    className={`builder-trigger-card${selectedTrigger === opt.id ? " is-selected" : ""}`}
+                    key={opt.id}
+                    onClick={() => setSelectedTrigger(opt.id)}
+                  >
+                    <Icon name={opt.icon} size={20} />
+                    <strong>{opt.label}</strong>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card>
+              <h2>3. Select Action</h2>
+              <p className="muted" style={{ fontSize: "0.82rem", marginBottom: "1rem" }}>
+                What action should FITOS execute automatically?
+              </p>
+              <div className="builder-trigger-grid">
+                {ACTION_OPTIONS.map((opt) => (
+                  <div
+                    className={`builder-trigger-card${selectedAction === opt.id ? " is-selected" : ""}`}
+                    key={opt.id}
+                    onClick={() => setSelectedAction(opt.id)}
+                  >
+                    <Icon name={opt.icon} size={20} />
+                    <strong>{opt.label}</strong>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <div className="form-actions">
+              <Button onClick={() => setActiveTab("active")} variant="ghost">
+                Cancel
+              </Button>
+              <Button disabled={!name.trim()} loading={createMutation.isPending} variant="primary">
+                Save & Activate Workflow
+              </Button>
             </div>
+          </form>
+        )}
 
-            {/* Step: Trigger */}
-            {builderStep === "trigger" && (
-              <Card>
-                <h2 style={{ marginBottom: "0.25rem" }}>⚡ Choose a Trigger</h2>
-                <p className="muted" style={{ marginBottom: "1.5rem", fontSize: "0.85rem" }}>
-                  This event will start the automation.
-                </p>
-                <div className="builder-option-grid">
-                  {TRIGGER_OPTIONS.map((opt) => (
-                    <button
-                      className={`builder-option${selectedTrigger === opt.id ? " builder-option--selected" : ""}`}
-                      key={opt.id}
-                      onClick={() => setSelectedTrigger(opt.id)}
-                      type="button"
+        {/* ── EXECUTION LOGS ── */}
+        {activeTab === "logs" && (
+          <div className="form-stack">
+            <Card>
+              <h2>Recent Automation Execution History</h2>
+              <p className="muted" style={{ fontSize: "0.8rem", marginBottom: "1rem" }}>
+                Live record of automated emails, SMS, CRM updates, and scheduled background jobs.
+              </p>
+
+              {logsQuery.isLoading ? (
+                <p className="muted">Loading logs…</p>
+              ) : logsQuery.data?.length ? (
+                <div className="activity-list">
+                  {logsQuery.data.map((log) => (
+                    <div
+                      key={log.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "0.75rem 0",
+                        borderBottom: "1px solid var(--border-subtle)"
+                      }}
                     >
-                      <Icon name={opt.icon as Parameters<typeof Icon>[0]["name"]} size={22} />
-                      <span>{opt.label}</span>
-                    </button>
+                      <div>
+                        <strong>{log.ruleName}</strong>
+                        <span className="muted" style={{ display: "block", fontSize: "0.8rem" }}>
+                          {log.message} · Target: {log.targetEntityName ?? "System"}
+                        </span>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <span className="fitos-badge fitos-badge--success">{log.status}</span>
+                        <span className="muted" style={{ display: "block", fontSize: "0.75rem", marginTop: "0.2rem" }}>
+                          {formatDateTime(log.executedAt)}
+                        </span>
+                      </div>
+                    </div>
                   ))}
                 </div>
-                <div className="form-actions" style={{ marginTop: "1.5rem" }}>
-                  <button
-                    className="fitos-button fitos-button--primary"
-                    disabled={!selectedTrigger}
-                    onClick={() => setBuilderStep("condition")}
-                    type="button"
-                  >
-                    Next: Add Condition →
-                  </button>
-                </div>
-              </Card>
-            )}
-
-            {/* Step: Condition */}
-            {builderStep === "condition" && (
-              <Card>
-                <h2 style={{ marginBottom: "0.25rem" }}>⚙ Add a Condition (Optional)</h2>
-                <p className="muted" style={{ marginBottom: "1.5rem", fontSize: "0.85rem" }}>
-                  Narrow when the automation runs based on member data.
-                </p>
-                <div className="form-grid">
-                  <div>
-                    <label className="form-field__label">Filter by</label>
-                    <select className="fitos-control">
-                      <option>No condition — run for all members</option>
-                      <option>Membership plan = specific plan</option>
-                      <option>Member status = active</option>
-                      <option>Last visit &gt; 14 days ago</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-actions" style={{ marginTop: "1.5rem" }}>
-                  <button
-                    className="fitos-button fitos-button--ghost"
-                    onClick={() => setBuilderStep("trigger")}
-                    type="button"
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    className="fitos-button fitos-button--primary"
-                    onClick={() => setBuilderStep("action")}
-                    type="button"
-                  >
-                    Next: Choose Action →
-                  </button>
-                </div>
-              </Card>
-            )}
-
-            {/* Step: Action */}
-            {builderStep === "action" && (
-              <Card>
-                <h2 style={{ marginBottom: "0.25rem" }}>✉ Choose an Action</h2>
-                <p className="muted" style={{ marginBottom: "1.5rem", fontSize: "0.85rem" }}>
-                  What should FITOS do when the trigger fires?
-                </p>
-                <div className="builder-option-grid">
-                  {ACTION_OPTIONS.map((opt) => (
-                    <button
-                      className={`builder-option${selectedAction === opt.id ? " builder-option--selected" : ""}`}
-                      key={opt.id}
-                      onClick={() => setSelectedAction(opt.id)}
-                      type="button"
-                    >
-                      <Icon name={opt.icon as Parameters<typeof Icon>[0]["name"]} size={22} />
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="form-actions" style={{ marginTop: "1.5rem" }}>
-                  <button
-                    className="fitos-button fitos-button--ghost"
-                    onClick={() => setBuilderStep("condition")}
-                    type="button"
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    className="fitos-button fitos-button--primary"
-                    disabled={!selectedAction}
-                    onClick={() => setBuilderStep("review")}
-                    type="button"
-                  >
-                    Next: Review →
-                  </button>
-                </div>
-              </Card>
-            )}
-
-            {/* Step: Review */}
-            {builderStep === "review" && (
-              <Card>
-                <h2 style={{ marginBottom: "0.25rem" }}>✓ Review & Activate</h2>
-                <p className="muted" style={{ marginBottom: "1.5rem", fontSize: "0.85rem" }}>
-                  Confirm your automation before publishing it.
-                </p>
-                <div className="automation-review">
-                  <div className="automation-review__flow">
-                    <div className="automation-flow-node automation-flow-node--trigger automation-flow-node--lg">
-                      ⚡{" "}
-                      {TRIGGER_OPTIONS.find((t) => t.id === selectedTrigger)?.label ??
-                        "No trigger selected"}
-                    </div>
-                    <div className="automation-review__arrow">↓</div>
-                    <div className="automation-flow-node automation-flow-node--action automation-flow-node--lg">
-                      ✉{" "}
-                      {ACTION_OPTIONS.find((a) => a.id === selectedAction)?.label ??
-                        "No action selected"}
-                    </div>
-                  </div>
-                </div>
-                <div className="form-grid" style={{ marginTop: "1.5rem" }}>
-                  <div>
-                    <label className="form-field__label">Automation Name</label>
-                    <input
-                      className="fitos-control"
-                      defaultValue={`${TRIGGER_OPTIONS.find((t) => t.id === selectedTrigger)?.label ?? "My"} Automation`}
-                    />
-                  </div>
-                </div>
-                <div className="form-actions" style={{ marginTop: "1.5rem" }}>
-                  <button
-                    className="fitos-button fitos-button--ghost"
-                    onClick={() => setBuilderStep("action")}
-                    type="button"
-                  >
-                    ← Back
-                  </button>
-                  <button
-                    className="fitos-button fitos-button--primary"
-                    onClick={() => {
-                      setActiveTab("active");
-                      setBuilderStep("trigger");
-                    }}
-                    type="button"
-                  >
-                    🚀 Activate Automation
-                  </button>
-                </div>
-              </Card>
-            )}
+              ) : (
+                <p className="muted">No execution logs recorded yet. Use &quot;Test Run&quot; on any active workflow.</p>
+              )}
+            </Card>
           </div>
         )}
       </div>
