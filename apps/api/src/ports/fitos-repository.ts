@@ -490,6 +490,9 @@ export interface FitosRepository {
   createInventoryMovement(scope: TenantScope, input: CreateInventoryMovementRequest, recordedByUserId: string): Promise<InventoryMovementResponse>;
   listPurchaseOrders(scope: TenantScope, branchId?: string): Promise<PurchaseOrderResponse[]>;
   createPurchaseOrder(scope: TenantScope, input: CreatePurchaseOrderRequest): Promise<PurchaseOrderResponse>;
+  listServiceInventoryRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]>;
+  replaceServiceInventoryRequirements(scope: TenantScope, serviceId: string, requirements: import("@fitos/contracts").ServiceInventoryRequirement[]): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]>;
+  consumeInventory(scope: TenantScope, input: { branchId: string; serviceId?: string; referenceType: string; referenceId: string; items: import("@fitos/contracts").ServiceInventoryRequirement[] }): Promise<import("@fitos/contracts").InventoryConsumptionResponse[]>;
 
   // FITOS Assess & Performance Profiles
   listAssessmentDefinitions(scope: TenantScope): Promise<AssessmentDefinitionResponse[]>;

@@ -1011,6 +1011,8 @@ export const inventoryMovements = pgTable(
     index("idx_inv_movements_tenant_branch").on(table.tenantId, table.branchId)
   ]
 );
+export const serviceInventoryRequirements = pgTable("service_inventory_requirements", { id: uuid("id").defaultRandom().primaryKey(), tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }), serviceId: uuid("service_id").notNull().references(() => services.id, { onDelete: "cascade" }), itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "restrict" }), quantityPerSession: integer("quantity_per_session").notNull() }, (table) => [uniqueIndex("uq_service_inventory_requirement").on(table.tenantId, table.serviceId, table.itemId)]);
+export const inventoryConsumptions = pgTable("inventory_consumptions", { id: uuid("id").defaultRandom().primaryKey(), tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }), branchId: uuid("branch_id").notNull().references(() => branches.id, { onDelete: "restrict" }), itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "restrict" }), serviceId: uuid("service_id").references(() => services.id, { onDelete: "set null" }), referenceType: varchar("reference_type", { length: 40 }).notNull(), referenceId: uuid("reference_id"), quantity: integer("quantity").notNull(), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow() }, (table) => [uniqueIndex("uq_inventory_consumption_reference").on(table.tenantId, table.itemId, table.referenceType, table.referenceId)]);
 
 export const purchaseOrders = pgTable(
   "purchase_orders",
@@ -1307,6 +1309,8 @@ export const schema = {
   occurrenceEquipmentAllocations,
   // Inventory
   inventoryItems,
+  serviceInventoryRequirements,
+  inventoryConsumptions,
   inventoryMovements,
   purchaseOrders,
   purchaseOrderLines,

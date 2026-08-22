@@ -41,6 +41,8 @@ import {
   occurrenceEquipmentAllocations,
   inventoryItems,
   inventoryMovements,
+  serviceInventoryRequirements,
+  inventoryConsumptions,
   purchaseOrders,
   assessmentDefinitions,
   assessmentSessions,
@@ -3672,24 +3674,27 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   async createEquipmentMaintenance(scope: TenantScope, input: CreateMaintenanceRecordRequest): Promise<EquipmentMaintenanceRecordResponse> {
-    const [asset] = await this.db
-      .select()
-      .from(equipmentAssets)
-      .where(and(eq(equipmentAssets.tenantId, scope.tenantId), eq(equipmentAssets.id, input.assetId)));
-    const [rec] = await this.db
-      .insert(equipmentMaintenanceRecords)
-      .values({
+    const { asset, rec } = await this.db.transaction(async (tx) => {
+      const [lockedAsset] = await tx.select().from(equipmentAssets).where(and(eq(equipmentAssets.tenantId, scope.tenantId), eq(equipmentAssets.id, input.assetId))).for("update");
+      if (!lockedAsset) throw new Error("Equipment asset not found.");
+      const servicedAt = new Date();
+      const [created] = await tx.insert(equipmentMaintenanceRecords).values({
         tenantId: scope.tenantId,
-        branchId: asset?.branchId ?? (scope.branchIds[0] as string) ?? scope.tenantId,
+        branchId: lockedAsset.branchId,
         assetId: input.assetId,
         serviceType: input.type,
         costMinor: input.costMinor ?? 0,
         notes: input.notes,
         servicedAt: new Date(),
         nextServiceDueAt: input.nextDueAt ? new Date(input.nextDueAt) : null
-      })
-      .returning();
-    if (!rec) throw new Error("Failed to create maintenance record.");
+      }).returning();
+      await tx.update(equipmentAssets).set({
+        ...(input.type === "calibration" ? { lastServicedAt: servicedAt, nextServiceDueAt: input.nextDueAt ? new Date(input.nextDueAt) : lockedAsset.nextServiceDueAt } : { lastServicedAt: servicedAt, nextServiceDueAt: input.nextDueAt ? new Date(input.nextDueAt) : lockedAsset.nextServiceDueAt }),
+        status: "available", updatedAt: servicedAt
+      }).where(eq(equipmentAssets.id, lockedAsset.id));
+      if (!created) throw new Error("Failed to create maintenance record.");
+      return { asset: lockedAsset, rec: created };
+    });
     return {
       id: rec.id,
       tenantId: rec.tenantId,
@@ -4165,6 +4170,10 @@ export class DrizzleFitosRepository implements FitosRepository {
       updatedAt: r.updatedAt.toISOString()
     }));
   }
+
+  async listServiceInventoryRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> { const rows = await this.db.select().from(serviceInventoryRequirements).where(and(eq(serviceInventoryRequirements.tenantId, scope.tenantId), eq(serviceInventoryRequirements.serviceId, serviceId))); return rows.map((row) => ({ itemId: row.itemId, quantityPerSession: row.quantityPerSession })); }
+  async replaceServiceInventoryRequirements(scope: TenantScope, serviceId: string, requirements: import("@fitos/contracts").ServiceInventoryRequirement[]): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> { await this.db.transaction(async (tx) => { await tx.delete(serviceInventoryRequirements).where(and(eq(serviceInventoryRequirements.tenantId, scope.tenantId), eq(serviceInventoryRequirements.serviceId, serviceId))); if (requirements.length) await tx.insert(serviceInventoryRequirements).values(requirements.map((item) => ({ tenantId: scope.tenantId, serviceId, itemId: item.itemId, quantityPerSession: item.quantityPerSession }))); }); return requirements; }
+  async consumeInventory(scope: TenantScope, input: { branchId: string; serviceId?: string; referenceType: string; referenceId: string; items: import("@fitos/contracts").ServiceInventoryRequirement[] }): Promise<import("@fitos/contracts").InventoryConsumptionResponse[]> { return this.db.transaction(async (tx) => { const output = []; for (const item of input.items) { const [stock] = await tx.select().from(inventoryItems).where(and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.branchId, input.branchId), eq(inventoryItems.id, item.itemId))).for("update"); if (!stock || stock.currentStock < item.quantityPerSession) throw new Error("Insufficient inventory stock."); const [row] = await tx.insert(inventoryConsumptions).values({ tenantId: scope.tenantId, branchId: input.branchId, itemId: item.itemId, serviceId: input.serviceId ?? null, referenceType: input.referenceType, referenceId: input.referenceId, quantity: item.quantityPerSession }).onConflictDoNothing().returning(); if (row) { await tx.update(inventoryItems).set({ currentStock: stock.currentStock - item.quantityPerSession, updatedAt: new Date() }).where(eq(inventoryItems.id, item.itemId)); output.push({ id: row.id, tenantId: row.tenantId, branchId: row.branchId, itemId: row.itemId, serviceId: row.serviceId, referenceType: row.referenceType, referenceId: row.referenceId, quantity: row.quantity, createdAt: row.createdAt.toISOString() }); } } return output; }); }
 
   async listOccurrenceEquipmentAllocations(scope: TenantScope, occurrenceId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse[]> { const rows = await this.db.select().from(occurrenceEquipmentAllocations).where(and(eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId), eq(occurrenceEquipmentAllocations.occurrenceId, occurrenceId))); return rows.map((row) => ({ id: row.id, tenantId: row.tenantId, occurrenceId: row.occurrenceId, assetId: row.assetId, status: row.status as any, createdAt: row.createdAt.toISOString() })); }
   async reserveOccurrenceEquipment(scope: TenantScope, occurrenceId: string, assetId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse> {

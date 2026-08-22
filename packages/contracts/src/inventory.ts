@@ -82,6 +82,8 @@ export interface CreateInventoryMovementRequest {
   costMinor?: number;
   notes?: string;
 }
+export interface ServiceInventoryRequirement { itemId: string; quantityPerSession: number; }
+export interface InventoryConsumptionResponse { id: string; tenantId: string; branchId: string; itemId: string; serviceId: string | null; referenceType: string; referenceId: string | null; quantity: number; createdAt: string; }
 
 export interface PurchaseOrderItem {
   itemId: string;
