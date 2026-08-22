@@ -33,7 +33,8 @@ type Tab =
   | "attendance"
   | "credits"
   | "timeline"
-  | "followups";
+  | "followups"
+  | "performance";
 
 type MemberFormValues = {
   firstName: string;
@@ -239,6 +240,7 @@ export function MemberDetailPage() {
     { id: "bookings", label: "Bookings", icon: "calendar" },
     { id: "attendance", label: "Attendance", icon: "check" },
     { id: "credits", label: "Credits & Payments", icon: "spark" },
+    { id: "performance", label: "Performance & Therapy", icon: "spark" },
     { id: "timeline", label: "Activity", icon: "dashboard" },
     { id: "followups", label: "CRM Follow-ups", icon: "users" }
   ];
@@ -661,6 +663,11 @@ export function MemberDetailPage() {
             </Card>
           </div>
         )}
+
+        {/* ── PERFORMANCE & THERAPY TAB ── */}
+        {activeTab === "performance" && memberId && (
+          <PerformanceProfileTab memberId={memberId} />
+        )}
       </div>
 
       {/* Member Editor (inline below tabs when open) */}
@@ -954,5 +961,133 @@ function ActivateMembershipModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+// ── Performance & Therapy Inline Tab ────────────────────────────────────────
+function PerformanceProfileTab({ memberId }: { memberId: string }) {
+  const profileQ = useQuery({
+    queryKey: ["member-performance", memberId],
+    queryFn: () => api.memberPerformanceProfile(memberId),
+    retry: 1
+  });
+
+  const therapyQ = useQuery({
+    queryKey: ["therapy-sessions-member", memberId],
+    queryFn: () => api.therapySessions(memberId),
+    retry: 1
+  });
+
+  const profile = profileQ.data;
+  const therapySessions = therapyQ.data ?? [];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {/* ── Performance Profile Summary ── */}
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "1.25rem" }}>
+        <h3 style={{ fontSize: ".9rem", fontWeight: 800, color: "white", marginBottom: ".75rem" }}>
+          ⚡ Performance Profile
+        </h3>
+        {profileQ.isLoading ? (
+          <Skeleton height="4rem" />
+        ) : profile ? (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: ".75rem", marginBottom: "1rem" }}>
+              <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)", borderRadius: "10px", padding: ".75rem" }}>
+                <div style={{ fontSize: ".7rem", color: "rgba(255,255,255,0.4)", marginBottom: "2px" }}>Total Assessments</div>
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "white" }}>{profile.totalAssessments}</div>
+              </div>
+              <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.18)", borderRadius: "10px", padding: ".75rem" }}>
+                <div style={{ fontSize: ".7rem", color: "rgba(255,255,255,0.4)", marginBottom: "2px" }}>Last Assessed</div>
+                <div style={{ fontSize: ".95rem", fontWeight: 700, color: "white" }}>
+                  {profile.lastAssessedAt ? new Date(profile.lastAssessedAt).toLocaleDateString("en-KE", { dateStyle: "medium" }) : "Not yet assessed"}
+                </div>
+              </div>
+            </div>
+
+            {/* Latest Metrics */}
+            {Object.keys(profile.latestMetrics).length > 0 && (
+              <div>
+                <div style={{ fontSize: ".72rem", fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: ".5rem" }}>
+                  Latest Biometric Snapshot
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: ".5rem" }}>
+                  {Object.entries(profile.latestMetrics).map(([k, v]) => (
+                    <div key={k} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "8px", padding: ".6rem .75rem" }}>
+                      <div style={{ fontSize: ".65rem", color: "rgba(255,255,255,0.35)", textTransform: "capitalize" }}>
+                        {k.replace(/([A-Z])/g, " $1")}
+                      </div>
+                      <div style={{ fontSize: ".95rem", fontWeight: 800, color: "white" }}>
+                        {typeof v === "number" ? v.toLocaleString() : String(v)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Assessment Timeline */}
+            {profile.timeline.length > 0 && (
+              <div style={{ marginTop: "1rem" }}>
+                <div style={{ fontSize: ".72rem", fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: ".5rem" }}>
+                  Assessment History
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: ".4rem" }}>
+                  {profile.timeline.slice().reverse().map((sess) => (
+                    <div key={sess.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: ".6rem .85rem", fontSize: ".82rem" }}>
+                      <div>
+                        <span style={{ color: "white", fontWeight: 600 }}>{sess.definitionName}</span>
+                        <span style={{ color: "rgba(255,255,255,0.4)", marginLeft: ".5rem" }}>{sess.summary.substring(0, 60)}…</span>
+                      </div>
+                      <span style={{ color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap", marginLeft: ".75rem", fontSize: ".75rem" }}>
+                        {new Date(sess.conductedAt).toLocaleDateString("en-KE", { dateStyle: "short" })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: ".85rem" }}>No performance data available. Complete an assessment scan first.</p>
+        )}
+      </div>
+
+      {/* ── Therapy Sessions ── */}
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "1.25rem" }}>
+        <h3 style={{ fontSize: ".9rem", fontWeight: 800, color: "white", marginBottom: ".75rem" }}>
+          🛠 Therapy & Recovery Sessions
+        </h3>
+        {therapyQ.isLoading ? (
+          <Skeleton height="4rem" />
+        ) : therapySessions.length === 0 ? (
+          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: ".85rem" }}>No therapy sessions recorded for this member.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: ".4rem" }}>
+            {therapySessions.map((s) => {
+              const delta = s.prePainScore !== null && s.postPainScore !== null ? s.prePainScore - s.postPainScore : null;
+              return (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: ".65rem .85rem" }}>
+                  <div>
+                    <div style={{ fontSize: ".84rem", color: "white", fontWeight: 600 }}>{s.protocolName}</div>
+                    <div style={{ fontSize: ".73rem", color: "rgba(255,255,255,0.4)", marginTop: "2px" }}>{s.modalityCode.replace(/_/g, " ")} • {s.staffName}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: ".75rem" }}>
+                    {delta !== null && (
+                      <span style={{ fontSize: ".8rem", fontWeight: 700, color: delta >= 0 ? "#22c55e" : "#ef4444" }}>
+                        Pain {delta >= 0 ? `↓${delta}` : `↑${Math.abs(delta)}`}
+                      </span>
+                    )}
+                    <span style={{ fontSize: ".73rem", color: "rgba(255,255,255,0.3)", whiteSpace: "nowrap" }}>
+                      {new Date(s.startedAt).toLocaleDateString("en-KE", { dateStyle: "short" })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

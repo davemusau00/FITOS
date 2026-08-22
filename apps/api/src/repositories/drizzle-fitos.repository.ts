@@ -28,6 +28,20 @@ import {
   tenants,
   userBranchAccess,
   users,
+  equipmentPools,
+  equipmentAssets,
+  equipmentMaintenanceRecords,
+  serviceEquipmentRequirements,
+  occurrenceEquipmentAllocations,
+  inventoryItems,
+  inventoryMovements,
+  purchaseOrders,
+  assessmentDefinitions,
+  assessmentSessions,
+  assessmentDeviceImports,
+  therapyModalities,
+  therapyProtocols,
+  therapySessions,
   type FitosDatabase
 } from "@fitos/database";
 import type {
@@ -83,12 +97,38 @@ import type {
   CreditReason,
   PaymentTransactionResponse,
   CreatePaymentRequest,
-  PaymentListFilters,
-  ReconcilePaymentRequest,
   AttendanceRecordResponse,
   CheckInRequest,
   UpdateRosterStatusRequest,
-  AttendanceListFilters
+  AttendanceListFilters,
+  // Equipment
+  EquipmentAssetResponse,
+  CreateEquipmentAssetRequest,
+  UpdateEquipmentAssetRequest,
+  EquipmentPoolResponse,
+  CreateEquipmentPoolRequest,
+  EquipmentMaintenanceRecordResponse,
+  CreateMaintenanceRecordRequest,
+  // Inventory
+  InventoryItemResponse,
+  CreateInventoryItemRequest,
+  UpdateInventoryItemRequest,
+  InventoryMovementResponse,
+  CreateInventoryMovementRequest,
+  PurchaseOrderResponse,
+  CreatePurchaseOrderRequest,
+  // Assessments
+  AssessmentDefinitionResponse,
+  CreateAssessmentDefinitionRequest,
+  AssessmentSessionResponse,
+  CreateAssessmentSessionRequest,
+  MemberPerformanceProfileResponse,
+  // Therapy
+  TherapyModalityResponse,
+  TherapyProtocolResponse,
+  CreateTherapyProtocolRequest,
+  TherapySessionResponse,
+  CreateTherapySessionRequest
 } from "@fitos/contracts";
 import { decodeCursor, encodeCursor } from "@fitos/shared";
 import type { Pool } from "pg";
@@ -3381,128 +3421,426 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   // ─── Equipment & Resource Scheduling ─────────────────────────────────────────
-  async listEquipmentAssets(_scope: TenantScope, _branchId?: string): Promise<import("@fitos/contracts").EquipmentAssetResponse[]> {
-    return [];
-  }
-
-  async findEquipmentAssetById(_scope: TenantScope, _assetId: string): Promise<import("@fitos/contracts").EquipmentAssetResponse | null> {
-    return null;
-  }
-
-  async createEquipmentAsset(scope: TenantScope, input: import("@fitos/contracts").CreateEquipmentAssetRequest): Promise<import("@fitos/contracts").EquipmentAssetResponse> {
-    const now = new Date().toISOString();
-    return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      branchId: input.branchId,
-      roomId: input.roomId ?? null,
-      name: input.name,
-      assetCode: input.assetCode,
-      serialNumber: input.serialNumber ?? null,
-      modelName: input.modelName,
-      category: input.category,
-      status: input.status ?? "available",
-      purchaseDate: input.purchaseDate ?? null,
-      warrantyEndsAt: input.warrantyEndsAt ?? null,
-      lastServicedAt: null,
-      nextServiceDueAt: input.nextServiceDueAt ?? null,
+  async listEquipmentAssets(scope: TenantScope, branchId?: string): Promise<EquipmentAssetResponse[]> {
+    const conditions = [eq(equipmentAssets.tenantId, scope.tenantId)];
+    if (branchId) conditions.push(eq(equipmentAssets.branchId, branchId));
+    else if (scope.branchIds.length) conditions.push(inArray(equipmentAssets.branchId, scope.branchIds));
+    const rows = await this.db.select().from(equipmentAssets).where(and(...conditions));
+    return rows.map((r) => ({
+      id: r.id,
+      tenantId: r.tenantId,
+      branchId: r.branchId,
+      roomId: null,
+      name: r.name,
+      assetCode: r.serialNumber ?? r.id.slice(0, 8),
+      serialNumber: r.serialNumber,
+      modelName: r.modelNumber ?? r.name,
+      category: r.category as any,
+      status: r.status as any,
+      purchaseDate: r.purchaseDate,
+      warrantyEndsAt: r.warrantyExpiresAt,
+      lastServicedAt: r.lastServicedAt ? r.lastServicedAt.toISOString() : null,
+      nextServiceDueAt: r.nextServiceDueAt ? r.nextServiceDueAt.toISOString() : null,
       lastCalibratedAt: null,
-      nextCalibrationDueAt: input.nextCalibrationDueAt ?? null,
-      notes: input.notes ?? null,
-      createdAt: now,
-      updatedAt: now
+      nextCalibrationDueAt: null,
+      notes: r.notes,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString()
+    }));
+  }
+
+  async findEquipmentAssetById(scope: TenantScope, assetId: string): Promise<EquipmentAssetResponse | null> {
+    const [r] = await this.db
+      .select()
+      .from(equipmentAssets)
+      .where(and(eq(equipmentAssets.tenantId, scope.tenantId), eq(equipmentAssets.id, assetId)));
+    if (!r) return null;
+    return {
+      id: r.id,
+      tenantId: r.tenantId,
+      branchId: r.branchId,
+      roomId: null,
+      name: r.name,
+      assetCode: r.serialNumber ?? r.id.slice(0, 8),
+      serialNumber: r.serialNumber,
+      modelName: r.modelNumber ?? r.name,
+      category: r.category as any,
+      status: r.status as any,
+      purchaseDate: r.purchaseDate,
+      warrantyEndsAt: r.warrantyExpiresAt,
+      lastServicedAt: r.lastServicedAt ? r.lastServicedAt.toISOString() : null,
+      nextServiceDueAt: r.nextServiceDueAt ? r.nextServiceDueAt.toISOString() : null,
+      lastCalibratedAt: null,
+      nextCalibrationDueAt: null,
+      notes: r.notes,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString()
     };
   }
 
-  async updateEquipmentAsset(_scope: TenantScope, _assetId: string, _input: import("@fitos/contracts").UpdateEquipmentAssetRequest): Promise<import("@fitos/contracts").EquipmentAssetResponse | null> {
-    return null;
-  }
-
-  async listEquipmentPools(_scope: TenantScope, _branchId?: string): Promise<import("@fitos/contracts").EquipmentPoolResponse[]> {
-    return [];
-  }
-
-  async createEquipmentPool(scope: TenantScope, input: import("@fitos/contracts").CreateEquipmentPoolRequest): Promise<import("@fitos/contracts").EquipmentPoolResponse> {
+  async createEquipmentAsset(scope: TenantScope, input: CreateEquipmentAssetRequest): Promise<EquipmentAssetResponse> {
+    const [created] = await this.db
+      .insert(equipmentAssets)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        name: input.name,
+        serialNumber: input.serialNumber ?? null,
+        modelNumber: input.modelName,
+        category: input.category,
+        status: input.status ?? "available",
+        purchaseDate: input.purchaseDate ?? null,
+        warrantyExpiresAt: input.warrantyEndsAt ?? null,
+        nextServiceDueAt: input.nextServiceDueAt ? new Date(input.nextServiceDueAt) : null,
+        notes: input.notes ?? null
+      })
+      .returning();
     return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      branchId: input.branchId,
-      name: input.name,
-      category: input.category,
-      totalQuantity: input.assetIds.length,
-      availableQuantity: input.assetIds.length,
+      id: created.id,
+      tenantId: created.tenantId,
+      branchId: created.branchId,
+      roomId: input.roomId ?? null,
+      name: created.name,
+      assetCode: input.assetCode ?? created.serialNumber ?? created.id.slice(0, 8),
+      serialNumber: created.serialNumber,
+      modelName: created.modelNumber ?? created.name,
+      category: created.category as any,
+      status: created.status as any,
+      purchaseDate: created.purchaseDate,
+      warrantyEndsAt: created.warrantyExpiresAt,
+      lastServicedAt: created.lastServicedAt ? created.lastServicedAt.toISOString() : null,
+      nextServiceDueAt: created.nextServiceDueAt ? created.nextServiceDueAt.toISOString() : null,
+      lastCalibratedAt: null,
+      nextCalibrationDueAt: input.nextCalibrationDueAt ?? null,
+      notes: created.notes,
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString()
+    };
+  }
+
+  async updateEquipmentAsset(scope: TenantScope, assetId: string, input: UpdateEquipmentAssetRequest): Promise<EquipmentAssetResponse | null> {
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.status !== undefined) updateData.status = input.status;
+    if (input.notes !== undefined) updateData.notes = input.notes;
+    if (input.nextServiceDueAt !== undefined) updateData.nextServiceDueAt = input.nextServiceDueAt ? new Date(input.nextServiceDueAt) : null;
+    const [updated] = await this.db
+      .update(equipmentAssets)
+      .set(updateData)
+      .where(and(eq(equipmentAssets.tenantId, scope.tenantId), eq(equipmentAssets.id, assetId)))
+      .returning();
+    if (!updated) return null;
+    return {
+      id: updated.id,
+      tenantId: updated.tenantId,
+      branchId: updated.branchId,
+      roomId: null,
+      name: updated.name,
+      assetCode: updated.serialNumber ?? updated.id.slice(0, 8),
+      serialNumber: updated.serialNumber,
+      modelName: updated.modelNumber ?? updated.name,
+      category: updated.category as any,
+      status: updated.status as any,
+      purchaseDate: updated.purchaseDate,
+      warrantyEndsAt: updated.warrantyExpiresAt,
+      lastServicedAt: updated.lastServicedAt ? updated.lastServicedAt.toISOString() : null,
+      nextServiceDueAt: updated.nextServiceDueAt ? updated.nextServiceDueAt.toISOString() : null,
+      lastCalibratedAt: null,
+      nextCalibrationDueAt: null,
+      notes: updated.notes,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString()
+    };
+  }
+
+  async listEquipmentPools(scope: TenantScope, branchId?: string): Promise<EquipmentPoolResponse[]> {
+    const conditions = [eq(equipmentPools.tenantId, scope.tenantId)];
+    if (branchId) conditions.push(eq(equipmentPools.branchId, branchId));
+    else if (scope.branchIds.length) conditions.push(inArray(equipmentPools.branchId, scope.branchIds));
+    const pools = await this.db.select().from(equipmentPools).where(and(...conditions));
+    return pools.map((p) => ({
+      id: p.id,
+      tenantId: p.tenantId,
+      branchId: p.branchId,
+      name: p.name,
+      category: p.category as any,
+      totalQuantity: p.capacity,
+      availableQuantity: p.capacity,
+      assetIds: []
+    }));
+  }
+
+  async createEquipmentPool(scope: TenantScope, input: CreateEquipmentPoolRequest): Promise<EquipmentPoolResponse> {
+    const [created] = await this.db
+      .insert(equipmentPools)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        name: input.name,
+        code: input.name.toLowerCase().replace(/\s+/g, "_"),
+        category: input.category,
+        capacity: input.assetIds.length || 1,
+        isActive: true
+      })
+      .returning();
+    return {
+      id: created.id,
+      tenantId: created.tenantId,
+      branchId: created.branchId,
+      name: created.name,
+      category: created.category as any,
+      totalQuantity: input.assetIds.length || 1,
+      availableQuantity: input.assetIds.length || 1,
       assetIds: input.assetIds
     };
   }
 
-  async listEquipmentMaintenance(_scope: TenantScope, _assetId?: string): Promise<import("@fitos/contracts").EquipmentMaintenanceRecordResponse[]> {
-    return [];
+  async listEquipmentMaintenance(scope: TenantScope, assetId?: string): Promise<EquipmentMaintenanceRecordResponse[]> {
+    const conditions = [eq(equipmentMaintenanceRecords.tenantId, scope.tenantId)];
+    if (assetId) conditions.push(eq(equipmentMaintenanceRecords.assetId, assetId));
+    const rows = await this.db
+      .select({
+        rec: equipmentMaintenanceRecords,
+        assetName: equipmentAssets.name
+      })
+      .from(equipmentMaintenanceRecords)
+      .leftJoin(equipmentAssets, eq(equipmentMaintenanceRecords.assetId, equipmentAssets.id))
+      .where(and(...conditions));
+    return rows.map(({ rec, assetName }) => ({
+      id: rec.id,
+      tenantId: rec.tenantId,
+      assetId: rec.assetId,
+      assetName: assetName ?? "Asset",
+      type: rec.serviceType as any,
+      performedAt: rec.servicedAt.toISOString(),
+      performedBy: "Service Technician",
+      costMinor: rec.costMinor ?? null,
+      notes: rec.notes,
+      nextDueAt: rec.nextServiceDueAt ? rec.nextServiceDueAt.toISOString() : null,
+      createdAt: rec.createdAt.toISOString()
+    }));
   }
 
-  async createEquipmentMaintenance(scope: TenantScope, input: import("@fitos/contracts").CreateMaintenanceRecordRequest): Promise<import("@fitos/contracts").EquipmentMaintenanceRecordResponse> {
-    const now = new Date().toISOString();
+  async createEquipmentMaintenance(scope: TenantScope, input: CreateMaintenanceRecordRequest): Promise<EquipmentMaintenanceRecordResponse> {
+    const [asset] = await this.db
+      .select()
+      .from(equipmentAssets)
+      .where(and(eq(equipmentAssets.tenantId, scope.tenantId), eq(equipmentAssets.id, input.assetId)));
+    const [rec] = await this.db
+      .insert(equipmentMaintenanceRecords)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: asset?.branchId ?? (scope.branchIds[0] as string) ?? scope.tenantId,
+        assetId: input.assetId,
+        serviceType: input.type,
+        costMinor: input.costMinor ?? 0,
+        notes: input.notes,
+        servicedAt: new Date(),
+        nextServiceDueAt: input.nextDueAt ? new Date(input.nextDueAt) : null
+      })
+      .returning();
     return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      assetId: input.assetId,
-      assetName: "Equipment Asset",
+      id: rec.id,
+      tenantId: rec.tenantId,
+      assetId: rec.assetId,
+      assetName: asset?.name ?? "Asset",
       type: input.type,
-      performedAt: now,
+      performedAt: rec.servicedAt.toISOString(),
       performedBy: input.performedBy,
       costMinor: input.costMinor ?? null,
-      notes: input.notes,
+      notes: rec.notes,
       nextDueAt: input.nextDueAt ?? null,
-      createdAt: now
+      createdAt: rec.createdAt.toISOString()
     };
   }
 
   // ─── Inventory & Consumables ────────────────────────────────────────────────
-  async listInventoryItems(_scope: TenantScope, _branchId?: string): Promise<import("@fitos/contracts").InventoryItemResponse[]> {
-    return [];
+  async listInventoryItems(scope: TenantScope, branchId?: string): Promise<InventoryItemResponse[]> {
+    const conditions = [eq(inventoryItems.tenantId, scope.tenantId)];
+    if (branchId) conditions.push(eq(inventoryItems.branchId, branchId));
+    else if (scope.branchIds.length) conditions.push(inArray(inventoryItems.branchId, scope.branchIds));
+    const rows = await this.db.select().from(inventoryItems).where(and(...conditions));
+    return rows.map((r) => ({
+      id: r.id,
+      tenantId: r.tenantId,
+      branchId: r.branchId,
+      sku: r.sku,
+      name: r.name,
+      category: r.category as any,
+      unit: r.unitOfMeasure,
+      unitCostMinor: r.costPriceMinor,
+      retailPriceMinor: r.retailPriceMinor,
+      stockOnHand: r.currentStock,
+      reorderPoint: r.reorderPoint,
+      reorderQuantity: r.reorderQuantity,
+      isRetail: true,
+      isConsumable: false,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString()
+    }));
   }
 
-  async findInventoryItemById(_scope: TenantScope, _itemId: string): Promise<import("@fitos/contracts").InventoryItemResponse | null> {
-    return null;
-  }
-
-  async createInventoryItem(scope: TenantScope, input: import("@fitos/contracts").CreateInventoryItemRequest): Promise<import("@fitos/contracts").InventoryItemResponse> {
-    const now = new Date().toISOString();
+  async findInventoryItemById(scope: TenantScope, itemId: string): Promise<InventoryItemResponse | null> {
+    const [r] = await this.db
+      .select()
+      .from(inventoryItems)
+      .where(and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, itemId)));
+    if (!r) return null;
     return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      branchId: input.branchId,
-      sku: input.sku,
-      name: input.name,
-      category: input.category,
-      unit: input.unit ?? "unit",
-      unitCostMinor: input.unitCostMinor,
-      retailPriceMinor: input.retailPriceMinor ?? 0,
-      stockOnHand: input.initialStock ?? 0,
-      reorderPoint: input.reorderPoint ?? 10,
-      reorderQuantity: input.reorderQuantity ?? 20,
-      isRetail: input.isRetail ?? true,
-      isConsumable: input.isConsumable ?? false,
-      createdAt: now,
-      updatedAt: now
+      id: r.id,
+      tenantId: r.tenantId,
+      branchId: r.branchId,
+      sku: r.sku,
+      name: r.name,
+      category: r.category as any,
+      unit: r.unitOfMeasure,
+      unitCostMinor: r.costPriceMinor,
+      retailPriceMinor: r.retailPriceMinor,
+      stockOnHand: r.currentStock,
+      reorderPoint: r.reorderPoint,
+      reorderQuantity: r.reorderQuantity,
+      isRetail: true,
+      isConsumable: false,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString()
     };
   }
 
-  async updateInventoryItem(_scope: TenantScope, _itemId: string, _input: import("@fitos/contracts").UpdateInventoryItemRequest): Promise<import("@fitos/contracts").InventoryItemResponse | null> {
-    return null;
-  }
-
-  async listInventoryMovements(_scope: TenantScope, _itemId?: string): Promise<import("@fitos/contracts").InventoryMovementResponse[]> {
-    return [];
-  }
-
-  async createInventoryMovement(scope: TenantScope, input: import("@fitos/contracts").CreateInventoryMovementRequest, recordedByUserId: string): Promise<import("@fitos/contracts").InventoryMovementResponse> {
-    const now = new Date().toISOString();
+  async createInventoryItem(scope: TenantScope, input: CreateInventoryItemRequest): Promise<InventoryItemResponse> {
+    const [created] = await this.db
+      .insert(inventoryItems)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        sku: input.sku,
+        name: input.name,
+        category: input.category,
+        unitOfMeasure: input.unit ?? "unit",
+        costPriceMinor: input.unitCostMinor,
+        retailPriceMinor: input.retailPriceMinor ?? 0,
+        currentStock: input.initialStock ?? 0,
+        reorderPoint: input.reorderPoint ?? 10,
+        reorderQuantity: input.reorderQuantity ?? 20,
+        isActive: true
+      })
+      .returning();
     return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      branchId: input.branchId,
-      itemId: input.itemId,
-      itemName: "Item",
+      id: created.id,
+      tenantId: created.tenantId,
+      branchId: created.branchId,
+      sku: created.sku,
+      name: created.name,
+      category: created.category as any,
+      unit: created.unitOfMeasure,
+      unitCostMinor: created.costPriceMinor,
+      retailPriceMinor: created.retailPriceMinor,
+      stockOnHand: created.currentStock,
+      reorderPoint: created.reorderPoint,
+      reorderQuantity: created.reorderQuantity,
+      isRetail: input.isRetail ?? true,
+      isConsumable: input.isConsumable ?? false,
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString()
+    };
+  }
+
+  async updateInventoryItem(scope: TenantScope, itemId: string, input: UpdateInventoryItemRequest): Promise<InventoryItemResponse | null> {
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.retailPriceMinor !== undefined) updateData.retailPriceMinor = input.retailPriceMinor;
+    if (input.reorderPoint !== undefined) updateData.reorderPoint = input.reorderPoint;
+    if (input.reorderQuantity !== undefined) updateData.reorderQuantity = input.reorderQuantity;
+    const [updated] = await this.db
+      .update(inventoryItems)
+      .set(updateData)
+      .where(and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, itemId)))
+      .returning();
+    if (!updated) return null;
+    return {
+      id: updated.id,
+      tenantId: updated.tenantId,
+      branchId: updated.branchId,
+      sku: updated.sku,
+      name: updated.name,
+      category: updated.category as any,
+      unit: updated.unitOfMeasure,
+      unitCostMinor: updated.costPriceMinor,
+      retailPriceMinor: updated.retailPriceMinor,
+      stockOnHand: updated.currentStock,
+      reorderPoint: updated.reorderPoint,
+      reorderQuantity: updated.reorderQuantity,
+      isRetail: true,
+      isConsumable: false,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString()
+    };
+  }
+
+  async listInventoryMovements(scope: TenantScope, itemId?: string): Promise<InventoryMovementResponse[]> {
+    const conditions = [eq(inventoryMovements.tenantId, scope.tenantId)];
+    if (itemId) conditions.push(eq(inventoryMovements.itemId, itemId));
+    const rows = await this.db
+      .select({
+        mov: inventoryMovements,
+        itemName: inventoryItems.name,
+        userName: users.displayName
+      })
+      .from(inventoryMovements)
+      .leftJoin(inventoryItems, eq(inventoryMovements.itemId, inventoryItems.id))
+      .leftJoin(users, eq(inventoryMovements.recordedByUserId, users.id))
+      .where(and(...conditions));
+    return rows.map(({ mov, itemName, userName }) => ({
+      id: mov.id,
+      tenantId: mov.tenantId,
+      branchId: mov.branchId,
+      itemId: mov.itemId,
+      itemName: itemName ?? "Item",
+      movementType: mov.type as any,
+      quantity: mov.quantity,
+      referenceType: null,
+      referenceId: mov.referenceId,
+      costMinor: null,
+      notes: mov.reason,
+      recordedByUserId: mov.recordedByUserId ?? "",
+      recordedByName: userName ?? "Staff",
+      recordedAt: mov.createdAt.toISOString()
+    }));
+  }
+
+  async createInventoryMovement(scope: TenantScope, input: CreateInventoryMovementRequest, recordedByUserId: string): Promise<InventoryMovementResponse> {
+    const [item] = await this.db
+      .select()
+      .from(inventoryItems)
+      .where(and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, input.itemId)));
+    if (!item) throw new Error("Inventory item not found.");
+    const newStock = input.movementType === "receipt" ? item.currentStock + input.quantity : item.currentStock - input.quantity;
+    await this.db
+      .update(inventoryItems)
+      .set({ currentStock: newStock, updatedAt: new Date() })
+      .where(eq(inventoryItems.id, item.id));
+
+    const [mov] = await this.db
+      .insert(inventoryMovements)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: item.branchId,
+        itemId: item.id,
+        type: input.movementType,
+        quantity: input.quantity,
+        balanceAfter: newStock,
+        reason: input.notes ?? input.movementType,
+        referenceId: input.referenceId ?? null,
+        recordedByUserId
+      })
+      .returning();
+
+    const [user] = await this.db.select().from(users).where(eq(users.id, recordedByUserId));
+    return {
+      id: mov.id,
+      tenantId: mov.tenantId,
+      branchId: mov.branchId,
+      itemId: mov.itemId,
+      itemName: item.name,
       movementType: input.movementType,
       quantity: input.quantity,
       referenceType: input.referenceType ?? null,
@@ -3510,156 +3848,417 @@ export class DrizzleFitosRepository implements FitosRepository {
       costMinor: input.costMinor ?? null,
       notes: input.notes ?? null,
       recordedByUserId,
-      recordedByName: "Staff",
-      recordedAt: now
+      recordedByName: user?.displayName ?? "Staff",
+      recordedAt: mov.createdAt.toISOString()
     };
   }
 
-  async listPurchaseOrders(_scope: TenantScope, _branchId?: string): Promise<import("@fitos/contracts").PurchaseOrderResponse[]> {
-    return [];
+  async listPurchaseOrders(scope: TenantScope, branchId?: string): Promise<PurchaseOrderResponse[]> {
+    const conditions = [eq(purchaseOrders.tenantId, scope.tenantId)];
+    if (branchId) conditions.push(eq(purchaseOrders.branchId, branchId));
+    const rows = await this.db.select().from(purchaseOrders).where(and(...conditions));
+    return rows.map((r) => ({
+      id: r.id,
+      tenantId: r.tenantId,
+      branchId: r.branchId,
+      branchName: null,
+      poNumber: r.poNumber,
+      supplierName: r.supplierName,
+      status: r.status as any,
+      items: (r.itemsJson as any[]) || [],
+      totalMinor: r.totalAmountMinor,
+      orderedAt: r.issuedAt.toISOString(),
+      receivedAt: r.receivedAt ? r.receivedAt.toISOString() : null,
+      notes: null,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString()
+    }));
   }
 
-  async createPurchaseOrder(scope: TenantScope, input: import("@fitos/contracts").CreatePurchaseOrderRequest): Promise<import("@fitos/contracts").PurchaseOrderResponse> {
-    const now = new Date().toISOString();
-    return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      branchId: input.branchId,
-      poNumber: `PO-${Date.now().toString().slice(-6)}`,
-      supplierName: input.supplierName,
-      status: "ordered",
-      items: input.items.map((i) => ({
+  async createPurchaseOrder(scope: TenantScope, input: CreatePurchaseOrderRequest): Promise<PurchaseOrderResponse> {
+    let totalMinor = 0;
+    const items = input.items.map((i) => {
+      const lineTotal = i.quantity * i.unitCostMinor;
+      totalMinor += lineTotal;
+      return {
         itemId: i.itemId,
         itemName: "Item",
         quantity: i.quantity,
         unitCostMinor: i.unitCostMinor,
-        totalMinor: i.quantity * i.unitCostMinor
-      })),
-      totalMinor: input.items.reduce((sum, i) => sum + i.quantity * i.unitCostMinor, 0),
-      orderedAt: now,
+        totalMinor: lineTotal
+      };
+    });
+    const poNumber = `PO-${Date.now().toString().slice(-6)}`;
+    const [created] = await this.db
+      .insert(purchaseOrders)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        poNumber,
+        supplierName: input.supplierName,
+        status: "ordered",
+        totalAmountMinor: totalMinor,
+        itemsJson: items,
+        issuedAt: new Date()
+      })
+      .returning();
+    return {
+      id: created.id,
+      tenantId: created.tenantId,
+      branchId: created.branchId,
+      branchName: null,
+      poNumber: created.poNumber,
+      supplierName: created.supplierName,
+      status: "ordered",
+      items,
+      totalMinor,
+      orderedAt: created.issuedAt.toISOString(),
       receivedAt: null,
       notes: input.notes ?? null,
-      createdAt: now,
-      updatedAt: now
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString()
     };
   }
 
   // ─── FITOS Assess & Performance Profiles ────────────────────────────────────
-  async listAssessmentDefinitions(_scope: TenantScope): Promise<import("@fitos/contracts").AssessmentDefinitionResponse[]> {
-    return [];
+  async listAssessmentDefinitions(scope: TenantScope): Promise<AssessmentDefinitionResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(assessmentDefinitions)
+      .where(eq(assessmentDefinitions.tenantId, scope.tenantId));
+    return rows.map((r) => ({
+      id: r.id,
+      tenantId: r.tenantId,
+      name: r.name,
+      category: r.category as any,
+      description: r.description,
+      deviceVendor: r.deviceVendor as any,
+      metrics: (r.metricsJson as any[]) || [],
+      isActive: r.isActive,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString()
+    }));
   }
 
-  async createAssessmentDefinition(scope: TenantScope, input: import("@fitos/contracts").CreateAssessmentDefinitionRequest): Promise<import("@fitos/contracts").AssessmentDefinitionResponse> {
-    const now = new Date().toISOString();
+  async createAssessmentDefinition(scope: TenantScope, input: CreateAssessmentDefinitionRequest): Promise<AssessmentDefinitionResponse> {
+    const [created] = await this.db
+      .insert(assessmentDefinitions)
+      .values({
+        tenantId: scope.tenantId,
+        code: input.name.toLowerCase().replace(/\s+/g, "_"),
+        name: input.name,
+        category: input.category,
+        deviceVendor: input.deviceVendor,
+        metricsJson: input.metrics,
+        description: input.description,
+        isActive: true
+      })
+      .returning();
     return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      name: input.name,
-      category: input.category,
-      description: input.description,
-      deviceVendor: input.deviceVendor,
+      id: created.id,
+      tenantId: created.tenantId,
+      name: created.name,
+      category: created.category as any,
+      description: created.description,
+      deviceVendor: created.deviceVendor as any,
       metrics: input.metrics,
       isActive: true,
-      createdAt: now,
-      updatedAt: now
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString()
     };
   }
 
-  async listAssessmentSessions(_scope: TenantScope, _memberId?: string, _branchId?: string): Promise<import("@fitos/contracts").AssessmentSessionResponse[]> {
-    return [];
+  async listAssessmentSessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<AssessmentSessionResponse[]> {
+    const conditions = [eq(assessmentSessions.tenantId, scope.tenantId)];
+    if (memberId) conditions.push(eq(assessmentSessions.memberId, memberId));
+    if (branchId) conditions.push(eq(assessmentSessions.branchId, branchId));
+    const rows = await this.db
+      .select({
+        sess: assessmentSessions,
+        defName: assessmentDefinitions.name,
+        contactFirst: contacts.firstName,
+        contactLast: contacts.lastName,
+        assessorName: users.displayName
+      })
+      .from(assessmentSessions)
+      .leftJoin(assessmentDefinitions, eq(assessmentSessions.definitionId, assessmentDefinitions.id))
+      .leftJoin(members, eq(assessmentSessions.memberId, members.id))
+      .leftJoin(contacts, eq(members.contactId, contacts.id))
+      .leftJoin(users, eq(assessmentSessions.assessorStaffId, users.id))
+      .where(and(...conditions));
+    return rows.map(({ sess, defName, contactFirst, contactLast, assessorName }) => ({
+      id: sess.id,
+      tenantId: sess.tenantId,
+      branchId: sess.branchId,
+      branchName: null,
+      memberId: sess.memberId,
+      memberName: contactFirst ? `${contactFirst} ${contactLast ?? ""}`.trim() : "Member",
+      assessorStaffId: sess.assessorStaffId ?? "",
+      assessorName: assessorName ?? "Staff Assessor",
+      definitionId: sess.definitionId,
+      definitionName: defName ?? "Assessment",
+      category: sess.category as any,
+      status: sess.status as any,
+      conductedAt: sess.conductedAt.toISOString(),
+      summary: sess.summary,
+      metrics: (sess.metricsJson as any) || {},
+      notes: sess.notes,
+      createdAt: sess.createdAt.toISOString(),
+      updatedAt: sess.updatedAt.toISOString()
+    }));
   }
 
-  async createAssessmentSession(scope: TenantScope, input: import("@fitos/contracts").CreateAssessmentSessionRequest, assessorStaffId: string): Promise<import("@fitos/contracts").AssessmentSessionResponse> {
-    const now = new Date().toISOString();
+  async createAssessmentSession(scope: TenantScope, input: CreateAssessmentSessionRequest, assessorStaffId: string): Promise<AssessmentSessionResponse> {
+    const [def] = await this.db
+      .select()
+      .from(assessmentDefinitions)
+      .where(and(eq(assessmentDefinitions.tenantId, scope.tenantId), eq(assessmentDefinitions.id, input.definitionId)));
+    const [memberRow] = await this.db
+      .select({ contactFirst: contacts.firstName, contactLast: contacts.lastName })
+      .from(members)
+      .leftJoin(contacts, eq(members.contactId, contacts.id))
+      .where(and(eq(members.tenantId, scope.tenantId), eq(members.id, input.memberId)));
+    const [assessor] = await this.db.select().from(users).where(eq(users.id, assessorStaffId));
+
+    const [sess] = await this.db
+      .insert(assessmentSessions)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        memberId: input.memberId,
+        assessorStaffId,
+        definitionId: input.definitionId,
+        category: def?.category ?? "body_composition",
+        status: "completed",
+        conductedAt: input.conductedAt ? new Date(input.conductedAt) : new Date(),
+        summary: input.summary,
+        metricsJson: input.metrics,
+        provenanceJson: {},
+        notes: input.notes ?? null
+      })
+      .returning();
+
     return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      branchId: input.branchId,
-      memberId: input.memberId,
-      memberName: "Member",
+      id: sess.id,
+      tenantId: sess.tenantId,
+      branchId: sess.branchId,
+      branchName: null,
+      memberId: sess.memberId,
+      memberName: memberRow ? `${memberRow.contactFirst} ${memberRow.contactLast ?? ""}`.trim() : "Member",
       assessorStaffId,
-      assessorName: "Staff Assessor",
-      definitionId: input.definitionId,
-      definitionName: "Assessment",
-      category: "body_composition",
+      assessorName: assessor?.displayName ?? "Staff Assessor",
+      definitionId: sess.definitionId,
+      definitionName: def?.name ?? "Assessment",
+      category: sess.category as any,
       status: "completed",
-      conductedAt: input.conductedAt || now,
-      summary: input.summary,
+      conductedAt: sess.conductedAt.toISOString(),
+      summary: sess.summary,
       metrics: input.metrics,
-      notes: input.notes ?? null,
-      createdAt: now,
-      updatedAt: now
+      notes: sess.notes,
+      createdAt: sess.createdAt.toISOString(),
+      updatedAt: sess.updatedAt.toISOString()
     };
   }
 
-  async getMemberPerformanceProfile(_scope: TenantScope, memberId: string): Promise<import("@fitos/contracts").MemberPerformanceProfileResponse> {
+  async getMemberPerformanceProfile(scope: TenantScope, memberId: string): Promise<MemberPerformanceProfileResponse> {
+    const [memberRow] = await this.db
+      .select({ contactFirst: contacts.firstName, contactLast: contacts.lastName })
+      .from(members)
+      .leftJoin(contacts, eq(members.contactId, contacts.id))
+      .where(and(eq(members.tenantId, scope.tenantId), eq(members.id, memberId)));
+    const sessions = await this.listAssessmentSessions(scope, memberId);
+    const latest = sessions[sessions.length - 1];
     return {
       memberId,
-      memberName: "Member",
-      totalAssessments: 0,
-      lastAssessedAt: null,
-      latestMetrics: {},
-      timeline: []
+      memberName: memberRow ? `${memberRow.contactFirst} ${memberRow.contactLast ?? ""}`.trim() : "Member",
+      totalAssessments: sessions.length,
+      lastAssessedAt: latest?.conductedAt ?? null,
+      latestMetrics: latest?.metrics ?? {},
+      timeline: sessions
     };
   }
 
   // ─── FITOS Therapy & Recovery ───────────────────────────────────────────────
-  async listTherapyModalities(_scope: TenantScope): Promise<import("@fitos/contracts").TherapyModalityResponse[]> {
-    return [];
+  async listTherapyModalities(scope: TenantScope): Promise<TherapyModalityResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(therapyModalities)
+      .where(eq(therapyModalities.tenantId, scope.tenantId));
+    return rows.map((r) => ({
+      id: r.id,
+      tenantId: r.tenantId,
+      code: r.code as any,
+      name: r.name,
+      category: r.category as any,
+      defaultDurationMinutes: r.defaultDurationMinutes,
+      contraindications: (r.contraindicationsJson as string[]) || [],
+      description: r.description,
+      isActive: r.isActive,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString()
+    }));
   }
 
-  async listTherapyProtocols(_scope: TenantScope, _modalityCode?: string): Promise<import("@fitos/contracts").TherapyProtocolResponse[]> {
-    return [];
+  async listTherapyProtocols(scope: TenantScope, modalityCode?: string): Promise<TherapyProtocolResponse[]> {
+    const conditions = [eq(therapyProtocols.tenantId, scope.tenantId)];
+    if (modalityCode) conditions.push(eq(therapyProtocols.modalityCode, modalityCode));
+    const rows = await this.db.select().from(therapyProtocols).where(and(...conditions));
+    return rows.map((r) => ({
+      id: r.id,
+      tenantId: r.tenantId,
+      modalityCode: r.modalityCode as any,
+      modalityName: r.modalityName,
+      name: r.name,
+      indication: r.indication,
+      targetArea: r.targetArea,
+      parameters: (r.parametersJson as any) || {},
+      safetyChecklist: (r.safetyChecklistJson as string[]) || [],
+      clinicalNotes: r.clinicalNotes,
+      isActive: r.isActive,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString()
+    }));
   }
 
-  async createTherapyProtocol(scope: TenantScope, input: import("@fitos/contracts").CreateTherapyProtocolRequest): Promise<import("@fitos/contracts").TherapyProtocolResponse> {
-    const now = new Date().toISOString();
+  async createTherapyProtocol(scope: TenantScope, input: CreateTherapyProtocolRequest): Promise<TherapyProtocolResponse> {
+    const [created] = await this.db
+      .insert(therapyProtocols)
+      .values({
+        tenantId: scope.tenantId,
+        modalityCode: input.modalityCode,
+        modalityName: input.modalityName,
+        name: input.name,
+        indication: input.indication,
+        targetArea: input.targetArea,
+        parametersJson: input.parameters,
+        safetyChecklistJson: input.safetyChecklist,
+        clinicalNotes: input.clinicalNotes,
+        isActive: true
+      })
+      .returning();
     return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      modalityCode: input.modalityCode,
-      modalityName: input.modalityName,
-      name: input.name,
-      indication: input.indication,
-      targetArea: input.targetArea,
+      id: created.id,
+      tenantId: created.tenantId,
+      modalityCode: created.modalityCode as any,
+      modalityName: created.modalityName,
+      name: created.name,
+      indication: created.indication,
+      targetArea: created.targetArea,
       parameters: input.parameters,
       safetyChecklist: input.safetyChecklist,
-      clinicalNotes: input.clinicalNotes,
+      clinicalNotes: created.clinicalNotes,
       isActive: true,
-      createdAt: now,
-      updatedAt: now
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString()
     };
   }
 
-  async listTherapySessions(_scope: TenantScope, _memberId?: string, _branchId?: string): Promise<import("@fitos/contracts").TherapySessionResponse[]> {
-    return [];
+  async listTherapySessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<TherapySessionResponse[]> {
+    const conditions = [eq(therapySessions.tenantId, scope.tenantId)];
+    if (memberId) conditions.push(eq(therapySessions.memberId, memberId));
+    if (branchId) conditions.push(eq(therapySessions.branchId, branchId));
+    const rows = await this.db
+      .select({
+        sess: therapySessions,
+        contactFirst: contacts.firstName,
+        contactLast: contacts.lastName,
+        staffName: users.displayName,
+        assetName: equipmentAssets.name
+      })
+      .from(therapySessions)
+      .leftJoin(members, eq(therapySessions.memberId, members.id))
+      .leftJoin(contacts, eq(members.contactId, contacts.id))
+      .leftJoin(users, eq(therapySessions.staffUserId, users.id))
+      .leftJoin(equipmentAssets, eq(therapySessions.assetId, equipmentAssets.id))
+      .where(and(...conditions));
+    return rows.map(({ sess, contactFirst, contactLast, staffName, assetName }) => ({
+      id: sess.id,
+      tenantId: sess.tenantId,
+      branchId: sess.branchId,
+      branchName: null,
+      memberId: sess.memberId,
+      memberName: contactFirst ? `${contactFirst} ${contactLast ?? ""}`.trim() : "Member",
+      staffUserId: sess.staffUserId ?? "",
+      staffName: staffName ?? "Clinical Staff",
+      protocolId: sess.protocolId,
+      protocolName: sess.protocolName,
+      modalityCode: sess.modalityCode as any,
+      assetId: sess.assetId,
+      assetName: assetName ?? null,
+      status: sess.status as any,
+      startedAt: sess.startedAt.toISOString(),
+      completedAt: sess.completedAt ? sess.completedAt.toISOString() : null,
+      prePainScore: sess.prePainScore,
+      postPainScore: sess.postPainScore,
+      actualDosage: (sess.actualDosageJson as any) || {},
+      adverseReaction: sess.adverseReaction,
+      sessionNotes: sess.sessionNotes,
+      createdAt: sess.createdAt.toISOString(),
+      updatedAt: sess.updatedAt.toISOString()
+    }));
   }
 
-  async createTherapySession(scope: TenantScope, input: import("@fitos/contracts").CreateTherapySessionRequest, staffUserId: string): Promise<import("@fitos/contracts").TherapySessionResponse> {
-    const now = new Date().toISOString();
+  async createTherapySession(scope: TenantScope, input: CreateTherapySessionRequest, staffUserId: string): Promise<TherapySessionResponse> {
+    const [proto] = await this.db
+      .select()
+      .from(therapyProtocols)
+      .where(and(eq(therapyProtocols.tenantId, scope.tenantId), eq(therapyProtocols.id, input.protocolId)));
+    const [memberRow] = await this.db
+      .select({ contactFirst: contacts.firstName, contactLast: contacts.lastName })
+      .from(members)
+      .leftJoin(contacts, eq(members.contactId, contacts.id))
+      .where(and(eq(members.tenantId, scope.tenantId), eq(members.id, input.memberId)));
+    const [staff] = await this.db.select().from(users).where(eq(users.id, staffUserId));
+    const asset = input.assetId
+      ? (await this.db.select().from(equipmentAssets).where(eq(equipmentAssets.id, input.assetId)))[0]
+      : null;
+
+    const [sess] = await this.db
+      .insert(therapySessions)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        memberId: input.memberId,
+        staffUserId,
+        protocolId: input.protocolId,
+        protocolName: proto?.name ?? "Therapy Protocol",
+        modalityCode: proto?.modalityCode ?? "neubie_direct_current",
+        assetId: input.assetId ?? null,
+        status: input.status ?? "completed",
+        startedAt: new Date(),
+        completedAt: new Date(),
+        prePainScore: input.prePainScore ?? null,
+        postPainScore: input.postPainScore ?? null,
+        actualDosageJson: input.actualDosage,
+        adverseReaction: input.adverseReaction ?? false,
+        sessionNotes: input.sessionNotes ?? null
+      })
+      .returning();
+
     return {
-      id: Math.random().toString(36).slice(2),
-      tenantId: scope.tenantId,
-      branchId: input.branchId,
-      memberId: input.memberId,
-      memberName: "Member",
+      id: sess.id,
+      tenantId: sess.tenantId,
+      branchId: sess.branchId,
+      branchName: null,
+      memberId: sess.memberId,
+      memberName: memberRow ? `${memberRow.contactFirst} ${memberRow.contactLast ?? ""}`.trim() : "Member",
       staffUserId,
-      staffName: "Clinical Staff",
-      protocolId: input.protocolId,
-      protocolName: "Therapy Protocol",
-      modalityCode: "neubie_direct_current",
-      assetId: input.assetId ?? null,
-      assetName: null,
-      status: input.status ?? "completed",
-      startedAt: now,
-      completedAt: now,
-      prePainScore: input.prePainScore ?? null,
-      postPainScore: input.postPainScore ?? null,
+      staffName: staff?.displayName ?? "Clinical Staff",
+      protocolId: sess.protocolId,
+      protocolName: sess.protocolName,
+      modalityCode: sess.modalityCode as any,
+      assetId: sess.assetId,
+      assetName: asset?.name ?? null,
+      status: sess.status as any,
+      startedAt: sess.startedAt.toISOString(),
+      completedAt: sess.completedAt ? sess.completedAt.toISOString() : null,
+      prePainScore: sess.prePainScore,
+      postPainScore: sess.postPainScore,
       actualDosage: input.actualDosage,
-      adverseReaction: input.adverseReaction ?? false,
-      sessionNotes: input.sessionNotes ?? null,
-      createdAt: now,
-      updatedAt: now
+      adverseReaction: sess.adverseReaction,
+      sessionNotes: sess.sessionNotes,
+      createdAt: sess.createdAt.toISOString(),
+      updatedAt: sess.updatedAt.toISOString()
     };
   }
 }

@@ -788,6 +788,384 @@ export const attendanceRecords = pgTable(
   ]
 );
 
+// ─── Equipment & Resources ──────────────────────────────────────────────────
+export const equipmentPools = pgTable(
+  "equipment_pools",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 160 }).notNull(),
+    code: varchar("code", { length: 80 }).notNull(),
+    category: varchar("category", { length: 80 }).notNull(),
+    capacity: integer("capacity").notNull().default(1),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_equipment_pools_code").on(table.tenantId, table.branchId, table.code),
+    index("idx_equipment_pools_tenant_branch").on(table.tenantId, table.branchId)
+  ]
+);
+
+export const equipmentAssets = pgTable(
+  "equipment_assets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    poolId: uuid("pool_id").references(() => equipmentPools.id, { onDelete: "set null" }),
+    name: varchar("name", { length: 160 }).notNull(),
+    serialNumber: varchar("serial_number", { length: 120 }),
+    modelNumber: varchar("model_number", { length: 120 }),
+    category: varchar("category", { length: 80 }).notNull(),
+    status: varchar("status", { length: 40 }).notNull().default("operational"),
+    condition: varchar("condition", { length: 40 }).notNull().default("good"),
+    hourlyOperationalCostMinor: integer("hourly_operational_cost_minor").default(0),
+    purchaseDate: date("purchase_date"),
+    warrantyExpiresAt: date("warranty_expires_at"),
+    lastServicedAt: timestamp("last_serviced_at", { withTimezone: true }),
+    nextServiceDueAt: timestamp("next_service_due_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_equipment_assets_tenant_branch").on(table.tenantId, table.branchId),
+    index("idx_equipment_assets_pool").on(table.tenantId, table.poolId),
+    index("idx_equipment_assets_status").on(table.tenantId, table.status)
+  ]
+);
+
+export const equipmentMaintenanceRecords = pgTable(
+  "equipment_maintenance_records",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => equipmentAssets.id, { onDelete: "cascade" }),
+    performedByUserId: uuid("performed_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    serviceType: varchar("service_type", { length: 80 }).notNull(),
+    costMinor: integer("cost_minor").notNull().default(0),
+    notes: text("notes").notNull(),
+    servicedAt: timestamp("serviced_at", { withTimezone: true }).notNull().defaultNow(),
+    downtimeHours: numeric("downtime_hours", { precision: 6, scale: 2 }),
+    nextServiceDueAt: timestamp("next_service_due_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_maint_records_asset").on(table.tenantId, table.assetId),
+    index("idx_maint_records_serviced_at").on(table.tenantId, table.servicedAt)
+  ]
+);
+
+export const serviceEquipmentRequirements = pgTable(
+  "service_equipment_requirements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    poolId: uuid("pool_id")
+      .notNull()
+      .references(() => equipmentPools.id, { onDelete: "cascade" }),
+    quantityRequired: integer("quantity_required").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_service_equipment_req").on(table.tenantId, table.serviceId, table.poolId)
+  ]
+);
+
+export const occurrenceEquipmentAllocations = pgTable(
+  "occurrence_equipment_allocations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    occurrenceId: uuid("occurrence_id")
+      .notNull()
+      .references(() => scheduleOccurrences.id, { onDelete: "cascade" }),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => equipmentAssets.id, { onDelete: "cascade" }),
+    status: varchar("status", { length: 40 }).notNull().default("reserved"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_occurrence_asset").on(table.tenantId, table.occurrenceId, table.assetId)
+  ]
+);
+
+// ─── Inventory & Consumables ────────────────────────────────────────────────
+export const inventoryItems = pgTable(
+  "inventory_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    sku: varchar("sku", { length: 80 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    category: varchar("category", { length: 80 }).notNull(),
+    costPriceMinor: integer("cost_price_minor").notNull().default(0),
+    retailPriceMinor: integer("retail_price_minor").notNull().default(0),
+    currency: varchar("currency", { length: 3 }).notNull().default("KES"),
+    currentStock: integer("current_stock").notNull().default(0),
+    reorderPoint: integer("reorder_point").notNull().default(5),
+    reorderQuantity: integer("reorder_quantity").notNull().default(20),
+    unitOfMeasure: varchar("unit_of_measure", { length: 40 }).notNull().default("unit"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_inventory_sku").on(table.tenantId, table.branchId, table.sku),
+    index("idx_inventory_tenant_branch").on(table.tenantId, table.branchId)
+  ]
+);
+
+export const inventoryMovements = pgTable(
+  "inventory_movements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => inventoryItems.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 40 }).notNull(),
+    quantity: integer("quantity").notNull(),
+    balanceAfter: integer("balance_after").notNull(),
+    reason: varchar("reason", { length: 255 }).notNull(),
+    referenceId: varchar("reference_id", { length: 120 }),
+    recordedByUserId: uuid("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_inv_movements_item").on(table.tenantId, table.itemId),
+    index("idx_inv_movements_tenant_branch").on(table.tenantId, table.branchId)
+  ]
+);
+
+export const purchaseOrders = pgTable(
+  "purchase_orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    poNumber: varchar("po_number", { length: 80 }).notNull(),
+    supplierName: varchar("supplier_name", { length: 160 }).notNull(),
+    status: varchar("status", { length: 40 }).notNull().default("draft"),
+    totalAmountMinor: integer("total_amount_minor").notNull().default(0),
+    currency: varchar("currency", { length: 3 }).notNull().default("KES"),
+    itemsJson: jsonb("items_json").notNull().default(sql`'[]'::jsonb`),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    receivedAt: timestamp("received_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_po_number").on(table.tenantId, table.branchId, table.poNumber)
+  ]
+);
+
+// ─── FITOS Assess & Diagnostics ─────────────────────────────────────────────
+export const assessmentDefinitions = pgTable(
+  "assessment_definitions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    code: varchar("code", { length: 80 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    category: varchar("category", { length: 80 }).notNull(),
+    deviceVendor: varchar("device_vendor", { length: 80 }).notNull(),
+    metricsJson: jsonb("metrics_json").notNull().default(sql`'[]'::jsonb`),
+    description: text("description").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_assessment_def_code").on(table.tenantId, table.code)
+  ]
+);
+
+export const assessmentSessions = pgTable(
+  "assessment_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    assessorStaffId: uuid("assessor_staff_id").references(() => users.id, { onDelete: "set null" }),
+    definitionId: uuid("definition_id")
+      .notNull()
+      .references(() => assessmentDefinitions.id, { onDelete: "restrict" }),
+    category: varchar("category", { length: 80 }).notNull(),
+    status: varchar("status", { length: 40 }).notNull().default("completed"),
+    conductedAt: timestamp("conducted_at", { withTimezone: true }).notNull().defaultNow(),
+    summary: text("summary").notNull(),
+    metricsJson: jsonb("metrics_json").notNull().default(sql`'{}'::jsonb`),
+    provenanceJson: jsonb("provenance_json").default(sql`'{}'::jsonb`),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_assess_sessions_member").on(table.tenantId, table.memberId),
+    index("idx_assess_sessions_conducted_at").on(table.tenantId, table.conductedAt)
+  ]
+);
+
+export const assessmentDeviceImports = pgTable(
+  "assessment_device_imports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    deviceVendor: varchar("device_vendor", { length: 80 }).notNull(),
+    deviceSerial: varchar("device_serial", { length: 120 }),
+    fileName: varchar("file_name", { length: 255 }),
+    rawChecksum: varchar("raw_checksum", { length: 64 }).notNull(),
+    rawPayload: text("raw_payload").notNull(),
+    parsedRecordsCount: integer("parsed_records_count").notNull().default(0),
+    status: varchar("status", { length: 40 }).notNull().default("processed"),
+    importedByUserId: uuid("imported_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_device_imports_tenant_branch").on(table.tenantId, table.branchId)
+  ]
+);
+
+// ─── FITOS Therapy & Recovery ───────────────────────────────────────────────
+export const therapyModalities = pgTable(
+  "therapy_modalities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    code: varchar("code", { length: 80 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    category: varchar("category", { length: 80 }).notNull(),
+    defaultDurationMinutes: integer("default_duration_minutes").notNull().default(30),
+    contraindicationsJson: jsonb("contraindications_json").notNull().default(sql`'[]'::jsonb`),
+    description: text("description").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_therapy_modality_code").on(table.tenantId, table.code)
+  ]
+);
+
+export const therapyProtocols = pgTable(
+  "therapy_protocols",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    modalityCode: varchar("modality_code", { length: 80 }).notNull(),
+    modalityName: varchar("modality_name", { length: 160 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    indication: varchar("indication", { length: 255 }).notNull(),
+    targetArea: varchar("target_area", { length: 160 }).notNull(),
+    parametersJson: jsonb("parameters_json").notNull().default(sql`'{}'::jsonb`),
+    safetyChecklistJson: jsonb("safety_checklist_json").notNull().default(sql`'[]'::jsonb`),
+    clinicalNotes: text("clinical_notes").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_therapy_protocols_modality").on(table.tenantId, table.modalityCode)
+  ]
+);
+
+export const therapySessions = pgTable(
+  "therapy_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    staffUserId: uuid("staff_user_id").references(() => users.id, { onDelete: "set null" }),
+    protocolId: uuid("protocol_id")
+      .notNull()
+      .references(() => therapyProtocols.id, { onDelete: "restrict" }),
+    protocolName: varchar("protocol_name", { length: 160 }).notNull(),
+    modalityCode: varchar("modality_code", { length: 80 }).notNull(),
+    assetId: uuid("asset_id").references(() => equipmentAssets.id, { onDelete: "set null" }),
+    status: varchar("status", { length: 40 }).notNull().default("completed"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    prePainScore: integer("pre_pain_score"),
+    postPainScore: integer("post_pain_score"),
+    actualDosageJson: jsonb("actual_dosage_json").notNull().default(sql`'{}'::jsonb`),
+    adverseReaction: boolean("adverse_reaction").notNull().default(false),
+    sessionNotes: text("session_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_therapy_sessions_member").on(table.tenantId, table.memberId),
+    index("idx_therapy_sessions_started_at").on(table.tenantId, table.startedAt)
+  ]
+);
+
 export const schema = {
   tenants,
   branches,
@@ -816,7 +1194,26 @@ export const schema = {
   paymentTransactions,
   attendanceRecords,
   auditEvents,
-  idempotencyKeys
+  idempotencyKeys,
+  // Equipment
+  equipmentPools,
+  equipmentAssets,
+  equipmentMaintenanceRecords,
+  serviceEquipmentRequirements,
+  occurrenceEquipmentAllocations,
+  // Inventory
+  inventoryItems,
+  inventoryMovements,
+  purchaseOrders,
+  // Assessments
+  assessmentDefinitions,
+  assessmentSessions,
+  assessmentDeviceImports,
+  // Therapy
+  therapyModalities,
+  therapyProtocols,
+  therapySessions
 };
 
 export type DatabaseSchema = typeof schema;
+
