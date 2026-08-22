@@ -60,6 +60,17 @@ const createSessionSchema = z
   })
   .strict();
 
+const importDeviceDataSchema = z
+  .object({
+    branchId: z.string().uuid(),
+    memberId: z.string().uuid(),
+    deviceVendor: z.enum(vendors),
+    deviceSerial: z.string().trim().max(120).optional(),
+    fileName: z.string().trim().max(255).optional(),
+    fileContent: z.string().min(1)
+  })
+  .strict();
+
 const toScope = (actor: RequestActor) => ({
   tenantId: actor.tenantId,
   tenantUserId: actor.tenantUserId,
@@ -71,7 +82,8 @@ const toScope = (actor: RequestActor) => ({
 @Controller("assessments")
 export class AssessmentsController {
   constructor(
-    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
+    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository,
+    private readonly deviceImportService: DeviceImportService
   ) {}
 
   @Get("definitions")
@@ -102,6 +114,13 @@ export class AssessmentsController {
   createSession(@Actor() actor: RequestActor, @Body() body: unknown) {
     const input = createSessionSchema.parse(body) as CreateAssessmentSessionRequest;
     return this.repository.createAssessmentSession(toScope(actor), input, actor.userId);
+  }
+
+  @Post("import-device-data")
+  @RequirePermission("assessment:write")
+  importDeviceData(@Actor() actor: RequestActor, @Body() body: unknown) {
+    const input = importDeviceDataSchema.parse(body);
+    return this.deviceImportService.importDeviceData(toScope(actor), input as any, actor.userId);
   }
 
   @Get("members/:memberId/profile")

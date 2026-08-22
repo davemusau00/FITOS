@@ -4539,7 +4539,8 @@ export class InMemoryFitosRepository implements FitosRepository {
     const id = randomUUID();
     const ts = now();
 
-    item.stockOnHand += input.quantity;
+    const isIncoming = input.movementType === "purchase_in" || input.movementType === "adjustment";
+    item.stockOnHand = isIncoming ? item.stockOnHand + input.quantity : Math.max(0, item.stockOnHand - input.quantity);
     item.updatedAt = ts;
 
     const user = this.users.get(recordedByUserId);
