@@ -567,6 +567,18 @@ export const api = {
       method: "POST",
       body: json(payload)
     }),
+  importDeviceData: (payload: {
+    branchId: string;
+    memberId: string;
+    deviceVendor: string;
+    deviceSerial?: string;
+    fileName?: string;
+    fileContent: string;
+  }) =>
+    request<{ session: AssessmentSessionResponse; rawChecksum: string; extractedMetricsCount: number }>(
+      "/assessments/import-device-data",
+      { method: "POST", body: json(payload) }
+    ),
   memberPerformanceProfile: (memberId: string) =>
     request<MemberPerformanceProfileResponse>(`/assessments/members/${memberId}/profile`),
 

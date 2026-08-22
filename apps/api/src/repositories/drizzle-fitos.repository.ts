@@ -1428,7 +1428,27 @@ export class DrizzleFitosRepository implements FitosRepository {
             eq(bookings.status, "confirmed")
           )
         );
-      if ((capacity?.count ?? 0) >= occurrence.capacity) throw new Error("Occurrence is full.");
+
+      const branchAssets = await tx
+        .select()
+        .from(equipmentAssets)
+        .where(
+          and(
+            eq(equipmentAssets.tenantId, scope.tenantId),
+            eq(equipmentAssets.branchId, occurrence.branchId)
+          )
+        );
+      const serviceMatchingAssets = branchAssets.filter(
+        (a) => a.category.toLowerCase() === (service.category ?? "").toLowerCase()
+      );
+      let effectiveCapacity = occurrence.capacity;
+      if (serviceMatchingAssets.length > 0) {
+        const operationalCount = serviceMatchingAssets.filter(
+          (a) => a.status === "available" || a.status === "operational"
+        ).length;
+        effectiveCapacity = Math.min(occurrence.capacity, operationalCount);
+      }
+      if ((capacity?.count ?? 0) >= effectiveCapacity) throw new Error("Occurrence is full.");
 
       let creditMembership: typeof memberMemberships.$inferSelect | null = null;
       if (service.creditsRequired > 0) {

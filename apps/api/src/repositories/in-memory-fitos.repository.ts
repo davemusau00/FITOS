@@ -2382,12 +2382,24 @@ export class InMemoryFitosRepository implements FitosRepository {
         booking.occurrenceId === occurrence.id &&
         booking.status === "confirmed"
     );
-    if (activeBookings.some((booking) => booking.memberId === input.memberId)) {
-      throw new Error("Member already has a booking for this occurrence.");
-    }
-    if (activeBookings.length >= occurrence.capacity) throw new Error("Occurrence is full.");
     const service = this.services.get(occurrence.serviceId);
     if (!service || service.tenantId !== scope.tenantId) throw new Error("Service unavailable.");
+
+    const branchAssets = [...this.equipmentAssets.values()].filter(
+      (a) => a.tenantId === scope.tenantId && a.branchId === occurrence.branchId
+    );
+    const serviceMatchingAssets = branchAssets.filter(
+      (a) => a.category.toLowerCase() === (service.category ?? "").toLowerCase()
+    );
+    let effectiveCapacity = occurrence.capacity;
+    if (serviceMatchingAssets.length > 0) {
+      const operationalCount = serviceMatchingAssets.filter(
+        (a) => a.status === "available" || a.status === "operational"
+      ).length;
+      effectiveCapacity = Math.min(occurrence.capacity, operationalCount);
+    }
+
+    if (activeBookings.length >= effectiveCapacity) throw new Error("Occurrence is full.");
     const creditsRequired = service.creditsRequired;
     const eligibleMemberships = [...this.memberMemberships.values()]
       .filter(

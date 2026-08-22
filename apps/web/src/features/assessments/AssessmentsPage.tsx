@@ -33,6 +33,7 @@ export default function AssessmentsPage() {
 
   const [selectedSession, setSelectedSession] = useState<AssessmentSessionResponse | null>(null);
   const [showNewSession, setShowNewSession] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedDefId, setSelectedDefId] = useState<string>("");
 
   const [search, setSearch] = useState("");
@@ -68,6 +69,9 @@ export default function AssessmentsPage() {
           <p className="assess-subtitle">Diagnostic biometrics, force plate kinetics, and body composition profiling.</p>
         </div>
         <div className="assess-header-actions">
+          <button className="btn-secondary" onClick={() => setShowImportModal(true)}>
+            ⚡ Import Device Data
+          </button>
           <button className="btn-primary" onClick={() => setShowNewSession(true)}>
             + Record Assessment
           </button>
@@ -266,6 +270,14 @@ export default function AssessmentsPage() {
           defaultDefId={selectedDefId}
           onClose={() => { setShowNewSession(false); setSelectedDefId(""); }}
           onCreated={() => { setShowNewSession(false); setSelectedDefId(""); void reload(); }}
+        />
+      )}
+
+      {/* Import Device Data Modal */}
+      {showImportModal && (
+        <ImportDeviceDataModal
+          onClose={() => setShowImportModal(false)}
+          onImported={() => { setShowImportModal(false); void reload(); }}
         />
       )}
 
@@ -538,3 +550,144 @@ function NewSessionModal({
     </div>
   );
 }
+
+// ── Import Device Data Modal ────────────────────────────────────────────────
+function ImportDeviceDataModal({
+  onClose,
+  onImported
+}: {
+  onClose: () => void;
+  onImported: () => void;
+}) {
+  const [vendor, setVendor] = useState("lookinbody_inbody");
+  const [memberId, setMemberId] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [deviceSerial, setDeviceSerial] = useState("");
+  const [fileContent, setFileContent] = useState("");
+  const [fileName, setFileName] = useState("");
+
+  const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.members(new URLSearchParams({ limit: "100" })).then((res) => {
+      setMembers(res.data.map((m) => ({ id: m.id, name: `${m.firstName} ${m.lastName}` })));
+      if (res.data[0]) setMemberId(res.data[0].id);
+    });
+    api.branches().then((b) => {
+      setBranches(b.map((br) => ({ id: br.id, name: br.name })));
+      if (b[0]) setBranchId(b[0].id);
+    });
+  }, []);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setFileContent(evt.target?.result as string || "");
+    };
+    reader.readAsText(file);
+  };
+
+  const submit = async () => {
+    if (!memberId || !branchId || !fileContent) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await api.importDeviceData({
+        branchId,
+        memberId,
+        deviceVendor: vendor,
+        deviceSerial: deviceSerial || undefined,
+        fileName: fileName || undefined,
+        fileContent
+      });
+      onImported();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to import device data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>⚡ Import Diagnostic Device Data</h2>
+          <button className="drawer-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-row">
+            <div className="form-group">
+              <label>Device Vendor / Integration</label>
+              <select value={vendor} onChange={(e) => setVendor(e.target.value)}>
+                <option value="lookinbody_inbody">InBody 970 / LookinBody (CSV / JSON)</option>
+                <option value="vald_forcedecks">VALD ForceDecks (CMJ Kinetics CSV / JSON)</option>
+                <option value="cosmed_k5">COSMED K5 Metabolic Spirometry</option>
+                <option value="pnoe">PNOE VO2 Max Metabolic Analyzer</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Target Member</label>
+              <select value={memberId} onChange={(e) => setMemberId(e.target.value)}>
+                {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Branch</label>
+              <select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Device Serial # (Optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. IB-970-KE-8842"
+                value={deviceSerial}
+                onChange={(e) => setDeviceSerial(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Upload Export File (CSV / JSON)</label>
+            <input type="file" accept=".csv,.json,.txt" onChange={handleFileUpload} />
+          </div>
+
+          <div className="form-group">
+            <label>Or Paste Raw Export Content</label>
+            <textarea
+              rows={4}
+              placeholder="Paste InBody CSV lines or VALD JSON payload..."
+              value={fileContent}
+              onChange={(e) => setFileContent(e.target.value)}
+            />
+          </div>
+
+          {error && <p className="form-error">{error}</p>}
+
+          <div className="modal-actions">
+            <button className="btn-secondary" onClick={onClose}>Cancel</button>
+            <button
+              className="btn-primary"
+              onClick={submit}
+              disabled={loading || !memberId || !branchId || !fileContent.trim()}
+            >
+              {loading ? "Importing & Verifying…" : "⚡ Import & Record Scan"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
