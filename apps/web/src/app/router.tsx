@@ -57,6 +57,7 @@ export function AppRouter() {
       <Route element={<ConfigureFitosPage />} path="/configure" />
       <Route element={<LoginPage />} path="/login" />
       <Route element={<TenantSignupPage />} path="/signup" />
+      <Route element={<MemberPortalPage />} path="/member/*" />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />} path="/app">
           <Route element={<Navigate replace to="overview" />} index />
@@ -81,8 +82,6 @@ export function AppRouter() {
           {/* Business */}
           <Route element={<ServicesPage />} path="services" />
           <Route element={<MembershipsPage />} path="memberships" />
-          <Route element={<PaymentsPage />} path="payments" />
-          <Route element={<UnmatchedPaymentsPage />} path="payments/unmatched" />
 
           {/* Growth */}
           <Route element={<InsightsPage />} path="insights" />
@@ -107,7 +106,6 @@ export function AppRouter() {
           <Route element={<SitesPage />} path="sites" />
         </Route>
         <Route element={<OnboardingPage />} path="/onboarding" />
-        <Route element={<MemberPortalPage />} path="/member/*" />
       </Route>
 
       {/* Public Tenant Website */}

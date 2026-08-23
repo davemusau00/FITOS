@@ -109,9 +109,11 @@ export class PlatformController {
     // Generate a platform bearer token
     const rawToken = createOpaqueSessionToken();
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
-    
-    // We can also store the platform session or reuse user password hash mechanism
-    // Here we return the platform token
+    await this.repository.createPlatformAdminToken({
+      userId: platformUser.id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + Number(process.env.PLATFORM_TOKEN_TTL_SECONDS ?? 28_800) * 1_000).toISOString()
+    });
     return {
       token: rawToken,
       tokenHash,

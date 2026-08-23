@@ -482,6 +482,8 @@ export const api = {
   memberLogout: () => request<{ ok: boolean }>("/member-auth/logout", { method: "POST" }),
   memberMe: () => request<MemberProfileResponse>("/member-auth/me"),
   memberPortalOverview: () => request<MemberPortalOverviewResponse>("/member-auth/overview"),
+  memberBook: (occurrenceId: string) => request<BookingResponse>("/member-auth/book", { method: "POST", body: json({ occurrenceId }) }),
+  memberCancel: (bookingId: string, reason = "Member self-cancelled") => request<BookingResponse>("/member-auth/cancel", { method: "POST", body: json({ bookingId, reason }) }),
 
   // ── Platform / SaaS Self-Service ─────────────────────────────────────────
   signupTenant: (payload: SaaSTenantSignupRequest) =>

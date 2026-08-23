@@ -171,6 +171,7 @@ export interface FitosRepository {
   ping(): Promise<boolean>;
 
   findLoginIdentity(email: string): Promise<LoginIdentity | null>;
+  findUserById(userId: string): Promise<{ id: string; displayName: string; email: string | null; isPlatformAdmin: boolean } | null>;
   createSession(input: CreateSessionInput): Promise<{ id: string }>;
   resolveSession(tokenHash: string, now: string): Promise<ResolvedSession | null>;
   revokeSession(tokenHash: string, now: string): Promise<void>;
@@ -463,6 +464,7 @@ export interface FitosRepository {
   updateImplementationInquiryStatus(id: string, status: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null>;
   buildTenantSeedManifest(id: string): Promise<import("@fitos/contracts").TenantSeedManifest | null>;
   resolvePlatformAdminByTokenHash(tokenHash: string): Promise<{ userId: string; displayName: string; email: string | null } | null>;
+  createPlatformAdminToken(input: { userId: string; tokenHash: string; expiresAt: string }): Promise<void>;
   listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]>;
   saveSitePage(scope: TenantScope, input: import("@fitos/contracts").SaveSitePageRequest): Promise<import("@fitos/contracts").SitePageResponse>;
   publishSitePage(scope: TenantScope, pageId: string): Promise<import("@fitos/contracts").SitePageResponse | null>;

@@ -56,7 +56,6 @@ const navGroups: NavGroup[] = [
     group: "Business",
     items: [
       { to: "/app/services", label: "Services & Classes", icon: "spark", permission: "service:read" },
-      { to: "/app/payments", label: "Payments", icon: "shield", permission: "payment:read" },
       { to: "/app/equipment", label: "Equipment & Assets", icon: "check", permission: "schedule:read" },
       { to: "/app/inventory", label: "Inventory & Stock", icon: "check", permission: "tenant:read" },
       { to: "/app/staff", label: "Team & Staff", icon: "team", permission: "staff:read" }

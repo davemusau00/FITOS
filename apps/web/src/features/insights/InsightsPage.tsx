@@ -80,7 +80,7 @@ export function InsightsPage() {
                 <span>Avg Weekly Visits</span>
                 <strong>{summary?.avgWeeklyVisits ?? 0}</strong>
                 <div className="kpi__change" style={{ color: "var(--success)" }}>
-                  ▲ +{summary?.avgWeeklyVisitsChangePct ?? 12}% vs last month
+                  {summary?.avgWeeklyVisitsChangePct == null ? "No comparison data" : `${summary.avgWeeklyVisitsChangePct}% vs last month`}
                 </div>
               </Card>
 
@@ -88,7 +88,7 @@ export function InsightsPage() {
                 <span>Class Occupancy Rate</span>
                 <strong>{summary?.classOccupancyRate ?? 0}%</strong>
                 <div className="kpi__change" style={{ color: "var(--success)" }}>
-                  ▲ +{summary?.classOccupancyChangePct ?? 5}% vs last month
+                  {summary?.classOccupancyChangePct == null ? "No comparison data" : `${summary.classOccupancyChangePct}% vs last month`}
                 </div>
               </Card>
 

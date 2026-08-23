@@ -166,6 +166,7 @@ type StoredCreditLedgerEntry = CreditLedgerEntryResponse & { tenantId: string };
 type StoredPaymentTransaction = PaymentTransactionResponse;
 type StoredAttendanceRecord = AttendanceRecordResponse;
 type StoredIdempotency = IdempotencyRecord;
+type StoredPlatformAdminToken = { userId: string; tokenHash: string; expiresAt: string; revokedAt: string | null };
 
 const now = () => new Date().toISOString();
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -181,6 +182,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly tenants = new Map<string, StoredTenant>();
   private readonly branches = new Map<string, StoredBranch>();
   private readonly users = new Map<string, StoredUser>();
+  private readonly platformAdminTokens = new Map<string, StoredPlatformAdminToken>();
   private readonly roles = new Map<string, StoredRole>();
   private readonly tenantUsers = new Map<string, StoredTenantUser>();
   private readonly branchAccess = new Map<string, Set<string>>();
@@ -3831,6 +3833,10 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     return {
       profile: resolvedProfile,
+      bookableOccurrences: [...this.occurrences.values()]
+        .filter((o) => o.tenantId === member.tenantId && o.status === "scheduled" && new Date(o.startsAt) >= nowTime)
+        .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+        .slice(0, 50),
       upcomingBookings,
       recentAttendance
     };
@@ -4969,10 +4975,20 @@ export class InMemoryFitosRepository implements FitosRepository {
     return this.getImplementationInquiry(id);
   }
 
-  async resolvePlatformAdminByTokenHash(_tokenHash: string): Promise<{ userId: string; displayName: string; email: string | null } | null> {
-    const user = [...this.users.values()][0];
-    if (!user) return null;
+  async resolvePlatformAdminByTokenHash(tokenHash: string): Promise<{ userId: string; displayName: string; email: string | null } | null> {
+    const token = this.platformAdminTokens.get(tokenHash);
+    if (!token || token.revokedAt || new Date(token.expiresAt) <= new Date()) return null;
+    const user = this.users.get(token.userId);
+    if (!user || user.status !== "active" || !(user as any).isPlatformAdmin) return null;
     return { userId: user.id, displayName: user.displayName, email: user.email };
   }
-}
 
+  async findUserById(userId: string): Promise<{ id: string; displayName: string; email: string | null; isPlatformAdmin: boolean } | null> {
+    const user = this.users.get(userId);
+    return user ? { id: user.id, displayName: user.displayName, email: user.email, isPlatformAdmin: Boolean((user as any).isPlatformAdmin) } : null;
+  }
+
+  async createPlatformAdminToken(input: { userId: string; tokenHash: string; expiresAt: string }): Promise<void> {
+    this.platformAdminTokens.set(input.tokenHash, { ...input, revokedAt: null });
+  }
+}

@@ -1,5 +1,6 @@
 import type { BookingResponse } from "./bookings.js";
 import type { AttendanceRecordResponse } from "./attendance.js";
+import type { ScheduleOccurrenceResponse } from "./services.js";
 
 export interface MemberLoginRequest {
   identifier: string; // phone or email
@@ -35,6 +36,7 @@ export interface MemberProfileResponse {
 
 export interface MemberPortalOverviewResponse {
   profile: MemberProfileResponse;
+  bookableOccurrences: ScheduleOccurrenceResponse[];
   upcomingBookings: Array<
     BookingResponse & {
       serviceName: string;

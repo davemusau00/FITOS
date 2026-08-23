@@ -18,7 +18,7 @@ export function TenantPublicPage() {
     email: "",
     interest: ""
   });
-  const slug = tenantSlug || "apex-fitness-nairobi";
+  const slug = tenantSlug ?? "";
 
   const tenantInfo = useQuery({
     queryKey: ["public", slug, "info"],
@@ -65,7 +65,7 @@ export function TenantPublicPage() {
   const activeCoaches = coaches.data ?? [];
 
   const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const gymName = tenantSlug ? tenantSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) : "Apex Fitness Club";
+  const gymName = tenantInfo.data?.name ?? (tenantSlug ? tenantSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) : "FITOS facility");
 
   if (publishedSite.data) {
     return <PublishedSitePage site={publishedSite.data} gymName={tenantInfo.data?.name ?? gymName} />;
@@ -115,10 +115,10 @@ export function TenantPublicPage() {
             <span className="live-dot" /> High-Performance Training
           </div>
           <h1 className="public-hero__title">
-            Transform Your Strength at <span>{gymName}</span>
+            Welcome to <span>{gymName}</span>
           </h1>
           <p className="public-hero__subtitle">
-            World-class coaches, dynamic classes, and state-of-the-art facilities designed to push your limits.
+            Explore the services, timetable, and contact details this facility has published.
           </p>
           <div className="public-hero__cta">
             <button
@@ -134,11 +134,11 @@ export function TenantPublicPage() {
           </div>
           <div className="public-hero__stats">
             <div className="public-hero__stat">
-              <strong>15+</strong>
+              <strong>Published</strong>
               <span>Classes Weekly</span>
             </div>
             <div className="public-hero__stat">
-              <strong>100%</strong>
+              <strong>Configured</strong>
               <span>Certified Trainers</span>
             </div>
             <div className="public-hero__stat">
@@ -265,16 +265,7 @@ export function TenantPublicPage() {
               </p>
             </Card>
           ))}
-          {activeCoaches.length === 0 && (
-            <Card className="public-coach-card">
-              <div className="public-coach-avatar">M</div>
-              <h3>Coach Marcus</h3>
-              <span className="public-coach-role">Head Trainer</span>
-              <p className="muted" style={{ fontSize: "0.82rem", marginTop: "0.5rem" }}>
-                Specializes in functional movement, metabolic conditioning, and athletic development.
-              </p>
-            </Card>
-          )}
+          {activeCoaches.length === 0 && <p className="muted">Instructor profiles have not been published.</p>}
         </div>
       </section>
 
@@ -286,7 +277,7 @@ export function TenantPublicPage() {
         </div>
 
         <div className="public-location-cards">
-          {(tenantInfo.data?.branches?.length ? tenantInfo.data.branches : [{ id: "b1", name: "Main Studio", addressLine1: "Kilimani Road", city: "Nairobi", phone: "+254 700 000 000" }]).map((branch) => (
+          {(tenantInfo.data?.branches ?? []).map((branch) => (
             <Card className="public-location-card" key={branch.id}>
               <div className="public-location-card__icon">
                 <Icon name="building" size={24} />

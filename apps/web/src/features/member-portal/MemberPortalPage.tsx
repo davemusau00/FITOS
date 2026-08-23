@@ -31,13 +31,6 @@ export function MemberPortalPage() {
     enabled: Boolean(memberProfile.data)
   });
 
-  const occurrences = useQuery({
-    queryKey: ["schedule", "portal"],
-    queryFn: () => api.scheduleOccurrences(new URLSearchParams({ status: "scheduled", limit: "50" }))
-  });
-
-  const services = useQuery({ queryKey: ["services"], queryFn: api.services });
-
   const loginMutation = useMutation({
     mutationFn: () => api.memberLogin(identifier.trim(), password),
     onSuccess: () => {
@@ -58,9 +51,8 @@ export function MemberPortalPage() {
 
   const bookClassMutation = useMutation({
     mutationFn: (occurrenceId: string) => {
-      const memberId = memberProfile.data?.id;
-      if (!memberId) throw new Error("Please log in.");
-      return api.createBooking({ occurrenceId, memberId, source: "member_portal" });
+      if (!memberProfile.data) throw new Error("Please log in.");
+      return api.memberBook(occurrenceId);
     },
     onSuccess: () => {
       setSelectedOccurrence(null);
@@ -69,7 +61,7 @@ export function MemberPortalPage() {
   });
 
   const cancelBookingMutation = useMutation({
-    mutationFn: (bookingId: string) => api.cancelBooking(bookingId, "Cancelled by member"),
+    mutationFn: (bookingId: string) => api.memberCancel(bookingId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["member-auth", "overview"] });
     }
@@ -280,12 +272,11 @@ export function MemberPortalPage() {
                 Select any upcoming session below to reserve your spot instantly using your available credits ({profile.creditBalance} remaining).
               </p>
 
-              {occurrences.isLoading ? (
+              {portalOverview.isLoading ? (
                 <PageLoading />
-              ) : occurrences.data?.data.length ? (
+              ) : overview?.bookableOccurrences.length ? (
                 <div className="member-portal-schedule-grid">
-                  {occurrences.data.data.map((occ) => {
-                    const svc = services.data?.find((s) => s.id === occ.serviceId);
+                  {overview.bookableOccurrences.map((occ) => {
                     const isBooked = upcomingBookings.some((b) => b.occurrenceId === occ.id);
                     const start = new Date(occ.startsAt);
                     return (
@@ -295,8 +286,8 @@ export function MemberPortalPage() {
                           <span>{start.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}</span>
                         </div>
                         <div className="member-portal-class-item__info">
-                          <h4>{svc?.name ?? "Class Session"}</h4>
-                          <p>{svc?.durationMinutes ?? 45} mins · {svc?.creditsRequired ?? 1} credit</p>
+                          <h4>Class Session</h4>
+                          <p>Available session · reserve with credits</p>
                         </div>
                         <div className="member-portal-class-item__action">
                           {isBooked ? (

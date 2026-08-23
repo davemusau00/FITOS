@@ -143,7 +143,7 @@ export function FitosLandingPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
             {[
               { label: "Active Members", value: "3,842", change: "+12.4% vs last mo", color: "#60a5fa" },
-              { label: "Class Occupancy", value: "88.6%", change: "Resource-constrained capacity enforced", color: "#34d399" },
+              { label: "Class Occupancy", value: "Configured", change: "Resource-constrained capacity enforced", color: "#34d399" },
               { label: "InBody & VALD Scans", value: "419", change: "Normalized SI metrics", color: "#a78bfa" },
               { label: "Therapy Sessions", value: "184", change: "Zero adverse reactions", color: "#f472b6" }
             ].map((card, i) => (

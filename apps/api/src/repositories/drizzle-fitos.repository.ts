@@ -53,6 +53,7 @@ import {
   stocktakeLines,
   automationRules,
   automationRuns,
+  platformAdminTokens,
   assessmentDefinitions,
   assessmentSessions,
   assessmentMetricResults,
@@ -3435,6 +3436,10 @@ export class DrizzleFitosRepository implements FitosRepository {
       .orderBy(desc(attendanceRecords.checkedInAt))
       .limit(10);
 
+    const bookableRows = await this.db.select().from(scheduleOccurrences)
+      .where(and(eq(scheduleOccurrences.tenantId, row.member.tenantId), eq(scheduleOccurrences.status, "scheduled"), gte(scheduleOccurrences.startsAt, new Date()), ...(row.member.homeBranchId ? [eq(scheduleOccurrences.branchId, row.member.homeBranchId)] : [])))
+      .orderBy(scheduleOccurrences.startsAt).limit(50);
+
     const planSnapshot = activeMembership?.planSnapshot as any;
 
     return {
@@ -3471,24 +3476,34 @@ export class DrizzleFitosRepository implements FitosRepository {
         status: booking.status as any,
         bookedAt: booking.createdAt.toISOString(),
         cancelledAt: booking.cancelledAt?.toISOString() ?? null,
-        cancelReason: booking.cancelReason,
+        cancellationReason: booking.cancellationReason,
+        creditMembershipId: booking.creditMembershipId,
+        creditsDebited: booking.creditsDebited,
+        entitlementOverrideReason: booking.entitlementOverrideReason,
+        lateCancelled: booking.lateCancelled,
+        createdAt: booking.createdAt.toISOString(),
+        updatedAt: booking.updatedAt.toISOString(),
+        createdByUserId: booking.createdByUserId,
         serviceName: service.name,
         trainerName: trainer?.displayName ?? null,
         roomName: room?.name ?? null,
         startsAt: occurrence.startsAt.toISOString(),
         endsAt: occurrence.endsAt.toISOString()
       })),
+      bookableOccurrences: await this.withResourceWarnings(bookableRows),
       recentAttendance: attendanceRows.map(({ attendance, occurrence, service }) => ({
         id: attendance.id,
         tenantId: attendance.tenantId,
         branchId: attendance.branchId,
         memberId: attendance.memberId,
         occurrenceId: attendance.occurrenceId ?? null,
-        bookingId: attendance.bookingId ?? null,
-        checkedInAt: attendance.checkedInAt.toISOString(),
-        rosterStatus: attendance.rosterStatus as any,
+        bookingId: null,
+        checkedInAt: attendance.checkedInAt?.toISOString() ?? attendance.createdAt.toISOString(),
+        status: attendance.status as any,
+        actorUserId: attendance.actorUserId,
         overrideReason: attendance.overrideReason,
         createdAt: attendance.createdAt.toISOString(),
+        updatedAt: attendance.updatedAt.toISOString(),
         serviceName: service?.name ?? null,
         startsAt: occurrence?.startsAt?.toISOString() ?? null
       }))
@@ -3979,10 +3994,22 @@ export class DrizzleFitosRepository implements FitosRepository {
     return { id: inquiry.id, contactName: inquiry.contactName ?? undefined, businessName: inquiry.businessName ?? undefined, email: inquiry.email ?? undefined, phone: inquiry.phone ?? undefined, country: inquiry.country ?? undefined, businessType: inquiry.businessType ?? undefined, payload: (payload?.payloadJson as Record<string, unknown>) ?? {}, status: inquiry.status as any, schemaVersion: payload?.schemaVersion ?? 1, submittedAt: inquiry.submittedAt?.toISOString() ?? null, createdAt: inquiry.createdAt.toISOString(), updatedAt: inquiry.updatedAt.toISOString() };
   }
 
-  async resolvePlatformAdminByTokenHash(_tokenHash: string): Promise<{ userId: string; displayName: string; email: string | null } | null> {
-    const [user] = await this.db.select().from(users).where(and(eq(users.isPlatformAdmin, true), eq(users.status, "active"))).limit(1);
+  async findUserById(userId: string): Promise<{ id: string; displayName: string; email: string | null; isPlatformAdmin: boolean } | null> {
+    const [user] = await this.db.select().from(users).where(eq(users.id, userId)).limit(1);
+    return user ? { id: user.id, displayName: user.displayName, email: user.email, isPlatformAdmin: user.isPlatformAdmin } : null;
+  }
+
+  async resolvePlatformAdminByTokenHash(tokenHash: string): Promise<{ userId: string; displayName: string; email: string | null } | null> {
+    const [row] = await this.db.select({ user: users }).from(platformAdminTokens)
+      .innerJoin(users, eq(platformAdminTokens.userId, users.id))
+      .where(and(eq(platformAdminTokens.tokenHash, tokenHash), isNull(platformAdminTokens.revokedAt), gt(platformAdminTokens.expiresAt, new Date()), eq(users.isPlatformAdmin, true), eq(users.status, "active"))).limit(1);
+    const user = row?.user;
     if (!user) return null;
     return { userId: user.id, displayName: user.displayName, email: user.email };
+  }
+
+  async createPlatformAdminToken(input: { userId: string; tokenHash: string; expiresAt: string }): Promise<void> {
+    await this.db.insert(platformAdminTokens).values({ userId: input.userId, tokenHash: input.tokenHash, expiresAt: new Date(input.expiresAt) });
   }
 
   async listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]> { const rows = await this.db.select().from(sitePages).where(eq(sitePages.tenantId, scope.tenantId)).orderBy(sitePages.slug); return rows.map((page) => this.sitePageResponse(page)); }

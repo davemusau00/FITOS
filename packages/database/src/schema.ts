@@ -84,6 +84,19 @@ export const users = pgTable(
   (table) => [index("idx_users_email").on(table.email)]
 );
 
+export const platformAdminTokens = pgTable(
+  "platform_admin_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [uniqueIndex("uq_platform_admin_tokens_hash").on(table.tokenHash), index("idx_platform_admin_tokens_user").on(table.userId)]
+);
+
 export const roles = pgTable(
   "roles",
   {
@@ -1375,6 +1388,7 @@ export const schema = {
   implementationInquiryPayloads,
   branches,
   users,
+  platformAdminTokens,
   roles,
   permissions,
   rolePermissions,

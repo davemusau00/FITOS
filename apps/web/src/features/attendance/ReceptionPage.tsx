@@ -34,6 +34,11 @@ export function ReceptionPage() {
   });
 
   const services = useQuery({ queryKey: ["services"], queryFn: api.services });
+  const sessionBookings = useQuery({
+    queryKey: ["bookings", "reception", activeBranchId],
+    queryFn: () => api.bookings(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
+    enabled: Boolean(activeBranchId)
+  });
 
   const checkInMutation = useMutation({
     mutationFn: (memberId: string) => {
@@ -49,6 +54,10 @@ export function ReceptionPage() {
   });
 
   const todayOccurrences = occurrences.data?.data ?? [];
+  const confirmedByOccurrence = new Map<string, number>();
+  for (const booking of sessionBookings.data?.data ?? []) {
+    if (booking.status === "confirmed") confirmedByOccurrence.set(booking.occurrenceId, (confirmedByOccurrence.get(booking.occurrenceId) ?? 0) + 1);
+  }
   const now = new Date();
 
   return (
@@ -204,11 +213,18 @@ export function ReceptionPage() {
                       })}
                     </div>
                     <div className="reception-session-capacity">
+                      {(() => {
+                        const booked = confirmedByOccurrence.get(occ.id) ?? 0;
+                        const capacity = occ.effectiveCapacity ?? occ.capacity;
+                        const percentage = capacity > 0 ? Math.min(100, Math.round((booked / capacity) * 100)) : 0;
+                        return <>
                       <div
                         className="reception-session-capacity__bar"
-                        style={{ width: "40%" }}
+                        style={{ width: `${percentage}%` }}
                       />
-                      <span>Capacity: {occ.capacity}</span>
+                      <span>{booked} / {capacity} booked</span>
+                        </>;
+                      })()}
                     </div>
                     {isUpcoming && minutesUntilStart > 0 && (
                       <div className="reception-session-card__upcoming">
