@@ -36,7 +36,10 @@ export interface SaaSTenantSignupResponse {
   branchId: string;
   ownerUserId: string;
   ownerEmail: string;
+  /** Raw session token — also set as httpOnly fitos_session cookie. */
   token: string;
+  /** CSRF token pair for the newly created session. */
+  csrfToken: string;
   trialEndsAt: string;
 }
 
@@ -89,6 +92,8 @@ export interface ImplementationInquiryResponse extends ImplementationInquiryDraf
   submittedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Raw resume token — only returned on first save. Store locally to reconstruct the resume URL. */
+  resumeToken?: string;
 }
 export interface TenantSeedManifest {
   schemaVersion: 1;

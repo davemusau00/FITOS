@@ -1,13 +1,16 @@
-import { Body, Controller, Get, Inject, Post, Param, Patch, Query } from "@nestjs/common";
+import { Body, Controller, Get, Inject, NotFoundException, Param, Patch, Post, Query, Req, Res, UnauthorizedException } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import { z } from "zod";
 import type { RequestActor, SaaSTenantSignupRequest } from "@fitos/contracts";
-import { ScryptPasswordHasher } from "@fitos/auth";
+import { createHash } from "node:crypto";
+import { ScryptPasswordHasher, createCsrfToken, createOpaqueSessionToken, hashSessionToken } from "@fitos/auth";
 import { Public } from "../../common/auth/public.decorator.js";
 import { Actor } from "../../common/request-context/actor.decorator.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository } from "../../ports/fitos-repository.js";
-import { RequirePermission } from "../../common/auth/permissions.decorator.js";
+import { RequirePlatformAdmin } from "../../common/auth/require-platform-admin.decorator.js";
+import type { FitosRequest } from "../../common/request-context/request-context.js";
 
 const signupSchema = z
   .object({
@@ -25,9 +28,36 @@ const signupSchema = z
     password: z.string().min(8).max(100)
   })
   .strict();
-const inquirySchema = z.object({ id: z.string().uuid().optional(), contactName: z.string().trim().max(160).optional(), businessName: z.string().trim().max(160).optional(), email: z.string().trim().email().max(255).optional(), phone: z.string().trim().max(60).optional(), country: z.string().trim().max(80).optional(), businessType: z.string().trim().max(80).optional(), payload: z.record(z.unknown()) }).strict();
+
+const inquirySchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    contactName: z.string().trim().max(160).optional(),
+    businessName: z.string().trim().max(160).optional(),
+    email: z.string().trim().email().max(255).optional(),
+    phone: z.string().trim().max(60).optional(),
+    country: z.string().trim().max(80).optional(),
+    businessType: z.string().trim().max(80).optional(),
+    payload: z.record(z.unknown())
+  })
+  .strict();
+
+const platformLoginSchema = z
+  .object({
+    email: z.string().trim().email(),
+    password: z.string().min(1)
+  })
+  .strict();
 
 const hasher = new ScryptPasswordHasher();
+
+const cookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: Number(process.env.SESSION_TTL_SECONDS ?? 28_800) * 1_000
+});
 
 @ApiTags("platform")
 @Controller("platform")
@@ -38,10 +68,59 @@ export class PlatformController {
 
   @Public()
   @Post("signup")
-  async signup(@Body() body: unknown) {
+  async signup(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) response: Response
+  ) {
     const input = signupSchema.parse(body) as SaaSTenantSignupRequest;
     const passwordHash = await hasher.hash(input.password);
-    return this.repository.signupTenant(input, passwordHash);
+    const result = await this.repository.signupTenant(input, passwordHash);
+
+    if (result.token) {
+      response.cookie("fitos_session", result.token, cookieOptions());
+      if (result.csrfToken) {
+        response.cookie("fitos_csrf", result.csrfToken, {
+          httpOnly: false,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: Number(process.env.SESSION_TTL_SECONDS ?? 28_800) * 1_000
+        });
+      }
+    }
+
+    return result;
+  }
+
+  @Public()
+  @Post("auth/login")
+  async platformAdminLogin(@Body() body: unknown) {
+    const { email, password } = platformLoginSchema.parse(body);
+    const identity = await this.repository.findLoginIdentity(email);
+    if (!identity) throw new UnauthorizedException("Invalid credentials.");
+    const verified = await hasher.verify(password, identity.passwordHash);
+    if (!verified) throw new UnauthorizedException("Invalid credentials.");
+
+    const platformUser = await this.repository.findUserById(identity.user.id);
+    if (!platformUser || !(platformUser as any).isPlatformAdmin) {
+      throw new UnauthorizedException("Access denied: Not a platform administrator.");
+    }
+
+    // Generate a platform bearer token
+    const rawToken = createOpaqueSessionToken();
+    const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    
+    // We can also store the platform session or reuse user password hash mechanism
+    // Here we return the platform token
+    return {
+      token: rawToken,
+      tokenHash,
+      user: {
+        id: platformUser.id,
+        displayName: platformUser.displayName,
+        email: platformUser.email
+      }
+    };
   }
 
   @Public()
@@ -53,26 +132,81 @@ export class PlatformController {
   @Public()
   @Post("implementation-inquiries/submit")
   submitInquiry(@Body() body: unknown) {
-    const input = inquirySchema.extend({ contactName: z.string().trim().min(2).max(160), businessName: z.string().trim().min(2).max(160), email: z.string().trim().email().max(255) }).parse(body);
+    const input = inquirySchema
+      .extend({
+        contactName: z.string().trim().min(2).max(160),
+        businessName: z.string().trim().min(2).max(160),
+        email: z.string().trim().email().max(255)
+      })
+      .parse(body);
     return this.repository.saveImplementationInquiry(input, true);
   }
 
+  @Public()
+  @Get("implementation-inquiries/:id/resume")
+  async resumeInquiry(
+    @Param("id") id: string,
+    @Query("token") token: string
+  ) {
+    if (!token) throw new UnauthorizedException("Resume token is required.");
+    const inquiry = await this.repository.getImplementationInquiryByToken(id, token);
+    if (!inquiry) throw new NotFoundException("Draft inquiry not found or resume token expired.");
+    return inquiry;
+  }
+
+  @Public()
+  @Post("implementation-inquiries/:id/email-link")
+  async emailResumeLink(
+    @Param("id") id: string,
+    @Body() body: unknown
+  ) {
+    const parsed = z.object({ email: z.string().email() }).parse(body);
+    const inquiry = await this.repository.getImplementationInquiry(id);
+    if (!inquiry) throw new NotFoundException("Inquiry not found.");
+    // Log/trigger email with resume token
+    return { ok: true, message: `Resume link generated for ${parsed.email}` };
+  }
+
+  // ─── Platform Admin Protected Endpoints ─────────────────────────────────────
   @Get("implementation-inquiries")
-  @RequirePermission("tenant:settings")
-  listInquiries(@Query("status") status?: string) { return this.repository.listImplementationInquiries(status as any); }
+  @RequirePlatformAdmin()
+  listInquiries(@Query("status") status?: string) {
+    return this.repository.listImplementationInquiries(status as any);
+  }
 
   @Get("implementation-inquiries/:id")
-  @RequirePermission("tenant:settings")
-  getInquiry(@Param("id") id: string) { return this.repository.getImplementationInquiry(id); }
+  @RequirePlatformAdmin()
+  getInquiry(@Param("id") id: string) {
+    return this.repository.getImplementationInquiry(id);
+  }
 
   @Patch("implementation-inquiries/:id/status")
-  @RequirePermission("tenant:settings")
-  updateInquiry(@Param("id") id: string, @Body() body: unknown) { const input = z.object({ status: z.enum(["draft", "submitted", "qualified", "needs_clarification", "approved", "converted", "archived"]) }).strict().parse(body); return this.repository.updateImplementationInquiryStatus(id, input.status); }
+  @RequirePlatformAdmin()
+  updateInquiry(@Param("id") id: string, @Body() body: unknown) {
+    const input = z
+      .object({
+        status: z.enum([
+          "draft",
+          "submitted",
+          "qualified",
+          "needs_clarification",
+          "approved",
+          "converted",
+          "archived"
+        ])
+      })
+      .strict()
+      .parse(body);
+    return this.repository.updateImplementationInquiryStatus(id, input.status);
+  }
 
   @Get("implementation-inquiries/:id/seed-manifest")
-  @RequirePermission("tenant:settings")
-  seedManifest(@Param("id") id: string) { return this.repository.buildTenantSeedManifest(id); }
+  @RequirePlatformAdmin()
+  seedManifest(@Param("id") id: string) {
+    return this.repository.buildTenantSeedManifest(id);
+  }
 
+  // ─── Tenant Settings / Quotas ───────────────────────────────────────────────
   @Get("subscription")
   subscription(@Actor() actor: RequestActor) {
     return this.repository.getTenantSubscription(actor.tenantId);

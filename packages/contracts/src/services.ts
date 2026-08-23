@@ -104,8 +104,26 @@ export interface ScheduleOccurrenceResponse {
   roomId: string | null;
   startsAt: string;
   endsAt: string;
+  /** Configured capacity for this occurrence. */
   capacity: number;
+  /**
+   * Capacity constrained by available equipment. May be lower than `capacity`
+   * when equipment pools are under-resourced. Operators should use this value
+   * when deciding whether to accept more bookings.
+   */
+  effectiveCapacity?: number;
   resourceWarnings?: ServiceResourceWarning[];
+  /**
+   * When `effectiveCapacity` is lower than the current confirmed booking count
+   * a capacity alert is surfaced. Operators can inspect and optionally stop
+   * further bookings via the `stopNewBookings` flag.
+   */
+  capacityAlert?: {
+    confirmedBookings: number;
+    effectiveCapacity: number;
+    shortage: number;
+    stopNewBookings: boolean;
+  };
   status: OccurrenceStatus;
   createdAt: string;
   updatedAt: string;

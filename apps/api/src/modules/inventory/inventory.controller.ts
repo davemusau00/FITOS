@@ -85,6 +85,34 @@ const createPOSchema = z
 const bomSchema = z.object({ requirements: z.array(z.object({ itemId: z.string().uuid(), quantityPerSession: z.number().int().positive() })).max(100) }).strict();
 const consumeSchema = z.object({ branchId: z.string().uuid(), serviceId: z.string().uuid().optional(), referenceType: z.string().trim().min(1).max(40), referenceId: z.string().uuid(), items: z.array(z.object({ itemId: z.string().uuid(), quantityPerSession: z.number().int().positive() })).min(1).max(100) }).strict();
 
+const createLotSchema = z
+  .object({
+    branchId: z.string().uuid().optional(),
+    itemId: z.string().uuid(),
+    lotCode: z.string().trim().max(80).optional(),
+    purchaseOrderId: z.string().uuid().optional(),
+    quantityReceived: z.number().positive(),
+    unitCostMinor: z.number().int().nonnegative().optional(),
+    expiresOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").optional(),
+    notes: z.string().trim().max(500).optional()
+  })
+  .strict();
+
+const createStocktakeSchema = z
+  .object({
+    branchId: z.string().uuid().optional(),
+    notes: z.string().trim().max(500).optional()
+  })
+  .strict();
+
+const recordCountSchema = z
+  .object({
+    itemId: z.string().uuid(),
+    countedQuantity: z.number().min(0)
+  })
+  .strict();
+
+
 const toScope = (actor: RequestActor) => ({
   tenantId: actor.tenantId,
   tenantUserId: actor.tenantUserId,
@@ -170,4 +198,68 @@ export class InventoryController {
   @Post("consume")
   @RequirePermission("tenant:settings")
   consume(@Actor() actor: RequestActor, @Body() body: unknown) { return this.repository.consumeInventory(toScope(actor), consumeSchema.parse(body)); }
+
+  // ─── Inventory Lots ──────────────────────────────────────────────────────────
+  @Get("lots")
+  @RequirePermission("tenant:read")
+  listLots(@Actor() actor: RequestActor, @Query("itemId") itemId?: string) {
+    return this.repository.listInventoryLots(toScope(actor), itemId);
+  }
+
+  @Post("lots")
+  @RequirePermission("tenant:settings")
+  createLot(@Actor() actor: RequestActor, @Body() body: unknown) {
+    const input = createLotSchema.parse(body);
+    return this.repository.createInventoryLot(toScope(actor), input);
+  }
+
+  @Get("lots/expiring")
+  @RequirePermission("tenant:read")
+  listExpiringLots(@Actor() actor: RequestActor, @Query("days") days?: string) {
+    const daysAhead = days ? Math.max(1, Math.min(365, parseInt(days, 10))) : 30;
+    return this.repository.listExpiringInventoryLots(toScope(actor), daysAhead);
+  }
+
+  // ─── Stocktakes ──────────────────────────────────────────────────────────────
+  @Get("stocktakes")
+  @RequirePermission("tenant:read")
+  listStocktakes(@Actor() actor: RequestActor, @Query("branchId") branchId?: string) {
+    return this.repository.listStocktakes(toScope(actor), branchId);
+  }
+
+  @Post("stocktakes")
+  @RequirePermission("tenant:settings")
+  createStocktake(@Actor() actor: RequestActor, @Body() body: unknown) {
+    const input = createStocktakeSchema.parse(body);
+    return this.repository.createStocktake(toScope(actor), input, actor.userId);
+  }
+
+  @Get("stocktakes/:id")
+  @RequirePermission("tenant:read")
+  async getStocktake(@Actor() actor: RequestActor, @Param("id") id: string) {
+    const stocktake = await this.repository.getStocktake(toScope(actor), id);
+    if (!stocktake) throw new NotFoundException("Stocktake not found.");
+    return stocktake;
+  }
+
+  @Post("stocktakes/:id/count")
+  @RequirePermission("tenant:settings")
+  async recordCount(
+    @Actor() actor: RequestActor,
+    @Param("id") id: string,
+    @Body() body: unknown
+  ) {
+    const input = recordCountSchema.parse(body);
+    return this.repository.recordStocktakeCount(toScope(actor), id, input);
+  }
+
+  @Post("stocktakes/:id/complete")
+  @RequirePermission("tenant:settings")
+  async completeStocktake(
+    @Actor() actor: RequestActor,
+    @Param("id") id: string
+  ) {
+    return this.repository.completeStocktake(toScope(actor), id, actor.userId);
+  }
 }
+

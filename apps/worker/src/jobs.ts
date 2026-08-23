@@ -28,10 +28,21 @@ export const exportJobSchema = tenantEventBase.extend({
   payload: z.object({ report: z.string().min(1), requestedBy: z.string().uuid() })
 });
 
+export const automationJobSchema = tenantEventBase.extend({
+  type: z.literal("automations.execute"),
+  payload: z.object({
+    ruleId: z.string().uuid(),
+    triggerEvent: z.string(),
+    targetEntityId: z.string().uuid().optional(),
+    idempotencyKey: z.string()
+  })
+});
+
 export const workerJobSchema = z.discriminatedUnion("type", [
   notificationJobSchema,
   paymentWebhookJobSchema,
-  exportJobSchema
+  exportJobSchema,
+  automationJobSchema
 ]);
 
 export type WorkerJob = z.infer<typeof workerJobSchema>;

@@ -19,13 +19,18 @@ const MOVEMENT_LABELS: Record<InventoryMovementType, { label: string; color: str
   waste: { label: "Waste / Expired", color: "#ef4444", sign: "-" }
 };
 
-type Tab = "items" | "movements" | "po";
+type Tab = "items" | "movements" | "po" | "lots" | "stocktake";
 
 export default function InventoryPage() {
   const [tab, setTab] = useState<Tab>("items");
   const [items, setItems] = useState<InventoryItemResponse[]>([]);
   const [movements, setMovements] = useState<InventoryMovementResponse[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderResponse[]>([]);
+  const [lots, setLots] = useState<import("@fitos/contracts").InventoryLotResponse[]>([]);
+  const [stocktakes, setStocktakes] = useState<import("@fitos/contracts").StocktakeResponse[]>([]);
+  const [selectedStocktake, setSelectedStocktake] = useState<import("@fitos/contracts").StocktakeResponse | null>(null);
+  const [showNewLot, setShowNewLot] = useState(false);
+  const [showNewStocktake, setShowNewStocktake] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [selectedItem, setSelectedItem] = useState<InventoryItemResponse | null>(null);
@@ -41,14 +46,18 @@ export default function InventoryPage() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [i, m, p] = await Promise.all([
+      const [i, m, p, l, s] = await Promise.all([
         api.inventoryItems(),
         api.inventoryMovements(),
-        api.purchaseOrders()
+        api.purchaseOrders(),
+        api.inventoryLots(),
+        api.stocktakes()
       ]);
       setItems(i);
       setMovements(m);
       setPurchaseOrders(p);
+      setLots(l);
+      setStocktakes(s);
     } finally {
       setLoading(false);
     }
@@ -119,6 +128,12 @@ export default function InventoryPage() {
       <div className="inv-tabs">
         <button className={`inv-tab ${tab === "items" ? "active" : ""}`} onClick={() => setTab("items")}>
           Stock Registry ({items.length})
+        </button>
+        <button className={`inv-tab ${tab === "lots" ? "active" : ""}`} onClick={() => setTab("lots")}>
+          Inventory Lots ({lots.length})
+        </button>
+        <button className={`inv-tab ${tab === "stocktake" ? "active" : ""}`} onClick={() => setTab("stocktake")}>
+          Stocktakes ({stocktakes.length})
         </button>
         <button className={`inv-tab ${tab === "movements" ? "active" : ""}`} onClick={() => setTab("movements")}>
           Movements Ledger ({movements.length})
@@ -239,6 +254,140 @@ export default function InventoryPage() {
         </div>
       )}
 
+      {tab === "lots" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Showing batch lots with expiry dates and on-hand tracking.</span>
+            <button className="btn-primary" onClick={() => setShowNewLot(true)}>+ Receive Lot</button>
+          </div>
+          <div style={{ background: "rgba(15, 23, 42, 0.6)", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
+              <thead style={{ background: "rgba(30, 41, 59, 0.6)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                <tr>
+                  <th style={{ padding: "0.75rem 1rem" }}>Lot Code</th>
+                  <th style={{ padding: "0.75rem 1rem" }}>Item SKU / Name</th>
+                  <th style={{ padding: "0.75rem 1rem" }}>Received Qty</th>
+                  <th style={{ padding: "0.75rem 1rem" }}>On Hand</th>
+                  <th style={{ padding: "0.75rem 1rem" }}>Expires On</th>
+                  <th style={{ padding: "0.75rem 1rem" }}>Received Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lots.map((l) => {
+                  const item = items.find((i) => i.id === l.itemId);
+                  const isExpiringSoon = l.expiresOn && new Date(l.expiresOn).getTime() - Date.now() < 30 * 86400000;
+                  return (
+                    <tr key={l.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#60a5fa" }}>{l.lotCode || "—"}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>{item ? `${item.sku} · ${item.name}` : l.itemId}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>{l.quantityReceived}</td>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>{l.quantityOnHand}</td>
+                      <td style={{ padding: "0.75rem 1rem", color: isExpiringSoon ? "#f87171" : "#94a3b8" }}>
+                        {l.expiresOn ? `${l.expiresOn} ${isExpiringSoon ? "⚠️ Expiring" : ""}` : "No Expiry"}
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#64748b" }}>{new Date(l.receivedAt).toLocaleDateString()}</td>
+                    </tr>
+                  );
+                })}
+                {lots.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>No inventory lots received yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab === "stocktake" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          {!selectedStocktake ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Reconcile physical inventory counts against system records.</span>
+                <button className="btn-primary" onClick={async () => {
+                  const created = await api.createStocktake({});
+                  setStocktakes((prev) => [created, ...prev]);
+                  setSelectedStocktake(created);
+                }}>+ Start New Stocktake</button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1rem" }}>
+                {stocktakes.map((st) => (
+                  <div key={st.id} onClick={() => setSelectedStocktake(st)} style={{ background: "rgba(30, 41, 59, 0.6)", padding: "1.25rem", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                      <strong style={{ fontSize: "1rem" }}>Stocktake #{st.id.slice(0, 8)}</strong>
+                      <span style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem", borderRadius: "0.25rem", background: st.status === "completed" ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)", color: st.status === "completed" ? "#34d399" : "#fbbf24" }}>
+                        {st.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>{st.lines.length} items counted</div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.5rem" }}>Created {new Date(st.createdAt).toLocaleDateString()}</div>
+                  </div>
+                ))}
+                {stocktakes.length === 0 && (
+                  <div style={{ padding: "2rem", color: "#64748b", textAlign: "center", gridColumn: "1 / -1" }}>No stocktakes performed yet.</div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.75rem", padding: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                <div>
+                  <button onClick={() => setSelectedStocktake(null)} style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", fontSize: "0.85rem", marginBottom: "0.25rem" }}>← Back to Stocktakes</button>
+                  <h3 style={{ margin: 0 }}>Stocktake #{selectedStocktake.id.slice(0, 8)}</h3>
+                </div>
+                {selectedStocktake.status !== "completed" && (
+                  <button className="btn-primary" onClick={async () => {
+                    const completed = await api.completeStocktake(selectedStocktake.id);
+                    setSelectedStocktake(completed);
+                    void reload();
+                  }}>Complete & Post Adjustments</button>
+                )}
+              </div>
+
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
+                <thead style={{ background: "rgba(30, 41, 59, 0.6)" }}>
+                  <tr>
+                    <th style={{ padding: "0.75rem 1rem" }}>Item</th>
+                    <th style={{ padding: "0.75rem 1rem" }}>Expected Stock</th>
+                    <th style={{ padding: "0.75rem 1rem" }}>Physical Count</th>
+                    <th style={{ padding: "0.75rem 1rem" }}>Variance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedStocktake.lines.map((line) => (
+                    <tr key={line.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 500 }}>{line.itemName || line.itemId}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>{line.expectedQuantity}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>
+                        {selectedStocktake.status === "completed" ? (
+                          line.countedQuantity ?? "—"
+                        ) : (
+                          <input
+                            type="number"
+                            defaultValue={line.countedQuantity ?? ""}
+                            onBlur={async (e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val)) {
+                                const updated = await api.recordStocktakeCount(selectedStocktake.id, { itemId: line.itemId, countedQuantity: val });
+                                setSelectedStocktake(updated);
+                              }
+                            }}
+                            style={{ width: "80px", padding: "0.3rem", borderRadius: "0.3rem" }}
+                          />
+                        )}
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: (line.variance ?? 0) < 0 ? "#f87171" : (line.variance ?? 0) > 0 ? "#34d399" : "#94a3b8" }}>
+                        {line.variance !== null ? `${line.variance > 0 ? "+" : ""}${line.variance}` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === "po" && (
         <div className="po-grid">
           {purchaseOrders.map((po) => (
@@ -275,6 +424,7 @@ export default function InventoryPage() {
           )}
         </div>
       )}
+
 
       {/* Item Detail Drawer */}
       {selectedItem && (

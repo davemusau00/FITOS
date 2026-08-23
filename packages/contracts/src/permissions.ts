@@ -50,6 +50,20 @@ export const PERMISSION_KEYS = [
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
 
+/**
+ * Platform-level permission keys live in a completely separate namespace from
+ * tenant permissions. They are only meaningful when checking `isPlatformAdmin`
+ * on the user record combined with the X-Platform-Token header.
+ */
+export const PLATFORM_PERMISSION_KEYS = [
+  "platform:inquiries:read",
+  "platform:inquiries:manage",
+  "platform:tenant:read",
+  "platform:tenant:create"
+] as const;
+export type PlatformPermissionKey = (typeof PLATFORM_PERMISSION_KEYS)[number];
+
+
 export const ROLE_KEYS = ["owner", "manager", "reception", "trainer", "finance"] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
 

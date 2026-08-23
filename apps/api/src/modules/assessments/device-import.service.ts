@@ -8,6 +8,8 @@ import type {
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository, TenantScope } from "../../ports/fitos-repository.js";
 
+import { VENDOR_METRIC_MAPPINGS, VENDOR_MAPPING_VERSION } from "./vendor-mappings.js";
+
 export interface DeviceImportInput {
   branchId: string;
   memberId: string;
@@ -37,6 +39,25 @@ export class DeviceImportService {
     const rawChecksum = createHash("sha256").update(input.fileContent).digest("hex");
 
     const parsed = this.parseDevicePayload(input.deviceVendor, input.fileContent);
+    const vendorMap = VENDOR_METRIC_MAPPINGS[input.deviceVendor] || {};
+
+    // Map metrics with proper units and keys
+    const normalizedMetrics: Record<string, number | string> = {};
+    const definitionMetrics: Array<{ key: string; name: string; unit: string }> = [];
+
+    for (const [rawKey, val] of Object.entries(parsed.metrics)) {
+      const mapping = vendorMap[rawKey];
+      const targetKey = mapping?.metricKey ?? rawKey;
+      const targetName = mapping?.name ?? rawKey.replace(/([A-Z])/g, " $1").trim();
+      const targetUnit = mapping?.unit ?? "pts";
+
+      normalizedMetrics[targetKey] = val;
+      definitionMetrics.push({
+        key: targetKey,
+        name: targetName,
+        unit: targetUnit
+      });
+    }
 
     // Find or locate suitable assessment definition
     const definitions = await this.repository.listAssessmentDefinitions(scope);
@@ -46,12 +67,8 @@ export class DeviceImportService {
         name: parsed.defaultDefinitionName,
         category: parsed.category,
         deviceVendor: input.deviceVendor,
-        description: `Imported diagnostic biometrics via ${input.deviceVendor}`,
-        metrics: Object.keys(parsed.metrics).map((k) => ({
-          key: k,
-          name: k.replace(/([A-Z])/g, " $1"),
-          unit: "pts"
-        }))
+        description: `Imported diagnostic biometrics via ${input.deviceVendor} (Mapping v${VENDOR_MAPPING_VERSION})`,
+        metrics: definitionMetrics
       });
     }
 

@@ -459,8 +459,10 @@ export interface FitosRepository {
   saveImplementationInquiry(input: import("@fitos/contracts").ImplementationInquiryDraft, submit: boolean): Promise<import("@fitos/contracts").ImplementationInquiryResponse>;
   listImplementationInquiries(status?: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse[]>;
   getImplementationInquiry(id: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null>;
+  getImplementationInquiryByToken(id: string, token: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null>;
   updateImplementationInquiryStatus(id: string, status: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null>;
   buildTenantSeedManifest(id: string): Promise<import("@fitos/contracts").TenantSeedManifest | null>;
+  resolvePlatformAdminByTokenHash(tokenHash: string): Promise<{ userId: string; displayName: string; email: string | null } | null>;
   listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]>;
   saveSitePage(scope: TenantScope, input: import("@fitos/contracts").SaveSitePageRequest): Promise<import("@fitos/contracts").SitePageResponse>;
   publishSitePage(scope: TenantScope, pageId: string): Promise<import("@fitos/contracts").SitePageResponse | null>;
@@ -493,6 +495,14 @@ export interface FitosRepository {
   listServiceInventoryRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]>;
   replaceServiceInventoryRequirements(scope: TenantScope, serviceId: string, requirements: import("@fitos/contracts").ServiceInventoryRequirement[]): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]>;
   consumeInventory(scope: TenantScope, input: { branchId: string; serviceId?: string; referenceType: string; referenceId: string; items: import("@fitos/contracts").ServiceInventoryRequirement[] }): Promise<import("@fitos/contracts").InventoryConsumptionResponse[]>;
+  listInventoryLots(scope: TenantScope, itemId?: string): Promise<import("@fitos/contracts").InventoryLotResponse[]>;
+  createInventoryLot(scope: TenantScope, input: import("@fitos/contracts").CreateInventoryLotRequest): Promise<import("@fitos/contracts").InventoryLotResponse>;
+  listExpiringInventoryLots(scope: TenantScope, daysAhead: number): Promise<import("@fitos/contracts").InventoryLotResponse[]>;
+  listStocktakes(scope: TenantScope, branchId?: string): Promise<import("@fitos/contracts").StocktakeResponse[]>;
+  createStocktake(scope: TenantScope, input: import("@fitos/contracts").CreateStocktakeRequest, createdByUserId: string): Promise<import("@fitos/contracts").StocktakeResponse>;
+  getStocktake(scope: TenantScope, stocktakeId: string): Promise<import("@fitos/contracts").StocktakeResponse | null>;
+  recordStocktakeCount(scope: TenantScope, stocktakeId: string, input: import("@fitos/contracts").RecordStocktakeCountRequest): Promise<import("@fitos/contracts").StocktakeResponse>;
+  completeStocktake(scope: TenantScope, stocktakeId: string, actorUserId: string): Promise<import("@fitos/contracts").StocktakeResponse>;
 
   // FITOS Assess & Performance Profiles
   listAssessmentDefinitions(scope: TenantScope): Promise<AssessmentDefinitionResponse[]>;

@@ -134,6 +134,13 @@
       "when": 1787952000000,
       "tag": "0018_inventory_lots_stocktakes",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788038400000,
+      "tag": "0019_saas_subscriptions",
+      "breakpoints": true
     }
   ]
 }

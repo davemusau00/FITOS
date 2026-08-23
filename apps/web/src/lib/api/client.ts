@@ -494,6 +494,8 @@ export const api = {
   featureFlags: () => request<FeatureFlagResponse[]>("/platform/feature-flags"),
   saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) => request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", { method: "POST", body: json(payload) }),
   submitImplementationInquiry: (payload: ImplementationInquiryDraft) => request<ImplementationInquiryResponse>("/platform/implementation-inquiries/submit", { method: "POST", body: json(payload) }),
+  resumeImplementationInquiry: (id: string, token: string) => request<ImplementationInquiryResponse>(`/platform/implementation-inquiries/${id}/resume?token=${encodeURIComponent(token)}`),
+  emailInquiryResumeLink: (id: string, email: string) => request<{ ok: boolean; message: string }>(`/platform/implementation-inquiries/${id}/email-link`, { method: "POST", body: json({ email }) }),
   implementationInquiries: (status?: ImplementationInquiryStatus) => request<ImplementationInquiryResponse[]>(`/platform/implementation-inquiries${status ? `?status=${status}` : ""}`),
   implementationInquiry: (id: string) => request<ImplementationInquiryResponse | null>(`/platform/implementation-inquiries/${id}`),
   updateImplementationInquiryStatus: (id: string, status: ImplementationInquiryStatus) => request<ImplementationInquiryResponse | null>(`/platform/implementation-inquiries/${id}/status`, { method: "PATCH", body: json({ status }) }),
@@ -575,6 +577,14 @@ export const api = {
   serviceInventoryBom: (serviceId: string) => request<import("@fitos/contracts").ServiceInventoryRequirement[]>(`/inventory/bom/${serviceId}`),
   replaceServiceInventoryBom: (serviceId: string, requirements: import("@fitos/contracts").ServiceInventoryRequirement[]) => request<import("@fitos/contracts").ServiceInventoryRequirement[]>(`/inventory/bom/${serviceId}`, { method: "POST", body: json({ requirements }) }),
   consumeInventory: (payload: { branchId: string; serviceId?: string; referenceType: string; referenceId: string; items: import("@fitos/contracts").ServiceInventoryRequirement[] }) => request<import("@fitos/contracts").InventoryConsumptionResponse[]>("/inventory/consume", { method: "POST", body: json(payload) }),
+  inventoryLots: (itemId?: string) => request<import("@fitos/contracts").InventoryLotResponse[]>(`/inventory/lots${itemId ? `?itemId=${itemId}` : ""}`),
+  createInventoryLot: (payload: import("@fitos/contracts").CreateInventoryLotRequest) => request<import("@fitos/contracts").InventoryLotResponse>("/inventory/lots", { method: "POST", body: json(payload) }),
+  expiringInventoryLots: (days?: number) => request<import("@fitos/contracts").InventoryLotResponse[]>(`/inventory/lots/expiring${days ? `?days=${days}` : ""}`),
+  stocktakes: (branchId?: string) => request<import("@fitos/contracts").StocktakeResponse[]>(`/inventory/stocktakes${branchId ? `?branchId=${branchId}` : ""}`),
+  stocktake: (id: string) => request<import("@fitos/contracts").StocktakeResponse>(`/inventory/stocktakes/${id}`),
+  createStocktake: (payload: import("@fitos/contracts").CreateStocktakeRequest) => request<import("@fitos/contracts").StocktakeResponse>("/inventory/stocktakes", { method: "POST", body: json(payload) }),
+  recordStocktakeCount: (id: string, payload: import("@fitos/contracts").RecordStocktakeCountRequest) => request<import("@fitos/contracts").StocktakeResponse>(`/inventory/stocktakes/${id}/count`, { method: "POST", body: json(payload) }),
+  completeStocktake: (id: string) => request<import("@fitos/contracts").StocktakeResponse>(`/inventory/stocktakes/${id}/complete`, { method: "POST", body: json({}) }),
 
   // ── FITOS Assess & Performance Profiles ─────────────────────────────────
   assessmentDefinitions: () =>

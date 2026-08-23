@@ -36,6 +36,7 @@ export const tenants = pgTable(
   },
   (table) => [uniqueIndex("uq_tenants_slug").on(table.slug)]
 );
+export const tenantSubscriptions = pgTable("tenant_subscriptions", { tenantId: uuid("tenant_id").primaryKey().references(() => tenants.id, { onDelete: "cascade" }), plan: varchar("plan", { length: 30 }).notNull().default("pro"), status: varchar("status", { length: 30 }).notNull().default("trial"), trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }), currentPeriodEndsAt: timestamp("current_period_ends_at", { withTimezone: true }), capabilitiesJson: jsonb("capabilities_json").notNull().default(sql`'[]'::jsonb`), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow() });
 
 export const branches = pgTable(
   "branches",
@@ -74,6 +75,8 @@ export const users = pgTable(
     passwordHash: text("password_hash").notNull(),
     displayName: varchar("display_name", { length: 160 }).notNull(),
     status: varchar("status", { length: 30 }).notNull().default("active"),
+    /** When true this user can authenticate as a FITOS platform admin using X-Platform-Token. */
+    isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
@@ -1254,6 +1257,9 @@ export const implementationInquiries = pgTable("implementation_inquiries", {
   country: varchar("country", { length: 80 }),
   businessType: varchar("business_type", { length: 80 }),
   submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  /** SHA-256 hash of the raw resume token returned to the enquirer. */
+  resumeTokenHash: varchar("resume_token_hash", { length: 64 }),
+  resumeTokenExpiresAt: timestamp("resume_token_expires_at", { withTimezone: true }),
   assignedToUserId: uuid("assigned_to_user_id").references(() => users.id, { onDelete: "set null" }),
   convertedTenantId: uuid("converted_tenant_id").references(() => tenants.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1266,8 +1272,104 @@ export const implementationInquiryPayloads = pgTable("implementation_inquiry_pay
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
+// ─── Automation Engine ────────────────────────────────────────────────────────
+export const automationRules = pgTable(
+  "automation_rules",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 200 }).notNull(),
+    description: text("description"),
+    triggerType: varchar("trigger_type", { length: 80 }).notNull(),
+    triggerConfig: jsonb("trigger_config").notNull().default(sql`'{}'::jsonb`),
+    conditions: jsonb("conditions").notNull().default(sql`'[]'::jsonb`),
+    actionType: varchar("action_type", { length: 80 }).notNull(),
+    actionConfig: jsonb("action_config").notNull().default(sql`'{}'::jsonb`),
+    isActive: boolean("is_active").notNull().default(true),
+    totalExecutions: integer("total_executions").notNull().default(0),
+    lastExecutedAt: timestamp("last_executed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("idx_automation_rules_tenant").on(table.tenantId, table.isActive)]
+);
+
+export const automationRuns = pgTable(
+  "automation_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ruleId: uuid("rule_id").notNull().references(() => automationRules.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    status: varchar("status", { length: 40 }).notNull().default("pending"),
+    triggerEvent: varchar("trigger_event", { length: 80 }).notNull(),
+    targetEntityId: uuid("target_entity_id"),
+    targetEntityName: varchar("target_entity_name", { length: 160 }),
+    message: text("message"),
+    idempotencyKey: varchar("idempotency_key", { length: 255 }),
+    executedAt: timestamp("executed_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_automation_runs_rule").on(table.ruleId),
+    index("idx_automation_runs_tenant_date").on(table.tenantId, table.executedAt),
+    uniqueIndex("uq_automation_runs_idempotency").on(table.idempotencyKey)
+  ]
+);
+
+// ─── Inventory Lots & Stocktakes ──────────────────────────────────────────────
+export const inventoryLots = pgTable(
+  "inventory_lots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id").references(() => branches.id, { onDelete: "restrict" }),
+    itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "cascade" }),
+    lotCode: varchar("lot_code", { length: 80 }),
+    purchaseOrderId: uuid("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "set null" }),
+    quantityReceived: numeric("quantity_received", { precision: 12, scale: 3 }).notNull(),
+    quantityOnHand: numeric("quantity_on_hand", { precision: 12, scale: 3 }).notNull(),
+    unitCostMinor: integer("unit_cost_minor").default(0),
+    expiresOn: date("expires_on"),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_inventory_lots_item").on(table.tenantId, table.itemId),
+    index("idx_inventory_lots_expiry").on(table.tenantId, table.expiresOn)
+  ]
+);
+
+export const stocktakes = pgTable(
+  "stocktakes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id").references(() => branches.id, { onDelete: "restrict" }),
+    status: varchar("status", { length: 30 }).notNull().default("draft"),
+    notes: text("notes"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("idx_stocktakes_tenant").on(table.tenantId, table.status)]
+);
+
+export const stocktakeLines = pgTable(
+  "stocktake_lines",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    stocktakeId: uuid("stocktake_id").notNull().references(() => stocktakes.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "restrict" }),
+    expectedQuantity: numeric("expected_quantity", { precision: 12, scale: 3 }),
+    countedQuantity: numeric("counted_quantity", { precision: 12, scale: 3 }),
+    variance: numeric("variance", { precision: 12, scale: 3 })
+  },
+  (table) => [index("idx_stocktake_lines_stocktake").on(table.stocktakeId)]
+);
+
 export const schema = {
   tenants,
+  tenantSubscriptions,
   sitePages,
   implementationInquiries,
   implementationInquiryPayloads,
@@ -1314,6 +1416,12 @@ export const schema = {
   inventoryMovements,
   purchaseOrders,
   purchaseOrderLines,
+  inventoryLots,
+  stocktakes,
+  stocktakeLines,
+  // Automations
+  automationRules,
+  automationRuns,
   // Assessments
   assessmentDefinitions,
   assessmentSessions,

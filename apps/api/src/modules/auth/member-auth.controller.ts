@@ -100,4 +100,29 @@ export class MemberAuthController {
     if (!overview) throw new UnauthorizedException("Member not found.");
     return overview;
   }
+
+  @Post("book")
+  async book(@Req() req: FitosRequest, @Body() body: unknown) {
+    const token = (req.cookies as Record<string, string>)?.[SESSION_COOKIE];
+    if (!token) throw new UnauthorizedException("Not logged in.");
+    const hash = hashSessionToken(token);
+    const profile = await this.repository.resolveMemberSession(hash, new Date().toISOString());
+    if (!profile) throw new UnauthorizedException("Session expired.");
+    const { occurrenceId } = z.object({ occurrenceId: z.string().uuid() }).parse(body);
+    return this.repository.memberSelfBook(profile.id, occurrenceId);
+  }
+
+  @Post("cancel")
+  async cancel(@Req() req: FitosRequest, @Body() body: unknown) {
+    const token = (req.cookies as Record<string, string>)?.[SESSION_COOKIE];
+    if (!token) throw new UnauthorizedException("Not logged in.");
+    const hash = hashSessionToken(token);
+    const profile = await this.repository.resolveMemberSession(hash, new Date().toISOString());
+    if (!profile) throw new UnauthorizedException("Session expired.");
+    const { bookingId, reason } = z
+      .object({ bookingId: z.string().uuid(), reason: z.string().trim().min(1).max(255).default("Member self-cancelled") })
+      .parse(body);
+    return this.repository.memberSelfCancel(profile.id, bookingId, reason);
+  }
 }
+

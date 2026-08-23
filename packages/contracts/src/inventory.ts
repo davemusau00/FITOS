@@ -84,8 +84,64 @@ export interface CreateInventoryMovementRequest {
 }
 export interface ServiceInventoryRequirement { itemId: string; quantityPerSession: number; }
 export interface InventoryConsumptionResponse { id: string; tenantId: string; branchId: string; itemId: string; serviceId: string | null; referenceType: string; referenceId: string | null; quantity: number; createdAt: string; }
-export interface InventoryLotResponse { id: string; tenantId: string; branchId: string; itemId: string; lotCode: string; expiresOn: string | null; quantityOnHand: number; receivedAt: string; }
-export interface StocktakeResponse { id: string; tenantId: string; branchId: string; status: "draft" | "completed"; notes: string | null; lines: Array<{ itemId: string; expectedQuantity: number; countedQuantity: number }>; createdAt: string; completedAt: string | null; }
+export interface InventoryLotResponse {
+  id: string;
+  tenantId: string;
+  branchId: string | null;
+  itemId: string;
+  lotCode: string | null;
+  purchaseOrderId: string | null;
+  quantityReceived: number;
+  quantityOnHand: number;
+  unitCostMinor: number;
+  expiresOn: string | null;
+  receivedAt: string;
+  notes: string | null;
+  createdAt: string;
+}
+export interface CreateInventoryLotRequest {
+  branchId?: string;
+  itemId: string;
+  lotCode?: string;
+  purchaseOrderId?: string;
+  quantityReceived: number;
+  unitCostMinor?: number;
+  expiresOn?: string;
+  notes?: string;
+}
+
+export interface StocktakeLineResponse {
+  id: string;
+  stocktakeId: string;
+  itemId: string;
+  itemName?: string;
+  expectedQuantity: number;
+  countedQuantity: number | null;
+  variance: number | null;
+}
+
+export interface StocktakeResponse {
+  id: string;
+  tenantId: string;
+  branchId: string | null;
+  status: "draft" | "completed";
+  notes: string | null;
+  lines: StocktakeLineResponse[];
+  createdByUserId: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface CreateStocktakeRequest {
+  branchId?: string;
+  notes?: string;
+}
+
+export interface RecordStocktakeCountRequest {
+  itemId: string;
+  countedQuantity: number;
+}
+
 
 export interface PurchaseOrderItem {
   itemId: string;

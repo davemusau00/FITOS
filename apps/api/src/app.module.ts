@@ -6,6 +6,7 @@ import { ApiExceptionFilter } from "./common/errors/http-exception.filter.js";
 import { PermissionGuard } from "./common/auth/permission.guard.js";
 import { RateLimitService } from "./common/auth/rate-limit.service.js";
 import { SessionGuard } from "./common/auth/session.guard.js";
+import { PlatformAdminGuard } from "./common/auth/platform-admin.guard.js";
 import { AuthService } from "./common/auth/auth.service.js";
 import { IdempotencyService } from "./common/idempotency/idempotency.service.js";
 import { RequestLoggingInterceptor } from "./common/logging/request-logging.interceptor.js";
@@ -112,6 +113,7 @@ const repositoryFactory = (): FitosRepository => {
     MetricsService,
     { provide: APP_GUARD, useClass: SessionGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
+    { provide: APP_GUARD, useClass: PlatformAdminGuard },
     { provide: APP_FILTER, useClass: ApiExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: RequestLoggingInterceptor }
   ]

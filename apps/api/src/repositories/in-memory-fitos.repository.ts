@@ -4263,6 +4263,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       ownerUserId: userId,
       ownerEmail: input.ownerEmail,
       token,
+      csrfToken: "mock-csrf-token",
       trialEndsAt
     };
   }
@@ -4858,4 +4859,120 @@ export class InMemoryFitosRepository implements FitosRepository {
     this.therapySessions.set(id, session);
     return session;
   }
+
+  // ─── Inventory Lots & Stocktakes (In-Memory) ────────────────────────────────
+  private readonly inventoryLotsMap = new Map<string, import("@fitos/contracts").InventoryLotResponse>();
+  private readonly stocktakesMap = new Map<string, import("@fitos/contracts").StocktakeResponse>();
+
+  async listInventoryLots(scope: TenantScope, itemId?: string): Promise<import("@fitos/contracts").InventoryLotResponse[]> {
+    return [...this.inventoryLotsMap.values()].filter((l) => l.tenantId === scope.tenantId && (!itemId || l.itemId === itemId));
+  }
+
+  async createInventoryLot(scope: TenantScope, input: import("@fitos/contracts").CreateInventoryLotRequest): Promise<import("@fitos/contracts").InventoryLotResponse> {
+    const id = randomUUID();
+    const ts = new Date().toISOString();
+    const item = this.inventoryItems.get(input.itemId);
+    const lot: import("@fitos/contracts").InventoryLotResponse = {
+      id,
+      tenantId: scope.tenantId,
+      branchId: input.branchId ?? item?.branchId ?? null,
+      itemId: input.itemId,
+      lotCode: input.lotCode ?? `LOT-${Date.now().toString().slice(-6)}`,
+      purchaseOrderId: input.purchaseOrderId ?? null,
+      quantityReceived: input.quantityReceived,
+      quantityOnHand: input.quantityReceived,
+      unitCostMinor: input.unitCostMinor ?? item?.unitCostMinor ?? 0,
+      expiresOn: input.expiresOn ?? null,
+      receivedAt: ts,
+      notes: input.notes ?? null,
+      createdAt: ts
+    };
+    this.inventoryLotsMap.set(id, lot);
+    if (item) {
+      item.stockOnHand += Math.round(input.quantityReceived);
+      this.inventoryItems.set(item.id, item);
+    }
+    return lot;
+  }
+
+  async listExpiringInventoryLots(scope: TenantScope, daysAhead: number): Promise<import("@fitos/contracts").InventoryLotResponse[]> {
+    const targetDate = new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10);
+    return [...this.inventoryLotsMap.values()].filter((l) => l.tenantId === scope.tenantId && l.expiresOn && l.expiresOn <= targetDate && l.quantityOnHand > 0);
+  }
+
+  async listStocktakes(scope: TenantScope, branchId?: string): Promise<import("@fitos/contracts").StocktakeResponse[]> {
+    return [...this.stocktakesMap.values()].filter((s) => s.tenantId === scope.tenantId && (!branchId || s.branchId === branchId));
+  }
+
+  async createStocktake(scope: TenantScope, input: import("@fitos/contracts").CreateStocktakeRequest, createdByUserId: string): Promise<import("@fitos/contracts").StocktakeResponse> {
+    const id = randomUUID();
+    const ts = new Date().toISOString();
+    const items = [...this.inventoryItems.values()].filter((i) => i.tenantId === scope.tenantId && (!input.branchId || i.branchId === input.branchId));
+    const lines = items.map((i) => ({
+      id: randomUUID(),
+      stocktakeId: id,
+      itemId: i.id,
+      itemName: i.name,
+      expectedQuantity: i.stockOnHand,
+      countedQuantity: null,
+      variance: null
+    }));
+
+    const stocktake: import("@fitos/contracts").StocktakeResponse = {
+      id,
+      tenantId: scope.tenantId,
+      branchId: input.branchId ?? null,
+      status: "draft",
+      notes: input.notes ?? null,
+      lines,
+      createdByUserId,
+      createdAt: ts,
+      completedAt: null
+    };
+    this.stocktakesMap.set(id, stocktake);
+    return stocktake;
+  }
+
+  async getStocktake(scope: TenantScope, stocktakeId: string): Promise<import("@fitos/contracts").StocktakeResponse | null> {
+    const st = this.stocktakesMap.get(stocktakeId);
+    return st && st.tenantId === scope.tenantId ? st : null;
+  }
+
+  async recordStocktakeCount(scope: TenantScope, stocktakeId: string, input: import("@fitos/contracts").RecordStocktakeCountRequest): Promise<import("@fitos/contracts").StocktakeResponse> {
+    const st = this.stocktakesMap.get(stocktakeId);
+    if (!st || st.tenantId !== scope.tenantId) throw new Error("Stocktake not found.");
+    const line = st.lines.find((l) => l.itemId === input.itemId);
+    if (!line) throw new Error("Stocktake line item not found.");
+    line.countedQuantity = input.countedQuantity;
+    line.variance = input.countedQuantity - line.expectedQuantity;
+    return st;
+  }
+
+  async completeStocktake(scope: TenantScope, stocktakeId: string, actorUserId: string): Promise<import("@fitos/contracts").StocktakeResponse> {
+    const st = this.stocktakesMap.get(stocktakeId);
+    if (!st || st.tenantId !== scope.tenantId) throw new Error("Stocktake not found.");
+    st.status = "completed";
+    st.completedAt = new Date().toISOString();
+    for (const line of st.lines) {
+      if (line.countedQuantity !== null) {
+        const item = this.inventoryItems.get(line.itemId);
+        if (item) {
+          item.stockOnHand = line.countedQuantity;
+          this.inventoryItems.set(item.id, item);
+        }
+      }
+    }
+    return st;
+  }
+
+  async getImplementationInquiryByToken(id: string, _token: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
+    return this.getImplementationInquiry(id);
+  }
+
+  async resolvePlatformAdminByTokenHash(_tokenHash: string): Promise<{ userId: string; displayName: string; email: string | null } | null> {
+    const user = [...this.users.values()][0];
+    if (!user) return null;
+    return { userId: user.id, displayName: user.displayName, email: user.email };
+  }
 }
+

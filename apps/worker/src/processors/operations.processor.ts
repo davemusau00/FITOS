@@ -37,5 +37,17 @@ export async function processOperationsJob(job: WorkerJob): Promise<void> {
         }) + "\n"
       );
       return;
+    case "automations.execute":
+      process.stdout.write(
+        JSON.stringify({
+          event: "automation.executed",
+          eventId: job.eventId,
+          tenantId: job.tenantId,
+          ruleId: job.payload.ruleId,
+          triggerEvent: job.payload.triggerEvent,
+          idempotencyKey: job.payload.idempotencyKey
+        }) + "\n"
+      );
+      return;
   }
 }
