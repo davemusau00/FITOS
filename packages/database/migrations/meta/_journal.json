@@ -148,6 +148,13 @@
       "when": 1788124800000,
       "tag": "0020_platform_admin_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788211200000,
+      "tag": "0021_platform_admin_flag",
+      "breakpoints": true
     }
   ]
 }
