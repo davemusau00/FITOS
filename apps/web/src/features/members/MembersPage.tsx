@@ -23,7 +23,7 @@ export function MembersPage() {
   const [params, setParams] = useSearchParams();
   const [selectedQuickMember, setSelectedQuickMember] = useState<MemberListItem | null>(null);
   const [activeSegment, setActiveSegment] = useState<string>("all");
-  const { activeBranchId } = useBranch();
+  const { activeBranchId, branches, setActiveBranch } = useBranch();
 
   const query = params.get("query") ?? "";
   const status = params.get("status") ?? "";
@@ -201,11 +201,10 @@ export function MembersPage() {
         <select
           aria-label="Filter members by branch"
           className="fitos-control"
-          onChange={(event) => set("branchId", event.currentTarget.value)}
-          value={params.get("branchId") ?? ""}
+          onChange={(event) => setActiveBranch(event.currentTarget.value)}
+          value={activeBranchId}
         >
-          <option value="">All accessible branches</option>
-          {branches.data?.map((branch) => (
+          {branches.map((branch) => (
             <option key={branch.id} value={branch.id}>
               {branch.name}
             </option>
