@@ -4223,11 +4223,27 @@ export class InMemoryFitosRepository implements FitosRepository {
   ): Promise<import("@fitos/contracts").PublicReservationResponse> {
     const tenant = [...this.tenants.values()].find((t) => t.slug === tenantSlug);
     if (!tenant) throw new Error("Tenant not found.");
+    let status: import("@fitos/contracts").PublicReservationResponse["status"] = "requested";
+    if (input.occurrenceId) {
+      const occurrence = this.occurrences.get(input.occurrenceId);
+      if (!occurrence || occurrence.tenantId !== tenant.id || occurrence.status === "cancelled") {
+        throw new Error("The selected schedule occurrence is unavailable.");
+      }
+      const confirmedBookings = [...this.bookings.values()].filter(
+        (b) => b.occurrenceId === occurrence.id && b.status === "confirmed"
+      ).length;
+      const pendingReservations = this.publicReservations.filter(
+        (r) =>
+          r.occurrenceId === occurrence.id && (r.status === "requested" || r.status === "confirmed")
+      ).length;
+      status =
+        confirmedBookings + pendingReservations < occurrence.capacity ? "confirmed" : "waitlisted";
+    }
     const reservation = {
       id: randomUUID(),
       tenantId: tenant.id,
       ...input,
-      status: "requested" as const,
+      status,
       createdAt: now()
     };
     this.publicReservations.push(reservation);

@@ -5760,6 +5760,7 @@ export class DrizzleFitosRepository implements FitosRepository {
     const created = await this.db.transaction(async (tx) => {
       let branchId = input.branchId ?? null;
       let serviceId = input.serviceId ?? null;
+      let reservationStatus = "requested";
       if (input.occurrenceId) {
         const [occurrence] = await tx
           .select()
@@ -5782,6 +5783,23 @@ export class DrizzleFitosRepository implements FitosRepository {
         }
         branchId = occurrence.branchId;
         serviceId = occurrence.serviceId;
+        const [confirmed] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(bookings)
+          .where(and(eq(bookings.occurrenceId, occurrence.id), eq(bookings.status, "confirmed")));
+        const [pending] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(publicReservations)
+          .where(
+            and(
+              eq(publicReservations.occurrenceId, occurrence.id),
+              sql`${publicReservations.status} in ('requested', 'confirmed')`
+            )
+          );
+        reservationStatus =
+          (confirmed?.count ?? 0) + (pending?.count ?? 0) < occurrence.capacity
+            ? "confirmed"
+            : "waitlisted";
       }
       if (branchId) {
         const [branch] = await tx
@@ -5807,6 +5825,7 @@ export class DrizzleFitosRepository implements FitosRepository {
           occurrenceId: input.occurrenceId ?? null,
           serviceId,
           reservationType: input.reservationType,
+          status: reservationStatus,
           firstName: input.firstName.trim(),
           lastName: input.lastName?.trim() || null,
           phone: input.phone?.trim() || null,

@@ -64,7 +64,8 @@ export interface CreatePublicLeadRequest {
   notes?: string | null;
 }
 
-export type PublicReservationType = "class" | "assessment" | "therapy" | "recovery" | "consultation" | "facility";
+export type PublicReservationType =
+  "class" | "assessment" | "therapy" | "recovery" | "consultation" | "facility";
 export interface CreatePublicReservationRequest {
   branchId?: string;
   occurrenceId?: string;
@@ -79,6 +80,6 @@ export interface CreatePublicReservationRequest {
 export interface PublicReservationResponse extends CreatePublicReservationRequest {
   id: string;
   tenantId: string;
-  status: "requested" | "confirmed" | "cancelled";
+  status: "requested" | "confirmed" | "waitlisted" | "cancelled";
   createdAt: string;
 }
