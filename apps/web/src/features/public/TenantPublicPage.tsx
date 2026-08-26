@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button, Card, Icon, Modal } from "@fitos/ui";
 import { api } from "../../lib/api/client";
+import type { CreatePublicReservationRequest } from "@fitos/contracts";
 import { FitosLogo } from "../../app/logo";
 import { ErrorNotice } from "../shared";
 
@@ -11,6 +12,7 @@ export function TenantPublicPage() {
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
   const [trialModalOpen, setTrialModalOpen] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null);
   const [leadForm, setLeadForm] = useState({
     firstName: "",
     lastName: "",
@@ -60,15 +62,29 @@ export function TenantPublicPage() {
     }
   });
 
+  const reservationMutation = useMutation({
+    mutationFn: (data: CreatePublicReservationRequest) => api.publicCreateReservation(slug, data),
+    onSuccess: () => setLeadSubmitted(true)
+  });
+
   const publicServices = services.data ?? [];
   const scheduleItems = schedule.data ?? [];
+  const visibleSchedule = scheduleItems.filter(
+    (occ) => new Date(occ.startsAt).getDay() === selectedDay
+  );
   const activeCoaches = coaches.data ?? [];
 
   const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const gymName = tenantInfo.data?.name ?? (tenantSlug ? tenantSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) : "FITOS facility");
+  const gymName =
+    tenantInfo.data?.name ??
+    (tenantSlug
+      ? tenantSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+      : "FITOS facility");
 
   if (publishedSite.data) {
-    return <PublishedSitePage site={publishedSite.data} gymName={tenantInfo.data?.name ?? gymName} />;
+    return (
+      <PublishedSitePage site={publishedSite.data} gymName={tenantInfo.data?.name ?? gymName} />
+    );
   }
 
   const handleOpenTrial = (serviceName?: string) => {
@@ -93,7 +109,10 @@ export function TenantPublicPage() {
             <a href="#locations">Location</a>
           </nav>
           <div className="public-nav__actions">
-            <Link className="fitos-button fitos-button--ghost fitos-button--small" to="/login">
+            <Link
+              className="fitos-button fitos-button--ghost fitos-button--small"
+              to={`/member?tenant=${encodeURIComponent(slug)}`}
+            >
               Member Sign In
             </Link>
             <button
@@ -128,7 +147,10 @@ export function TenantPublicPage() {
             >
               Claim Your Free Trial Pass
             </button>
-            <a className="fitos-button fitos-button--secondary fitos-button--large" href="#timetable">
+            <a
+              className="fitos-button fitos-button--secondary fitos-button--large"
+              href="#timetable"
+            >
               Explore Timetable →
             </a>
           </div>
@@ -154,7 +176,9 @@ export function TenantPublicPage() {
         <div className="public-section__header">
           <span className="public-section__eyebrow">PROGRAMS &amp; SERVICES</span>
           <h2 className="public-section__title">Signature Training Classes</h2>
-          <p className="public-section__desc">From high-intensity conditioning to functional mobility, find your rhythm.</p>
+          <p className="public-section__desc">
+            From high-intensity conditioning to functional mobility, find your rhythm.
+          </p>
         </div>
 
         <div className="public-classes-grid">
@@ -167,7 +191,9 @@ export function TenantPublicPage() {
               <h3 className="public-class-card__name">{svc.name}</h3>
               <p className="public-class-card__meta">
                 <span>{svc.serviceType.toUpperCase()}</span> ·{" "}
-                <span>{svc.creditsRequired} Credit{svc.creditsRequired > 1 ? "s" : ""}</span>
+                <span>
+                  {svc.creditsRequired} Credit{svc.creditsRequired > 1 ? "s" : ""}
+                </span>
               </p>
               <div className="public-class-card__footer">
                 <button
@@ -207,27 +233,35 @@ export function TenantPublicPage() {
 
         {/* Schedule List */}
         <div className="public-timetable">
-          {scheduleItems.length ? (
-            scheduleItems.map((occ) => {
+          {visibleSchedule.length ? (
+            visibleSchedule.map((occ) => {
               const svc = services.data?.find((s) => s.id === occ.serviceId);
               const start = new Date(occ.startsAt);
               const end = new Date(occ.endsAt);
               return (
                 <div className="public-timetable-item" key={occ.id}>
                   <div className="public-timetable-item__time">
-                    <strong>{start.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}</strong>
-                    <span>{end.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}</span>
+                    <strong>
+                      {start.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}
+                    </strong>
+                    <span>
+                      {end.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
                   </div>
                   <div className="public-timetable-item__details">
                     <h4>{svc?.name ?? occ.serviceName ?? "Class Session"}</h4>
                     <p>
-                      Coach: {occ.trainerName ?? "Head Coach"} · {svc?.durationMinutes ?? 45} mins · {occ.availableSpots} spots left
+                      Coach: {occ.trainerName ?? "Trainer TBA"} · {svc?.durationMinutes ?? 45} mins
+                      · {occ.availableSpots} spots left
                     </p>
                   </div>
                   <div className="public-timetable-item__action">
                     <button
                       className="fitos-button fitos-button--primary fitos-button--small"
-                      onClick={() => handleOpenTrial(svc?.name)}
+                      onClick={() => {
+                        setSelectedOccurrenceId(occ.id);
+                        handleOpenTrial(svc?.name);
+                      }}
                       type="button"
                     >
                       Reserve Spot
@@ -249,15 +283,15 @@ export function TenantPublicPage() {
         <div className="public-section__header">
           <span className="public-section__eyebrow">EXPERT TEAM</span>
           <h2 className="public-section__title">Meet Your Instructors</h2>
-          <p className="public-section__desc">Certified performance coaches dedicated to your progress.</p>
+          <p className="public-section__desc">
+            Certified performance coaches dedicated to your progress.
+          </p>
         </div>
 
         <div className="public-coaches-grid">
           {activeCoaches.map((coach) => (
             <Card className="public-coach-card" key={coach.id}>
-              <div className="public-coach-avatar">
-                {coach.displayName[0]}
-              </div>
+              <div className="public-coach-avatar">{coach.displayName[0]}</div>
               <h3>{coach.displayName}</h3>
               <span className="public-coach-role">{coach.roleName}</span>
               <p className="muted" style={{ fontSize: "0.82rem", marginTop: "0.5rem" }}>
@@ -265,7 +299,9 @@ export function TenantPublicPage() {
               </p>
             </Card>
           ))}
-          {activeCoaches.length === 0 && <p className="muted">Instructor profiles have not been published.</p>}
+          {activeCoaches.length === 0 && (
+            <p className="muted">Instructor profiles have not been published.</p>
+          )}
         </div>
       </section>
 
@@ -312,7 +348,9 @@ export function TenantPublicPage() {
         <div className="public-footer__inner">
           <div className="public-footer__brand">
             <FitosLogo height={22} />
-            <p>© {new Date().getFullYear()} {gymName}. Powered by FITOS OS.</p>
+            <p>
+              © {new Date().getFullYear()} {gymName}. Powered by FITOS OS.
+            </p>
           </div>
           <div className="public-footer__links">
             <Link to="/login">Staff Login</Link>
@@ -335,7 +373,10 @@ export function TenantPublicPage() {
                 <Icon name="check" size={36} />
               </div>
               <h3>You're All Set!</h3>
-              <p>We received your request for <strong>{leadForm.interest || "General Trial"}</strong>. Our team will contact you shortly with your confirmation.</p>
+              <p>
+                We received your request for <strong>{leadForm.interest || "General Trial"}</strong>
+                . Our team will contact you shortly with your confirmation.
+              </p>
               <Button onClick={() => setTrialModalOpen(false)} variant="primary">
                 Close
               </Button>
@@ -345,7 +386,18 @@ export function TenantPublicPage() {
               className="form-stack"
               onSubmit={(e) => {
                 e.preventDefault();
-                leadMutation.mutate(leadForm);
+                if (selectedOccurrenceId) {
+                  const occurrence = scheduleItems.find((item) => item.id === selectedOccurrenceId);
+                  reservationMutation.mutate({
+                    occurrenceId: selectedOccurrenceId,
+                    serviceId: occurrence?.serviceId,
+                    reservationType: "class",
+                    firstName: leadForm.firstName.trim(),
+                    lastName: leadForm.lastName.trim() || undefined,
+                    phone: leadForm.phone.trim() || undefined,
+                    email: leadForm.email.trim() || undefined
+                  });
+                } else leadMutation.mutate(leadForm);
               }}
             >
               <div className="form-grid">
@@ -409,7 +461,7 @@ export function TenantPublicPage() {
                 </select>
               </div>
 
-              <ErrorNotice error={leadMutation.error} />
+              <ErrorNotice error={reservationMutation.error ?? leadMutation.error} />
 
               <div className="form-actions">
                 <Button onClick={() => setTrialModalOpen(false)} variant="ghost">
@@ -417,11 +469,11 @@ export function TenantPublicPage() {
                 </Button>
                 <Button
                   disabled={!leadForm.firstName.trim() || !leadForm.phone.trim()}
-                  loading={leadMutation.isPending}
+                  loading={reservationMutation.isPending || leadMutation.isPending}
                   type="submit"
                   variant="primary"
                 >
-                  Confirm Free Pass
+                  {selectedOccurrenceId ? "Confirm Reservation" : "Confirm Free Pass"}
                 </Button>
               </div>
             </form>
@@ -432,6 +484,57 @@ export function TenantPublicPage() {
   );
 }
 
-function PublishedSitePage({ site, gymName }: { site: import("@fitos/contracts").SitePageResponse; gymName: string }) {
-  return <div className="public-portal"><header className="public-nav"><div className="public-nav__inner"><div className="public-nav__brand"><FitosLogo height={24} /><span className="public-nav__tenant-badge">{gymName}</span></div><Link className="fitos-button fitos-button--primary fitos-button--small" to="/member">Member Sign In</Link></div></header>{site.sections.map((section, index) => { const heading = typeof section.heading === "string" ? section.heading : ""; const body = typeof section.body === "string" ? section.body : ""; const label = typeof section.label === "string" ? section.label : "Learn more"; return <section className={section.type === "hero" ? "public-hero" : "public-section"} key={`${section.type}-${index}`}><div className="public-section__header"><span className="public-section__eyebrow">{section.type.replace(/_/g, " ").toUpperCase()}</span><h1 className="public-section__title">{heading || site.title}</h1>{body && <p className="public-section__desc">{body}</p>}{section.type === "cta" && <Link className="fitos-button fitos-button--primary" to="/member">{label}</Link>}</div></section>; })}<footer className="public-footer"><div className="public-footer__inner"><p>© {new Date().getFullYear()} {gymName}. Powered by FITOS OS.</p></div></footer></div>;
+function PublishedSitePage({
+  site,
+  gymName
+}: {
+  site: import("@fitos/contracts").SitePageResponse;
+  gymName: string;
+}) {
+  return (
+    <div className="public-portal">
+      <header className="public-nav">
+        <div className="public-nav__inner">
+          <div className="public-nav__brand">
+            <FitosLogo height={24} />
+            <span className="public-nav__tenant-badge">{gymName}</span>
+          </div>
+          <Link className="fitos-button fitos-button--primary fitos-button--small" to="/member">
+            Member Sign In
+          </Link>
+        </div>
+      </header>
+      {site.sections.map((section, index) => {
+        const heading = typeof section.heading === "string" ? section.heading : "";
+        const body = typeof section.body === "string" ? section.body : "";
+        const label = typeof section.label === "string" ? section.label : "Learn more";
+        return (
+          <section
+            className={section.type === "hero" ? "public-hero" : "public-section"}
+            key={`${section.type}-${index}`}
+          >
+            <div className="public-section__header">
+              <span className="public-section__eyebrow">
+                {section.type.replace(/_/g, " ").toUpperCase()}
+              </span>
+              <h1 className="public-section__title">{heading || site.title}</h1>
+              {body && <p className="public-section__desc">{body}</p>}
+              {section.type === "cta" && (
+                <Link className="fitos-button fitos-button--primary" to="/member">
+                  {label}
+                </Link>
+              )}
+            </div>
+          </section>
+        );
+      })}
+      <footer className="public-footer">
+        <div className="public-footer__inner">
+          <p>
+            © {new Date().getFullYear()} {gymName}. Powered by FITOS OS.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
 }

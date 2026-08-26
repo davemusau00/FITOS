@@ -578,3 +578,15 @@
     }
   }
 }
+.fitos-data-table-mobile {
+  display: none;
+}
+@media (max-width: 639px) {
+  .fitos-data-table-wrap:has(.fitos-data-table-mobile) .fitos-data-table {
+    display: none;
+  }
+  .fitos-data-table-mobile {
+    display: grid;
+    gap: 0.75rem;
+  }
+}

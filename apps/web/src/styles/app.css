@@ -1348,6 +1348,227 @@ html, body {
   .member-profile-header__kpis { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* SaaS visual alignment: public and account-entry surfaces share the dashboard language. */
+.saas-public-page {
+  --saas-content: 80rem;
+  background: var(--surface-0) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-sans) !important;
+  min-height: 100dvh;
+}
+.saas-public-page a { color: inherit; }
+.saas-public-page header {
+  background: color-mix(in srgb, var(--surface-0) 91%, transparent) !important;
+  border-color: var(--border-subtle) !important;
+}
+.saas-public-page header > div,
+.saas-public-page > footer > div {
+  max-width: var(--saas-content) !important;
+}
+.saas-landing-page > section {
+  box-sizing: border-box;
+  max-width: none !important;
+  width: 100% !important;
+}
+.saas-landing-page > section > div {
+  box-sizing: border-box;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  max-width: var(--saas-content) !important;
+  width: auto;
+}
+.saas-landing-page > section[id="features"] > div,
+.saas-landing-page > section[id="pricing"] > div,
+.saas-landing-page > section[id="faq"] > div,
+.saas-landing-page > section:last-of-type > div { width: 100%; }
+.saas-public-page nav a,
+.saas-public-page footer a { color: var(--text-secondary) !important; }
+.saas-public-page nav a:hover,
+.saas-public-page footer a:hover { color: var(--fitos-energy) !important; }
+.saas-public-page .fitos-button--primary,
+.saas-public-page a[style*="background"] {
+  background: var(--fitos-energy) !important;
+  border-color: var(--fitos-energy) !important;
+  box-shadow: none !important;
+  color: var(--fitos-jet) !important;
+  display: inline-flex !important;
+  min-width: 0 !important;
+  width: max-content !important;
+}
+.saas-public-page .fitos-button--primary:hover,
+.saas-public-page a[style*="background"]:hover { color: var(--fitos-jet) !important; }
+.saas-landing-page section[id="pricing"] .fitos-button { width: 100% !important; }
+.saas-public-page .fitos-button--secondary { color: var(--text-primary) !important; }
+.saas-public-page [style*="rgba(59, 130, 246"],
+.saas-public-page [style*="#3b82f6"],
+.saas-public-page [style*="#60a5fa"],
+.saas-public-page [style*="#2563eb"] { color: var(--fitos-energy) !important; }
+.saas-public-page [style*="#94a3b8"] { color: var(--text-secondary) !important; }
+.saas-public-page [style*="#cbd5e1"],
+.saas-public-page [style*="#e2e8f0"],
+.saas-public-page [style*="#f1f5f9"],
+.saas-public-page [style*="#f8fafc"] { color: var(--text-primary) !important; }
+.saas-public-page [style*="#64748b"] { color: var(--text-muted) !important; }
+.saas-public-page section[style*="background"],
+.saas-public-page div[style*="background: rgba(15, 23, 42"],
+.saas-public-page div[style*="background: rgba(30, 41, 59"] {
+  background: var(--surface-1) !important;
+  border-color: var(--border-subtle) !important;
+}
+.saas-landing-page h1,
+.saas-landing-page h2,
+.saas-landing-page h3 { letter-spacing: -0.04em !important; }
+.saas-landing-page h1 span {
+  background: none !important;
+  color: var(--fitos-energy) !important;
+  -webkit-text-fill-color: var(--fitos-energy) !important;
+}
+.saas-landing-page section:first-of-type {
+  background: radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--fitos-energy) 9%, transparent), transparent 52%) !important;
+}
+.saas-landing-page section:first-of-type > div:first-child { width: auto !important; }
+.saas-landing-page section:first-of-type h1 { max-width: 54rem !important; margin-left: auto !important; margin-right: auto !important; }
+.saas-landing-page section:first-of-type p { max-width: 42rem !important; margin-left: auto !important; margin-right: auto !important; }
+.saas-landing-page section:first-of-type > div:last-child { margin-top: 0; }
+.saas-landing-page section[id="solutions"] { background: var(--surface-1) !important; }
+.saas-landing-page section[id="solutions"] > div > div:last-child,
+.saas-landing-page section[id="pricing"] > div:last-child,
+.saas-landing-page section[id="features"] > div:last-child { width: 100% !important; }
+.saas-landing-page section[id="solutions"] h2,
+.saas-landing-page section[id="pricing"] h2,
+.saas-landing-page section[id="features"] h2,
+.saas-landing-page section[id="faq"] h2 { color: var(--text-primary) !important; }
+.saas-landing-page section[id="solutions"] button,
+.saas-landing-page section[id="pricing"] button { color: var(--text-primary) !important; }
+.saas-landing-page section[id="solutions"] button[style*="rgba(59, 130, 246"],
+.saas-landing-page section[id="pricing"] button[style*="#3b82f6"] { background: var(--fitos-energy) !important; color: var(--fitos-jet) !important; }
+.saas-landing-page section[id="pricing"] > div:last-child > div { border-color: var(--border-subtle) !important; }
+.saas-landing-page section[id="pricing"] > div:last-child > div:nth-child(2) { border-color: var(--fitos-energy) !important; }
+.saas-landing-page section[id="pricing"] > div:last-child > div > div[style*="#3b82f6"] { background: var(--fitos-energy) !important; color: var(--fitos-jet) !important; }
+.saas-landing-page section[id="faq"] > div:last-child > div { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; }
+.saas-landing-page section[id="faq"] button { color: var(--text-primary) !important; }
+.saas-landing-page section:last-of-type > div { background: var(--surface-1) !important; border-color: var(--border-strong) !important; }
+.saas-landing-page section:last-of-type > div h2 { color: var(--fitos-energy) !important; }
+.saas-configure-page header + div {
+  background: var(--surface-3) !important;
+}
+.saas-configure-page header + div > div { background: var(--fitos-energy) !important; }
+.saas-configure-page main,
+.saas-configure-page form { max-width: 60rem; }
+.saas-configure-page form {
+  background: var(--surface-1) !important;
+  border-color: var(--border-subtle) !important;
+  box-shadow: var(--shadow-panel) !important;
+}
+.saas-configure-page label {
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.saas-configure-page label:has(input[type="checkbox"]) {
+  align-items: center;
+  flex-direction: row;
+  font-weight: 600;
+}
+.saas-configure-page input:not([type="checkbox"]),
+.saas-configure-page select,
+.saas-configure-page textarea,
+.saas-complete-page input {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-control) !important;
+  color: var(--text-primary) !important;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.8rem !important;
+}
+.saas-configure-page input:focus,
+.saas-configure-page select:focus,
+.saas-configure-page textarea:focus { border-color: var(--fitos-energy) !important; outline: none; }
+.saas-configure-page button:not(.fitos-button) {
+  background: var(--surface-3) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius-control) !important;
+  color: var(--text-primary) !important;
+}
+.saas-configure-page button.fitos-button--primary { background: var(--fitos-energy) !important; color: var(--fitos-jet) !important; }
+.saas-configure-page [style*="linear-gradient"],
+.saas-configure-page [style*="#10b981"],
+.saas-configure-page [style*="#059669"] { background: var(--fitos-energy) !important; color: var(--fitos-jet) !important; }
+.saas-complete-page > div {
+  background: var(--surface-1) !important;
+  border-color: var(--border-subtle) !important;
+  box-shadow: var(--shadow-panel) !important;
+}
+
+.signup-page {
+  background: var(--surface-0) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-sans) !important;
+}
+.signup-bg {
+  background: radial-gradient(ellipse 75% 55% at 50% 0%, color-mix(in srgb, var(--fitos-energy) 10%, transparent), transparent 70%) !important;
+}
+.signup-card {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-panel) !important;
+  box-shadow: var(--shadow-panel) !important;
+  max-width: 34rem !important;
+}
+.signup-logo { background: var(--fitos-energy) !important; color: var(--fitos-jet) !important; }
+.signup-brand-name,
+.signup-title,
+.signup-card h1 { color: var(--text-primary) !important; }
+.signup-subtitle,
+.signup-login-link { color: var(--text-secondary) !important; }
+.signup-steps { border-color: var(--border-subtle) !important; }
+.signup-step-dot { background: var(--surface-3) !important; border-color: var(--border-strong) !important; color: var(--text-muted) !important; }
+.signup-step.active .signup-step-dot,
+.signup-step.done .signup-step-dot { background: var(--fitos-energy) !important; border-color: var(--fitos-energy) !important; color: var(--fitos-jet) !important; }
+.signup-step.active .signup-step-label,
+.signup-step.done .signup-step-label { color: var(--fitos-energy) !important; }
+.signup-page .form-group label { color: var(--text-secondary) !important; }
+.signup-page .form-group input,
+.signup-page .form-group select { background: var(--surface-2) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+.signup-page .form-group input:focus,
+.signup-page .form-group select:focus { border-color: var(--fitos-energy) !important; outline: none; }
+.signup-page .btn-primary { background: var(--fitos-energy) !important; color: var(--fitos-jet) !important; }
+.signup-page .btn-outline { background: var(--surface-3) !important; border-color: var(--border-strong) !important; color: var(--text-primary) !important; }
+.signup-page .review-section,
+.signup-page .review-trial,
+.signup-page .login-demo-box { background: var(--surface-2) !important; border-color: var(--border-subtle) !important; }
+
+.onboarding-screen,
+.sub-page { background: var(--surface-0) !important; color: var(--text-primary) !important; }
+.onboarding-topbar { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; }
+.onboarding-step,
+.onboarding-summary-card,
+.sub-plan-card,
+.sub-usage-card,
+.sub-features-card { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; box-shadow: none !important; }
+.onboarding-step:hover { background: var(--surface-2) !important; border-color: var(--border-strong) !important; }
+.onboarding-step--done .onboarding-step__number { background: color-mix(in srgb, var(--fitos-energy) 16%, var(--surface-3)) !important; color: var(--fitos-energy) !important; }
+.onboarding-progress-badge strong,
+.onboarding-hero .page-header__eyebrow,
+.sub-title,
+.sub-header h1 { color: var(--fitos-energy) !important; }
+.btn-upgrade { background: var(--fitos-energy) !important; color: var(--fitos-jet) !important; }
+.feature-item.enabled { border-color: color-mix(in srgb, var(--fitos-energy) 22%, transparent) !important; }
+
+@media (max-width: 700px) {
+  .saas-public-page header > div { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .saas-public-page nav { display: none !important; }
+  .saas-public-page section { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
+  .saas-configure-page form { padding: 1.25rem !important; }
+  .saas-configure-page form > div:last-child { gap: 0.75rem !important; }
+  .saas-configure-page form [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  .signup-card { padding: 1.5rem 1.125rem !important; }
+  .signup-step-label { display: none !important; }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    CRM MEMBER PROFILE HEADER
    ═══════════════════════════════════════════════════════════════════════════ */

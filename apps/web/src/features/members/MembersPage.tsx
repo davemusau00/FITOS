@@ -15,6 +15,7 @@ import {
 } from "@fitos/ui";
 import type { MemberListItem } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
+import { useBranch } from "../../app/branch-context";
 import { PageLoading, ErrorNotice, formatDate } from "../shared";
 
 export function MembersPage() {
@@ -22,26 +23,25 @@ export function MembersPage() {
   const [params, setParams] = useSearchParams();
   const [selectedQuickMember, setSelectedQuickMember] = useState<MemberListItem | null>(null);
   const [activeSegment, setActiveSegment] = useState<string>("all");
+  const { activeBranchId } = useBranch();
 
   const query = params.get("query") ?? "";
   const status = params.get("status") ?? "";
-  const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
-
   const requestParams = useMemo(() => {
     const next = new URLSearchParams();
     if (query) next.set("query", query);
     if (status) next.set("status", status);
     else if (activeSegment === "active") next.set("status", "active");
     else if (activeSegment === "inactive") next.set("status", "inactive");
-    const branch = params.get("branchId");
-    if (branch) next.set("branchId", branch);
+    if (activeBranchId) next.set("branchId", activeBranchId);
     next.set("limit", "100");
     return next;
-  }, [params, query, status, activeSegment]);
+  }, [params, query, status, activeSegment, activeBranchId]);
 
   const members = useQuery({
-    queryKey: ["members", requestParams.toString()],
-    queryFn: () => api.members(requestParams)
+    queryKey: ["members", activeBranchId, requestParams.toString()],
+    queryFn: () => api.members(requestParams),
+    enabled: Boolean(activeBranchId)
   });
 
   const allMembers = members.data?.data ?? [];
@@ -79,7 +79,12 @@ export function MembersPage() {
     {
       id: "memberNumber",
       header: "Member #",
-      cell: (m) => (m.memberNumber ? <span className="member-profile-header__number">#{m.memberNumber}</span> : "—")
+      cell: (m) =>
+        m.memberNumber ? (
+          <span className="member-profile-header__number">#{m.memberNumber}</span>
+        ) : (
+          "—"
+        )
     },
     {
       id: "phone",
@@ -154,7 +159,9 @@ export function MembersPage() {
         </Card>
         <Card className="kpi">
           <span>Retention Rate</span>
-          <strong>{allMembers.length ? `${Math.round((activeCount / allMembers.length) * 100)}%` : "100%"}</strong>
+          <strong>
+            {allMembers.length ? `${Math.round((activeCount / allMembers.length) * 100)}%` : "100%"}
+          </strong>
         </Card>
         <Card className="kpi">
           <span>Inactive / Lapsed</span>
@@ -249,7 +256,10 @@ export function MembersPage() {
         >
           <div className="form-stack">
             <div className="table-member-cell" style={{ padding: "0.5rem 0" }}>
-              <div className="table-member-avatar" style={{ width: "3rem", height: "3rem", fontSize: "1.1rem" }}>
+              <div
+                className="table-member-avatar"
+                style={{ width: "3rem", height: "3rem", fontSize: "1.1rem" }}
+              >
                 {selectedQuickMember.firstName[0]}
                 {selectedQuickMember.lastName?.[0]}
               </div>

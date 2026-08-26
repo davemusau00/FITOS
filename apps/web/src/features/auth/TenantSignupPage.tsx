@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api/client";
+import { FitosLogo } from "../../app/logo";
 
 const STEPS = ["Gym Details", "Location", "Owner Account", "Review"];
 
@@ -97,8 +98,7 @@ export default function TenantSignupPage() {
       <div className="signup-bg" />
       <div className="signup-card">
         <div className="signup-brand">
-          <div className="signup-logo">F</div>
-          <span className="signup-brand-name">FITOS</span>
+          <FitosLogo height={28} />
         </div>
         <h1 className="signup-title">Start your free 14-day trial</h1>
         <p className="signup-subtitle">No credit card required. Full access to all features.</p>

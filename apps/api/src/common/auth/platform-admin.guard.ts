@@ -52,7 +52,7 @@ export class PlatformAdminGuard implements CanActivate {
     }
 
     // Attach to request for audit / logging use
-    (request as unknown as Record<string, unknown>).platformActor = { userId: platformUser.userId };
+    request.platformActor = platformUser;
     return true;
   }
 }

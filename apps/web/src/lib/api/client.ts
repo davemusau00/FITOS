@@ -102,7 +102,6 @@ import type {
   CreateTherapySessionRequest
 } from "@fitos/contracts";
 
-
 export class ApiClientError extends Error {
   constructor(
     message: string,
@@ -250,6 +249,8 @@ export const api = {
 
   // Services & Rooms
   services: () => request<ServiceResponse[]>("/services"),
+  servicesByBranch: (branchId: string) =>
+    request<ServiceResponse[]>(`/services?branchId=${encodeURIComponent(branchId)}`),
   service: (id: string) => request<ServiceResponse>(`/services/${id}`),
   createService: (payload: CreateServiceRequest) =>
     request<ServiceResponse>("/services", {
@@ -456,22 +457,28 @@ export const api = {
     }),
 
   // ── Public Tenant (unauthenticated) ───────────────────────────────────────
-  publicTenantInfo: (slug: string) =>
-    request<PublicTenantInfoResponse>(`/public/${slug}`),
-  publicServices: (slug: string) =>
-    request<PublicServiceResponse[]>(`/public/${slug}/services`),
-  publicCoaches: (slug: string) =>
-    request<PublicCoachResponse[]>(`/public/${slug}/coaches`),
+  publicTenantInfo: (slug: string) => request<PublicTenantInfoResponse>(`/public/${slug}`),
+  publicServices: (slug: string) => request<PublicServiceResponse[]>(`/public/${slug}/services`),
+  publicCoaches: (slug: string) => request<PublicCoachResponse[]>(`/public/${slug}/coaches`),
   publicSchedule: (slug: string, daysAhead?: number) =>
     request<PublicScheduleOccurrenceResponse[]>(
       `/public/${slug}/schedule${daysAhead ? `?daysAhead=${daysAhead}` : ""}`
     ),
   publicCreateLead: (
     slug: string,
-    payload: { firstName: string; lastName?: string; phone?: string; email?: string; interest?: string }
+    payload: {
+      firstName: string;
+      lastName?: string;
+      phone?: string;
+      email?: string;
+      interest?: string;
+    }
   ) => request<LeadResponse>(`/public/${slug}/leads`, { method: "POST", body: json(payload) }),
   publicCreateReservation: (slug: string, payload: CreatePublicReservationRequest) =>
-    request<PublicReservationResponse>(`/public/${encodeURIComponent(slug)}/reservations`, { method: "POST", body: json(payload) }),
+    request<PublicReservationResponse>(`/public/${encodeURIComponent(slug)}/reservations`, {
+      method: "POST",
+      body: json(payload)
+    }),
 
   // ── Member Portal ─────────────────────────────────────────────────────────
   memberLogin: (identifier: string, password: string) =>
@@ -482,8 +489,13 @@ export const api = {
   memberLogout: () => request<{ ok: boolean }>("/member-auth/logout", { method: "POST" }),
   memberMe: () => request<MemberProfileResponse>("/member-auth/me"),
   memberPortalOverview: () => request<MemberPortalOverviewResponse>("/member-auth/overview"),
-  memberBook: (occurrenceId: string) => request<BookingResponse>("/member-auth/book", { method: "POST", body: json({ occurrenceId }) }),
-  memberCancel: (bookingId: string, reason = "Member self-cancelled") => request<BookingResponse>("/member-auth/cancel", { method: "POST", body: json({ bookingId, reason }) }),
+  memberBook: (occurrenceId: string) =>
+    request<BookingResponse>("/member-auth/book", { method: "POST", body: json({ occurrenceId }) }),
+  memberCancel: (bookingId: string, reason = "Member self-cancelled") =>
+    request<BookingResponse>("/member-auth/cancel", {
+      method: "POST",
+      body: json({ bookingId, reason })
+    }),
 
   // ── Platform / SaaS Self-Service ─────────────────────────────────────────
   signupTenant: (payload: SaaSTenantSignupRequest) =>
@@ -494,22 +506,53 @@ export const api = {
   tenantSubscription: () => request<TenantSubscriptionResponse>("/platform/subscription"),
   tenantUsageQuotas: () => request<UsageQuotaMetricsResponse>("/platform/usage"),
   featureFlags: () => request<FeatureFlagResponse[]>("/platform/feature-flags"),
-  saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) => request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", { method: "POST", body: json(payload) }),
-  submitImplementationInquiry: (payload: ImplementationInquiryDraft) => request<ImplementationInquiryResponse>("/platform/implementation-inquiries/submit", { method: "POST", body: json(payload) }),
-  resumeImplementationInquiry: (id: string, token: string) => request<ImplementationInquiryResponse>(`/platform/implementation-inquiries/${id}/resume?token=${encodeURIComponent(token)}`),
-  emailInquiryResumeLink: (id: string, email: string) => request<{ ok: boolean; message: string }>(`/platform/implementation-inquiries/${id}/email-link`, { method: "POST", body: json({ email }) }),
-  implementationInquiries: (status?: ImplementationInquiryStatus) => request<ImplementationInquiryResponse[]>(`/platform/implementation-inquiries${status ? `?status=${status}` : ""}`),
-  implementationInquiry: (id: string) => request<ImplementationInquiryResponse | null>(`/platform/implementation-inquiries/${id}`),
-  updateImplementationInquiryStatus: (id: string, status: ImplementationInquiryStatus) => request<ImplementationInquiryResponse | null>(`/platform/implementation-inquiries/${id}/status`, { method: "PATCH", body: json({ status }) }),
-  implementationSeedManifest: (id: string) => request<TenantSeedManifest | null>(`/platform/implementation-inquiries/${id}/seed-manifest`),
+  saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) =>
+    request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", {
+      method: "POST",
+      body: json(payload)
+    }),
+  submitImplementationInquiry: (payload: ImplementationInquiryDraft) =>
+    request<ImplementationInquiryResponse>("/platform/implementation-inquiries/submit", {
+      method: "POST",
+      body: json(payload)
+    }),
+  resumeImplementationInquiry: (id: string, token: string) =>
+    request<ImplementationInquiryResponse>(
+      `/platform/implementation-inquiries/${id}/resume?token=${encodeURIComponent(token)}`
+    ),
+  emailInquiryResumeLink: (id: string, email: string) =>
+    request<{ ok: boolean; message: string }>(
+      `/platform/implementation-inquiries/${id}/email-link`,
+      { method: "POST", body: json({ email }) }
+    ),
+  implementationInquiries: (status?: ImplementationInquiryStatus) =>
+    request<ImplementationInquiryResponse[]>(
+      `/platform/implementation-inquiries${status ? `?status=${status}` : ""}`
+    ),
+  implementationInquiry: (id: string) =>
+    request<ImplementationInquiryResponse | null>(`/platform/implementation-inquiries/${id}`),
+  updateImplementationInquiryStatus: (id: string, status: ImplementationInquiryStatus) =>
+    request<ImplementationInquiryResponse | null>(
+      `/platform/implementation-inquiries/${id}/status`,
+      { method: "PATCH", body: json({ status }) }
+    ),
+  implementationSeedManifest: (id: string) =>
+    request<TenantSeedManifest | null>(`/platform/implementation-inquiries/${id}/seed-manifest`),
   sitePages: () => request<SitePageResponse[]>("/sites/pages"),
-  saveSitePage: (payload: SaveSitePageRequest) => request<SitePageResponse>("/sites/pages", { method: "POST", body: json(payload) }),
-  publishSitePage: (id: string) => request<SitePageResponse>(`/sites/pages/${id}/publish`, { method: "POST", body: json({}) }),
-  publicSitePage: (tenantSlug: string, pageSlug = "home") => request<SitePageResponse>(`/public/${encodeURIComponent(tenantSlug)}/site/${encodeURIComponent(pageSlug)}`),
+  saveSitePage: (payload: SaveSitePageRequest) =>
+    request<SitePageResponse>("/sites/pages", { method: "POST", body: json(payload) }),
+  publishSitePage: (id: string) =>
+    request<SitePageResponse>(`/sites/pages/${id}/publish`, { method: "POST", body: json({}) }),
+  publicSitePage: (tenantSlug: string, pageSlug = "home") =>
+    request<SitePageResponse>(
+      `/public/${encodeURIComponent(tenantSlug)}/site/${encodeURIComponent(pageSlug)}`
+    ),
 
   // ── Equipment & Resource Scheduling ─────────────────────────────────────
   equipmentAssets: (branchId?: string) =>
-    request<EquipmentAssetResponse[]>(`/equipment/assets${branchId ? `?branchId=${branchId}` : ""}`),
+    request<EquipmentAssetResponse[]>(
+      `/equipment/assets${branchId ? `?branchId=${branchId}` : ""}`
+    ),
   equipmentAsset: (assetId: string) =>
     request<EquipmentAssetResponse>(`/equipment/assets/${assetId}`),
   createEquipmentAsset: (payload: CreateEquipmentAssetRequest) =>
@@ -540,14 +583,19 @@ export const api = {
     }),
   serviceEquipmentRequirements: (serviceId: string) =>
     request<ServiceEquipmentRequirement[]>(`/services/${serviceId}/equipment-requirements`),
-  replaceServiceEquipmentRequirements: (serviceId: string, requirements: ServiceEquipmentRequirement[]) =>
-    request<ServiceEquipmentRequirement[]>(`/services/${serviceId}/equipment-requirements`, { method: "POST", body: json({ requirements }) }),
+  replaceServiceEquipmentRequirements: (
+    serviceId: string,
+    requirements: ServiceEquipmentRequirement[]
+  ) =>
+    request<ServiceEquipmentRequirement[]>(`/services/${serviceId}/equipment-requirements`, {
+      method: "POST",
+      body: json({ requirements })
+    }),
 
   // ── Inventory & Consumables ─────────────────────────────────────────────
   inventoryItems: (branchId?: string) =>
     request<InventoryItemResponse[]>(`/inventory/items${branchId ? `?branchId=${branchId}` : ""}`),
-  inventoryItem: (itemId: string) =>
-    request<InventoryItemResponse>(`/inventory/items/${itemId}`),
+  inventoryItem: (itemId: string) => request<InventoryItemResponse>(`/inventory/items/${itemId}`),
   createInventoryItem: (payload: CreateInventoryItemRequest) =>
     request<InventoryItemResponse>("/inventory/items", {
       method: "POST",
@@ -576,21 +624,69 @@ export const api = {
       method: "POST",
       body: json(payload)
     }),
-  serviceInventoryBom: (serviceId: string) => request<import("@fitos/contracts").ServiceInventoryRequirement[]>(`/inventory/bom/${serviceId}`),
-  replaceServiceInventoryBom: (serviceId: string, requirements: import("@fitos/contracts").ServiceInventoryRequirement[]) => request<import("@fitos/contracts").ServiceInventoryRequirement[]>(`/inventory/bom/${serviceId}`, { method: "POST", body: json({ requirements }) }),
-  consumeInventory: (payload: { branchId: string; serviceId?: string; referenceType: string; referenceId: string; items: import("@fitos/contracts").ServiceInventoryRequirement[] }) => request<import("@fitos/contracts").InventoryConsumptionResponse[]>("/inventory/consume", { method: "POST", body: json(payload) }),
-  inventoryLots: (itemId?: string) => request<import("@fitos/contracts").InventoryLotResponse[]>(`/inventory/lots${itemId ? `?itemId=${itemId}` : ""}`),
-  createInventoryLot: (payload: import("@fitos/contracts").CreateInventoryLotRequest) => request<import("@fitos/contracts").InventoryLotResponse>("/inventory/lots", { method: "POST", body: json(payload) }),
-  expiringInventoryLots: (days?: number) => request<import("@fitos/contracts").InventoryLotResponse[]>(`/inventory/lots/expiring${days ? `?days=${days}` : ""}`),
-  stocktakes: (branchId?: string) => request<import("@fitos/contracts").StocktakeResponse[]>(`/inventory/stocktakes${branchId ? `?branchId=${branchId}` : ""}`),
-  stocktake: (id: string) => request<import("@fitos/contracts").StocktakeResponse>(`/inventory/stocktakes/${id}`),
-  createStocktake: (payload: import("@fitos/contracts").CreateStocktakeRequest) => request<import("@fitos/contracts").StocktakeResponse>("/inventory/stocktakes", { method: "POST", body: json(payload) }),
-  recordStocktakeCount: (id: string, payload: import("@fitos/contracts").RecordStocktakeCountRequest) => request<import("@fitos/contracts").StocktakeResponse>(`/inventory/stocktakes/${id}/count`, { method: "POST", body: json(payload) }),
-  completeStocktake: (id: string) => request<import("@fitos/contracts").StocktakeResponse>(`/inventory/stocktakes/${id}/complete`, { method: "POST", body: json({}) }),
+  serviceInventoryBom: (serviceId: string) =>
+    request<import("@fitos/contracts").ServiceInventoryRequirement[]>(
+      `/inventory/bom/${serviceId}`
+    ),
+  replaceServiceInventoryBom: (
+    serviceId: string,
+    requirements: import("@fitos/contracts").ServiceInventoryRequirement[]
+  ) =>
+    request<import("@fitos/contracts").ServiceInventoryRequirement[]>(
+      `/inventory/bom/${serviceId}`,
+      { method: "POST", body: json({ requirements }) }
+    ),
+  consumeInventory: (payload: {
+    branchId: string;
+    serviceId?: string;
+    referenceType: string;
+    referenceId: string;
+    items: import("@fitos/contracts").ServiceInventoryRequirement[];
+  }) =>
+    request<import("@fitos/contracts").InventoryConsumptionResponse[]>("/inventory/consume", {
+      method: "POST",
+      body: json(payload)
+    }),
+  inventoryLots: (itemId?: string) =>
+    request<import("@fitos/contracts").InventoryLotResponse[]>(
+      `/inventory/lots${itemId ? `?itemId=${itemId}` : ""}`
+    ),
+  createInventoryLot: (payload: import("@fitos/contracts").CreateInventoryLotRequest) =>
+    request<import("@fitos/contracts").InventoryLotResponse>("/inventory/lots", {
+      method: "POST",
+      body: json(payload)
+    }),
+  expiringInventoryLots: (days?: number) =>
+    request<import("@fitos/contracts").InventoryLotResponse[]>(
+      `/inventory/lots/expiring${days ? `?days=${days}` : ""}`
+    ),
+  stocktakes: (branchId?: string) =>
+    request<import("@fitos/contracts").StocktakeResponse[]>(
+      `/inventory/stocktakes${branchId ? `?branchId=${branchId}` : ""}`
+    ),
+  stocktake: (id: string) =>
+    request<import("@fitos/contracts").StocktakeResponse>(`/inventory/stocktakes/${id}`),
+  createStocktake: (payload: import("@fitos/contracts").CreateStocktakeRequest) =>
+    request<import("@fitos/contracts").StocktakeResponse>("/inventory/stocktakes", {
+      method: "POST",
+      body: json(payload)
+    }),
+  recordStocktakeCount: (
+    id: string,
+    payload: import("@fitos/contracts").RecordStocktakeCountRequest
+  ) =>
+    request<import("@fitos/contracts").StocktakeResponse>(`/inventory/stocktakes/${id}/count`, {
+      method: "POST",
+      body: json(payload)
+    }),
+  completeStocktake: (id: string) =>
+    request<import("@fitos/contracts").StocktakeResponse>(`/inventory/stocktakes/${id}/complete`, {
+      method: "POST",
+      body: json({})
+    }),
 
   // ── FITOS Assess & Performance Profiles ─────────────────────────────────
-  assessmentDefinitions: () =>
-    request<AssessmentDefinitionResponse[]>("/assessments/definitions"),
+  assessmentDefinitions: () => request<AssessmentDefinitionResponse[]>("/assessments/definitions"),
   createAssessmentDefinition: (payload: CreateAssessmentDefinitionRequest) =>
     request<AssessmentDefinitionResponse>("/assessments/definitions", {
       method: "POST",
@@ -616,20 +712,25 @@ export const api = {
     fileName?: string;
     fileContent: string;
   }) =>
-    request<{ session: AssessmentSessionResponse; rawChecksum: string; extractedMetricsCount: number }>(
-      "/assessments/import-device-data",
-      { method: "POST", body: json(payload) }
-    ),
+    request<{
+      session: AssessmentSessionResponse;
+      rawChecksum: string;
+      extractedMetricsCount: number;
+    }>("/assessments/import-device-data", { method: "POST", body: json(payload) }),
   memberPerformanceProfile: (memberId: string) =>
     request<MemberPerformanceProfileResponse>(`/assessments/members/${memberId}/profile`),
 
   // ── FITOS Therapy & Recovery ─────────────────────────────────────────────
-  therapyModalities: () =>
-    request<TherapyModalityResponse[]>("/therapy/modalities"),
+  therapyModalities: () => request<TherapyModalityResponse[]>("/therapy/modalities"),
   createTherapyModality: (payload: CreateTherapyModalityRequest) =>
-    request<TherapyModalityResponse>("/therapy/modalities", { method: "POST", body: json(payload) }),
+    request<TherapyModalityResponse>("/therapy/modalities", {
+      method: "POST",
+      body: json(payload)
+    }),
   therapyProtocols: (modalityCode?: string) =>
-    request<TherapyProtocolResponse[]>(`/therapy/protocols${modalityCode ? `?modalityCode=${modalityCode}` : ""}`),
+    request<TherapyProtocolResponse[]>(
+      `/therapy/protocols${modalityCode ? `?modalityCode=${modalityCode}` : ""}`
+    ),
   createTherapyProtocol: (payload: CreateTherapyProtocolRequest) =>
     request<TherapyProtocolResponse>("/therapy/protocols", { method: "POST", body: json(payload) }),
   therapySessions: (memberId?: string, branchId?: string) => {

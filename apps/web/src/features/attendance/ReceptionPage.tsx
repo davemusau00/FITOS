@@ -2,38 +2,42 @@ import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Icon, StatusBadge } from "@fitos/ui";
 import type { MemberListItem } from "@fitos/contracts";
-import { useAuth } from "../../app/auth";
+import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
 import { ErrorNotice } from "../shared";
 
 export function ReceptionPage() {
-  const { auth } = useAuth();
+  const { activeBranchId } = useBranch();
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [checkedIn, setCheckedIn] = useState<Set<string>>(new Set());
 
-  const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
-  const activeBranchId = auth?.selectedBranchId ?? auth?.branches[0]?.id ?? branches.data?.[0]?.id ?? "";
-
   const members = useQuery({
-    queryKey: ["members", "reception", searchQuery],
+    queryKey: ["members", activeBranchId, "reception", searchQuery],
     queryFn: () =>
-      api.members(new URLSearchParams({ query: searchQuery, limit: "8" })),
-    enabled: searchQuery.length >= 2
+      api.members(
+        new URLSearchParams({ query: searchQuery, branchId: activeBranchId, limit: "8" })
+      ),
+    enabled: searchQuery.length >= 2 && Boolean(activeBranchId)
   });
 
   const occurrences = useQuery({
-    queryKey: ["schedule", "today"],
+    queryKey: ["schedule", activeBranchId, "today"],
     queryFn: () => {
       const today = new Date().toISOString().split("T")[0]!;
       return api.scheduleOccurrences(
-        new URLSearchParams({ from: today, to: today, limit: "50" })
+        new URLSearchParams({ from: today, to: today, branchId: activeBranchId, limit: "50" })
       );
-    }
+    },
+    enabled: Boolean(activeBranchId)
   });
 
-  const services = useQuery({ queryKey: ["services"], queryFn: api.services });
+  const services = useQuery({
+    queryKey: ["services", activeBranchId],
+    queryFn: () => api.servicesByBranch(activeBranchId),
+    enabled: Boolean(activeBranchId)
+  });
   const sessionBookings = useQuery({
     queryKey: ["bookings", "reception", activeBranchId],
     queryFn: () => api.bookings(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
@@ -42,9 +46,8 @@ export function ReceptionPage() {
 
   const checkInMutation = useMutation({
     mutationFn: (memberId: string) => {
-      const branchId = activeBranchId || branches.data?.[0]?.id;
-      if (!branchId) throw new Error("No branch selected.");
-      return api.checkIn({ branchId, memberId });
+      if (!activeBranchId) throw new Error("No branch selected.");
+      return api.checkIn({ branchId: activeBranchId, memberId });
     },
     onSuccess: (_data, memberId) => {
       setCheckedIn((prev) => new Set([...prev, memberId]));
@@ -56,7 +59,11 @@ export function ReceptionPage() {
   const todayOccurrences = occurrences.data?.data ?? [];
   const confirmedByOccurrence = new Map<string, number>();
   for (const booking of sessionBookings.data?.data ?? []) {
-    if (booking.status === "confirmed") confirmedByOccurrence.set(booking.occurrenceId, (confirmedByOccurrence.get(booking.occurrenceId) ?? 0) + 1);
+    if (booking.status === "confirmed")
+      confirmedByOccurrence.set(
+        booking.occurrenceId,
+        (confirmedByOccurrence.get(booking.occurrenceId) ?? 0) + 1
+      );
   }
   const now = new Date();
 
@@ -184,9 +191,7 @@ export function ReceptionPage() {
                 const end = new Date(occ.endsAt);
                 const isNow = start <= now && end >= now;
                 const isUpcoming = start > now;
-                const minutesUntilStart = Math.round(
-                  (start.getTime() - now.getTime()) / 60000
-                );
+                const minutesUntilStart = Math.round((start.getTime() - now.getTime()) / 60000);
                 return (
                   <Card
                     className={`reception-session-card${isNow ? " reception-session-card--live" : ""}`}
@@ -198,9 +203,7 @@ export function ReceptionPage() {
                         LIVE NOW
                       </div>
                     )}
-                    <div className="reception-session-card__name">
-                      {service?.name ?? "Class"}
-                    </div>
+                    <div className="reception-session-card__name">{service?.name ?? "Class"}</div>
                     <div className="reception-session-card__time">
                       {start.toLocaleTimeString("en-KE", {
                         hour: "2-digit",
@@ -216,14 +219,19 @@ export function ReceptionPage() {
                       {(() => {
                         const booked = confirmedByOccurrence.get(occ.id) ?? 0;
                         const capacity = occ.effectiveCapacity ?? occ.capacity;
-                        const percentage = capacity > 0 ? Math.min(100, Math.round((booked / capacity) * 100)) : 0;
-                        return <>
-                      <div
-                        className="reception-session-capacity__bar"
-                        style={{ width: `${percentage}%` }}
-                      />
-                      <span>{booked} / {capacity} booked</span>
-                        </>;
+                        const percentage =
+                          capacity > 0 ? Math.min(100, Math.round((booked / capacity) * 100)) : 0;
+                        return (
+                          <>
+                            <div
+                              className="reception-session-capacity__bar"
+                              style={{ width: `${percentage}%` }}
+                            />
+                            <span>
+                              {booked} / {capacity} booked
+                            </span>
+                          </>
+                        );
                       })()}
                     </div>
                     {isUpcoming && minutesUntilStart > 0 && (

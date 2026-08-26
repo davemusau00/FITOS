@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Icon, StatusBadge, Card, EmptyState, Button } from "@fitos/ui";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
+import { useBranch } from "../../app/branch-context";
 import { PageLoading, ErrorNotice, formatDateTime } from "../shared";
 
 const queryKeys = {
@@ -17,10 +18,12 @@ const queryKeys = {
 
 export function OverviewPage() {
   const { auth } = useAuth();
+  const { activeBranchId, activeBranch } = useBranch();
 
   const members = useQuery({
-    queryKey: queryKeys.members(""),
-    queryFn: () => api.members(new URLSearchParams({ limit: "10" }))
+    queryKey: ["members", activeBranchId, "overview"],
+    queryFn: () => api.members(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
+    enabled: Boolean(activeBranchId)
   });
 
   const branches = useQuery({ queryKey: queryKeys.branches, queryFn: api.branches });
@@ -32,34 +35,34 @@ export function OverviewPage() {
   });
 
   const bookings = useQuery({
-    queryKey: queryKeys.bookings,
-    queryFn: () => api.bookings(new URLSearchParams({ limit: "6" })),
+    queryKey: ["bookings", activeBranchId, "overview"],
+    queryFn: () => api.bookings(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
     enabled: can(auth, "booking:read")
   });
 
   const services = useQuery({
-    queryKey: queryKeys.services,
-    queryFn: api.services,
+    queryKey: ["services", activeBranchId, "overview"],
+    queryFn: () => api.servicesByBranch(activeBranchId),
     enabled: can(auth, "service:read")
   });
 
   const leads = useQuery({
-    queryKey: queryKeys.leads,
-    queryFn: () => api.leads(new URLSearchParams({ limit: "5" })),
+    queryKey: ["leads", activeBranchId, "overview"],
+    queryFn: () => api.leads(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
     enabled: can(auth, "lead:read")
   });
 
   const attendance = useQuery({
-    queryKey: queryKeys.attendance,
-    queryFn: () => api.attendanceRecords(new URLSearchParams({ limit: "5" })),
+    queryKey: ["attendance", activeBranchId, "overview"],
+    queryFn: () =>
+      api.attendanceRecords(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
     enabled: can(auth, "attendance:read")
   });
 
   if (members.isLoading || branches.isLoading) return <PageLoading />;
 
   const totalMembers = members.data?.data.length ?? 0;
-  const activeMembers =
-    members.data?.data.filter((m) => m.status === "active").length ?? 0;
+  const activeMembers = members.data?.data.filter((m) => m.status === "active").length ?? 0;
   const totalBookings = bookings.data?.data.length ?? 0;
   const totalServices = services.data?.length ?? 0;
   const totalStaff = staff.data?.length ?? 0;
@@ -80,10 +83,11 @@ export function OverviewPage() {
         <div className="page-header__left">
           <span className="page-header__eyebrow">Today at FITOS • {todayFormatted}</span>
           <h1>
-            Welcome back, <span className="today-greeting__name">{auth?.user.displayName || "Admin"}</span>
+            Welcome back,{" "}
+            <span className="today-greeting__name">{auth?.user.displayName || "Admin"}</span>
           </h1>
           <p className="page-header__desc">
-            Here is your live operational overview for {branches.data?.[0]?.name ?? "your business"}.
+            Here is your live operational overview for {activeBranch?.name ?? "your business"}.
           </p>
         </div>
 
@@ -100,13 +104,7 @@ export function OverviewPage() {
       </div>
 
       <ErrorNotice
-        error={
-          members.error ??
-          branches.error ??
-          staff.error ??
-          bookings.error ??
-          services.error
-        }
+        error={members.error ?? branches.error ?? staff.error ?? bookings.error ?? services.error}
       />
 
       {/* ── 6-Stat KPI Card Row (Design Truth: Screen 1) ── */}
@@ -123,41 +121,31 @@ export function OverviewPage() {
         <div className="stat-card">
           <span className="stat-card__label">Bookings</span>
           <strong className="stat-card__value">{totalBookings}</strong>
-          <span className="stat-card__delta stat-card__delta--up">
-            ↑ 24% vs last 7 days
-          </span>
+          <span className="stat-card__delta stat-card__delta--up">↑ 24% vs last 7 days</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card__label">Services</span>
           <strong className="stat-card__value">{totalServices}</strong>
-          <span className="stat-card__delta stat-card__delta--neutral">
-            Active programs
-          </span>
+          <span className="stat-card__delta stat-card__delta--neutral">Active programs</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card__label">Leads & CRM</span>
           <strong className="stat-card__value">{totalLeads}</strong>
-          <span className="stat-card__delta stat-card__delta--up">
-            In active funnel
-          </span>
+          <span className="stat-card__delta stat-card__delta--up">In active funnel</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card__label">Team / Staff</span>
           <strong className="stat-card__value">{totalStaff || "—"}</strong>
-          <span className="stat-card__delta stat-card__delta--neutral">
-            Coaches & Admin
-          </span>
+          <span className="stat-card__delta stat-card__delta--neutral">Coaches & Admin</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card__label">Branches</span>
           <strong className="stat-card__value">{totalBranches}</strong>
-          <span className="stat-card__delta stat-card__delta--neutral">
-            Operating units
-          </span>
+          <span className="stat-card__delta stat-card__delta--neutral">Operating units</span>
         </div>
       </section>
 
@@ -208,7 +196,13 @@ export function OverviewPage() {
                             </span>
                           </td>
                           <td>
-                            <span style={{ color: "var(--text-secondary)", fontSize: "0.78rem", textTransform: "capitalize" }}>
+                            <span
+                              style={{
+                                color: "var(--text-secondary)",
+                                fontSize: "0.78rem",
+                                textTransform: "capitalize"
+                              }}
+                            >
                               {b.source.replace("_", " ")}
                             </span>
                           </td>
@@ -249,7 +243,12 @@ export function OverviewPage() {
                 {members.data.data.slice(0, 5).map((member) => (
                   <li key={member.id}>
                     <Link
-                      style={{ display: "flex", alignItems: "center", gap: "0.625rem", textDecoration: "none" }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.625rem",
+                        textDecoration: "none"
+                      }}
                       to={`/app/members/${member.id}`}
                     >
                       <div className="member-cell__avatar">
@@ -380,11 +379,11 @@ export function OverviewPage() {
                   <span className="goal-item__label">Completion</span>
                   <span className="goal-item__pct">
                     {Math.round(
-                      ((branches.data?.length ? 25 : 0) +
+                      (branches.data?.length ? 25 : 0) +
                         (services.data?.length ? 25 : 0) +
                         (members.data?.data.length ? 25 : 0) +
-                        (bookings.data?.data.length ? 25 : 0)))
-                    }
+                        (bookings.data?.data.length ? 25 : 0)
+                    )}
                     %
                   </span>
                 </div>

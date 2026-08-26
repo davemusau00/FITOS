@@ -74,7 +74,7 @@ export function FitosLandingPage() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg, #090d16)", color: "var(--color-text, #f1f5f9)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div className="saas-public-page saas-landing-page">
       {/* ── Top Navigation ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(16px)", backgroundColor: "rgba(9, 13, 22, 0.85)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ maxWidth: "80rem", margin: "0 auto", padding: "1rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

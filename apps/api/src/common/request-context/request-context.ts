@@ -7,4 +7,5 @@ export interface FitosRequest extends Request {
   actor?: RequestActor;
   sessionToken?: string;
   session?: ResolvedSession;
+  platformActor?: { userId: string; displayName?: string; email?: string | null };
 }

@@ -1,11 +1,30 @@
-import { Body, Controller, Get, Inject, NotFoundException, Param, Patch, Post, Query, Req, Res, UnauthorizedException } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+  UnauthorizedException
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { z } from "zod";
 import type { RequestActor, SaaSTenantSignupRequest } from "@fitos/contracts";
 import { createHash } from "node:crypto";
-import { ScryptPasswordHasher, createCsrfToken, createOpaqueSessionToken, hashSessionToken } from "@fitos/auth";
+import {
+  ScryptPasswordHasher,
+  createCsrfToken,
+  createOpaqueSessionToken,
+  hashSessionToken
+} from "@fitos/auth";
 import { Public } from "../../common/auth/public.decorator.js";
+import { AuthMode } from "../../common/auth/auth-mode.decorator.js";
 import { Actor } from "../../common/request-context/actor.decorator.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository } from "../../ports/fitos-repository.js";
@@ -62,16 +81,11 @@ const cookieOptions = () => ({
 @ApiTags("platform")
 @Controller("platform")
 export class PlatformController {
-  constructor(
-    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
-  ) {}
+  constructor(@Inject(FitosRepositoryToken) private readonly repository: FitosRepository) {}
 
   @Public()
   @Post("signup")
-  async signup(
-    @Body() body: unknown,
-    @Res({ passthrough: true }) response: Response
-  ) {
+  async signup(@Body() body: unknown, @Res({ passthrough: true }) response: Response) {
     const input = signupSchema.parse(body) as SaaSTenantSignupRequest;
     const passwordHash = await hasher.hash(input.password);
     const result = await this.repository.signupTenant(input, passwordHash);
@@ -93,6 +107,7 @@ export class PlatformController {
   }
 
   @Public()
+  @AuthMode("public")
   @Post("auth/login")
   async platformAdminLogin(@Body() body: unknown) {
     const { email, password } = platformLoginSchema.parse(body);
@@ -109,20 +124,55 @@ export class PlatformController {
     // Generate a platform bearer token
     const rawToken = createOpaqueSessionToken();
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+    const expiresAt = new Date(
+      Date.now() + Number(process.env.PLATFORM_TOKEN_TTL_SECONDS ?? 28_800) * 1_000
+    ).toISOString();
     await this.repository.createPlatformAdminToken({
       userId: platformUser.id,
       tokenHash,
-      expiresAt: new Date(Date.now() + Number(process.env.PLATFORM_TOKEN_TTL_SECONDS ?? 28_800) * 1_000).toISOString()
+      expiresAt
     });
     return {
       token: rawToken,
-      tokenHash,
+      expiresAt,
       user: {
         id: platformUser.id,
         displayName: platformUser.displayName,
         email: platformUser.email
       }
     };
+  }
+
+  @Post("auth/logout")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async platformAdminLogout(@Req() request: FitosRequest) {
+    const rawToken = request.header("x-platform-token");
+    if (rawToken)
+      await this.repository.revokePlatformAdminToken(
+        createHash("sha256").update(rawToken).digest("hex"),
+        new Date().toISOString()
+      );
+    return { ok: true };
+  }
+
+  @Post("auth/revoke-all")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async revokeAllPlatformTokens(@Req() request: FitosRequest) {
+    if (request.platformActor)
+      await this.repository.revokeAllPlatformAdminTokens(
+        request.platformActor.userId,
+        new Date().toISOString()
+      );
+    return { ok: true };
+  }
+
+  @Get("auth/me")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  platformAdminMe(@Req() request: FitosRequest) {
+    return request.platformActor;
   }
 
   @Public()
@@ -146,10 +196,7 @@ export class PlatformController {
 
   @Public()
   @Get("implementation-inquiries/:id/resume")
-  async resumeInquiry(
-    @Param("id") id: string,
-    @Query("token") token: string
-  ) {
+  async resumeInquiry(@Param("id") id: string, @Query("token") token: string) {
     if (!token) throw new UnauthorizedException("Resume token is required.");
     const inquiry = await this.repository.getImplementationInquiryByToken(id, token);
     if (!inquiry) throw new NotFoundException("Draft inquiry not found or resume token expired.");
@@ -158,10 +205,7 @@ export class PlatformController {
 
   @Public()
   @Post("implementation-inquiries/:id/email-link")
-  async emailResumeLink(
-    @Param("id") id: string,
-    @Body() body: unknown
-  ) {
+  async emailResumeLink(@Param("id") id: string, @Body() body: unknown) {
     const parsed = z.object({ email: z.string().email() }).parse(body);
     const inquiry = await this.repository.getImplementationInquiry(id);
     if (!inquiry) throw new NotFoundException("Inquiry not found.");
@@ -171,18 +215,21 @@ export class PlatformController {
 
   // ─── Platform Admin Protected Endpoints ─────────────────────────────────────
   @Get("implementation-inquiries")
+  @AuthMode("platform")
   @RequirePlatformAdmin()
   listInquiries(@Query("status") status?: string) {
     return this.repository.listImplementationInquiries(status as any);
   }
 
   @Get("implementation-inquiries/:id")
+  @AuthMode("platform")
   @RequirePlatformAdmin()
   getInquiry(@Param("id") id: string) {
     return this.repository.getImplementationInquiry(id);
   }
 
   @Patch("implementation-inquiries/:id/status")
+  @AuthMode("platform")
   @RequirePlatformAdmin()
   updateInquiry(@Param("id") id: string, @Body() body: unknown) {
     const input = z
@@ -203,6 +250,7 @@ export class PlatformController {
   }
 
   @Get("implementation-inquiries/:id/seed-manifest")
+  @AuthMode("platform")
   @RequirePlatformAdmin()
   seedManifest(@Param("id") id: string) {
     return this.repository.buildTenantSeedManifest(id);

@@ -102,7 +102,7 @@ export function InsightsPage() {
                   }}
                 >
                   {(summary?.memberRetentionChangePct ?? 0) >= 0 ? "▲" : "▼"}{" "}
-                  {summary?.memberRetentionChangePct ?? -2}% vs last month
+                  {summary?.memberRetentionChangePct == null ? "— No comparison period yet" : `${summary.memberRetentionChangePct}% vs last month`}
                 </div>
               </Card>
 
@@ -192,7 +192,7 @@ export function InsightsPage() {
                         const point = occupancyHeatmap.find(
                           (pt) => pt.dayOfWeek === (di === 6 ? 0 : di + 1) && pt.hourOfDay === h
                         );
-                        const pct = point?.occupancyPercent ?? 15;
+                        const pct = point?.occupancyPercent ?? 0;
                         const intensity = pct / maxHeat;
                         return (
                           <div

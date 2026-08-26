@@ -1484,7 +1484,9 @@ export class DrizzleFitosRepository implements FitosRepository {
 
       const confirmedCount = capacity?.count ?? 0;
       if (confirmedCount >= effectiveCapacity) {
-        throw new Error(`Occurrence is full. Available equipment constrains capacity to ${effectiveCapacity}.`);
+        throw new Error(
+          `Occurrence is full. Available equipment constrains capacity to ${effectiveCapacity}.`
+        );
       }
 
       let creditMembership: typeof memberMemberships.$inferSelect | null = null;
@@ -3186,14 +3188,19 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   // ─── Public Tenant ──────────────────────────────────────────────────────────
-  async getPublicTenantInfo(tenantSlug: string): Promise<import("@fitos/contracts").PublicTenantInfoResponse | null> {
+  async getPublicTenantInfo(
+    tenantSlug: string
+  ): Promise<import("@fitos/contracts").PublicTenantInfoResponse | null> {
     const [tenant] = await this.db
       .select()
       .from(tenants)
       .where(eq(tenants.slug, tenantSlug))
       .limit(1);
     if (!tenant) return null;
-    const branchRows = await this.db.select().from(branches).where(eq(branches.tenantId, tenant.id));
+    const branchRows = await this.db
+      .select()
+      .from(branches)
+      .where(eq(branches.tenantId, tenant.id));
     return {
       name: tenant.name,
       slug: tenant.slug,
@@ -3213,8 +3220,14 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async listPublicServices(tenantSlug: string): Promise<import("@fitos/contracts").PublicServiceResponse[]> {
-    const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
+  async listPublicServices(
+    tenantSlug: string
+  ): Promise<import("@fitos/contracts").PublicServiceResponse[]> {
+    const [tenant] = await this.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, tenantSlug))
+      .limit(1);
     if (!tenant) return [];
     const rows = await this.db.select().from(services).where(eq(services.tenantId, tenant.id));
     return rows.map((s) => ({
@@ -3229,8 +3242,14 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async listPublicCoaches(tenantSlug: string): Promise<import("@fitos/contracts").PublicCoachResponse[]> {
-    const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
+  async listPublicCoaches(
+    tenantSlug: string
+  ): Promise<import("@fitos/contracts").PublicCoachResponse[]> {
+    const [tenant] = await this.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, tenantSlug))
+      .limit(1);
     if (!tenant) return [];
     const rows = await this.db
       .select({ user: users, tu: tenantUsers })
@@ -3246,8 +3265,15 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async listPublicSchedule(tenantSlug: string, daysAhead = 14): Promise<import("@fitos/contracts").PublicScheduleOccurrenceResponse[]> {
-    const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
+  async listPublicSchedule(
+    tenantSlug: string,
+    daysAhead = 14
+  ): Promise<import("@fitos/contracts").PublicScheduleOccurrenceResponse[]> {
+    const [tenant] = await this.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, tenantSlug))
+      .limit(1);
     if (!tenant) return [];
     const now = new Date();
     const until = new Date(now.getTime() + daysAhead * 86400000);
@@ -3296,8 +3322,15 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async createPublicLead(tenantSlug: string, input: import("@fitos/contracts").CreatePublicLeadRequest): Promise<import("@fitos/contracts").LeadResponse> {
-    const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug)).limit(1);
+  async createPublicLead(
+    tenantSlug: string,
+    input: import("@fitos/contracts").CreatePublicLeadRequest
+  ): Promise<import("@fitos/contracts").LeadResponse> {
+    const [tenant] = await this.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, tenantSlug))
+      .limit(1);
     if (!tenant) throw new Error("Tenant not found");
     const result = await this.db.transaction(async (tx) => {
       if (input.branchId) {
@@ -3345,32 +3378,98 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   // ─── Member Portal & Auth ────────────────────────────────────────────────────
-  async findMemberByIdentifier(identifier: string): Promise<import("@fitos/contracts").MemberResponse | null> {
+  async findMemberByIdentifier(
+    identifier: string
+  ): Promise<import("@fitos/contracts").MemberResponse | null> {
     // Full Drizzle implementation deferred — members table mapping not yet in this layer.
-    const [row] = await this.db.select({ member: members, contact: contacts }).from(members).innerJoin(contacts, eq(members.contactId, contacts.id)).where(or(eq(contacts.email, identifier), eq(contacts.phoneE164, identifier), eq(members.memberNumber, identifier))).limit(1);
+    const [row] = await this.db
+      .select({ member: members, contact: contacts })
+      .from(members)
+      .innerJoin(contacts, eq(members.contactId, contacts.id))
+      .where(
+        or(
+          eq(contacts.email, identifier),
+          eq(contacts.phoneE164, identifier),
+          eq(members.memberNumber, identifier)
+        )
+      )
+      .limit(1);
     return row ? this.memberResponse(row.member, row.contact) : null;
   }
 
-  async createMemberSession(input: { memberId: string; tokenHash: string; expiresAt: string }): Promise<{ id: string }> {
+  async createMemberSession(input: {
+    memberId: string;
+    tokenHash: string;
+    expiresAt: string;
+  }): Promise<{ id: string }> {
     const [member] = await this.db.select().from(members).where(eq(members.id, input.memberId));
     if (!member) throw new Error("Member not found.");
-    const [created] = await this.db.insert(memberSessions).values({ tenantId: member.tenantId, memberId: member.id, tokenHash: input.tokenHash, expiresAt: new Date(input.expiresAt) }).returning({ id: memberSessions.id });
+    const [created] = await this.db
+      .insert(memberSessions)
+      .values({
+        tenantId: member.tenantId,
+        memberId: member.id,
+        tokenHash: input.tokenHash,
+        expiresAt: new Date(input.expiresAt)
+      })
+      .returning({ id: memberSessions.id });
     if (!created) throw new Error("Unable to create member session.");
     return created;
   }
 
-  async resolveMemberSession(tokenHash: string, currentTime: string): Promise<import("@fitos/contracts").MemberProfileResponse | null> {
-    const [row] = await this.db.select({ member: members, contact: contacts, tenant: tenants, branch: branches }).from(memberSessions).innerJoin(members, eq(memberSessions.memberId, members.id)).innerJoin(contacts, eq(members.contactId, contacts.id)).innerJoin(tenants, eq(members.tenantId, tenants.id)).leftJoin(branches, eq(members.homeBranchId, branches.id)).where(and(eq(memberSessions.tokenHash, tokenHash), isNull(memberSessions.revokedAt), gt(memberSessions.expiresAt, new Date(currentTime)))).limit(1);
+  async resolveMemberSession(
+    tokenHash: string,
+    currentTime: string
+  ): Promise<import("@fitos/contracts").MemberProfileResponse | null> {
+    const [row] = await this.db
+      .select({ member: members, contact: contacts, tenant: tenants, branch: branches })
+      .from(memberSessions)
+      .innerJoin(members, eq(memberSessions.memberId, members.id))
+      .innerJoin(contacts, eq(members.contactId, contacts.id))
+      .innerJoin(tenants, eq(members.tenantId, tenants.id))
+      .leftJoin(branches, eq(members.homeBranchId, branches.id))
+      .where(
+        and(
+          eq(memberSessions.tokenHash, tokenHash),
+          isNull(memberSessions.revokedAt),
+          gt(memberSessions.expiresAt, new Date(currentTime))
+        )
+      )
+      .limit(1);
     if (!row) return null;
-    await this.db.update(memberSessions).set({ lastSeenAt: new Date(currentTime) }).where(eq(memberSessions.tokenHash, tokenHash));
-    return { id: row.member.id, tenantId: row.member.tenantId, tenantName: row.tenant.name, tenantSlug: row.tenant.slug, homeBranchId: row.member.homeBranchId, homeBranchName: row.branch?.name ?? null, memberNumber: row.member.memberNumber, firstName: row.contact.firstName, lastName: row.contact.lastName, phone: row.contact.phoneE164, email: row.contact.email, status: row.member.status as "active" | "inactive", joinedAt: row.member.joinedAt?.toISOString() ?? null, creditBalance: 0, activePlan: null };
+    await this.db
+      .update(memberSessions)
+      .set({ lastSeenAt: new Date(currentTime) })
+      .where(eq(memberSessions.tokenHash, tokenHash));
+    return {
+      id: row.member.id,
+      tenantId: row.member.tenantId,
+      tenantName: row.tenant.name,
+      tenantSlug: row.tenant.slug,
+      homeBranchId: row.member.homeBranchId,
+      homeBranchName: row.branch?.name ?? null,
+      memberNumber: row.member.memberNumber,
+      firstName: row.contact.firstName,
+      lastName: row.contact.lastName,
+      phone: row.contact.phoneE164,
+      email: row.contact.email,
+      status: row.member.status as "active" | "inactive",
+      joinedAt: row.member.joinedAt?.toISOString() ?? null,
+      creditBalance: 0,
+      activePlan: null
+    };
   }
 
   async revokeMemberSession(tokenHash: string, at: string): Promise<void> {
-    await this.db.update(memberSessions).set({ revokedAt: new Date(at) }).where(eq(memberSessions.tokenHash, tokenHash));
+    await this.db
+      .update(memberSessions)
+      .set({ revokedAt: new Date(at) })
+      .where(eq(memberSessions.tokenHash, tokenHash));
   }
 
-  async getMemberPortalOverview(memberId: string): Promise<import("@fitos/contracts").MemberPortalOverviewResponse | null> {
+  async getMemberPortalOverview(
+    memberId: string
+  ): Promise<import("@fitos/contracts").MemberPortalOverviewResponse | null> {
     const [row] = await this.db
       .select({ member: members, contact: contacts, tenant: tenants, branch: branches })
       .from(members)
@@ -3397,7 +3496,9 @@ export class DrizzleFitosRepository implements FitosRepository {
     const [balanceRow] = await this.db
       .select({ total: sql<number>`coalesce(sum(${creditLedger.delta}), 0)::int` })
       .from(creditLedger)
-      .where(and(eq(creditLedger.tenantId, row.member.tenantId), eq(creditLedger.memberId, memberId)));
+      .where(
+        and(eq(creditLedger.tenantId, row.member.tenantId), eq(creditLedger.memberId, memberId))
+      );
 
     const bookingRows = await this.db
       .select({
@@ -3432,13 +3533,30 @@ export class DrizzleFitosRepository implements FitosRepository {
       .from(attendanceRecords)
       .leftJoin(scheduleOccurrences, eq(attendanceRecords.occurrenceId, scheduleOccurrences.id))
       .leftJoin(services, eq(scheduleOccurrences.serviceId, services.id))
-      .where(and(eq(attendanceRecords.memberId, memberId), eq(attendanceRecords.tenantId, row.member.tenantId)))
+      .where(
+        and(
+          eq(attendanceRecords.memberId, memberId),
+          eq(attendanceRecords.tenantId, row.member.tenantId)
+        )
+      )
       .orderBy(desc(attendanceRecords.checkedInAt))
       .limit(10);
 
-    const bookableRows = await this.db.select().from(scheduleOccurrences)
-      .where(and(eq(scheduleOccurrences.tenantId, row.member.tenantId), eq(scheduleOccurrences.status, "scheduled"), gte(scheduleOccurrences.startsAt, new Date()), ...(row.member.homeBranchId ? [eq(scheduleOccurrences.branchId, row.member.homeBranchId)] : [])))
-      .orderBy(scheduleOccurrences.startsAt).limit(50);
+    const bookableRows = await this.db
+      .select()
+      .from(scheduleOccurrences)
+      .where(
+        and(
+          eq(scheduleOccurrences.tenantId, row.member.tenantId),
+          eq(scheduleOccurrences.status, "scheduled"),
+          gte(scheduleOccurrences.startsAt, new Date()),
+          ...(row.member.homeBranchId
+            ? [eq(scheduleOccurrences.branchId, row.member.homeBranchId)]
+            : [])
+        )
+      )
+      .orderBy(scheduleOccurrences.startsAt)
+      .limit(50);
 
     const planSnapshot = activeMembership?.planSnapshot as any;
 
@@ -3510,10 +3628,17 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async memberSelfBook(memberId: string, occurrenceId: string): Promise<import("@fitos/contracts").BookingResponse> {
+  async memberSelfBook(
+    memberId: string,
+    occurrenceId: string
+  ): Promise<import("@fitos/contracts").BookingResponse> {
     const [member] = await this.db.select().from(members).where(eq(members.id, memberId)).limit(1);
     if (!member) throw new Error("Member not found.");
-    const [occurrence] = await this.db.select().from(scheduleOccurrences).where(eq(scheduleOccurrences.id, occurrenceId)).limit(1);
+    const [occurrence] = await this.db
+      .select()
+      .from(scheduleOccurrences)
+      .where(eq(scheduleOccurrences.id, occurrenceId))
+      .limit(1);
     if (!occurrence) throw new Error("Schedule occurrence not found.");
 
     const scope: TenantScope = {
@@ -3535,10 +3660,18 @@ export class DrizzleFitosRepository implements FitosRepository {
     );
   }
 
-  async memberSelfCancel(memberId: string, bookingId: string, reason: string): Promise<import("@fitos/contracts").BookingResponse> {
+  async memberSelfCancel(
+    memberId: string,
+    bookingId: string,
+    reason: string
+  ): Promise<import("@fitos/contracts").BookingResponse> {
     const [member] = await this.db.select().from(members).where(eq(members.id, memberId)).limit(1);
     if (!member) throw new Error("Member not found.");
-    const [booking] = await this.db.select().from(bookings).where(and(eq(bookings.id, bookingId), eq(bookings.memberId, memberId))).limit(1);
+    const [booking] = await this.db
+      .select()
+      .from(bookings)
+      .where(and(eq(bookings.id, bookingId), eq(bookings.memberId, memberId)))
+      .limit(1);
     if (!booking) throw new Error("Booking not found or does not belong to you.");
 
     const scope: TenantScope = {
@@ -3552,7 +3685,10 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   // ─── Insights Analytics ──────────────────────────────────────────────────────
-  async getInsightsOverview(scope: TenantScope, branchId?: string): Promise<import("@fitos/contracts").InsightsOverviewResponse> {
+  async getInsightsOverview(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<import("@fitos/contracts").InsightsOverviewResponse> {
     const tenantId = scope.tenantId;
 
     const weeklyVisitsRows = await this.db.execute<{ week_start: string; visit_count: number }>(sql`
@@ -3570,12 +3706,20 @@ export class DrizzleFitosRepository implements FitosRepository {
     const [activeMembersCount] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(members)
-      .where(and(eq(members.tenantId, tenantId), eq(members.status, "active"), branchId ? eq(members.homeBranchId, branchId) : undefined));
+      .where(
+        and(
+          eq(members.tenantId, tenantId),
+          eq(members.status, "active"),
+          branchId ? eq(members.homeBranchId, branchId) : undefined
+        )
+      );
 
     const [leadsCount] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(leads)
-      .where(and(eq(leads.tenantId, tenantId), branchId ? eq(leads.branchId, branchId) : undefined));
+      .where(
+        and(eq(leads.tenantId, tenantId), branchId ? eq(leads.branchId, branchId) : undefined)
+      );
 
     const leadFunnelRows = await this.db.execute<{ stage: string; count: number }>(sql`
       SELECT stage, COUNT(*)::int as count
@@ -3585,7 +3729,11 @@ export class DrizzleFitosRepository implements FitosRepository {
       GROUP BY stage
     `);
 
-    const heatmapRows = await this.db.execute<{ dow: number; hour: number; avg_occupancy: number }>(sql`
+    const heatmapRows = await this.db.execute<{
+      dow: number;
+      hour: number;
+      avg_occupancy: number;
+    }>(sql`
       SELECT 
         EXTRACT(DOW FROM starts_at)::int as dow,
         EXTRACT(HOUR FROM starts_at)::int as hour,
@@ -3603,7 +3751,13 @@ export class DrizzleFitosRepository implements FitosRepository {
       ORDER BY dow, hour
     `);
 
-    const retentionRows = await this.db.execute<{ cohort_month: string; total_joined: number; retained_30d: number; retained_60d: number; retained_90d: number }>(sql`
+    const retentionRows = await this.db.execute<{
+      cohort_month: string;
+      total_joined: number;
+      retained_30d: number;
+      retained_60d: number;
+      retained_90d: number;
+    }>(sql`
       WITH member_cohorts AS (
         SELECT 
           id,
@@ -3626,7 +3780,12 @@ export class DrizzleFitosRepository implements FitosRepository {
       ORDER BY c.cohort_month DESC
     `);
 
-    const atRiskRows = await this.db.execute<{ id: string; name: string; email: string; days_inactive: number }>(sql`
+    const atRiskRows = await this.db.execute<{
+      id: string;
+      name: string;
+      email: string;
+      days_inactive: number;
+    }>(sql`
       SELECT 
         m.id,
         c.first_name || ' ' || coalesce(c.last_name, '') as name,
@@ -3650,7 +3809,9 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
 
     const avgWeekly = weeklyVisitsArray.length
-      ? Math.round(weeklyVisitsArray.reduce((sum, w) => sum + w.visits, 0) / weeklyVisitsArray.length)
+      ? Math.round(
+          weeklyVisitsArray.reduce((sum, w) => sum + w.visits, 0) / weeklyVisitsArray.length
+        )
       : 0;
 
     return {
@@ -3694,7 +3855,9 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   // ─── Automations ─────────────────────────────────────────────────────────────
-  async listAutomations(scope: TenantScope): Promise<import("@fitos/contracts").AutomationRuleResponse[]> {
+  async listAutomations(
+    scope: TenantScope
+  ): Promise<import("@fitos/contracts").AutomationRuleResponse[]> {
     const rows = await this.db
       .select()
       .from(automationRules)
@@ -3719,7 +3882,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async createAutomation(scope: TenantScope, input: import("@fitos/contracts").CreateAutomationRuleRequest): Promise<import("@fitos/contracts").AutomationRuleResponse> {
+  async createAutomation(
+    scope: TenantScope,
+    input: import("@fitos/contracts").CreateAutomationRuleRequest
+  ): Promise<import("@fitos/contracts").AutomationRuleResponse> {
     const [created] = await this.db
       .insert(automationRules)
       .values({
@@ -3755,7 +3921,11 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async updateAutomation(scope: TenantScope, ruleId: string, input: import("@fitos/contracts").UpdateAutomationRuleRequest): Promise<import("@fitos/contracts").AutomationRuleResponse | null> {
+  async updateAutomation(
+    scope: TenantScope,
+    ruleId: string,
+    input: import("@fitos/contracts").UpdateAutomationRuleRequest
+  ): Promise<import("@fitos/contracts").AutomationRuleResponse | null> {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (input.name !== undefined) updateData.name = input.name;
     if (input.description !== undefined) updateData.description = input.description;
@@ -3800,7 +3970,9 @@ export class DrizzleFitosRepository implements FitosRepository {
     return res.length > 0;
   }
 
-  async listAutomationLogs(scope: TenantScope): Promise<import("@fitos/contracts").AutomationExecutionLogResponse[]> {
+  async listAutomationLogs(
+    scope: TenantScope
+  ): Promise<import("@fitos/contracts").AutomationExecutionLogResponse[]> {
     const rows = await this.db
       .select({ log: automationRuns, rule: automationRules })
       .from(automationRuns)
@@ -3823,7 +3995,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async triggerAutomation(scope: TenantScope, ruleId: string): Promise<import("@fitos/contracts").AutomationExecutionLogResponse> {
+  async triggerAutomation(
+    scope: TenantScope,
+    ruleId: string
+  ): Promise<import("@fitos/contracts").AutomationExecutionLogResponse> {
     const [rule] = await this.db
       .select()
       .from(automationRules)
@@ -3869,22 +4044,89 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   // ─── Platform & Self-Service SaaS ──────────────────────────────────────────
-  async signupTenant(input: import("@fitos/contracts").SaaSTenantSignupRequest, passwordHash: string): Promise<import("@fitos/contracts").SaaSTenantSignupResponse> {
+  async signupTenant(
+    input: import("@fitos/contracts").SaaSTenantSignupRequest,
+    passwordHash: string
+  ): Promise<import("@fitos/contracts").SaaSTenantSignupResponse> {
     const result = await this.db.transaction(async (tx) => {
-      const [tenant] = await tx.insert(tenants).values({ name: input.gymName, slug: input.slug, defaultTimezone: input.timezone, defaultCurrency: input.currency }).returning();
+      const [tenant] = await tx
+        .insert(tenants)
+        .values({
+          name: input.gymName,
+          slug: input.slug,
+          defaultTimezone: input.timezone,
+          defaultCurrency: input.currency
+        })
+        .returning();
       if (!tenant) throw new Error("Unable to create tenant.");
-      const [branch] = await tx.insert(branches).values({ tenantId: tenant.id, name: input.branchName, slug: input.branchName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "main", timezone: input.timezone, email: input.ownerEmail, phone: input.ownerPhone ?? null, addressLine1: input.branchAddress ?? null }).returning();
-      const [user] = await tx.insert(users).values({ email: input.ownerEmail.toLowerCase(), phoneE164: input.ownerPhone ?? null, passwordHash, displayName: input.ownerName }).returning();
+      const [branch] = await tx
+        .insert(branches)
+        .values({
+          tenantId: tenant.id,
+          name: input.branchName,
+          slug:
+            input.branchName
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-|-$/g, "") || "main",
+          timezone: input.timezone,
+          email: input.ownerEmail,
+          phone: input.ownerPhone ?? null,
+          addressLine1: input.branchAddress ?? null
+        })
+        .returning();
+      const [user] = await tx
+        .insert(users)
+        .values({
+          email: input.ownerEmail.toLowerCase(),
+          phoneE164: input.ownerPhone ?? null,
+          passwordHash,
+          displayName: input.ownerName
+        })
+        .returning();
       if (!branch || !user) throw new Error("Unable to create signup records.");
-      const [role] = await tx.insert(roles).values({ tenantId: tenant.id, name: "Owner", systemKey: "owner", isSystem: true }).returning();
+      const [role] = await tx
+        .insert(roles)
+        .values({ tenantId: tenant.id, name: "Owner", systemKey: "owner", isSystem: true })
+        .returning();
       if (!role) throw new Error("Unable to create owner role.");
-      const [tenantUser] = await tx.insert(tenantUsers).values({ tenantId: tenant.id, userId: user.id, roleId: role.id }).returning();
-      await tx.insert(userBranchAccess).values({ tenantUserId: tenantUser!.id, branchId: branch.id });
+      const [tenantUser] = await tx
+        .insert(tenantUsers)
+        .values({ tenantId: tenant.id, userId: user.id, roleId: role.id })
+        .returning();
+      await tx
+        .insert(userBranchAccess)
+        .values({ tenantUserId: tenantUser!.id, branchId: branch.id });
       const permissionRows = await tx.select({ key: permissions.key }).from(permissions);
-      if (permissionRows.length) await tx.insert(rolePermissions).values(permissionRows.map((permission) => ({ roleId: role.id, permissionKey: permission.key })));
+      if (permissionRows.length)
+        await tx
+          .insert(rolePermissions)
+          .values(
+            permissionRows.map((permission) => ({ roleId: role.id, permissionKey: permission.key }))
+          );
       const trialEnds = new Date(Date.now() + 14 * 86400000);
-      await tx.insert(tenantSubscriptions).values({ tenantId: tenant.id, plan: "pro", status: "trial", trialEndsAt: trialEnds, currentPeriodEndsAt: trialEnds, capabilitiesJson: ["feature.crm", "feature.automations", "feature.insights", "feature.portal", "feature.assessments", "feature.therapy", "feature.inventory", "feature.equipment", "feature.sites", "feature.integrations"] });
-      
+      await tx
+        .insert(tenantSubscriptions)
+        .values({
+          tenantId: tenant.id,
+          plan: "pro",
+          status: "trial",
+          trialEndsAt: trialEnds,
+          currentPeriodEndsAt: trialEnds,
+          capabilitiesJson: [
+            "feature.crm",
+            "feature.automations",
+            "feature.insights",
+            "feature.portal",
+            "feature.assessments",
+            "feature.therapy",
+            "feature.inventory",
+            "feature.equipment",
+            "feature.sites",
+            "feature.integrations"
+          ]
+        });
+
       const sessionToken = createOpaqueSessionToken();
       const csrfToken = createCsrfToken(sessionToken);
       const ttlSeconds = Number(process.env.SESSION_TTL_SECONDS ?? 28_800);
@@ -3897,16 +4139,41 @@ export class DrizzleFitosRepository implements FitosRepository {
       });
       return { tenant, branch, user, trialEnds, sessionToken, csrfToken };
     });
-    return { tenantId: result.tenant.id, tenantSlug: result.tenant.slug, tenantName: result.tenant.name, branchId: result.branch.id, ownerUserId: result.user.id, ownerEmail: input.ownerEmail, token: result.sessionToken, csrfToken: result.csrfToken, trialEndsAt: result.trialEnds.toISOString() };
+    return {
+      tenantId: result.tenant.id,
+      tenantSlug: result.tenant.slug,
+      tenantName: result.tenant.name,
+      branchId: result.branch.id,
+      ownerUserId: result.user.id,
+      ownerEmail: input.ownerEmail,
+      token: result.sessionToken,
+      csrfToken: result.csrfToken,
+      trialEndsAt: result.trialEnds.toISOString()
+    };
   }
 
-  async getTenantSubscription(tenantId: string): Promise<import("@fitos/contracts").TenantSubscriptionResponse> {
-    const [subscription] = await this.db.select().from(tenantSubscriptions).where(eq(tenantSubscriptions.tenantId, tenantId));
+  async getTenantSubscription(
+    tenantId: string
+  ): Promise<import("@fitos/contracts").TenantSubscriptionResponse> {
+    const [subscription] = await this.db
+      .select()
+      .from(tenantSubscriptions)
+      .where(eq(tenantSubscriptions.tenantId, tenantId));
     if (!subscription) throw new Error("Tenant subscription not found.");
-    return { tenantId, plan: subscription.plan as any, planName: `FITOS ${subscription.plan[0]!.toUpperCase()}${subscription.plan.slice(1)}`, status: subscription.status as any, trialEndsAt: subscription.trialEndsAt?.toISOString() ?? null, currentPeriodEndsAt: subscription.currentPeriodEndsAt?.toISOString() ?? null, capabilities: subscription.capabilitiesJson as any };
+    return {
+      tenantId,
+      plan: subscription.plan as any,
+      planName: `FITOS ${subscription.plan[0]!.toUpperCase()}${subscription.plan.slice(1)}`,
+      status: subscription.status as any,
+      trialEndsAt: subscription.trialEndsAt?.toISOString() ?? null,
+      currentPeriodEndsAt: subscription.currentPeriodEndsAt?.toISOString() ?? null,
+      capabilities: subscription.capabilitiesJson as any
+    };
   }
 
-  async getTenantUsageQuotas(tenantId: string): Promise<import("@fitos/contracts").UsageQuotaMetricsResponse> {
+  async getTenantUsageQuotas(
+    tenantId: string
+  ): Promise<import("@fitos/contracts").UsageQuotaMetricsResponse> {
     const [membersCount] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(members)
@@ -3925,7 +4192,12 @@ export class DrizzleFitosRepository implements FitosRepository {
     const [autoCount] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(automationRuns)
-      .where(and(eq(automationRuns.tenantId, tenantId), gte(automationRuns.executedAt, new Date(Date.now() - 30 * 86400000))));
+      .where(
+        and(
+          eq(automationRuns.tenantId, tenantId),
+          gte(automationRuns.executedAt, new Date(Date.now() - 30 * 86400000))
+        )
+      );
 
     return {
       activeMembers: membersCount?.count ?? 0,
@@ -3941,99 +4213,418 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async listFeatureFlags(tenantId: string): Promise<import("@fitos/contracts").FeatureFlagResponse[]> {
-    const [subscription] = await this.db.select().from(tenantSubscriptions).where(eq(tenantSubscriptions.tenantId, tenantId)).limit(1);
-    const caps = new Set((subscription?.capabilitiesJson as string[]) || [
-      "feature.crm", "feature.automations", "feature.insights", "feature.portal", "feature.assessments", "feature.therapy", "feature.inventory", "feature.equipment", "feature.sites", "feature.integrations"
-    ]);
+  async listFeatureFlags(
+    tenantId: string
+  ): Promise<import("@fitos/contracts").FeatureFlagResponse[]> {
+    const [subscription] = await this.db
+      .select()
+      .from(tenantSubscriptions)
+      .where(eq(tenantSubscriptions.tenantId, tenantId))
+      .limit(1);
+    const caps = new Set(
+      (subscription?.capabilitiesJson as string[]) || [
+        "feature.crm",
+        "feature.automations",
+        "feature.insights",
+        "feature.portal",
+        "feature.assessments",
+        "feature.therapy",
+        "feature.inventory",
+        "feature.equipment",
+        "feature.sites",
+        "feature.integrations"
+      ]
+    );
 
     return [
-      { key: "feature.assessments", enabled: caps.has("feature.assessments"), name: "FITOS Assess Performance Lab", description: "InBody, VO2, force plate & ROM assessment engine", category: "advanced" },
-      { key: "feature.therapy", enabled: caps.has("feature.therapy"), name: "FITOS Therapy & Recovery", description: "NEUBIE STIM, AlterG, Normatec compression protocols", category: "advanced" },
-      { key: "feature.inventory", enabled: caps.has("feature.inventory"), name: "Inventory & Consumables", description: "Stock movements, lots, stocktakes and session BOM", category: "core" },
-      { key: "feature.equipment", enabled: caps.has("feature.equipment"), name: "Equipment & Asset Registry", description: "Resource scheduling, pools, maintenance & calibration", category: "core" },
-      { key: "feature.sites", enabled: caps.has("feature.sites"), name: "FITOS Sites Website Builder", description: "Modular block-based website CMS and publisher", category: "advanced" },
-      { key: "feature.integrations", enabled: caps.has("feature.integrations"), name: "Vendor Hardware Integrations", description: "LookinBody, VALD Hub, COSMED and PNOE import adapters", category: "beta" }
+      {
+        key: "feature.assessments",
+        enabled: caps.has("feature.assessments"),
+        name: "FITOS Assess Performance Lab",
+        description: "InBody, VO2, force plate & ROM assessment engine",
+        category: "advanced"
+      },
+      {
+        key: "feature.therapy",
+        enabled: caps.has("feature.therapy"),
+        name: "FITOS Therapy & Recovery",
+        description: "NEUBIE STIM, AlterG, Normatec compression protocols",
+        category: "advanced"
+      },
+      {
+        key: "feature.inventory",
+        enabled: caps.has("feature.inventory"),
+        name: "Inventory & Consumables",
+        description: "Stock movements, lots, stocktakes and session BOM",
+        category: "core"
+      },
+      {
+        key: "feature.equipment",
+        enabled: caps.has("feature.equipment"),
+        name: "Equipment & Asset Registry",
+        description: "Resource scheduling, pools, maintenance & calibration",
+        category: "core"
+      },
+      {
+        key: "feature.sites",
+        enabled: caps.has("feature.sites"),
+        name: "FITOS Sites Website Builder",
+        description: "Modular block-based website CMS and publisher",
+        category: "advanced"
+      },
+      {
+        key: "feature.integrations",
+        enabled: caps.has("feature.integrations"),
+        name: "Vendor Hardware Integrations",
+        description: "LookinBody, VALD Hub, COSMED and PNOE import adapters",
+        category: "beta"
+      }
     ];
   }
 
-  private sitePageResponse(page: typeof sitePages.$inferSelect): import("@fitos/contracts").SitePageResponse {
-    return { id: page.id, tenantId: page.tenantId, slug: page.slug, title: page.title, status: page.status as any, sections: page.sectionsJson as any, seo: page.seoJson as Record<string, unknown>, version: page.version, publishedAt: page.publishedAt?.toISOString() ?? null, createdAt: page.createdAt.toISOString(), updatedAt: page.updatedAt.toISOString() };
+  private sitePageResponse(
+    page: typeof sitePages.$inferSelect
+  ): import("@fitos/contracts").SitePageResponse {
+    return {
+      id: page.id,
+      tenantId: page.tenantId,
+      slug: page.slug,
+      title: page.title,
+      status: page.status as any,
+      sections: page.sectionsJson as any,
+      seo: page.seoJson as Record<string, unknown>,
+      version: page.version,
+      publishedAt: page.publishedAt?.toISOString() ?? null,
+      createdAt: page.createdAt.toISOString(),
+      updatedAt: page.updatedAt.toISOString()
+    };
   }
 
-  async saveImplementationInquiry(input: import("@fitos/contracts").ImplementationInquiryDraft, submit: boolean): Promise<import("@fitos/contracts").ImplementationInquiryResponse> {
+  async saveImplementationInquiry(
+    input: import("@fitos/contracts").ImplementationInquiryDraft,
+    submit: boolean
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse> {
     const current = new Date();
     const rawResumeToken = createOpaqueSessionToken();
     const resumeTokenHash = createHash("sha256").update(rawResumeToken).digest("hex");
     const resumeTokenExpiresAt = new Date(Date.now() + 7 * 86400000);
 
-    const values = { contactName: input.contactName ?? null, businessName: input.businessName ?? null, email: input.email ?? null, phone: input.phone ?? null, country: input.country ?? null, businessType: input.businessType ?? null, status: submit ? "submitted" : "draft", submittedAt: submit ? current : null, resumeTokenHash, resumeTokenExpiresAt, updatedAt: current };
-    const [inquiry] = input.id ? await this.db.update(implementationInquiries).set(values).where(eq(implementationInquiries.id, input.id)).returning() : await this.db.insert(implementationInquiries).values(values).returning();
+    const values = {
+      contactName: input.contactName ?? null,
+      businessName: input.businessName ?? null,
+      email: input.email ?? null,
+      phone: input.phone ?? null,
+      country: input.country ?? null,
+      businessType: input.businessType ?? null,
+      status: submit ? "submitted" : "draft",
+      submittedAt: submit ? current : null,
+      resumeTokenHash,
+      resumeTokenExpiresAt,
+      updatedAt: current
+    };
+    const [inquiry] = input.id
+      ? await this.db
+          .update(implementationInquiries)
+          .set(values)
+          .where(eq(implementationInquiries.id, input.id))
+          .returning()
+      : await this.db.insert(implementationInquiries).values(values).returning();
     if (!inquiry) throw new Error("Implementation inquiry not found.");
-    await this.db.insert(implementationInquiryPayloads).values({ inquiryId: inquiry.id, schemaVersion: 1, payloadJson: input.payload, updatedAt: current }).onConflictDoUpdate({ target: implementationInquiryPayloads.inquiryId, set: { payloadJson: input.payload, updatedAt: current } });
-    return { id: inquiry.id, contactName: inquiry.contactName ?? undefined, businessName: inquiry.businessName ?? undefined, email: inquiry.email ?? undefined, phone: inquiry.phone ?? undefined, country: inquiry.country ?? undefined, businessType: inquiry.businessType ?? undefined, payload: input.payload, status: inquiry.status as any, schemaVersion: 1, submittedAt: inquiry.submittedAt?.toISOString() ?? null, createdAt: inquiry.createdAt.toISOString(), updatedAt: inquiry.updatedAt.toISOString(), resumeToken: rawResumeToken };
+    await this.db
+      .insert(implementationInquiryPayloads)
+      .values({
+        inquiryId: inquiry.id,
+        schemaVersion: 1,
+        payloadJson: input.payload,
+        updatedAt: current
+      })
+      .onConflictDoUpdate({
+        target: implementationInquiryPayloads.inquiryId,
+        set: { payloadJson: input.payload, updatedAt: current }
+      });
+    return {
+      id: inquiry.id,
+      contactName: inquiry.contactName ?? undefined,
+      businessName: inquiry.businessName ?? undefined,
+      email: inquiry.email ?? undefined,
+      phone: inquiry.phone ?? undefined,
+      country: inquiry.country ?? undefined,
+      businessType: inquiry.businessType ?? undefined,
+      payload: input.payload,
+      status: inquiry.status as any,
+      schemaVersion: 1,
+      submittedAt: inquiry.submittedAt?.toISOString() ?? null,
+      createdAt: inquiry.createdAt.toISOString(),
+      updatedAt: inquiry.updatedAt.toISOString(),
+      resumeToken: rawResumeToken
+    };
   }
 
-  async getImplementationInquiryByToken(id: string, token: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
+  async getImplementationInquiryByToken(
+    id: string,
+    token: string
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
     const tokenHash = createHash("sha256").update(token).digest("hex");
     const [row] = await this.db
       .select({ inquiry: implementationInquiries, payload: implementationInquiryPayloads })
       .from(implementationInquiries)
-      .leftJoin(implementationInquiryPayloads, eq(implementationInquiryPayloads.inquiryId, implementationInquiries.id))
+      .leftJoin(
+        implementationInquiryPayloads,
+        eq(implementationInquiryPayloads.inquiryId, implementationInquiries.id)
+      )
       .where(
         and(
           eq(implementationInquiries.id, id),
           eq(implementationInquiries.resumeTokenHash, tokenHash),
-          or(isNull(implementationInquiries.resumeTokenExpiresAt), gte(implementationInquiries.resumeTokenExpiresAt, new Date()))
+          or(
+            isNull(implementationInquiries.resumeTokenExpiresAt),
+            gte(implementationInquiries.resumeTokenExpiresAt, new Date())
+          )
         )
       )
       .limit(1);
 
     if (!row) return null;
     const { inquiry, payload } = row;
-    return { id: inquiry.id, contactName: inquiry.contactName ?? undefined, businessName: inquiry.businessName ?? undefined, email: inquiry.email ?? undefined, phone: inquiry.phone ?? undefined, country: inquiry.country ?? undefined, businessType: inquiry.businessType ?? undefined, payload: (payload?.payloadJson as Record<string, unknown>) ?? {}, status: inquiry.status as any, schemaVersion: payload?.schemaVersion ?? 1, submittedAt: inquiry.submittedAt?.toISOString() ?? null, createdAt: inquiry.createdAt.toISOString(), updatedAt: inquiry.updatedAt.toISOString() };
+    return {
+      id: inquiry.id,
+      contactName: inquiry.contactName ?? undefined,
+      businessName: inquiry.businessName ?? undefined,
+      email: inquiry.email ?? undefined,
+      phone: inquiry.phone ?? undefined,
+      country: inquiry.country ?? undefined,
+      businessType: inquiry.businessType ?? undefined,
+      payload: (payload?.payloadJson as Record<string, unknown>) ?? {},
+      status: inquiry.status as any,
+      schemaVersion: payload?.schemaVersion ?? 1,
+      submittedAt: inquiry.submittedAt?.toISOString() ?? null,
+      createdAt: inquiry.createdAt.toISOString(),
+      updatedAt: inquiry.updatedAt.toISOString()
+    };
   }
 
-  async findUserById(userId: string): Promise<{ id: string; displayName: string; email: string | null; isPlatformAdmin: boolean } | null> {
+  async findUserById(
+    userId: string
+  ): Promise<{
+    id: string;
+    displayName: string;
+    email: string | null;
+    isPlatformAdmin: boolean;
+  } | null> {
     const [user] = await this.db.select().from(users).where(eq(users.id, userId)).limit(1);
-    return user ? { id: user.id, displayName: user.displayName, email: user.email, isPlatformAdmin: user.isPlatformAdmin } : null;
+    return user
+      ? {
+          id: user.id,
+          displayName: user.displayName,
+          email: user.email,
+          isPlatformAdmin: user.isPlatformAdmin
+        }
+      : null;
   }
 
-  async resolvePlatformAdminByTokenHash(tokenHash: string): Promise<{ userId: string; displayName: string; email: string | null } | null> {
-    const [row] = await this.db.select({ user: users }).from(platformAdminTokens)
+  async resolvePlatformAdminByTokenHash(
+    tokenHash: string
+  ): Promise<{ userId: string; displayName: string; email: string | null } | null> {
+    const [row] = await this.db
+      .select({ user: users })
+      .from(platformAdminTokens)
       .innerJoin(users, eq(platformAdminTokens.userId, users.id))
-      .where(and(eq(platformAdminTokens.tokenHash, tokenHash), isNull(platformAdminTokens.revokedAt), gt(platformAdminTokens.expiresAt, new Date()), eq(users.isPlatformAdmin, true), eq(users.status, "active"))).limit(1);
+      .where(
+        and(
+          eq(platformAdminTokens.tokenHash, tokenHash),
+          isNull(platformAdminTokens.revokedAt),
+          gt(platformAdminTokens.expiresAt, new Date()),
+          eq(users.isPlatformAdmin, true),
+          eq(users.status, "active")
+        )
+      )
+      .limit(1);
     const user = row?.user;
     if (!user) return null;
     return { userId: user.id, displayName: user.displayName, email: user.email };
   }
 
-  async createPlatformAdminToken(input: { userId: string; tokenHash: string; expiresAt: string }): Promise<void> {
-    await this.db.insert(platformAdminTokens).values({ userId: input.userId, tokenHash: input.tokenHash, expiresAt: new Date(input.expiresAt) });
+  async createPlatformAdminToken(input: {
+    userId: string;
+    tokenHash: string;
+    expiresAt: string;
+  }): Promise<void> {
+    await this.db
+      .insert(platformAdminTokens)
+      .values({
+        userId: input.userId,
+        tokenHash: input.tokenHash,
+        expiresAt: new Date(input.expiresAt)
+      });
   }
 
-  async listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]> { const rows = await this.db.select().from(sitePages).where(eq(sitePages.tenantId, scope.tenantId)).orderBy(sitePages.slug); return rows.map((page) => this.sitePageResponse(page)); }
-  async saveSitePage(scope: TenantScope, input: import("@fitos/contracts").SaveSitePageRequest): Promise<import("@fitos/contracts").SitePageResponse> {
-    const [page] = await this.db.insert(sitePages).values({ tenantId: scope.tenantId, slug: input.slug, title: input.title, sectionsJson: input.sections, seoJson: input.seo ?? {} }).onConflictDoUpdate({ target: [sitePages.tenantId, sitePages.slug], set: { title: input.title, sectionsJson: input.sections, seoJson: input.seo ?? {}, status: "draft", version: sql`${sitePages.version} + 1`, updatedAt: new Date() } }).returning();
-    if (!page) throw new Error("Unable to save site page."); return this.sitePageResponse(page);
+  async revokePlatformAdminToken(tokenHash: string, at: string): Promise<void> {
+    await this.db
+      .update(platformAdminTokens)
+      .set({ revokedAt: new Date(at) })
+      .where(
+        and(eq(platformAdminTokens.tokenHash, tokenHash), isNull(platformAdminTokens.revokedAt))
+      );
   }
-  async publishSitePage(scope: TenantScope, pageId: string): Promise<import("@fitos/contracts").SitePageResponse | null> { const [page] = await this.db.update(sitePages).set({ status: "published", publishedAt: new Date(), updatedAt: new Date() }).where(and(eq(sitePages.tenantId, scope.tenantId), eq(sitePages.id, pageId))).returning(); return page ? this.sitePageResponse(page) : null; }
-  async getPublicSitePage(tenantSlug: string, pageSlug = "home"): Promise<import("@fitos/contracts").SitePageResponse | null> { const [row] = await this.db.select({ page: sitePages }).from(sitePages).innerJoin(tenants, eq(sitePages.tenantId, tenants.id)).where(and(eq(tenants.slug, tenantSlug), eq(sitePages.slug, pageSlug), eq(sitePages.status, "published"))).limit(1); return row ? this.sitePageResponse(row.page) : null; }
 
-  async listImplementationInquiries(status?: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse[]> {
-    const rows = await this.db.select({ inquiry: implementationInquiries, payload: implementationInquiryPayloads }).from(implementationInquiries).leftJoin(implementationInquiryPayloads, eq(implementationInquiryPayloads.inquiryId, implementationInquiries.id)).where(status ? eq(implementationInquiries.status, status) : undefined).orderBy(desc(implementationInquiries.updatedAt));
-    return rows.map(({ inquiry, payload }) => ({ id: inquiry.id, contactName: inquiry.contactName ?? undefined, businessName: inquiry.businessName ?? undefined, email: inquiry.email ?? undefined, phone: inquiry.phone ?? undefined, country: inquiry.country ?? undefined, businessType: inquiry.businessType ?? undefined, payload: (payload?.payloadJson as Record<string, unknown>) ?? {}, status: inquiry.status as any, schemaVersion: payload?.schemaVersion ?? 1, submittedAt: inquiry.submittedAt?.toISOString() ?? null, createdAt: inquiry.createdAt.toISOString(), updatedAt: inquiry.updatedAt.toISOString() }));
+  async revokeAllPlatformAdminTokens(userId: string, at: string): Promise<void> {
+    await this.db
+      .update(platformAdminTokens)
+      .set({ revokedAt: new Date(at) })
+      .where(and(eq(platformAdminTokens.userId, userId), isNull(platformAdminTokens.revokedAt)));
   }
-  async getImplementationInquiry(id: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> { return (await this.listImplementationInquiries()).find((item) => item.id === id) ?? null; }
-  async updateImplementationInquiryStatus(id: string, status: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> { const [row] = await this.db.update(implementationInquiries).set({ status, updatedAt: new Date() }).where(eq(implementationInquiries.id, id)).returning(); return row ? this.getImplementationInquiry(row.id) : null; }
-  async buildTenantSeedManifest(id: string): Promise<import("@fitos/contracts").TenantSeedManifest | null> { const item = await this.getImplementationInquiry(id); if (!item) return null; const payload = item.payload as Record<string, any>; return { schemaVersion: 1, sourceInquiryId: id, generatedAt: new Date().toISOString(), business: { contactName: item.contactName, businessName: item.businessName, country: item.country, businessType: item.businessType }, branches: payload.locations ?? [], services: payload.services ?? [], team: payload.team ?? [], equipment: payload.equipment ?? [], assessments: payload.assessments ?? [], therapy: payload.therapy ?? [], inventory: payload.inventory ?? [], website: payload.website ?? {}, customRequirements: payload.customRequirements ?? [] }; }
+
+  async listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(sitePages)
+      .where(eq(sitePages.tenantId, scope.tenantId))
+      .orderBy(sitePages.slug);
+    return rows.map((page) => this.sitePageResponse(page));
+  }
+  async saveSitePage(
+    scope: TenantScope,
+    input: import("@fitos/contracts").SaveSitePageRequest
+  ): Promise<import("@fitos/contracts").SitePageResponse> {
+    const [page] = await this.db
+      .insert(sitePages)
+      .values({
+        tenantId: scope.tenantId,
+        slug: input.slug,
+        title: input.title,
+        sectionsJson: input.sections,
+        seoJson: input.seo ?? {}
+      })
+      .onConflictDoUpdate({
+        target: [sitePages.tenantId, sitePages.slug],
+        set: {
+          title: input.title,
+          sectionsJson: input.sections,
+          seoJson: input.seo ?? {},
+          status: "draft",
+          version: sql`${sitePages.version} + 1`,
+          updatedAt: new Date()
+        }
+      })
+      .returning();
+    if (!page) throw new Error("Unable to save site page.");
+    return this.sitePageResponse(page);
+  }
+  async publishSitePage(
+    scope: TenantScope,
+    pageId: string
+  ): Promise<import("@fitos/contracts").SitePageResponse | null> {
+    const [page] = await this.db
+      .update(sitePages)
+      .set({ status: "published", publishedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(sitePages.tenantId, scope.tenantId), eq(sitePages.id, pageId)))
+      .returning();
+    return page ? this.sitePageResponse(page) : null;
+  }
+  async getPublicSitePage(
+    tenantSlug: string,
+    pageSlug = "home"
+  ): Promise<import("@fitos/contracts").SitePageResponse | null> {
+    const [row] = await this.db
+      .select({ page: sitePages })
+      .from(sitePages)
+      .innerJoin(tenants, eq(sitePages.tenantId, tenants.id))
+      .where(
+        and(
+          eq(tenants.slug, tenantSlug),
+          eq(sitePages.slug, pageSlug),
+          eq(sitePages.status, "published")
+        )
+      )
+      .limit(1);
+    return row ? this.sitePageResponse(row.page) : null;
+  }
+
+  async listImplementationInquiries(
+    status?: import("@fitos/contracts").ImplementationInquiryStatus
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse[]> {
+    const rows = await this.db
+      .select({ inquiry: implementationInquiries, payload: implementationInquiryPayloads })
+      .from(implementationInquiries)
+      .leftJoin(
+        implementationInquiryPayloads,
+        eq(implementationInquiryPayloads.inquiryId, implementationInquiries.id)
+      )
+      .where(status ? eq(implementationInquiries.status, status) : undefined)
+      .orderBy(desc(implementationInquiries.updatedAt));
+    return rows.map(({ inquiry, payload }) => ({
+      id: inquiry.id,
+      contactName: inquiry.contactName ?? undefined,
+      businessName: inquiry.businessName ?? undefined,
+      email: inquiry.email ?? undefined,
+      phone: inquiry.phone ?? undefined,
+      country: inquiry.country ?? undefined,
+      businessType: inquiry.businessType ?? undefined,
+      payload: (payload?.payloadJson as Record<string, unknown>) ?? {},
+      status: inquiry.status as any,
+      schemaVersion: payload?.schemaVersion ?? 1,
+      submittedAt: inquiry.submittedAt?.toISOString() ?? null,
+      createdAt: inquiry.createdAt.toISOString(),
+      updatedAt: inquiry.updatedAt.toISOString()
+    }));
+  }
+  async getImplementationInquiry(
+    id: string
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
+    return (await this.listImplementationInquiries()).find((item) => item.id === id) ?? null;
+  }
+  async updateImplementationInquiryStatus(
+    id: string,
+    status: import("@fitos/contracts").ImplementationInquiryStatus
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
+    const [row] = await this.db
+      .update(implementationInquiries)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(implementationInquiries.id, id))
+      .returning();
+    return row ? this.getImplementationInquiry(row.id) : null;
+  }
+  async buildTenantSeedManifest(
+    id: string
+  ): Promise<import("@fitos/contracts").TenantSeedManifest | null> {
+    const item = await this.getImplementationInquiry(id);
+    if (!item) return null;
+    const payload = item.payload as Record<string, any>;
+    return {
+      schemaVersion: 1,
+      sourceInquiryId: id,
+      generatedAt: new Date().toISOString(),
+      business: {
+        contactName: item.contactName,
+        businessName: item.businessName,
+        country: item.country,
+        businessType: item.businessType
+      },
+      branches: payload.locations ?? [],
+      services: payload.services ?? [],
+      team: payload.team ?? [],
+      equipment: payload.equipment ?? [],
+      assessments: payload.assessments ?? [],
+      therapy: payload.therapy ?? [],
+      inventory: payload.inventory ?? [],
+      website: payload.website ?? {},
+      customRequirements: payload.customRequirements ?? []
+    };
+  }
 
   // ─── Equipment & Resource Scheduling ─────────────────────────────────────────
-  async listEquipmentAssets(scope: TenantScope, branchId?: string): Promise<EquipmentAssetResponse[]> {
+  async listEquipmentAssets(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<EquipmentAssetResponse[]> {
     const conditions = [eq(equipmentAssets.tenantId, scope.tenantId)];
     if (branchId) conditions.push(eq(equipmentAssets.branchId, branchId));
-    else if (scope.branchIds.length) conditions.push(inArray(equipmentAssets.branchId, scope.branchIds));
-    const rows = await this.db.select().from(equipmentAssets).where(and(...conditions));
+    else if (scope.branchIds.length)
+      conditions.push(inArray(equipmentAssets.branchId, scope.branchIds));
+    const rows = await this.db
+      .select()
+      .from(equipmentAssets)
+      .where(and(...conditions));
     return rows.map((r) => ({
       id: r.id,
       tenantId: r.tenantId,
@@ -4057,7 +4648,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async findEquipmentAssetById(scope: TenantScope, assetId: string): Promise<EquipmentAssetResponse | null> {
+  async findEquipmentAssetById(
+    scope: TenantScope,
+    assetId: string
+  ): Promise<EquipmentAssetResponse | null> {
     const [r] = await this.db
       .select()
       .from(equipmentAssets)
@@ -4086,7 +4680,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async createEquipmentAsset(scope: TenantScope, input: CreateEquipmentAssetRequest): Promise<EquipmentAssetResponse> {
+  async createEquipmentAsset(
+    scope: TenantScope,
+    input: CreateEquipmentAssetRequest
+  ): Promise<EquipmentAssetResponse> {
     const [created] = await this.db
       .insert(equipmentAssets)
       .values({
@@ -4127,12 +4724,19 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async updateEquipmentAsset(scope: TenantScope, assetId: string, input: UpdateEquipmentAssetRequest): Promise<EquipmentAssetResponse | null> {
+  async updateEquipmentAsset(
+    scope: TenantScope,
+    assetId: string,
+    input: UpdateEquipmentAssetRequest
+  ): Promise<EquipmentAssetResponse | null> {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (input.name !== undefined) updateData.name = input.name;
     if (input.status !== undefined) updateData.status = input.status;
     if (input.notes !== undefined) updateData.notes = input.notes;
-    if (input.nextServiceDueAt !== undefined) updateData.nextServiceDueAt = input.nextServiceDueAt ? new Date(input.nextServiceDueAt) : null;
+    if (input.nextServiceDueAt !== undefined)
+      updateData.nextServiceDueAt = input.nextServiceDueAt
+        ? new Date(input.nextServiceDueAt)
+        : null;
     const [updated] = await this.db
       .update(equipmentAssets)
       .set(updateData)
@@ -4162,11 +4766,18 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async listEquipmentPools(scope: TenantScope, branchId?: string): Promise<EquipmentPoolResponse[]> {
+  async listEquipmentPools(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<EquipmentPoolResponse[]> {
     const conditions = [eq(equipmentPools.tenantId, scope.tenantId)];
     if (branchId) conditions.push(eq(equipmentPools.branchId, branchId));
-    else if (scope.branchIds.length) conditions.push(inArray(equipmentPools.branchId, scope.branchIds));
-    const pools = await this.db.select().from(equipmentPools).where(and(...conditions));
+    else if (scope.branchIds.length)
+      conditions.push(inArray(equipmentPools.branchId, scope.branchIds));
+    const pools = await this.db
+      .select()
+      .from(equipmentPools)
+      .where(and(...conditions));
     return pools.map((p) => ({
       id: p.id,
       tenantId: p.tenantId,
@@ -4179,7 +4790,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async createEquipmentPool(scope: TenantScope, input: CreateEquipmentPoolRequest): Promise<EquipmentPoolResponse> {
+  async createEquipmentPool(
+    scope: TenantScope,
+    input: CreateEquipmentPoolRequest
+  ): Promise<EquipmentPoolResponse> {
     const [created] = await this.db
       .insert(equipmentPools)
       .values({
@@ -4205,7 +4819,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async listEquipmentMaintenance(scope: TenantScope, assetId?: string): Promise<EquipmentMaintenanceRecordResponse[]> {
+  async listEquipmentMaintenance(
+    scope: TenantScope,
+    assetId?: string
+  ): Promise<EquipmentMaintenanceRecordResponse[]> {
     const conditions = [eq(equipmentMaintenanceRecords.tenantId, scope.tenantId)];
     if (assetId) conditions.push(eq(equipmentMaintenanceRecords.assetId, assetId));
     const rows = await this.db
@@ -4231,25 +4848,53 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async createEquipmentMaintenance(scope: TenantScope, input: CreateMaintenanceRecordRequest): Promise<EquipmentMaintenanceRecordResponse> {
+  async createEquipmentMaintenance(
+    scope: TenantScope,
+    input: CreateMaintenanceRecordRequest
+  ): Promise<EquipmentMaintenanceRecordResponse> {
     const { asset, rec } = await this.db.transaction(async (tx) => {
-      const [lockedAsset] = await tx.select().from(equipmentAssets).where(and(eq(equipmentAssets.tenantId, scope.tenantId), eq(equipmentAssets.id, input.assetId))).for("update");
+      const [lockedAsset] = await tx
+        .select()
+        .from(equipmentAssets)
+        .where(
+          and(eq(equipmentAssets.tenantId, scope.tenantId), eq(equipmentAssets.id, input.assetId))
+        )
+        .for("update");
       if (!lockedAsset) throw new Error("Equipment asset not found.");
       const servicedAt = new Date();
-      const [created] = await tx.insert(equipmentMaintenanceRecords).values({
-        tenantId: scope.tenantId,
-        branchId: lockedAsset.branchId,
-        assetId: input.assetId,
-        serviceType: input.type,
-        costMinor: input.costMinor ?? 0,
-        notes: input.notes,
-        servicedAt: new Date(),
-        nextServiceDueAt: input.nextDueAt ? new Date(input.nextDueAt) : null
-      }).returning();
-      await tx.update(equipmentAssets).set({
-        ...(input.type === "calibration" ? { lastServicedAt: servicedAt, nextServiceDueAt: input.nextDueAt ? new Date(input.nextDueAt) : lockedAsset.nextServiceDueAt } : { lastServicedAt: servicedAt, nextServiceDueAt: input.nextDueAt ? new Date(input.nextDueAt) : lockedAsset.nextServiceDueAt }),
-        status: "available", updatedAt: servicedAt
-      }).where(eq(equipmentAssets.id, lockedAsset.id));
+      const [created] = await tx
+        .insert(equipmentMaintenanceRecords)
+        .values({
+          tenantId: scope.tenantId,
+          branchId: lockedAsset.branchId,
+          assetId: input.assetId,
+          serviceType: input.type,
+          costMinor: input.costMinor ?? 0,
+          notes: input.notes,
+          servicedAt: new Date(),
+          nextServiceDueAt: input.nextDueAt ? new Date(input.nextDueAt) : null
+        })
+        .returning();
+      await tx
+        .update(equipmentAssets)
+        .set({
+          ...(input.type === "calibration"
+            ? {
+                lastServicedAt: servicedAt,
+                nextServiceDueAt: input.nextDueAt
+                  ? new Date(input.nextDueAt)
+                  : lockedAsset.nextServiceDueAt
+              }
+            : {
+                lastServicedAt: servicedAt,
+                nextServiceDueAt: input.nextDueAt
+                  ? new Date(input.nextDueAt)
+                  : lockedAsset.nextServiceDueAt
+              }),
+          status: "available",
+          updatedAt: servicedAt
+        })
+        .where(eq(equipmentAssets.id, lockedAsset.id));
       if (!created) throw new Error("Failed to create maintenance record.");
       return { asset: lockedAsset, rec: created };
     });
@@ -4269,11 +4914,18 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   // ─── Inventory & Consumables ────────────────────────────────────────────────
-  async listInventoryItems(scope: TenantScope, branchId?: string): Promise<InventoryItemResponse[]> {
+  async listInventoryItems(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<InventoryItemResponse[]> {
     const conditions = [eq(inventoryItems.tenantId, scope.tenantId)];
     if (branchId) conditions.push(eq(inventoryItems.branchId, branchId));
-    else if (scope.branchIds.length) conditions.push(inArray(inventoryItems.branchId, scope.branchIds));
-    const rows = await this.db.select().from(inventoryItems).where(and(...conditions));
+    else if (scope.branchIds.length)
+      conditions.push(inArray(inventoryItems.branchId, scope.branchIds));
+    const rows = await this.db
+      .select()
+      .from(inventoryItems)
+      .where(and(...conditions));
     return rows.map((r) => ({
       id: r.id,
       tenantId: r.tenantId,
@@ -4294,7 +4946,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async findInventoryItemById(scope: TenantScope, itemId: string): Promise<InventoryItemResponse | null> {
+  async findInventoryItemById(
+    scope: TenantScope,
+    itemId: string
+  ): Promise<InventoryItemResponse | null> {
     const [r] = await this.db
       .select()
       .from(inventoryItems)
@@ -4320,7 +4975,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async createInventoryItem(scope: TenantScope, input: CreateInventoryItemRequest): Promise<InventoryItemResponse> {
+  async createInventoryItem(
+    scope: TenantScope,
+    input: CreateInventoryItemRequest
+  ): Promise<InventoryItemResponse> {
     const [created] = await this.db
       .insert(inventoryItems)
       .values({
@@ -4359,7 +5017,11 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async updateInventoryItem(scope: TenantScope, itemId: string, input: UpdateInventoryItemRequest): Promise<InventoryItemResponse | null> {
+  async updateInventoryItem(
+    scope: TenantScope,
+    itemId: string,
+    input: UpdateInventoryItemRequest
+  ): Promise<InventoryItemResponse | null> {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (input.name !== undefined) updateData.name = input.name;
     if (input.retailPriceMinor !== undefined) updateData.retailPriceMinor = input.retailPriceMinor;
@@ -4391,7 +5053,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async listInventoryMovements(scope: TenantScope, itemId?: string): Promise<InventoryMovementResponse[]> {
+  async listInventoryMovements(
+    scope: TenantScope,
+    itemId?: string
+  ): Promise<InventoryMovementResponse[]> {
     const conditions = [eq(inventoryMovements.tenantId, scope.tenantId)];
     if (itemId) conditions.push(eq(inventoryMovements.itemId, itemId));
     const rows = await this.db
@@ -4404,47 +5069,70 @@ export class DrizzleFitosRepository implements FitosRepository {
       .leftJoin(inventoryItems, eq(inventoryMovements.itemId, inventoryItems.id))
       .leftJoin(users, eq(inventoryMovements.recordedByUserId, users.id))
       .where(and(...conditions));
-    return rows.filter((r) => r.mov !== undefined).map(({ mov, itemName, userName }) => ({
-      id: mov.id,
-      tenantId: mov.tenantId,
-      branchId: mov.branchId,
-      itemId: mov.itemId,
-      itemName: itemName ?? "Item",
-      movementType: mov.type as any,
-      quantity: mov.quantity,
-      referenceType: null,
-      referenceId: mov.referenceId,
-      costMinor: null,
-      notes: mov.reason,
-      recordedByUserId: mov.recordedByUserId ?? "",
-      recordedByName: userName ?? "Staff",
-      recordedAt: mov.createdAt.toISOString()
-    }));
+    return rows
+      .filter((r) => r.mov !== undefined)
+      .map(({ mov, itemName, userName }) => ({
+        id: mov.id,
+        tenantId: mov.tenantId,
+        branchId: mov.branchId,
+        itemId: mov.itemId,
+        itemName: itemName ?? "Item",
+        movementType: mov.type as any,
+        quantity: mov.quantity,
+        referenceType: null,
+        referenceId: mov.referenceId,
+        costMinor: null,
+        notes: mov.reason,
+        recordedByUserId: mov.recordedByUserId ?? "",
+        recordedByName: userName ?? "Staff",
+        recordedAt: mov.createdAt.toISOString()
+      }));
   }
 
-  async createInventoryMovement(scope: TenantScope, input: CreateInventoryMovementRequest, recordedByUserId: string): Promise<InventoryMovementResponse> {
+  async createInventoryMovement(
+    scope: TenantScope,
+    input: CreateInventoryMovementRequest,
+    recordedByUserId: string
+  ): Promise<InventoryMovementResponse> {
     const { item, mov } = await this.db.transaction(async (tx) => {
       await tx.execute(sql`SELECT id FROM inventory_items WHERE id = ${input.itemId} FOR UPDATE`);
-      const [lockedItem] = await tx.select().from(inventoryItems).where(
-        and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, input.itemId), eq(inventoryItems.branchId, input.branchId))
-      );
+      const [lockedItem] = await tx
+        .select()
+        .from(inventoryItems)
+        .where(
+          and(
+            eq(inventoryItems.tenantId, scope.tenantId),
+            eq(inventoryItems.id, input.itemId),
+            eq(inventoryItems.branchId, input.branchId)
+          )
+        );
       if (!lockedItem) throw new Error("Inventory item not found in branch.");
-      const delta = input.movementType === "purchase_in" ? input.quantity :
-        input.movementType === "adjustment" ? input.quantity : -input.quantity;
+      const delta =
+        input.movementType === "purchase_in"
+          ? input.quantity
+          : input.movementType === "adjustment"
+            ? input.quantity
+            : -input.quantity;
       const newStock = lockedItem.currentStock + delta;
       if (newStock < 0) throw new Error("Inventory movement would make stock negative.");
-      await tx.update(inventoryItems).set({ currentStock: newStock, updatedAt: new Date() }).where(eq(inventoryItems.id, lockedItem.id));
-      const [created] = await tx.insert(inventoryMovements).values({
-        tenantId: scope.tenantId,
-        branchId: lockedItem.branchId,
-        itemId: lockedItem.id,
-        type: input.movementType,
-        quantity: input.quantity,
-        balanceAfter: newStock,
-        reason: input.notes ?? input.movementType,
-        referenceId: input.referenceId ?? null,
-        recordedByUserId
-      }).returning();
+      await tx
+        .update(inventoryItems)
+        .set({ currentStock: newStock, updatedAt: new Date() })
+        .where(eq(inventoryItems.id, lockedItem.id));
+      const [created] = await tx
+        .insert(inventoryMovements)
+        .values({
+          tenantId: scope.tenantId,
+          branchId: lockedItem.branchId,
+          itemId: lockedItem.id,
+          type: input.movementType,
+          quantity: input.quantity,
+          balanceAfter: newStock,
+          reason: input.notes ?? input.movementType,
+          referenceId: input.referenceId ?? null,
+          recordedByUserId
+        })
+        .returning();
       if (!created) throw new Error("Failed to record inventory movement.");
       return { item: lockedItem, mov: created };
     });
@@ -4468,10 +5156,16 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async listPurchaseOrders(scope: TenantScope, branchId?: string): Promise<PurchaseOrderResponse[]> {
+  async listPurchaseOrders(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<PurchaseOrderResponse[]> {
     const conditions = [eq(purchaseOrders.tenantId, scope.tenantId)];
     if (branchId) conditions.push(eq(purchaseOrders.branchId, branchId));
-    const rows = await this.db.select().from(purchaseOrders).where(and(...conditions));
+    const rows = await this.db
+      .select()
+      .from(purchaseOrders)
+      .where(and(...conditions));
     return rows.map((r) => ({
       id: r.id,
       tenantId: r.tenantId,
@@ -4490,19 +5184,24 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async createPurchaseOrder(scope: TenantScope, input: CreatePurchaseOrderRequest): Promise<PurchaseOrderResponse> {
+  async createPurchaseOrder(
+    scope: TenantScope,
+    input: CreatePurchaseOrderRequest
+  ): Promise<PurchaseOrderResponse> {
     let totalMinor = 0;
-    const items = input.items.map((i: { itemId: string; quantity: number; unitCostMinor: number }) => {
-      const lineTotal = i.quantity * i.unitCostMinor;
-      totalMinor += lineTotal;
-      return {
-        itemId: i.itemId,
-        itemName: "Item",
-        quantity: i.quantity,
-        unitCostMinor: i.unitCostMinor,
-        totalMinor: lineTotal
-      };
-    });
+    const items = input.items.map(
+      (i: { itemId: string; quantity: number; unitCostMinor: number }) => {
+        const lineTotal = i.quantity * i.unitCostMinor;
+        totalMinor += lineTotal;
+        return {
+          itemId: i.itemId,
+          itemName: "Item",
+          quantity: i.quantity,
+          unitCostMinor: i.unitCostMinor,
+          totalMinor: lineTotal
+        };
+      }
+    );
     const poNumber = `PO-${Date.now().toString().slice(-6)}`;
     const [created] = await this.db
       .insert(purchaseOrders)
@@ -4556,7 +5255,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async createAssessmentDefinition(scope: TenantScope, input: CreateAssessmentDefinitionRequest): Promise<AssessmentDefinitionResponse> {
+  async createAssessmentDefinition(
+    scope: TenantScope,
+    input: CreateAssessmentDefinitionRequest
+  ): Promise<AssessmentDefinitionResponse> {
     const [created] = await this.db
       .insert(assessmentDefinitions)
       .values({
@@ -4585,7 +5287,11 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async listAssessmentSessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<AssessmentSessionResponse[]> {
+  async listAssessmentSessions(
+    scope: TenantScope,
+    memberId?: string,
+    branchId?: string
+  ): Promise<AssessmentSessionResponse[]> {
     const conditions = [eq(assessmentSessions.tenantId, scope.tenantId)];
     if (memberId) conditions.push(eq(assessmentSessions.memberId, memberId));
     if (branchId) conditions.push(eq(assessmentSessions.branchId, branchId));
@@ -4598,38 +5304,52 @@ export class DrizzleFitosRepository implements FitosRepository {
         assessorName: users.displayName
       })
       .from(assessmentSessions)
-      .leftJoin(assessmentDefinitions, eq(assessmentSessions.definitionId, assessmentDefinitions.id))
+      .leftJoin(
+        assessmentDefinitions,
+        eq(assessmentSessions.definitionId, assessmentDefinitions.id)
+      )
       .leftJoin(members, eq(assessmentSessions.memberId, members.id))
       .leftJoin(contacts, eq(members.contactId, contacts.id))
       .leftJoin(users, eq(assessmentSessions.assessorStaffId, users.id))
       .where(and(...conditions));
-    return rows.filter((r) => r.sess !== undefined).map(({ sess, defName, contactFirst, contactLast, assessorName }) => ({
-      id: sess.id,
-      tenantId: sess.tenantId,
-      branchId: sess.branchId,
-      branchName: null,
-      memberId: sess.memberId,
-      memberName: contactFirst ? `${contactFirst} ${contactLast ?? ""}`.trim() : "Member",
-      assessorStaffId: sess.assessorStaffId ?? "",
-      assessorName: assessorName ?? "Staff Assessor",
-      definitionId: sess.definitionId,
-      definitionName: defName ?? "Assessment",
-      category: sess.category as any,
-      status: sess.status as any,
-      conductedAt: sess.conductedAt.toISOString(),
-      summary: sess.summary,
-      metrics: (sess.metricsJson as any) || {},
-      notes: sess.notes,
-      createdAt: sess.createdAt.toISOString(),
-      updatedAt: sess.updatedAt.toISOString()
-    }));
+    return rows
+      .filter((r) => r.sess !== undefined)
+      .map(({ sess, defName, contactFirst, contactLast, assessorName }) => ({
+        id: sess.id,
+        tenantId: sess.tenantId,
+        branchId: sess.branchId,
+        branchName: null,
+        memberId: sess.memberId,
+        memberName: contactFirst ? `${contactFirst} ${contactLast ?? ""}`.trim() : "Member",
+        assessorStaffId: sess.assessorStaffId ?? "",
+        assessorName: assessorName ?? "Staff Assessor",
+        definitionId: sess.definitionId,
+        definitionName: defName ?? "Assessment",
+        category: sess.category as any,
+        status: sess.status as any,
+        conductedAt: sess.conductedAt.toISOString(),
+        summary: sess.summary,
+        metrics: (sess.metricsJson as any) || {},
+        notes: sess.notes,
+        createdAt: sess.createdAt.toISOString(),
+        updatedAt: sess.updatedAt.toISOString()
+      }));
   }
 
-  async createAssessmentSession(scope: TenantScope, input: CreateAssessmentSessionRequest, assessorStaffId: string): Promise<AssessmentSessionResponse> {
+  async createAssessmentSession(
+    scope: TenantScope,
+    input: CreateAssessmentSessionRequest,
+    assessorStaffId: string
+  ): Promise<AssessmentSessionResponse> {
     const [def] = await this.db
       .select()
       .from(assessmentDefinitions)
-      .where(and(eq(assessmentDefinitions.tenantId, scope.tenantId), eq(assessmentDefinitions.id, input.definitionId)));
+      .where(
+        and(
+          eq(assessmentDefinitions.tenantId, scope.tenantId),
+          eq(assessmentDefinitions.id, input.definitionId)
+        )
+      );
     const [memberRow] = await this.db
       .select({ contactFirst: contacts.firstName, contactLast: contacts.lastName })
       .from(members)
@@ -4638,20 +5358,23 @@ export class DrizzleFitosRepository implements FitosRepository {
     const [assessor] = await this.db.select().from(users).where(eq(users.id, assessorStaffId));
 
     const sess = await this.db.transaction(async (tx) => {
-      const [created] = await tx.insert(assessmentSessions).values({
-        tenantId: scope.tenantId,
-        branchId: input.branchId,
-        memberId: input.memberId,
-        assessorStaffId,
-        definitionId: input.definitionId,
-        category: def?.category ?? "body_composition",
-        status: "completed",
-        conductedAt: input.conductedAt ? new Date(input.conductedAt) : new Date(),
-        summary: input.summary,
-        metricsJson: input.metrics,
-        provenanceJson: input.provenance ?? { source: "manual" },
-        notes: input.notes ?? null
-      }).returning();
+      const [created] = await tx
+        .insert(assessmentSessions)
+        .values({
+          tenantId: scope.tenantId,
+          branchId: input.branchId,
+          memberId: input.memberId,
+          assessorStaffId,
+          definitionId: input.definitionId,
+          category: def?.category ?? "body_composition",
+          status: "completed",
+          conductedAt: input.conductedAt ? new Date(input.conductedAt) : new Date(),
+          summary: input.summary,
+          metricsJson: input.metrics,
+          provenanceJson: input.provenance ?? { source: "manual" },
+          notes: input.notes ?? null
+        })
+        .returning();
       if (!created) return undefined;
       await tx.insert(assessmentMetricResults).values(
         Object.entries(input.metrics).map(([metricKey, value]) => ({
@@ -4673,7 +5396,9 @@ export class DrizzleFitosRepository implements FitosRepository {
       branchId: sess.branchId,
       branchName: null,
       memberId: sess.memberId,
-      memberName: memberRow ? `${memberRow.contactFirst} ${memberRow.contactLast ?? ""}`.trim() : "Member",
+      memberName: memberRow
+        ? `${memberRow.contactFirst} ${memberRow.contactLast ?? ""}`.trim()
+        : "Member",
       assessorStaffId,
       assessorName: assessor?.displayName ?? "Staff Assessor",
       definitionId: sess.definitionId,
@@ -4690,7 +5415,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async getMemberPerformanceProfile(scope: TenantScope, memberId: string): Promise<MemberPerformanceProfileResponse> {
+  async getMemberPerformanceProfile(
+    scope: TenantScope,
+    memberId: string
+  ): Promise<MemberPerformanceProfileResponse> {
     const [memberRow] = await this.db
       .select({ contactFirst: contacts.firstName, contactLast: contacts.lastName })
       .from(members)
@@ -4700,7 +5428,9 @@ export class DrizzleFitosRepository implements FitosRepository {
     const latest = sessions[sessions.length - 1];
     return {
       memberId,
-      memberName: memberRow ? `${memberRow.contactFirst} ${memberRow.contactLast ?? ""}`.trim() : "Member",
+      memberName: memberRow
+        ? `${memberRow.contactFirst} ${memberRow.contactLast ?? ""}`.trim()
+        : "Member",
       totalAssessments: sessions.length,
       lastAssessedAt: latest?.conductedAt ?? null,
       latestMetrics: latest?.metrics ?? {},
@@ -4729,23 +5459,220 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async listServiceInventoryRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> { const rows = await this.db.select().from(serviceInventoryRequirements).where(and(eq(serviceInventoryRequirements.tenantId, scope.tenantId), eq(serviceInventoryRequirements.serviceId, serviceId))); return rows.map((row) => ({ itemId: row.itemId, quantityPerSession: row.quantityPerSession })); }
-  async replaceServiceInventoryRequirements(scope: TenantScope, serviceId: string, requirements: import("@fitos/contracts").ServiceInventoryRequirement[]): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> { await this.db.transaction(async (tx) => { await tx.delete(serviceInventoryRequirements).where(and(eq(serviceInventoryRequirements.tenantId, scope.tenantId), eq(serviceInventoryRequirements.serviceId, serviceId))); if (requirements.length) await tx.insert(serviceInventoryRequirements).values(requirements.map((item) => ({ tenantId: scope.tenantId, serviceId, itemId: item.itemId, quantityPerSession: item.quantityPerSession }))); }); return requirements; }
-  async consumeInventory(scope: TenantScope, input: { branchId: string; serviceId?: string; referenceType: string; referenceId: string; items: import("@fitos/contracts").ServiceInventoryRequirement[] }): Promise<import("@fitos/contracts").InventoryConsumptionResponse[]> { return this.db.transaction(async (tx) => { const output = []; for (const item of input.items) { const [stock] = await tx.select().from(inventoryItems).where(and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.branchId, input.branchId), eq(inventoryItems.id, item.itemId))).for("update"); if (!stock || stock.currentStock < item.quantityPerSession) throw new Error("Insufficient inventory stock."); const [row] = await tx.insert(inventoryConsumptions).values({ tenantId: scope.tenantId, branchId: input.branchId, itemId: item.itemId, serviceId: input.serviceId ?? null, referenceType: input.referenceType, referenceId: input.referenceId, quantity: item.quantityPerSession }).onConflictDoNothing().returning(); if (row) { await tx.update(inventoryItems).set({ currentStock: stock.currentStock - item.quantityPerSession, updatedAt: new Date() }).where(eq(inventoryItems.id, item.itemId)); output.push({ id: row.id, tenantId: row.tenantId, branchId: row.branchId, itemId: row.itemId, serviceId: row.serviceId, referenceType: row.referenceType, referenceId: row.referenceId, quantity: row.quantity, createdAt: row.createdAt.toISOString() }); } } return output; }); }
-
-  async listOccurrenceEquipmentAllocations(scope: TenantScope, occurrenceId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse[]> { const rows = await this.db.select().from(occurrenceEquipmentAllocations).where(and(eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId), eq(occurrenceEquipmentAllocations.occurrenceId, occurrenceId))); return rows.map((row) => ({ id: row.id, tenantId: row.tenantId, occurrenceId: row.occurrenceId, assetId: row.assetId, status: row.status as any, createdAt: row.createdAt.toISOString() })); }
-  async reserveOccurrenceEquipment(scope: TenantScope, occurrenceId: string, assetId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse> {
+  async listServiceInventoryRequirements(
+    scope: TenantScope,
+    serviceId: string
+  ): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> {
+    const rows = await this.db
+      .select()
+      .from(serviceInventoryRequirements)
+      .where(
+        and(
+          eq(serviceInventoryRequirements.tenantId, scope.tenantId),
+          eq(serviceInventoryRequirements.serviceId, serviceId)
+        )
+      );
+    return rows.map((row) => ({ itemId: row.itemId, quantityPerSession: row.quantityPerSession }));
+  }
+  async replaceServiceInventoryRequirements(
+    scope: TenantScope,
+    serviceId: string,
+    requirements: import("@fitos/contracts").ServiceInventoryRequirement[]
+  ): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> {
+    await this.db.transaction(async (tx) => {
+      await tx
+        .delete(serviceInventoryRequirements)
+        .where(
+          and(
+            eq(serviceInventoryRequirements.tenantId, scope.tenantId),
+            eq(serviceInventoryRequirements.serviceId, serviceId)
+          )
+        );
+      if (requirements.length)
+        await tx
+          .insert(serviceInventoryRequirements)
+          .values(
+            requirements.map((item) => ({
+              tenantId: scope.tenantId,
+              serviceId,
+              itemId: item.itemId,
+              quantityPerSession: item.quantityPerSession
+            }))
+          );
+    });
+    return requirements;
+  }
+  async consumeInventory(
+    scope: TenantScope,
+    input: {
+      branchId: string;
+      serviceId?: string;
+      referenceType: string;
+      referenceId: string;
+      items: import("@fitos/contracts").ServiceInventoryRequirement[];
+    }
+  ): Promise<import("@fitos/contracts").InventoryConsumptionResponse[]> {
     return this.db.transaction(async (tx) => {
-      const [occurrence] = await tx.select().from(scheduleOccurrences).where(and(eq(scheduleOccurrences.id, occurrenceId), eq(scheduleOccurrences.tenantId, scope.tenantId)));
-      const [asset] = await tx.select().from(equipmentAssets).where(and(eq(equipmentAssets.id, assetId), eq(equipmentAssets.tenantId, scope.tenantId)));
-      if (!occurrence || !asset || occurrence.branchId !== asset.branchId || asset.status !== "available") throw new Error("Equipment asset is unavailable for this occurrence.");
-      const [conflict] = await tx.select({ id: occurrenceEquipmentAllocations.id }).from(occurrenceEquipmentAllocations).innerJoin(scheduleOccurrences, eq(occurrenceEquipmentAllocations.occurrenceId, scheduleOccurrences.id)).where(and(eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId), eq(occurrenceEquipmentAllocations.assetId, assetId), eq(occurrenceEquipmentAllocations.status, "reserved"), lt(scheduleOccurrences.startsAt, occurrence.endsAt), gt(scheduleOccurrences.endsAt, occurrence.startsAt))).limit(1);
-      if (conflict) throw new Error("Equipment asset is already reserved for an overlapping occurrence.");
-      const [created] = await tx.insert(occurrenceEquipmentAllocations).values({ tenantId: scope.tenantId, occurrenceId, assetId, status: "reserved" }).returning();
-      if (!created) throw new Error("Unable to reserve equipment asset."); return { id: created.id, tenantId: created.tenantId, occurrenceId: created.occurrenceId, assetId: created.assetId, status: created.status as any, createdAt: created.createdAt.toISOString() };
+      const output = [];
+      for (const item of input.items) {
+        const [stock] = await tx
+          .select()
+          .from(inventoryItems)
+          .where(
+            and(
+              eq(inventoryItems.tenantId, scope.tenantId),
+              eq(inventoryItems.branchId, input.branchId),
+              eq(inventoryItems.id, item.itemId)
+            )
+          )
+          .for("update");
+        if (!stock || stock.currentStock < item.quantityPerSession)
+          throw new Error("Insufficient inventory stock.");
+        const [row] = await tx
+          .insert(inventoryConsumptions)
+          .values({
+            tenantId: scope.tenantId,
+            branchId: input.branchId,
+            itemId: item.itemId,
+            serviceId: input.serviceId ?? null,
+            referenceType: input.referenceType,
+            referenceId: input.referenceId,
+            quantity: item.quantityPerSession
+          })
+          .onConflictDoNothing()
+          .returning();
+        if (row) {
+          await tx
+            .update(inventoryItems)
+            .set({
+              currentStock: stock.currentStock - item.quantityPerSession,
+              updatedAt: new Date()
+            })
+            .where(eq(inventoryItems.id, item.itemId));
+          output.push({
+            id: row.id,
+            tenantId: row.tenantId,
+            branchId: row.branchId,
+            itemId: row.itemId,
+            serviceId: row.serviceId,
+            referenceType: row.referenceType,
+            referenceId: row.referenceId,
+            quantity: row.quantity,
+            createdAt: row.createdAt.toISOString()
+          });
+        }
+      }
+      return output;
     });
   }
-  async releaseOccurrenceEquipment(scope: TenantScope, allocationId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse | null> { const [row] = await this.db.update(occurrenceEquipmentAllocations).set({ status: "released" }).where(and(eq(occurrenceEquipmentAllocations.id, allocationId), eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId))).returning(); return row ? { id: row.id, tenantId: row.tenantId, occurrenceId: row.occurrenceId, assetId: row.assetId, status: row.status as any, createdAt: row.createdAt.toISOString() } : null; }
+
+  async listOccurrenceEquipmentAllocations(
+    scope: TenantScope,
+    occurrenceId: string
+  ): Promise<import("@fitos/contracts").EquipmentAllocationResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(occurrenceEquipmentAllocations)
+      .where(
+        and(
+          eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId),
+          eq(occurrenceEquipmentAllocations.occurrenceId, occurrenceId)
+        )
+      );
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      occurrenceId: row.occurrenceId,
+      assetId: row.assetId,
+      status: row.status as any,
+      createdAt: row.createdAt.toISOString()
+    }));
+  }
+  async reserveOccurrenceEquipment(
+    scope: TenantScope,
+    occurrenceId: string,
+    assetId: string
+  ): Promise<import("@fitos/contracts").EquipmentAllocationResponse> {
+    return this.db.transaction(async (tx) => {
+      const [occurrence] = await tx
+        .select()
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.id, occurrenceId),
+            eq(scheduleOccurrences.tenantId, scope.tenantId)
+          )
+        );
+      const [asset] = await tx
+        .select()
+        .from(equipmentAssets)
+        .where(and(eq(equipmentAssets.id, assetId), eq(equipmentAssets.tenantId, scope.tenantId)));
+      if (
+        !occurrence ||
+        !asset ||
+        occurrence.branchId !== asset.branchId ||
+        asset.status !== "available"
+      )
+        throw new Error("Equipment asset is unavailable for this occurrence.");
+      const [conflict] = await tx
+        .select({ id: occurrenceEquipmentAllocations.id })
+        .from(occurrenceEquipmentAllocations)
+        .innerJoin(
+          scheduleOccurrences,
+          eq(occurrenceEquipmentAllocations.occurrenceId, scheduleOccurrences.id)
+        )
+        .where(
+          and(
+            eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId),
+            eq(occurrenceEquipmentAllocations.assetId, assetId),
+            eq(occurrenceEquipmentAllocations.status, "reserved"),
+            lt(scheduleOccurrences.startsAt, occurrence.endsAt),
+            gt(scheduleOccurrences.endsAt, occurrence.startsAt)
+          )
+        )
+        .limit(1);
+      if (conflict)
+        throw new Error("Equipment asset is already reserved for an overlapping occurrence.");
+      const [created] = await tx
+        .insert(occurrenceEquipmentAllocations)
+        .values({ tenantId: scope.tenantId, occurrenceId, assetId, status: "reserved" })
+        .returning();
+      if (!created) throw new Error("Unable to reserve equipment asset.");
+      return {
+        id: created.id,
+        tenantId: created.tenantId,
+        occurrenceId: created.occurrenceId,
+        assetId: created.assetId,
+        status: created.status as any,
+        createdAt: created.createdAt.toISOString()
+      };
+    });
+  }
+  async releaseOccurrenceEquipment(
+    scope: TenantScope,
+    allocationId: string
+  ): Promise<import("@fitos/contracts").EquipmentAllocationResponse | null> {
+    const [row] = await this.db
+      .update(occurrenceEquipmentAllocations)
+      .set({ status: "released" })
+      .where(
+        and(
+          eq(occurrenceEquipmentAllocations.id, allocationId),
+          eq(occurrenceEquipmentAllocations.tenantId, scope.tenantId)
+        )
+      )
+      .returning();
+    return row
+      ? {
+          id: row.id,
+          tenantId: row.tenantId,
+          occurrenceId: row.occurrenceId,
+          assetId: row.assetId,
+          status: row.status as any,
+          createdAt: row.createdAt.toISOString()
+        }
+      : null;
+  }
 
   /** Resource conflicts are operator warnings; they never change booking capacity. */
   private async withResourceWarnings(
@@ -4754,34 +5681,88 @@ export class DrizzleFitosRepository implements FitosRepository {
     if (!occurrences.length) return [];
     const tenantId = occurrences[0]!.tenantId;
     const serviceIds = [...new Set(occurrences.map((item) => item.serviceId))];
-    const requirements = await this.db.select().from(serviceEquipmentRequirements).where(and(
-      eq(serviceEquipmentRequirements.tenantId, tenantId), inArray(serviceEquipmentRequirements.serviceId, serviceIds)
-    ));
+    const requirements = await this.db
+      .select()
+      .from(serviceEquipmentRequirements)
+      .where(
+        and(
+          eq(serviceEquipmentRequirements.tenantId, tenantId),
+          inArray(serviceEquipmentRequirements.serviceId, serviceIds)
+        )
+      );
     if (!requirements.length) return occurrences.map((item) => this.occurrenceResponse(item));
     const poolIds = [...new Set(requirements.map((item) => item.poolId))];
     const [pools, assets, tenantOccurrences] = await Promise.all([
-      this.db.select().from(equipmentPools).where(and(eq(equipmentPools.tenantId, tenantId), inArray(equipmentPools.id, poolIds))),
-      this.db.select().from(equipmentAssets).where(and(eq(equipmentAssets.tenantId, tenantId), inArray(equipmentAssets.poolId, poolIds))),
-      this.db.select().from(scheduleOccurrences).where(and(eq(scheduleOccurrences.tenantId, tenantId), eq(scheduleOccurrences.status, "scheduled")))
+      this.db
+        .select()
+        .from(equipmentPools)
+        .where(and(eq(equipmentPools.tenantId, tenantId), inArray(equipmentPools.id, poolIds))),
+      this.db
+        .select()
+        .from(equipmentAssets)
+        .where(
+          and(eq(equipmentAssets.tenantId, tenantId), inArray(equipmentAssets.poolId, poolIds))
+        ),
+      this.db
+        .select()
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.tenantId, tenantId),
+            eq(scheduleOccurrences.status, "scheduled")
+          )
+        )
     ]);
     const reqByService = new Map<string, typeof requirements>();
-    for (const requirement of requirements) reqByService.set(requirement.serviceId, [...(reqByService.get(requirement.serviceId) ?? []), requirement]);
+    for (const requirement of requirements)
+      reqByService.set(requirement.serviceId, [
+        ...(reqByService.get(requirement.serviceId) ?? []),
+        requirement
+      ]);
     const poolById = new Map(pools.map((pool) => [pool.id, pool]));
     return occurrences.map((occurrence) => {
-      const warnings = (reqByService.get(occurrence.serviceId) ?? []).map((requirement) => {
-        const pool = poolById.get(requirement.poolId);
-        const available = assets.filter((asset) => asset.poolId === requirement.poolId && asset.branchId === occurrence.branchId && asset.status === "available").length;
-        const overlappingDemand = tenantOccurrences.filter((other) => other.branchId === occurrence.branchId && other.id !== occurrence.id && other.startsAt < occurrence.endsAt && other.endsAt > occurrence.startsAt)
-          .flatMap((other) => reqByService.get(other.serviceId) ?? []).filter((otherRequirement) => otherRequirement.poolId === requirement.poolId)
-          .reduce((total, otherRequirement) => total + otherRequirement.quantityRequired, 0);
-        const shortage = Math.max(0, requirement.quantityRequired + overlappingDemand - available);
-        return { poolId: requirement.poolId, poolName: pool?.name ?? "Equipment pool", required: requirement.quantityRequired, available, overlappingDemand, shortage };
-      }).filter((warning) => warning.shortage > 0);
+      const warnings = (reqByService.get(occurrence.serviceId) ?? [])
+        .map((requirement) => {
+          const pool = poolById.get(requirement.poolId);
+          const available = assets.filter(
+            (asset) =>
+              asset.poolId === requirement.poolId &&
+              asset.branchId === occurrence.branchId &&
+              asset.status === "available"
+          ).length;
+          const overlappingDemand = tenantOccurrences
+            .filter(
+              (other) =>
+                other.branchId === occurrence.branchId &&
+                other.id !== occurrence.id &&
+                other.startsAt < occurrence.endsAt &&
+                other.endsAt > occurrence.startsAt
+            )
+            .flatMap((other) => reqByService.get(other.serviceId) ?? [])
+            .filter((otherRequirement) => otherRequirement.poolId === requirement.poolId)
+            .reduce((total, otherRequirement) => total + otherRequirement.quantityRequired, 0);
+          const shortage = Math.max(
+            0,
+            requirement.quantityRequired + overlappingDemand - available
+          );
+          return {
+            poolId: requirement.poolId,
+            poolName: pool?.name ?? "Equipment pool",
+            required: requirement.quantityRequired,
+            available,
+            overlappingDemand,
+            shortage
+          };
+        })
+        .filter((warning) => warning.shortage > 0);
       return { ...this.occurrenceResponse(occurrence), resourceWarnings: warnings };
     });
   }
 
-  async createPublicReservation(tenantSlug: string, input: import("@fitos/contracts").CreatePublicReservationRequest): Promise<import("@fitos/contracts").PublicReservationResponse> {
+  async createPublicReservation(
+    tenantSlug: string,
+    input: import("@fitos/contracts").CreatePublicReservationRequest
+  ): Promise<import("@fitos/contracts").PublicReservationResponse> {
     const [tenant] = await this.db.select().from(tenants).where(eq(tenants.slug, tenantSlug));
     if (!tenant) throw new Error("Tenant not found.");
     const created = await this.db.transaction(async (tx) => {
@@ -4791,7 +5772,12 @@ export class DrizzleFitosRepository implements FitosRepository {
         const [occurrence] = await tx
           .select()
           .from(scheduleOccurrences)
-          .where(and(eq(scheduleOccurrences.id, input.occurrenceId), eq(scheduleOccurrences.tenantId, tenant.id)))
+          .where(
+            and(
+              eq(scheduleOccurrences.id, input.occurrenceId),
+              eq(scheduleOccurrences.tenantId, tenant.id)
+            )
+          )
           .limit(1);
         if (!occurrence || occurrence.status === "cancelled") {
           throw new Error("The selected schedule occurrence is unavailable.");
@@ -4806,81 +5792,188 @@ export class DrizzleFitosRepository implements FitosRepository {
         serviceId = occurrence.serviceId;
       }
       if (branchId) {
-        const [branch] = await tx.select({ id: branches.id }).from(branches)
-          .where(and(eq(branches.id, branchId), eq(branches.tenantId, tenant.id))).limit(1);
+        const [branch] = await tx
+          .select({ id: branches.id })
+          .from(branches)
+          .where(and(eq(branches.id, branchId), eq(branches.tenantId, tenant.id)))
+          .limit(1);
         if (!branch) throw new Error("Branch does not belong to this organization.");
       }
       if (serviceId) {
-        const [service] = await tx.select({ id: services.id }).from(services)
-          .where(and(eq(services.id, serviceId), eq(services.tenantId, tenant.id))).limit(1);
+        const [service] = await tx
+          .select({ id: services.id })
+          .from(services)
+          .where(and(eq(services.id, serviceId), eq(services.tenantId, tenant.id)))
+          .limit(1);
         if (!service) throw new Error("Service does not belong to this organization.");
       }
-      const [reservation] = await tx.insert(publicReservations).values({
-        tenantId: tenant.id,
-        branchId,
-        occurrenceId: input.occurrenceId ?? null,
-        serviceId,
-        reservationType: input.reservationType,
-        firstName: input.firstName.trim(),
-        lastName: input.lastName?.trim() || null,
-        phone: input.phone?.trim() || null,
-        email: input.email?.trim().toLowerCase() || null,
-        notes: input.notes?.trim() || null
-      }).returning();
+      const [reservation] = await tx
+        .insert(publicReservations)
+        .values({
+          tenantId: tenant.id,
+          branchId,
+          occurrenceId: input.occurrenceId ?? null,
+          serviceId,
+          reservationType: input.reservationType,
+          firstName: input.firstName.trim(),
+          lastName: input.lastName?.trim() || null,
+          phone: input.phone?.trim() || null,
+          email: input.email?.trim().toLowerCase() || null,
+          notes: input.notes?.trim() || null
+        })
+        .returning();
       if (!reservation) throw new Error("Unable to create reservation.");
       return reservation;
     });
     if (!created) throw new Error("Unable to create reservation.");
-    return { id: created.id, tenantId: created.tenantId, branchId: created.branchId ?? undefined, occurrenceId: created.occurrenceId ?? undefined, serviceId: created.serviceId ?? undefined, reservationType: created.reservationType as any, firstName: created.firstName, lastName: created.lastName ?? undefined, phone: created.phone ?? undefined, email: created.email ?? undefined, notes: created.notes ?? undefined, status: created.status as any, createdAt: created.createdAt.toISOString() };
+    return {
+      id: created.id,
+      tenantId: created.tenantId,
+      branchId: created.branchId ?? undefined,
+      occurrenceId: created.occurrenceId ?? undefined,
+      serviceId: created.serviceId ?? undefined,
+      reservationType: created.reservationType as any,
+      firstName: created.firstName,
+      lastName: created.lastName ?? undefined,
+      phone: created.phone ?? undefined,
+      email: created.email ?? undefined,
+      notes: created.notes ?? undefined,
+      status: created.status as any,
+      createdAt: created.createdAt.toISOString()
+    };
   }
 
   async setMemberPassword(memberId: string, passwordHash: string): Promise<void> {
     const [member] = await this.db.select().from(members).where(eq(members.id, memberId));
     if (!member) throw new Error("Member not found.");
-    await this.db.insert(memberIdentities).values({ tenantId: member.tenantId, memberId, passwordHash }).onConflictDoUpdate({ target: [memberIdentities.tenantId, memberIdentities.memberId], set: { passwordHash, passwordChangedAt: new Date(), updatedAt: new Date() } });
+    await this.db
+      .insert(memberIdentities)
+      .values({ tenantId: member.tenantId, memberId, passwordHash })
+      .onConflictDoUpdate({
+        target: [memberIdentities.tenantId, memberIdentities.memberId],
+        set: { passwordHash, passwordChangedAt: new Date(), updatedAt: new Date() }
+      });
   }
 
   async verifyMemberPassword(memberId: string, password: string): Promise<boolean> {
-    const [identity] = await this.db.select().from(memberIdentities).where(eq(memberIdentities.memberId, memberId));
-    return identity ? new (await import("@fitos/auth")).ScryptPasswordHasher().verify(password, identity.passwordHash) : false;
+    const [identity] = await this.db
+      .select()
+      .from(memberIdentities)
+      .where(eq(memberIdentities.memberId, memberId));
+    return identity
+      ? new (await import("@fitos/auth")).ScryptPasswordHasher().verify(
+          password,
+          identity.passwordHash
+        )
+      : false;
   }
 
-  async listServiceEquipmentRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
-    const rows = await this.db.select().from(serviceEquipmentRequirements).where(and(eq(serviceEquipmentRequirements.tenantId, scope.tenantId), eq(serviceEquipmentRequirements.serviceId, serviceId)));
+  async listServiceEquipmentRequirements(
+    scope: TenantScope,
+    serviceId: string
+  ): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
+    const rows = await this.db
+      .select()
+      .from(serviceEquipmentRequirements)
+      .where(
+        and(
+          eq(serviceEquipmentRequirements.tenantId, scope.tenantId),
+          eq(serviceEquipmentRequirements.serviceId, serviceId)
+        )
+      );
     return rows.map((row) => ({ poolId: row.poolId, quantityRequired: row.quantityRequired }));
   }
 
-  async replaceServiceEquipmentRequirements(scope: TenantScope, serviceId: string, requirements: import("@fitos/contracts").ServiceEquipmentRequirement[]): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
+  async replaceServiceEquipmentRequirements(
+    scope: TenantScope,
+    serviceId: string,
+    requirements: import("@fitos/contracts").ServiceEquipmentRequirement[]
+  ): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
     await this.db.transaction(async (tx) => {
-      const [service] = await tx.select().from(services).where(and(eq(services.tenantId, scope.tenantId), eq(services.id, serviceId)));
+      const [service] = await tx
+        .select()
+        .from(services)
+        .where(and(eq(services.tenantId, scope.tenantId), eq(services.id, serviceId)));
       if (!service) throw new Error("Service not found.");
       for (const requirement of requirements) {
-        const [pool] = await tx.select().from(equipmentPools).where(and(eq(equipmentPools.tenantId, scope.tenantId), eq(equipmentPools.id, requirement.poolId)));
-        if (!pool || (service.branchId && pool.branchId !== service.branchId)) throw new Error("Equipment pool is not available for this service.");
+        const [pool] = await tx
+          .select()
+          .from(equipmentPools)
+          .where(
+            and(
+              eq(equipmentPools.tenantId, scope.tenantId),
+              eq(equipmentPools.id, requirement.poolId)
+            )
+          );
+        if (!pool || (service.branchId && pool.branchId !== service.branchId))
+          throw new Error("Equipment pool is not available for this service.");
       }
-      await tx.delete(serviceEquipmentRequirements).where(and(eq(serviceEquipmentRequirements.tenantId, scope.tenantId), eq(serviceEquipmentRequirements.serviceId, serviceId)));
-      if (requirements.length) await tx.insert(serviceEquipmentRequirements).values(requirements.map((r) => ({ tenantId: scope.tenantId, serviceId, poolId: r.poolId, quantityRequired: r.quantityRequired })));
+      await tx
+        .delete(serviceEquipmentRequirements)
+        .where(
+          and(
+            eq(serviceEquipmentRequirements.tenantId, scope.tenantId),
+            eq(serviceEquipmentRequirements.serviceId, serviceId)
+          )
+        );
+      if (requirements.length)
+        await tx
+          .insert(serviceEquipmentRequirements)
+          .values(
+            requirements.map((r) => ({
+              tenantId: scope.tenantId,
+              serviceId,
+              poolId: r.poolId,
+              quantityRequired: r.quantityRequired
+            }))
+          );
     });
     return requirements;
   }
 
-  async createTherapyModality(scope: TenantScope, input: import("@fitos/contracts").CreateTherapyModalityRequest): Promise<TherapyModalityResponse> {
-    const [created] = await this.db.insert(therapyModalities).values({
-      tenantId: scope.tenantId, code: input.code, name: input.name, category: input.category,
-      defaultDurationMinutes: input.defaultDurationMinutes, contraindicationsJson: input.contraindications,
-      description: input.description, isActive: true
-    }).returning();
+  async createTherapyModality(
+    scope: TenantScope,
+    input: import("@fitos/contracts").CreateTherapyModalityRequest
+  ): Promise<TherapyModalityResponse> {
+    const [created] = await this.db
+      .insert(therapyModalities)
+      .values({
+        tenantId: scope.tenantId,
+        code: input.code,
+        name: input.name,
+        category: input.category,
+        defaultDurationMinutes: input.defaultDurationMinutes,
+        contraindicationsJson: input.contraindications,
+        description: input.description,
+        isActive: true
+      })
+      .returning();
     if (!created) throw new Error("Failed to create therapy modality.");
-    return { id: created.id, tenantId: created.tenantId, code: created.code as any, name: created.name,
-      category: created.category as any, defaultDurationMinutes: created.defaultDurationMinutes,
-      contraindications: created.contraindicationsJson as string[], description: created.description,
-      isActive: created.isActive, createdAt: created.createdAt.toISOString(), updatedAt: created.updatedAt.toISOString() };
+    return {
+      id: created.id,
+      tenantId: created.tenantId,
+      code: created.code as any,
+      name: created.name,
+      category: created.category as any,
+      defaultDurationMinutes: created.defaultDurationMinutes,
+      contraindications: created.contraindicationsJson as string[],
+      description: created.description,
+      isActive: created.isActive,
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString()
+    };
   }
 
-  async listTherapyProtocols(scope: TenantScope, modalityCode?: string): Promise<TherapyProtocolResponse[]> {
+  async listTherapyProtocols(
+    scope: TenantScope,
+    modalityCode?: string
+  ): Promise<TherapyProtocolResponse[]> {
     const conditions = [eq(therapyProtocols.tenantId, scope.tenantId)];
     if (modalityCode) conditions.push(eq(therapyProtocols.modalityCode, modalityCode));
-    const rows = await this.db.select().from(therapyProtocols).where(and(...conditions));
+    const rows = await this.db
+      .select()
+      .from(therapyProtocols)
+      .where(and(...conditions));
     return rows.map((r) => ({
       id: r.id,
       tenantId: r.tenantId,
@@ -4898,7 +5991,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
-  async createTherapyProtocol(scope: TenantScope, input: CreateTherapyProtocolRequest): Promise<TherapyProtocolResponse> {
+  async createTherapyProtocol(
+    scope: TenantScope,
+    input: CreateTherapyProtocolRequest
+  ): Promise<TherapyProtocolResponse> {
     const [created] = await this.db
       .insert(therapyProtocols)
       .values({
@@ -4932,7 +6028,11 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async listTherapySessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<TherapySessionResponse[]> {
+  async listTherapySessions(
+    scope: TenantScope,
+    memberId?: string,
+    branchId?: string
+  ): Promise<TherapySessionResponse[]> {
     const conditions = [eq(therapySessions.tenantId, scope.tenantId)];
     if (memberId) conditions.push(eq(therapySessions.memberId, memberId));
     if (branchId) conditions.push(eq(therapySessions.branchId, branchId));
@@ -4950,38 +6050,49 @@ export class DrizzleFitosRepository implements FitosRepository {
       .leftJoin(users, eq(therapySessions.staffUserId, users.id))
       .leftJoin(equipmentAssets, eq(therapySessions.assetId, equipmentAssets.id))
       .where(and(...conditions));
-    return rows.filter((r) => r.sess !== undefined).map(({ sess, contactFirst, contactLast, staffName, assetName }) => ({
-      id: sess.id,
-      tenantId: sess.tenantId,
-      branchId: sess.branchId,
-      branchName: null,
-      memberId: sess.memberId,
-      memberName: contactFirst ? `${contactFirst} ${contactLast ?? ""}`.trim() : "Member",
-      staffUserId: sess.staffUserId ?? "",
-      staffName: staffName ?? "Clinical Staff",
-      protocolId: sess.protocolId,
-      protocolName: sess.protocolName,
-      modalityCode: sess.modalityCode as any,
-      assetId: sess.assetId,
-      assetName: assetName ?? null,
-      status: sess.status as any,
-      startedAt: sess.startedAt.toISOString(),
-      completedAt: sess.completedAt ? sess.completedAt.toISOString() : null,
-      prePainScore: sess.prePainScore,
-      postPainScore: sess.postPainScore,
-      actualDosage: (sess.actualDosageJson as any) || {},
-      adverseReaction: sess.adverseReaction,
-      sessionNotes: sess.sessionNotes,
-      createdAt: sess.createdAt.toISOString(),
-      updatedAt: sess.updatedAt.toISOString()
-    }));
+    return rows
+      .filter((r) => r.sess !== undefined)
+      .map(({ sess, contactFirst, contactLast, staffName, assetName }) => ({
+        id: sess.id,
+        tenantId: sess.tenantId,
+        branchId: sess.branchId,
+        branchName: null,
+        memberId: sess.memberId,
+        memberName: contactFirst ? `${contactFirst} ${contactLast ?? ""}`.trim() : "Member",
+        staffUserId: sess.staffUserId ?? "",
+        staffName: staffName ?? "Clinical Staff",
+        protocolId: sess.protocolId,
+        protocolName: sess.protocolName,
+        modalityCode: sess.modalityCode as any,
+        assetId: sess.assetId,
+        assetName: assetName ?? null,
+        status: sess.status as any,
+        startedAt: sess.startedAt.toISOString(),
+        completedAt: sess.completedAt ? sess.completedAt.toISOString() : null,
+        prePainScore: sess.prePainScore,
+        postPainScore: sess.postPainScore,
+        actualDosage: (sess.actualDosageJson as any) || {},
+        adverseReaction: sess.adverseReaction,
+        sessionNotes: sess.sessionNotes,
+        createdAt: sess.createdAt.toISOString(),
+        updatedAt: sess.updatedAt.toISOString()
+      }));
   }
 
-  async createTherapySession(scope: TenantScope, input: CreateTherapySessionRequest, staffUserId: string): Promise<TherapySessionResponse> {
+  async createTherapySession(
+    scope: TenantScope,
+    input: CreateTherapySessionRequest,
+    staffUserId: string
+  ): Promise<TherapySessionResponse> {
     const [proto] = await this.db
       .select()
       .from(therapyProtocols)
-      .where(and(eq(therapyProtocols.tenantId, scope.tenantId), eq(therapyProtocols.id, input.protocolId)));
+      .where(
+        and(
+          eq(therapyProtocols.tenantId, scope.tenantId),
+          eq(therapyProtocols.id, input.protocolId)
+        )
+      );
     const [memberRow] = await this.db
       .select({ contactFirst: contacts.firstName, contactLast: contacts.lastName })
       .from(members)
@@ -4989,7 +6100,9 @@ export class DrizzleFitosRepository implements FitosRepository {
       .where(and(eq(members.tenantId, scope.tenantId), eq(members.id, input.memberId)));
     const [staff] = await this.db.select().from(users).where(eq(users.id, staffUserId));
     const asset = input.assetId
-      ? (await this.db.select().from(equipmentAssets).where(eq(equipmentAssets.id, input.assetId)))[0]
+      ? (
+          await this.db.select().from(equipmentAssets).where(eq(equipmentAssets.id, input.assetId))
+        )[0]
       : null;
 
     const [sess] = await this.db
@@ -5021,7 +6134,9 @@ export class DrizzleFitosRepository implements FitosRepository {
       branchId: sess.branchId,
       branchName: null,
       memberId: sess.memberId,
-      memberName: memberRow ? `${memberRow.contactFirst} ${memberRow.contactLast ?? ""}`.trim() : "Member",
+      memberName: memberRow
+        ? `${memberRow.contactFirst} ${memberRow.contactLast ?? ""}`.trim()
+        : "Member",
       staffUserId,
       staffName: staff?.displayName ?? "Clinical Staff",
       protocolId: sess.protocolId,

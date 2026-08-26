@@ -8,12 +8,14 @@ import type {
   ScheduleOccurrenceResponse
 } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
+import { useBranch } from "../../app/branch-context";
 import { ErrorNotice, PageLoading, formatCurrency, formatDateTime } from "../shared";
 
 export function NewBookingPage() {
   const navigate = useNavigate();
   const [urlParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { activeBranchId } = useBranch();
 
   const preselectedOccurrenceId = urlParams.get("occurrenceId") ?? "";
   const preselectedMemberId = urlParams.get("memberId") ?? "";
@@ -24,23 +26,27 @@ export function NewBookingPage() {
   const [submissionError, setSubmissionError] = useState<unknown>(null);
 
   const membersQuery = useQuery({
-    queryKey: ["members", memberSearch],
+    queryKey: ["members", activeBranchId, memberSearch],
     queryFn: () => {
       const p = new URLSearchParams();
       if (memberSearch.trim()) p.set("query", memberSearch.trim());
       p.set("limit", "50");
+      if (activeBranchId) p.set("branchId", activeBranchId);
       return api.members(p);
-    }
+    },
+    enabled: Boolean(activeBranchId)
   });
 
   const occurrencesQuery = useQuery({
-    queryKey: ["schedule", "bookable"],
+    queryKey: ["schedule", activeBranchId, "bookable"],
     queryFn: () => {
       const p = new URLSearchParams();
       p.set("status", "scheduled");
       p.set("limit", "100");
+      if (activeBranchId) p.set("branchId", activeBranchId);
       return api.scheduleOccurrences(p);
-    }
+    },
+    enabled: Boolean(activeBranchId)
   });
 
   const servicesQuery = useQuery({ queryKey: ["services"], queryFn: api.services });
@@ -49,8 +55,9 @@ export function NewBookingPage() {
   const roomsQuery = useQuery({ queryKey: ["rooms"], queryFn: () => api.rooms() });
 
   const allBookingsQuery = useQuery({
-    queryKey: ["bookings", "counts"],
-    queryFn: () => api.bookings()
+    queryKey: ["bookings", activeBranchId, "counts"],
+    queryFn: () => api.bookings(new URLSearchParams({ branchId: activeBranchId })),
+    enabled: Boolean(activeBranchId)
   });
 
   const selectedMember = membersQuery.data?.data.find((m) => m.id === selectedMemberId);

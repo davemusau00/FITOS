@@ -62,15 +62,24 @@ export function DataTable<T extends { id: string }>({
   columns,
   data,
   label,
-  onRowClick
+  onRowClick,
+  mobileRenderer
 }: {
   columns: Array<DataTableColumn<T>>;
   data: T[];
   label: string;
   onRowClick?: (row: T) => void;
+  mobileRenderer?: (row: T) => ReactNode;
 }) {
   return (
     <div className="fitos-data-table-wrap">
+      {mobileRenderer ? (
+        <div aria-label={`${label} mobile list`} className="fitos-data-table-mobile">
+          {data.map((row) => (
+            <div key={row.id}>{mobileRenderer(row)}</div>
+          ))}
+        </div>
+      ) : null}
       <table aria-label={label} className="fitos-data-table">
         <thead>
           <tr>

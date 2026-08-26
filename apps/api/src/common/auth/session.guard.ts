@@ -7,6 +7,7 @@ import { DomainError } from "../errors/domain-error.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository } from "../../ports/fitos-repository.js";
 import { IS_PUBLIC_ROUTE } from "./public.decorator.js";
+import { AUTH_MODE, type AuthMode } from "./auth-mode.decorator.js";
 import type { FitosRequest } from "../request-context/request-context.js";
 
 const unsafeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -24,6 +25,12 @@ export class SessionGuard implements CanActivate {
       context.getClass()
     ]);
     if (isPublic) return true;
+
+    const authMode = this.reflector.getAllAndOverride<AuthMode>(AUTH_MODE, [
+      context.getHandler(),
+      context.getClass()
+    ]);
+    if (authMode === "platform" || authMode === "member") return true;
 
     const request = context.switchToHttp().getRequest<FitosRequest>();
     const cookies = parseCookieHeader(request.headers.cookie);

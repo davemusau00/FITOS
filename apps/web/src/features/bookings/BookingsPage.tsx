@@ -16,6 +16,7 @@ import {
 import type { BookingResponse, BookingStatus } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
+import { useBranch } from "../../app/branch-context";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 export function BookingsPage() {
@@ -25,30 +26,39 @@ export function BookingsPage() {
   const [cancellingBooking, setCancellingBooking] = useState<BookingResponse | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelError, setCancelError] = useState<unknown>(null);
+  const { activeBranchId } = useBranch();
 
   const statusFilter = (params.get("status") as BookingStatus) || "";
   const memberSearch = params.get("query") || "";
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
-  const services = useQuery({ queryKey: ["services"], queryFn: api.services });
+  const services = useQuery({
+    queryKey: ["services", activeBranchId],
+    queryFn: () => api.servicesByBranch(activeBranchId),
+    enabled: Boolean(activeBranchId)
+  });
   const members = useQuery({
-    queryKey: ["members", "lookup"],
-    queryFn: () => api.members(new URLSearchParams({ limit: "100" }))
+    queryKey: ["members", activeBranchId, "lookup"],
+    queryFn: () => api.members(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
+    enabled: Boolean(activeBranchId)
   });
   const occurrences = useQuery({
-    queryKey: ["schedule", "lookup"],
-    queryFn: () => api.scheduleOccurrences()
+    queryKey: ["schedule", activeBranchId, "lookup"],
+    queryFn: () => api.scheduleOccurrences(new URLSearchParams({ branchId: activeBranchId })),
+    enabled: Boolean(activeBranchId)
   });
 
   const requestParams = useMemo(() => {
     const p = new URLSearchParams();
     if (statusFilter) p.set("status", statusFilter);
+    if (activeBranchId) p.set("branchId", activeBranchId);
     return p;
-  }, [statusFilter]);
+  }, [statusFilter, activeBranchId]);
 
   const bookingsQuery = useQuery({
-    queryKey: ["bookings", requestParams.toString()],
-    queryFn: () => api.bookings(requestParams)
+    queryKey: ["bookings", activeBranchId, requestParams.toString()],
+    queryFn: () => api.bookings(requestParams),
+    enabled: Boolean(activeBranchId)
   });
 
   const cancelMutation = useMutation({

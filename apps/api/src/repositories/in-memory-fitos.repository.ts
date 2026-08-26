@@ -166,7 +166,12 @@ type StoredCreditLedgerEntry = CreditLedgerEntryResponse & { tenantId: string };
 type StoredPaymentTransaction = PaymentTransactionResponse;
 type StoredAttendanceRecord = AttendanceRecordResponse;
 type StoredIdempotency = IdempotencyRecord;
-type StoredPlatformAdminToken = { userId: string; tokenHash: string; expiresAt: string; revokedAt: string | null };
+type StoredPlatformAdminToken = {
+  userId: string;
+  tokenHash: string;
+  expiresAt: string;
+  revokedAt: string | null;
+};
 
 const now = () => new Date().toISOString();
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -209,7 +214,10 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly equipmentAssets = new Map<string, EquipmentAssetResponse>();
   private readonly equipmentPools = new Map<string, EquipmentPoolResponse>();
   private readonly equipmentMaintenance = new Map<string, EquipmentMaintenanceRecordResponse>();
-  private readonly serviceEquipmentRequirements = new Map<string, import("@fitos/contracts").ServiceEquipmentRequirement[]>();
+  private readonly serviceEquipmentRequirements = new Map<
+    string,
+    import("@fitos/contracts").ServiceEquipmentRequirement[]
+  >();
   private readonly inventoryItems = new Map<string, InventoryItemResponse>();
   private readonly inventoryMovements: InventoryMovementResponse[] = [];
   private readonly purchaseOrders = new Map<string, PurchaseOrderResponse>();
@@ -224,11 +232,23 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly memberPasswords = new Map<string, string>();
   private readonly publicReservations: import("@fitos/contracts").PublicReservationResponse[] = [];
-  private readonly implementationInquiries = new Map<string, import("@fitos/contracts").ImplementationInquiryResponse>();
+  private readonly implementationInquiries = new Map<
+    string,
+    import("@fitos/contracts").ImplementationInquiryResponse
+  >();
   private readonly sitePages = new Map<string, import("@fitos/contracts").SitePageResponse>();
-  private readonly equipmentAllocations = new Map<string, import("@fitos/contracts").EquipmentAllocationResponse>();
-  private readonly serviceInventoryRequirements = new Map<string, import("@fitos/contracts").ServiceInventoryRequirement[]>();
-  private readonly inventoryConsumptions = new Map<string, import("@fitos/contracts").InventoryConsumptionResponse>();
+  private readonly equipmentAllocations = new Map<
+    string,
+    import("@fitos/contracts").EquipmentAllocationResponse
+  >();
+  private readonly serviceInventoryRequirements = new Map<
+    string,
+    import("@fitos/contracts").ServiceInventoryRequirement[]
+  >();
+  private readonly inventoryConsumptions = new Map<
+    string,
+    import("@fitos/contracts").InventoryConsumptionResponse
+  >();
   private readonly domainEvents: DomainEvent[] = [];
 
   async ping(): Promise<boolean> {
@@ -242,9 +262,24 @@ export class InMemoryFitosRepository implements FitosRepository {
       branch: { name: "Kilimani", slug: "kilimani" },
       owner: { email: "owner@gym.fitos.test", displayName: "Gym Owner", passwordHash },
       staff: [
-        { email: "reception@gym.fitos.test", displayName: "Gym Reception", roleKey: "reception", passwordHash },
-        { email: "finance@gym.fitos.test", displayName: "Gym Finance", roleKey: "finance", passwordHash },
-        { email: "trainer@gym.fitos.test", displayName: "Gym Trainer", roleKey: "trainer", passwordHash }
+        {
+          email: "reception@gym.fitos.test",
+          displayName: "Gym Reception",
+          roleKey: "reception",
+          passwordHash
+        },
+        {
+          email: "finance@gym.fitos.test",
+          displayName: "Gym Finance",
+          roleKey: "finance",
+          passwordHash
+        },
+        {
+          email: "trainer@gym.fitos.test",
+          displayName: "Gym Trainer",
+          roleKey: "trainer",
+          passwordHash
+        }
       ]
     });
     await this.createDemoTenant({
@@ -279,38 +314,80 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     // ── Rooms ──
     const roomMain: StoredRoom = {
-      id: randomUUID(), tenantId, branchId,
-      name: "Main Studio", capacity: 20,
-      isActive: true, createdAt: ts, updatedAt: ts
+      id: randomUUID(),
+      tenantId,
+      branchId,
+      name: "Main Studio",
+      capacity: 20,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
     };
     const roomSpin: StoredRoom = {
-      id: randomUUID(), tenantId, branchId,
-      name: "Spin Studio", capacity: 15,
-      isActive: true, createdAt: ts, updatedAt: ts
+      id: randomUUID(),
+      tenantId,
+      branchId,
+      name: "Spin Studio",
+      capacity: 15,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
     };
     this.rooms.set(roomMain.id, roomMain);
     this.rooms.set(roomSpin.id, roomSpin);
 
     // ── Services ──
     const makeService = (
-      name: string, slug: string, type: ServiceType,
-      duration: number, capacity: number, credits: number,
-      priceKes: number, publicVisible: boolean
+      name: string,
+      slug: string,
+      type: ServiceType,
+      duration: number,
+      capacity: number,
+      credits: number,
+      priceKes: number,
+      publicVisible: boolean
     ): StoredService => ({
-      id: randomUUID(), tenantId, branchId: null,
-      name, slug, serviceType: type,
-      durationMinutes: duration, defaultCapacity: capacity,
-      creditsRequired: credits, cancellationCutoffMinutes: 60,
+      id: randomUUID(),
+      tenantId,
+      branchId: null,
+      name,
+      slug,
+      serviceType: type,
+      durationMinutes: duration,
+      defaultCapacity: capacity,
+      creditsRequired: credits,
+      cancellationCutoffMinutes: 60,
       restoreCreditOnLateCancel: false,
       price: { amountMinor: String(priceKes * 100), currency: "KES" },
-      publicVisible, isActive: true, createdAt: ts, updatedAt: ts
+      publicVisible,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
     });
 
     const svcHiit = makeService("HIIT Bootcamp", "hiit-bootcamp", "class", 45, 20, 1, 800, true);
     const svcYoga = makeService("Morning Yoga Flow", "morning-yoga", "class", 60, 20, 1, 600, true);
     const svcSpin = makeService("Indoor Cycling", "indoor-cycling", "class", 45, 15, 1, 700, true);
-    const svcPT = makeService("Personal Training", "personal-training", "appointment", 60, 1, 2, 3500, false);
-    const svcStrength = makeService("Strength & Conditioning", "strength-conditioning", "class", 60, 20, 1, 750, true);
+    const svcPT = makeService(
+      "Personal Training",
+      "personal-training",
+      "appointment",
+      60,
+      1,
+      2,
+      3500,
+      false
+    );
+    const svcStrength = makeService(
+      "Strength & Conditioning",
+      "strength-conditioning",
+      "class",
+      60,
+      20,
+      1,
+      750,
+      true
+    );
     const svcPilates = makeService("Pilates Mat", "pilates-mat", "class", 50, 15, 1, 650, true);
     for (const s of [svcHiit, svcYoga, svcSpin, svcPT, svcStrength, svcPilates]) {
       this.services.set(s.id, s);
@@ -318,31 +395,60 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     // ── Membership Plans ──
     const planMonthly: StoredMembershipPlan = {
-      id: randomUUID(), tenantId, branchId: null,
-      name: "Monthly Unlimited", slug: "monthly-unlimited",
+      id: randomUUID(),
+      tenantId,
+      branchId: null,
+      name: "Monthly Unlimited",
+      slug: "monthly-unlimited",
       price: { amountMinor: "500000", currency: "KES" },
-      durationDays: 30, includedCredits: 30,
-      publicVisible: true, isActive: true, createdAt: ts, updatedAt: ts
+      durationDays: 30,
+      includedCredits: 30,
+      publicVisible: true,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
     };
     const planPunch10: StoredMembershipPlan = {
-      id: randomUUID(), tenantId, branchId: null,
-      name: "10-Class Punch Pass", slug: "punch-10",
+      id: randomUUID(),
+      tenantId,
+      branchId: null,
+      name: "10-Class Punch Pass",
+      slug: "punch-10",
       price: { amountMinor: "600000", currency: "KES" },
-      durationDays: 60, includedCredits: 10,
-      publicVisible: true, isActive: true, createdAt: ts, updatedAt: ts
+      durationDays: 60,
+      includedCredits: 10,
+      publicVisible: true,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
     };
     const planPunch5: StoredMembershipPlan = {
-      id: randomUUID(), tenantId, branchId: null,
-      name: "5-Class Starter Pack", slug: "starter-5",
+      id: randomUUID(),
+      tenantId,
+      branchId: null,
+      name: "5-Class Starter Pack",
+      slug: "starter-5",
       price: { amountMinor: "280000", currency: "KES" },
-      durationDays: 30, includedCredits: 5,
-      publicVisible: true, isActive: true, createdAt: ts, updatedAt: ts
+      durationDays: 30,
+      includedCredits: 5,
+      publicVisible: true,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
     };
     const planTrial: StoredMembershipPlan = {
-      id: randomUUID(), tenantId, branchId: null,
-      name: "Free Trial Pass", slug: "free-trial",
-      price: null, durationDays: 7, includedCredits: 2,
-      publicVisible: false, isActive: true, createdAt: ts, updatedAt: ts
+      id: randomUUID(),
+      tenantId,
+      branchId: null,
+      name: "Free Trial Pass",
+      slug: "free-trial",
+      price: null,
+      durationDays: 7,
+      includedCredits: 2,
+      publicVisible: false,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
     };
     for (const p of [planMonthly, planPunch10, planPunch5, planTrial]) {
       this.membershipPlans.set(p.id, p);
@@ -350,34 +456,208 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     // ── Members ──
     type MemberSeed = {
-      firstName: string; lastName: string;
-      phone: string; email?: string;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      email?: string;
       status: "active" | "inactive";
       joinedDaysAgo: number;
       plan: StoredMembershipPlan;
       memberNumber: string;
     };
     const memberSeeds: MemberSeed[] = [
-      { firstName: "Amina", lastName: "Otieno", phone: "+254712345678", email: "amina.otieno@gmail.com", status: "active", joinedDaysAgo: 90, plan: planMonthly, memberNumber: "GYM-0001" },
-      { firstName: "Brian", lastName: "Kamau", phone: "+254723456789", email: "bkamau@outlook.com", status: "active", joinedDaysAgo: 60, plan: planPunch10, memberNumber: "GYM-0002" },
-      { firstName: "Christine", lastName: "Wanjiku", phone: "+254734567890", email: "christine.w@gmail.com", status: "active", joinedDaysAgo: 45, plan: planMonthly, memberNumber: "GYM-0003" },
-      { firstName: "David", lastName: "Muthoni", phone: "+254745678901", status: "active", joinedDaysAgo: 30, plan: planPunch10, memberNumber: "GYM-0004" },
-      { firstName: "Esther", lastName: "Njoroge", phone: "+254756789012", email: "esther.njoroge@gmail.com", status: "active", joinedDaysAgo: 120, plan: planMonthly, memberNumber: "GYM-0005" },
-      { firstName: "Felix", lastName: "Ochieng", phone: "+254767890123", status: "active", joinedDaysAgo: 20, plan: planPunch5, memberNumber: "GYM-0006" },
-      { firstName: "Grace", lastName: "Achieng", phone: "+254778901234", email: "grace.a@yahoo.com", status: "active", joinedDaysAgo: 75, plan: planMonthly, memberNumber: "GYM-0007" },
-      { firstName: "Hassan", lastName: "Omar", phone: "+254789012345", status: "active", joinedDaysAgo: 15, plan: planTrial, memberNumber: "GYM-0008" },
-      { firstName: "Irene", lastName: "Mwangi", phone: "+254790123456", email: "irene.mwangi@gmail.com", status: "active", joinedDaysAgo: 50, plan: planPunch10, memberNumber: "GYM-0009" },
-      { firstName: "James", lastName: "Kariuki", phone: "+254701234567", email: "jkariuki@company.co.ke", status: "active", joinedDaysAgo: 180, plan: planMonthly, memberNumber: "GYM-0010" },
-      { firstName: "Karen", lastName: "Waweru", phone: "+254711111111", status: "active", joinedDaysAgo: 10, plan: planPunch5, memberNumber: "GYM-0011" },
-      { firstName: "Liam", lastName: "Gitau", phone: "+254722222222", email: "liam.g@gmail.com", status: "active", joinedDaysAgo: 65, plan: planMonthly, memberNumber: "GYM-0012" },
-      { firstName: "Mary", lastName: "Nyambura", phone: "+254733333333", status: "active", joinedDaysAgo: 40, plan: planPunch10, memberNumber: "GYM-0013" },
-      { firstName: "Nathan", lastName: "Ouma", phone: "+254744444444", email: "nouma@gmail.com", status: "active", joinedDaysAgo: 5, plan: planTrial, memberNumber: "GYM-0014" },
-      { firstName: "Olivia", lastName: "Wangari", phone: "+254755555555", status: "active", joinedDaysAgo: 100, plan: planMonthly, memberNumber: "GYM-0015" },
-      { firstName: "Peter", lastName: "Kimani", phone: "+254766666666", email: "peter.kimani@gmail.com", status: "inactive", joinedDaysAgo: 200, plan: planPunch10, memberNumber: "GYM-0016" },
-      { firstName: "Queen", lastName: "Adhiambo", phone: "+254777777777", status: "inactive", joinedDaysAgo: 150, plan: planMonthly, memberNumber: "GYM-0017" },
-      { firstName: "Robert", lastName: "Kiprotich", phone: "+254788888888", email: "r.kiprotich@gmail.com", status: "inactive", joinedDaysAgo: 250, plan: planPunch10, memberNumber: "GYM-0018" },
-      { firstName: "Sharon", lastName: "Mutua", phone: "+254799999999", status: "inactive", joinedDaysAgo: 300, plan: planMonthly, memberNumber: "GYM-0019" },
-      { firstName: "Thomas", lastName: "Ndirangu", phone: "+254700000001", email: "t.ndirangu@gmail.com", status: "active", joinedDaysAgo: 25, plan: planPunch5, memberNumber: "GYM-0020" }
+      {
+        firstName: "Amina",
+        lastName: "Otieno",
+        phone: "+254712345678",
+        email: "amina.otieno@gmail.com",
+        status: "active",
+        joinedDaysAgo: 90,
+        plan: planMonthly,
+        memberNumber: "GYM-0001"
+      },
+      {
+        firstName: "Brian",
+        lastName: "Kamau",
+        phone: "+254723456789",
+        email: "bkamau@outlook.com",
+        status: "active",
+        joinedDaysAgo: 60,
+        plan: planPunch10,
+        memberNumber: "GYM-0002"
+      },
+      {
+        firstName: "Christine",
+        lastName: "Wanjiku",
+        phone: "+254734567890",
+        email: "christine.w@gmail.com",
+        status: "active",
+        joinedDaysAgo: 45,
+        plan: planMonthly,
+        memberNumber: "GYM-0003"
+      },
+      {
+        firstName: "David",
+        lastName: "Muthoni",
+        phone: "+254745678901",
+        status: "active",
+        joinedDaysAgo: 30,
+        plan: planPunch10,
+        memberNumber: "GYM-0004"
+      },
+      {
+        firstName: "Esther",
+        lastName: "Njoroge",
+        phone: "+254756789012",
+        email: "esther.njoroge@gmail.com",
+        status: "active",
+        joinedDaysAgo: 120,
+        plan: planMonthly,
+        memberNumber: "GYM-0005"
+      },
+      {
+        firstName: "Felix",
+        lastName: "Ochieng",
+        phone: "+254767890123",
+        status: "active",
+        joinedDaysAgo: 20,
+        plan: planPunch5,
+        memberNumber: "GYM-0006"
+      },
+      {
+        firstName: "Grace",
+        lastName: "Achieng",
+        phone: "+254778901234",
+        email: "grace.a@yahoo.com",
+        status: "active",
+        joinedDaysAgo: 75,
+        plan: planMonthly,
+        memberNumber: "GYM-0007"
+      },
+      {
+        firstName: "Hassan",
+        lastName: "Omar",
+        phone: "+254789012345",
+        status: "active",
+        joinedDaysAgo: 15,
+        plan: planTrial,
+        memberNumber: "GYM-0008"
+      },
+      {
+        firstName: "Irene",
+        lastName: "Mwangi",
+        phone: "+254790123456",
+        email: "irene.mwangi@gmail.com",
+        status: "active",
+        joinedDaysAgo: 50,
+        plan: planPunch10,
+        memberNumber: "GYM-0009"
+      },
+      {
+        firstName: "James",
+        lastName: "Kariuki",
+        phone: "+254701234567",
+        email: "jkariuki@company.co.ke",
+        status: "active",
+        joinedDaysAgo: 180,
+        plan: planMonthly,
+        memberNumber: "GYM-0010"
+      },
+      {
+        firstName: "Karen",
+        lastName: "Waweru",
+        phone: "+254711111111",
+        status: "active",
+        joinedDaysAgo: 10,
+        plan: planPunch5,
+        memberNumber: "GYM-0011"
+      },
+      {
+        firstName: "Liam",
+        lastName: "Gitau",
+        phone: "+254722222222",
+        email: "liam.g@gmail.com",
+        status: "active",
+        joinedDaysAgo: 65,
+        plan: planMonthly,
+        memberNumber: "GYM-0012"
+      },
+      {
+        firstName: "Mary",
+        lastName: "Nyambura",
+        phone: "+254733333333",
+        status: "active",
+        joinedDaysAgo: 40,
+        plan: planPunch10,
+        memberNumber: "GYM-0013"
+      },
+      {
+        firstName: "Nathan",
+        lastName: "Ouma",
+        phone: "+254744444444",
+        email: "nouma@gmail.com",
+        status: "active",
+        joinedDaysAgo: 5,
+        plan: planTrial,
+        memberNumber: "GYM-0014"
+      },
+      {
+        firstName: "Olivia",
+        lastName: "Wangari",
+        phone: "+254755555555",
+        status: "active",
+        joinedDaysAgo: 100,
+        plan: planMonthly,
+        memberNumber: "GYM-0015"
+      },
+      {
+        firstName: "Peter",
+        lastName: "Kimani",
+        phone: "+254766666666",
+        email: "peter.kimani@gmail.com",
+        status: "inactive",
+        joinedDaysAgo: 200,
+        plan: planPunch10,
+        memberNumber: "GYM-0016"
+      },
+      {
+        firstName: "Queen",
+        lastName: "Adhiambo",
+        phone: "+254777777777",
+        status: "inactive",
+        joinedDaysAgo: 150,
+        plan: planMonthly,
+        memberNumber: "GYM-0017"
+      },
+      {
+        firstName: "Robert",
+        lastName: "Kiprotich",
+        phone: "+254788888888",
+        email: "r.kiprotich@gmail.com",
+        status: "inactive",
+        joinedDaysAgo: 250,
+        plan: planPunch10,
+        memberNumber: "GYM-0018"
+      },
+      {
+        firstName: "Sharon",
+        lastName: "Mutua",
+        phone: "+254799999999",
+        status: "inactive",
+        joinedDaysAgo: 300,
+        plan: planMonthly,
+        memberNumber: "GYM-0019"
+      },
+      {
+        firstName: "Thomas",
+        lastName: "Ndirangu",
+        phone: "+254700000001",
+        email: "t.ndirangu@gmail.com",
+        status: "active",
+        joinedDaysAgo: 25,
+        plan: planPunch5,
+        memberNumber: "GYM-0020"
+      }
     ];
 
     const storedMembers: StoredMember[] = [];
@@ -388,17 +668,24 @@ export class InMemoryFitosRepository implements FitosRepository {
       const memberId = randomUUID();
       const joinedAt = daysAgo(seed.joinedDaysAgo);
       const contact: StoredContact = {
-        id: contactId, tenantId,
-        firstName: seed.firstName, lastName: seed.lastName,
-        phone: seed.phone, email: seed.email ?? null,
+        id: contactId,
+        tenantId,
+        firstName: seed.firstName,
+        lastName: seed.lastName,
+        phone: seed.phone,
+        email: seed.email ?? null,
         dateOfBirth: null
       };
       const member: StoredMember = {
-        id: memberId, tenantId,
-        contactId, homeBranchId: branchId,
+        id: memberId,
+        tenantId,
+        contactId,
+        homeBranchId: branchId,
         memberNumber: seed.memberNumber,
         status: seed.status,
-        joinedAt, createdAt: joinedAt, updatedAt: joinedAt
+        joinedAt,
+        createdAt: joinedAt,
+        updatedAt: joinedAt
       };
       this.contacts.set(contactId, contact);
       this.members.set(memberId, member);
@@ -408,18 +695,92 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     // ── Leads ──
     type LeadSeed = {
-      firstName: string; lastName: string; phone: string; email?: string;
-      interest: string; source: string; stage: LeadStage; daysAgo: number;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      email?: string;
+      interest: string;
+      source: string;
+      stage: LeadStage;
+      daysAgo: number;
     };
     const leadSeeds: LeadSeed[] = [
-      { firstName: "Aisha", lastName: "Maina", phone: "+254712000001", email: "aisha.maina@gmail.com", interest: "Weight loss + group classes", source: "instagram", stage: "new", daysAgo: 1 },
-      { firstName: "Bernard", lastName: "Oloo", phone: "+254723000002", interest: "Strength training", source: "walk_in", stage: "contacted", daysAgo: 3 },
-      { firstName: "Carol", lastName: "Mbugua", phone: "+254734000003", email: "carol.mbugua@outlook.com", interest: "Yoga & stress relief", source: "referral", stage: "trial_booked", daysAgo: 5 },
-      { firstName: "Daniel", lastName: "Wekesa", phone: "+254745000004", interest: "Spin & cardio", source: "facebook", stage: "trial_completed", daysAgo: 8 },
-      { firstName: "Eva", lastName: "Chebet", phone: "+254756000005", email: "eva.chebet@gmail.com", interest: "HIIT bootcamp", source: "instagram", stage: "offer", daysAgo: 12 },
-      { firstName: "Frank", lastName: "Odero", phone: "+254767000006", interest: "Personal training", source: "google", stage: "new", daysAgo: 2 },
-      { firstName: "Gloria", lastName: "Ndungu", phone: "+254778000007", email: "gloria.n@gmail.com", interest: "Morning yoga", source: "referral", stage: "contacted", daysAgo: 6 },
-      { firstName: "Henry", lastName: "Chesang", phone: "+254789000008", interest: "General fitness", source: "walk_in", stage: "lost", daysAgo: 20 }
+      {
+        firstName: "Aisha",
+        lastName: "Maina",
+        phone: "+254712000001",
+        email: "aisha.maina@gmail.com",
+        interest: "Weight loss + group classes",
+        source: "instagram",
+        stage: "new",
+        daysAgo: 1
+      },
+      {
+        firstName: "Bernard",
+        lastName: "Oloo",
+        phone: "+254723000002",
+        interest: "Strength training",
+        source: "walk_in",
+        stage: "contacted",
+        daysAgo: 3
+      },
+      {
+        firstName: "Carol",
+        lastName: "Mbugua",
+        phone: "+254734000003",
+        email: "carol.mbugua@outlook.com",
+        interest: "Yoga & stress relief",
+        source: "referral",
+        stage: "trial_booked",
+        daysAgo: 5
+      },
+      {
+        firstName: "Daniel",
+        lastName: "Wekesa",
+        phone: "+254745000004",
+        interest: "Spin & cardio",
+        source: "facebook",
+        stage: "trial_completed",
+        daysAgo: 8
+      },
+      {
+        firstName: "Eva",
+        lastName: "Chebet",
+        phone: "+254756000005",
+        email: "eva.chebet@gmail.com",
+        interest: "HIIT bootcamp",
+        source: "instagram",
+        stage: "offer",
+        daysAgo: 12
+      },
+      {
+        firstName: "Frank",
+        lastName: "Odero",
+        phone: "+254767000006",
+        interest: "Personal training",
+        source: "google",
+        stage: "new",
+        daysAgo: 2
+      },
+      {
+        firstName: "Gloria",
+        lastName: "Ndungu",
+        phone: "+254778000007",
+        email: "gloria.n@gmail.com",
+        interest: "Morning yoga",
+        source: "referral",
+        stage: "contacted",
+        daysAgo: 6
+      },
+      {
+        firstName: "Henry",
+        lastName: "Chesang",
+        phone: "+254789000008",
+        interest: "General fitness",
+        source: "walk_in",
+        stage: "lost",
+        daysAgo: 20
+      }
     ];
 
     for (const seed of leadSeeds) {
@@ -427,21 +788,28 @@ export class InMemoryFitosRepository implements FitosRepository {
       const leadId = randomUUID();
       const createdAt = daysAgo(seed.daysAgo);
       const contact: StoredContact = {
-        id: contactId, tenantId,
-        firstName: seed.firstName, lastName: seed.lastName,
-        phone: seed.phone, email: seed.email ?? null,
+        id: contactId,
+        tenantId,
+        firstName: seed.firstName,
+        lastName: seed.lastName,
+        phone: seed.phone,
+        email: seed.email ?? null,
         dateOfBirth: null
       };
       const lead: StoredLead = {
-        id: leadId, tenantId, contactId,
-        branchId, ownerUserId: null,
+        id: leadId,
+        tenantId,
+        contactId,
+        branchId,
+        ownerUserId: null,
         interest: seed.interest,
         source: seed.source,
         stage: seed.stage,
         lostReason: seed.stage === "lost" ? "Price too high" : null,
         nextFollowUpAt: seed.stage === "new" || seed.stage === "contacted" ? daysFrom(2) : null,
         convertedMemberId: null,
-        createdAt, updatedAt: createdAt
+        createdAt,
+        updatedAt: createdAt
       };
       this.contacts.set(contactId, contact);
       this.leads.set(leadId, lead);
@@ -449,7 +817,12 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     // ── Schedule Occurrences ──
     // We create 3 occurrences per service across the past 2 weeks + this week + 2 weeks ahead
-    const slotMatrix: Array<{ svc: StoredService; room: StoredRoom; hourOffset: number; dayOffset: number }> = [
+    const slotMatrix: Array<{
+      svc: StoredService;
+      room: StoredRoom;
+      hourOffset: number;
+      dayOffset: number;
+    }> = [
       { svc: svcHiit, room: roomMain, hourOffset: 6, dayOffset: -14 },
       { svc: svcHiit, room: roomMain, hourOffset: 6, dayOffset: -7 },
       { svc: svcHiit, room: roomMain, hourOffset: 6, dayOffset: 0 },
@@ -469,7 +842,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       { svc: svcPilates, room: roomMain, hourOffset: 10, dayOffset: -10 },
       { svc: svcPilates, room: roomMain, hourOffset: 10, dayOffset: -3 },
       { svc: svcPilates, room: roomMain, hourOffset: 10, dayOffset: 4 },
-      { svc: svcPilates, room: roomMain, hourOffset: 10, dayOffset: 11 },
+      { svc: svcPilates, room: roomMain, hourOffset: 10, dayOffset: 11 }
     ];
 
     const storedOccurrences: StoredOccurrence[] = [];
@@ -481,15 +854,20 @@ export class InMemoryFitosRepository implements FitosRepository {
         return d.toISOString();
       })();
       const occ: StoredOccurrence = {
-        id: randomUUID(), tenantId, branchId,
-        templateId: null, serviceId: slot.svc.id,
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        templateId: null,
+        serviceId: slot.svc.id,
         trainerUserId: trainerUserId ?? null,
         roomId: slot.room.id,
-        startsAt, endsAt,
+        startsAt,
+        endsAt,
         capacity: slot.room.capacity!,
         status: new Date(startsAt) < new Date() ? "scheduled" : "scheduled",
         cancellationReason: null,
-        createdAt: ts, updatedAt: ts
+        createdAt: ts,
+        updatedAt: ts
       };
       this.occurrences.set(occ.id, occ);
       storedOccurrences.push(occ);
@@ -516,22 +894,29 @@ export class InMemoryFitosRepository implements FitosRepository {
       const isExpired = endsAt && new Date(endsAt) < new Date();
       const membershipStatus: MemberMembershipResponse["status"] = isExpired
         ? "expired"
-        : seed.status === "inactive" ? "cancelled" : "active";
+        : seed.status === "inactive"
+          ? "cancelled"
+          : "active";
 
       const membership: StoredMemberMembership = {
-        id: membershipId, tenantId,
+        id: membershipId,
+        tenantId,
         memberId: member.id,
         planId: seed.plan.id,
         planSnapshot,
         status: membershipStatus,
-        startsAt, endsAt,
-        createdAt: startsAt, updatedAt: startsAt
+        startsAt,
+        endsAt,
+        createdAt: startsAt,
+        updatedAt: startsAt
       };
       this.memberMemberships.set(membershipId, membership);
 
       // Credit grant ledger entry
       const grantEntry: StoredCreditLedgerEntry = {
-        id: randomUUID(), tenantId, membershipId,
+        id: randomUUID(),
+        tenantId,
+        membershipId,
         memberId: member.id,
         delta: seed.plan.includedCredits,
         reason: "purchase",
@@ -544,7 +929,9 @@ export class InMemoryFitosRepository implements FitosRepository {
       // Payment transaction for membership purchase (skip trial and inactive)
       if (seed.plan.price && seed.status === "active") {
         const payment: StoredPaymentTransaction = {
-          id: randomUUID(), tenantId, branchId,
+          id: randomUUID(),
+          tenantId,
+          branchId,
           memberId: member.id,
           amount: seed.plan.price,
           method: i % 3 === 0 ? "mpesa" : i % 3 === 1 ? "card" : "cash",
@@ -556,16 +943,15 @@ export class InMemoryFitosRepository implements FitosRepository {
           allocationId: membershipId,
           recordedByUserId: ownerTenantUserId,
           recordedAt: startsAt,
-          createdAt: startsAt, updatedAt: startsAt
+          createdAt: startsAt,
+          updatedAt: startsAt
         };
         this.payments.set(payment.id, payment);
       }
 
       // Bookings: give each active member 2-4 past bookings
       if (seed.status === "active" && storedOccurrences.length > 0) {
-        const pastOccurrences = storedOccurrences.filter(
-          o => new Date(o.startsAt) < new Date()
-        );
+        const pastOccurrences = storedOccurrences.filter((o) => new Date(o.startsAt) < new Date());
         const count = 2 + (i % 3);
         for (let b = 0; b < Math.min(count, pastOccurrences.length); b++) {
           const occ = pastOccurrences[b % pastOccurrences.length]!;
@@ -573,24 +959,31 @@ export class InMemoryFitosRepository implements FitosRepository {
           const creditsForOcc = occService?.creditsRequired ?? 1;
           const bookedAt = daysAgo(seed.joinedDaysAgo - 3 - b);
           const booking: StoredBooking = {
-            id: randomUUID(), tenantId, branchId,
-            occurrenceId: occ.id, memberId: member.id,
+            id: randomUUID(),
+            tenantId,
+            branchId,
+            occurrenceId: occ.id,
+            memberId: member.id,
             status: "confirmed",
             source: "staff",
             bookedAt,
-            cancelledAt: null, cancellationReason: null,
+            cancelledAt: null,
+            cancellationReason: null,
             creditMembershipId: membershipId,
             creditsDebited: creditsForOcc,
             entitlementOverrideReason: null,
             lateCancelled: false,
             createdByUserId: ownerTenantUserId,
-            createdAt: bookedAt, updatedAt: bookedAt
+            createdAt: bookedAt,
+            updatedAt: bookedAt
           };
           this.bookings.set(booking.id, booking);
 
           // Debit credit ledger for each booking
           const debitEntry: StoredCreditLedgerEntry = {
-            id: randomUUID(), tenantId, membershipId,
+            id: randomUUID(),
+            tenantId,
+            membershipId,
             memberId: member.id,
             delta: -creditsForOcc,
             reason: "booking",
@@ -607,13 +1000,17 @@ export class InMemoryFitosRepository implements FitosRepository {
             return d.toISOString();
           })();
           const attendance: StoredAttendanceRecord = {
-            id: randomUUID(), tenantId, branchId,
-            occurrenceId: occ.id, memberId: member.id,
+            id: randomUUID(),
+            tenantId,
+            branchId,
+            occurrenceId: occ.id,
+            memberId: member.id,
             status: b % 5 === 4 ? "no_show" : "attended",
             checkedInAt: b % 5 === 4 ? null : checkedInAt,
             actorUserId: ownerTenantUserId,
             overrideReason: null,
-            createdAt: checkedInAt, updatedAt: checkedInAt
+            createdAt: checkedInAt,
+            updatedAt: checkedInAt
           };
           this.attendance.set(attendance.id, attendance);
         }
@@ -684,7 +1081,8 @@ export class InMemoryFitosRepository implements FitosRepository {
       id: randomUUID(),
       tenantId,
       name: "Win-Back Alert for Inactive Members (21+ Days)",
-      description: "Create a staff outreach task when an active member has not checked in for 21 days.",
+      description:
+        "Create a staff outreach task when an active member has not checked in for 21 days.",
       triggerType: "member_inactive",
       triggerConfig: { daysInactive: 21 },
       conditions: [],
@@ -1011,9 +1409,27 @@ export class InMemoryFitosRepository implements FitosRepository {
       supplierName: "East Africa Fitness Supplies Ltd",
       status: "received",
       items: [
-        { itemId: item1.id, itemName: item1.name, quantity: 50, unitCostMinor: 60000, totalMinor: 3000000 },
-        { itemId: item2.id, itemName: item2.name, quantity: 150, unitCostMinor: 15000, totalMinor: 2250000 },
-        { itemId: item3.id, itemName: item3.name, quantity: 30, unitCostMinor: 100000, totalMinor: 3000000 }
+        {
+          itemId: item1.id,
+          itemName: item1.name,
+          quantity: 50,
+          unitCostMinor: 60000,
+          totalMinor: 3000000
+        },
+        {
+          itemId: item2.id,
+          itemName: item2.name,
+          quantity: 150,
+          unitCostMinor: 15000,
+          totalMinor: 2250000
+        },
+        {
+          itemId: item3.id,
+          itemName: item3.name,
+          quantity: 30,
+          unitCostMinor: 100000,
+          totalMinor: 3000000
+        }
       ],
       totalMinor: 8250000,
       orderedAt: daysAgo(65),
@@ -1029,15 +1445,46 @@ export class InMemoryFitosRepository implements FitosRepository {
       tenantId,
       name: "InBody 970 Multi-Frequency Full Body Composition Scan",
       category: "body_composition",
-      description: "Direct Segmental Multi-frequency Bioelectrical Impedance Analysis measuring 6 frequencies across 5 body segments.",
+      description:
+        "Direct Segmental Multi-frequency Bioelectrical Impedance Analysis measuring 6 frequencies across 5 body segments.",
       deviceVendor: "lookinbody_inbody",
       metrics: [
         { key: "weightKg", name: "Total Body Weight", unit: "kg", optimalMin: 50, optimalMax: 95 },
-        { key: "skeletalMuscleMassKg", name: "Skeletal Muscle Mass", unit: "kg", optimalMin: 28, optimalMax: 45 },
-        { key: "bodyFatPercentage", name: "Percent Body Fat", unit: "%", optimalMin: 12, optimalMax: 22 },
-        { key: "visceralFatLevel", name: "Visceral Fat Level", unit: "lvl", optimalMin: 1, optimalMax: 9 },
-        { key: "ecwRatio", name: "Extracellular Water Ratio", unit: "ratio", optimalMin: 0.36, optimalMax: 0.39 },
-        { key: "bmrKcal", name: "Basal Metabolic Rate", unit: "kcal", optimalMin: 1400, optimalMax: 2200 }
+        {
+          key: "skeletalMuscleMassKg",
+          name: "Skeletal Muscle Mass",
+          unit: "kg",
+          optimalMin: 28,
+          optimalMax: 45
+        },
+        {
+          key: "bodyFatPercentage",
+          name: "Percent Body Fat",
+          unit: "%",
+          optimalMin: 12,
+          optimalMax: 22
+        },
+        {
+          key: "visceralFatLevel",
+          name: "Visceral Fat Level",
+          unit: "lvl",
+          optimalMin: 1,
+          optimalMax: 9
+        },
+        {
+          key: "ecwRatio",
+          name: "Extracellular Water Ratio",
+          unit: "ratio",
+          optimalMin: 0.36,
+          optimalMax: 0.39
+        },
+        {
+          key: "bmrKcal",
+          name: "Basal Metabolic Rate",
+          unit: "kcal",
+          optimalMin: 1400,
+          optimalMax: 2200
+        }
       ],
       isActive: true,
       createdAt: daysAgo(120),
@@ -1049,14 +1496,45 @@ export class InMemoryFitosRepository implements FitosRepository {
       tenantId,
       name: "VALD ForceDecks Bilateral Countermovement Jump (CMJ)",
       category: "neuromuscular_force",
-      description: "Dual force plate kinetic analysis for explosive power, eccentric deceleration, and neuromuscular asymmetry.",
+      description:
+        "Dual force plate kinetic analysis for explosive power, eccentric deceleration, and neuromuscular asymmetry.",
       deviceVendor: "vald_forcedecks",
       metrics: [
-        { key: "jumpHeightCm", name: "Jump Height (Flight Time)", unit: "cm", optimalMin: 35, optimalMax: 65 },
-        { key: "peakPowerWatts", name: "Peak Concentric Power", unit: "W", optimalMin: 3500, optimalMax: 6000 },
-        { key: "rsiModified", name: "Reactive Strength Index (mRSI)", unit: "m/s", optimalMin: 0.45, optimalMax: 0.85 },
-        { key: "concentricAsymmetryPct", name: "Concentric Force Asymmetry", unit: "%", optimalMin: 0, optimalMax: 8 },
-        { key: "landingAsymmetryPct", name: "Landing Impact Asymmetry", unit: "%", optimalMin: 0, optimalMax: 10 }
+        {
+          key: "jumpHeightCm",
+          name: "Jump Height (Flight Time)",
+          unit: "cm",
+          optimalMin: 35,
+          optimalMax: 65
+        },
+        {
+          key: "peakPowerWatts",
+          name: "Peak Concentric Power",
+          unit: "W",
+          optimalMin: 3500,
+          optimalMax: 6000
+        },
+        {
+          key: "rsiModified",
+          name: "Reactive Strength Index (mRSI)",
+          unit: "m/s",
+          optimalMin: 0.45,
+          optimalMax: 0.85
+        },
+        {
+          key: "concentricAsymmetryPct",
+          name: "Concentric Force Asymmetry",
+          unit: "%",
+          optimalMin: 0,
+          optimalMax: 8
+        },
+        {
+          key: "landingAsymmetryPct",
+          name: "Landing Impact Asymmetry",
+          unit: "%",
+          optimalMin: 0,
+          optimalMax: 10
+        }
       ],
       isActive: true,
       createdAt: daysAgo(120),
@@ -1068,13 +1546,38 @@ export class InMemoryFitosRepository implements FitosRepository {
       tenantId,
       name: "VO2 Max & Metabolic Threshold Ramp Protocol",
       category: "cardiovascular_vo2",
-      description: "Direct breath-by-breath gas exchange spirometry testing aerobic capacity and metabolic crossover points.",
+      description:
+        "Direct breath-by-breath gas exchange spirometry testing aerobic capacity and metabolic crossover points.",
       deviceVendor: "cosmed_k5",
       metrics: [
-        { key: "vo2MaxMlKgMin", name: "Maximal Oxygen Uptake (VO2 Max)", unit: "ml/kg/min", optimalMin: 42, optimalMax: 60 },
-        { key: "aerobicThresholdHr", name: "Aerobic Threshold (VT1)", unit: "bpm", optimalMin: 130, optimalMax: 155 },
-        { key: "anaerobicThresholdHr", name: "Anaerobic Threshold (VT2)", unit: "bpm", optimalMin: 165, optimalMax: 185 },
-        { key: "maxHeartRateBpm", name: "Peak Heart Rate", unit: "bpm", optimalMin: 175, optimalMax: 198 }
+        {
+          key: "vo2MaxMlKgMin",
+          name: "Maximal Oxygen Uptake (VO2 Max)",
+          unit: "ml/kg/min",
+          optimalMin: 42,
+          optimalMax: 60
+        },
+        {
+          key: "aerobicThresholdHr",
+          name: "Aerobic Threshold (VT1)",
+          unit: "bpm",
+          optimalMin: 130,
+          optimalMax: 155
+        },
+        {
+          key: "anaerobicThresholdHr",
+          name: "Anaerobic Threshold (VT2)",
+          unit: "bpm",
+          optimalMin: 165,
+          optimalMax: 185
+        },
+        {
+          key: "maxHeartRateBpm",
+          name: "Peak Heart Rate",
+          unit: "bpm",
+          optimalMin: 175,
+          optimalMax: 198
+        }
       ],
       isActive: true,
       createdAt: daysAgo(120),
@@ -1089,9 +1592,13 @@ export class InMemoryFitosRepository implements FitosRepository {
     const amina = storedMembers[0];
     const daniel = storedMembers[1];
     const aminaContact = amina ? this.contacts.get(amina.contactId) : null;
-    const aminaName = aminaContact ? `${aminaContact.firstName} ${aminaContact.lastName}` : "Amina Otieno";
+    const aminaName = aminaContact
+      ? `${aminaContact.firstName} ${aminaContact.lastName}`
+      : "Amina Otieno";
     const danielContact = daniel ? this.contacts.get(daniel.contactId) : null;
-    const danielName = danielContact ? `${danielContact.firstName} ${danielContact.lastName}` : "Daniel Wekesa";
+    const danielName = danielContact
+      ? `${danielContact.firstName} ${danielContact.lastName}`
+      : "Daniel Wekesa";
 
     if (amina) {
       const sess1: AssessmentSessionResponse = {
@@ -1108,7 +1615,8 @@ export class InMemoryFitosRepository implements FitosRepository {
         category: "body_composition",
         status: "completed",
         conductedAt: daysAgo(45),
-        summary: "Baseline InBody scan. Healthy ECW ratio, good muscle distribution with slight right-leg dominance.",
+        summary:
+          "Baseline InBody scan. Healthy ECW ratio, good muscle distribution with slight right-leg dominance.",
         metrics: {
           weightKg: 64.2,
           skeletalMuscleMassKg: 27.8,
@@ -1164,7 +1672,8 @@ export class InMemoryFitosRepository implements FitosRepository {
         category: "neuromuscular_force",
         status: "completed",
         conductedAt: daysAgo(10),
-        summary: "Bilateral CMJ force test. 38.2cm jump height with 3.8% concentric symmetry (within elite bounds).",
+        summary:
+          "Bilateral CMJ force test. 38.2cm jump height with 3.8% concentric symmetry (within elite bounds).",
         metrics: {
           jumpHeightCm: 38.2,
           peakPowerWatts: 4120,
@@ -1172,7 +1681,8 @@ export class InMemoryFitosRepository implements FitosRepository {
           concentricAsymmetryPct: 3.8,
           landingAsymmetryPct: 5.2
         },
-        notes: "Triple extension power is strong. Minimal left-right asymmetry on force absorption.",
+        notes:
+          "Triple extension power is strong. Minimal left-right asymmetry on force absorption.",
         createdAt: daysAgo(10),
         updatedAt: daysAgo(10)
       };
@@ -1220,7 +1730,8 @@ export class InMemoryFitosRepository implements FitosRepository {
       category: "neuromuscular",
       defaultDurationMinutes: 45,
       contraindications: ["Pacemaker", "Pregnancy", "Active DVT / Blood Clots", "Recent seizure"],
-      description: "Direct current stimulation designed to reset neurological tone, promote tissue regeneration, and accelerate pain-free movement.",
+      description:
+        "Direct current stimulation designed to reset neurological tone, promote tissue regeneration, and accelerate pain-free movement.",
       isActive: true,
       createdAt: daysAgo(120),
       updatedAt: daysAgo(120)
@@ -1234,7 +1745,8 @@ export class InMemoryFitosRepository implements FitosRepository {
       category: "unweighted_gait",
       defaultDurationMinutes: 30,
       contraindications: ["Unstable fracture", "Severe DVT", "Severe open wound at waist"],
-      description: "NASA-patented differential air pressure system allowing precision bodyweight unloading from 100% down to 20% in 1% increments.",
+      description:
+        "NASA-patented differential air pressure system allowing precision bodyweight unloading from 100% down to 20% in 1% increments.",
       isActive: true,
       createdAt: daysAgo(120),
       updatedAt: daysAgo(120)
@@ -1247,8 +1759,13 @@ export class InMemoryFitosRepository implements FitosRepository {
       name: "Normatec 3 Dynamic Air Compression System",
       category: "pneumatic_compression",
       defaultDurationMinutes: 30,
-      contraindications: ["Acute pulmonary edema", "Acute thrombophlebitis", "Severe atherosclerosis"],
-      description: "Biomimicking peristaltic pulse pneumatic compression for rapid lymphatic drainage, venous return, and DOMS reduction.",
+      contraindications: [
+        "Acute pulmonary edema",
+        "Acute thrombophlebitis",
+        "Severe atherosclerosis"
+      ],
+      description:
+        "Biomimicking peristaltic pulse pneumatic compression for rapid lymphatic drainage, venous return, and DOMS reduction.",
       isActive: true,
       createdAt: daysAgo(120),
       updatedAt: daysAgo(120)
@@ -1267,9 +1784,19 @@ export class InMemoryFitosRepository implements FitosRepository {
       name: "Acute Patellar Tendinopathy Neuromuscular Reset",
       indication: "Patellofemoral pain syndrome, jumper's knee, chronic tendinopathy",
       targetArea: "Quadriceps, VMO & Infrapatellar Tendon",
-      parameters: { frequencyHz: 45, intensitymA: 3.8, polarity: "positive_proximal", durationMinutes: 30 },
-      safetyChecklist: ["Verify no metallic implants in knee", "Test skin sensation before pulse ramping", "Maintain active quad eccentric contraction during pulse"],
-      clinicalNotes: "Target motor points on vastus medialis and rectus femoris. Apply direct current during active terminal knee extension.",
+      parameters: {
+        frequencyHz: 45,
+        intensitymA: 3.8,
+        polarity: "positive_proximal",
+        durationMinutes: 30
+      },
+      safetyChecklist: [
+        "Verify no metallic implants in knee",
+        "Test skin sensation before pulse ramping",
+        "Maintain active quad eccentric contraction during pulse"
+      ],
+      clinicalNotes:
+        "Target motor points on vastus medialis and rectus femoris. Apply direct current during active terminal knee extension.",
       isActive: true,
       createdAt: daysAgo(120),
       updatedAt: daysAgo(120)
@@ -1284,8 +1811,13 @@ export class InMemoryFitosRepository implements FitosRepository {
       indication: "Post-op meniscus/ACL rehab, bone stress injury return-to-load",
       targetArea: "Lower Extremities & Gait Kinetic Chain",
       parameters: { bodyweightPct: 70, speedKmh: 8.5, inclinePct: 0, durationMinutes: 25 },
-      safetyChecklist: ["Calibrate air pressure seal", "Confirm zero pain at 70% unweighted baseline", "Monitor bilateral ground reaction symmetry"],
-      clinicalNotes: "Assess cadence and heel-strike symmetry. Increase load by 5% every 3 successful pain-free sessions.",
+      safetyChecklist: [
+        "Calibrate air pressure seal",
+        "Confirm zero pain at 70% unweighted baseline",
+        "Monitor bilateral ground reaction symmetry"
+      ],
+      clinicalNotes:
+        "Assess cadence and heel-strike symmetry. Increase load by 5% every 3 successful pain-free sessions.",
       isActive: true,
       createdAt: daysAgo(120),
       updatedAt: daysAgo(120)
@@ -1300,8 +1832,12 @@ export class InMemoryFitosRepository implements FitosRepository {
       indication: "Post-competition recovery, high-volume leg day DOMS prevention",
       targetArea: "Bilateral Lower Limbs (Feet to Hips)",
       parameters: { pressureLevel: 5, zoneHoldTimeSec: 30, durationMinutes: 30 },
-      safetyChecklist: ["Check for peripheral circulation before session", "Ensure zippered sleeves are fully fastened"],
-      clinicalNotes: "ZoneBoost enabled on calf and hamstring chambers for maximal metabolic clearance.",
+      safetyChecklist: [
+        "Check for peripheral circulation before session",
+        "Ensure zippered sleeves are fully fastened"
+      ],
+      clinicalNotes:
+        "ZoneBoost enabled on calf and hamstring chambers for maximal metabolic clearance.",
       isActive: true,
       createdAt: daysAgo(120),
       updatedAt: daysAgo(120)
@@ -1334,7 +1870,8 @@ export class InMemoryFitosRepository implements FitosRepository {
         postPainScore: 1,
         actualDosage: { frequencyHz: 45, intensitymA: 3.5, durationMinutes: 30 },
         adverseReaction: false,
-        sessionNotes: "Patient reported immediate reduction in patellar tendon pressure upon eccentric loading post-session.",
+        sessionNotes:
+          "Patient reported immediate reduction in patellar tendon pressure upon eccentric loading post-session.",
         createdAt: daysAgo(3),
         updatedAt: daysAgo(3)
       };
@@ -1381,7 +1918,12 @@ export class InMemoryFitosRepository implements FitosRepository {
       roleKey: Exclude<RoleKey, "owner">;
       passwordHash: string;
     }>;
-  }): Promise<{ tenantId: string; branchId: string; ownerTenantUserId: string; trainerUserId: string | null }> {
+  }): Promise<{
+    tenantId: string;
+    branchId: string;
+    ownerTenantUserId: string;
+    trainerUserId: string | null;
+  }> {
     const tenantId = randomUUID();
     const tenant: StoredTenant = {
       id: tenantId,
@@ -3549,7 +4091,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     const trainerMemberships = [...this.tenantUsers.values()].filter((tu) => {
       if (tu.tenantId !== tenant.id || tu.status !== "active") return false;
       const role = this.roles.get(tu.roleId);
-      return role?.name.toLowerCase().includes("trainer") || role?.name.toLowerCase().includes("coach") || role?.name.toLowerCase().includes("owner");
+      return (
+        role?.name.toLowerCase().includes("trainer") ||
+        role?.name.toLowerCase().includes("coach") ||
+        role?.name.toLowerCase().includes("owner")
+      );
     });
     return trainerMemberships.map((tm) => {
       const user = this.users.get(tm.userId);
@@ -3564,7 +4110,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async listPublicSchedule(tenantSlug: string, daysAhead = 14): Promise<PublicScheduleOccurrenceResponse[]> {
+  async listPublicSchedule(
+    tenantSlug: string,
+    daysAhead = 14
+  ): Promise<PublicScheduleOccurrenceResponse[]> {
     const tenant = [...this.tenants.values()].find((t) => t.slug === tenantSlug);
     if (!tenant) return [];
     const nowTime = new Date();
@@ -3607,7 +4156,10 @@ export class InMemoryFitosRepository implements FitosRepository {
       .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
   }
 
-  async createPublicLead(tenantSlug: string, input: CreatePublicLeadRequest): Promise<LeadResponse> {
+  async createPublicLead(
+    tenantSlug: string,
+    input: CreatePublicLeadRequest
+  ): Promise<LeadResponse> {
     const tenant = [...this.tenants.values()].find((t) => t.slug === tenantSlug);
     if (!tenant) throw new Error("Tenant not found.");
     const defaultBranch = [...this.branches.values()].find((b) => b.tenantId === tenant.id);
@@ -3665,10 +4217,19 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
   }
 
-  async createPublicReservation(tenantSlug: string, input: import("@fitos/contracts").CreatePublicReservationRequest): Promise<import("@fitos/contracts").PublicReservationResponse> {
+  async createPublicReservation(
+    tenantSlug: string,
+    input: import("@fitos/contracts").CreatePublicReservationRequest
+  ): Promise<import("@fitos/contracts").PublicReservationResponse> {
     const tenant = [...this.tenants.values()].find((t) => t.slug === tenantSlug);
     if (!tenant) throw new Error("Tenant not found.");
-    const reservation = { id: randomUUID(), tenantId: tenant.id, ...input, status: "requested" as const, createdAt: now() };
+    const reservation = {
+      id: randomUUID(),
+      tenantId: tenant.id,
+      ...input,
+      status: "requested" as const,
+      createdAt: now()
+    };
     this.publicReservations.push(reservation);
     return reservation;
   }
@@ -3682,8 +4243,11 @@ export class InMemoryFitosRepository implements FitosRepository {
       const contact = this.contacts.get(member.contactId);
       if (!contact) continue;
       const matchEmail = contact.email && contact.email.toLowerCase() === normalized;
-      const matchPhone = contact.phone && contact.phone.replace(/[^0-9+]/g, "").includes(normalized.replace(/[^0-9+]/g, ""));
-      const matchMemberNum = member.memberNumber && member.memberNumber.toLowerCase() === normalized;
+      const matchPhone =
+        contact.phone &&
+        contact.phone.replace(/[^0-9+]/g, "").includes(normalized.replace(/[^0-9+]/g, ""));
+      const matchMemberNum =
+        member.memberNumber && member.memberNumber.toLowerCase() === normalized;
       if (matchEmail || matchPhone || matchMemberNum) {
         return this.toMemberResponse(member, contact);
       }
@@ -3691,13 +4255,21 @@ export class InMemoryFitosRepository implements FitosRepository {
     return null;
   }
 
-  async setMemberPassword(memberId: string, passwordHash: string): Promise<void> { this.memberPasswords.set(memberId, passwordHash); }
+  async setMemberPassword(memberId: string, passwordHash: string): Promise<void> {
+    this.memberPasswords.set(memberId, passwordHash);
+  }
   async verifyMemberPassword(memberId: string, password: string): Promise<boolean> {
     const hash = this.memberPasswords.get(memberId);
-    return hash ? new (await import("@fitos/auth")).ScryptPasswordHasher().verify(password, hash) : false;
+    return hash
+      ? new (await import("@fitos/auth")).ScryptPasswordHasher().verify(password, hash)
+      : false;
   }
 
-  async createMemberSession(input: { memberId: string; tokenHash: string; expiresAt: string }): Promise<{ id: string }> {
+  async createMemberSession(input: {
+    memberId: string;
+    tokenHash: string;
+    expiresAt: string;
+  }): Promise<{ id: string }> {
     const id = randomUUID();
     this.memberSessions.set(input.tokenHash, {
       id,
@@ -3709,7 +4281,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     return { id };
   }
 
-  async resolveMemberSession(tokenHash: string, currentTime: string): Promise<MemberProfileResponse | null> {
+  async resolveMemberSession(
+    tokenHash: string,
+    currentTime: string
+  ): Promise<MemberProfileResponse | null> {
     const session = this.memberSessions.get(tokenHash);
     if (!session || session.revokedAt || session.expiresAt <= currentTime) return null;
     const member = this.members.get(session.memberId);
@@ -3724,7 +4299,9 @@ export class InMemoryFitosRepository implements FitosRepository {
     const creditBalance = entries.reduce((sum, e) => sum + e.delta, 0);
 
     // Active plan
-    const memberships = [...this.memberMemberships.values()].filter((m) => m.memberId === member.id && m.status === "active");
+    const memberships = [...this.memberMemberships.values()].filter(
+      (m) => m.memberId === member.id && m.status === "active"
+    );
     const latestPlan = memberships[0];
 
     return {
@@ -3770,7 +4347,9 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     const entries = [...this.creditLedger.values()].filter((c) => c.memberId === member.id);
     const creditBalance = entries.reduce((sum, e) => sum + e.delta, 0);
-    const memberships = [...this.memberMemberships.values()].filter((m) => m.memberId === member.id && m.status === "active");
+    const memberships = [...this.memberMemberships.values()].filter(
+      (m) => m.memberId === member.id && m.status === "active"
+    );
     const latestPlan = memberships[0];
 
     const resolvedProfile: MemberProfileResponse = {
@@ -3828,13 +4407,22 @@ export class InMemoryFitosRepository implements FitosRepository {
           startsAt: occ?.startsAt ?? a.checkedInAt
         };
       })
-      .sort((a, b) => new Date(b.checkedInAt ?? b.createdAt).getTime() - new Date(a.checkedInAt ?? a.createdAt).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.checkedInAt ?? b.createdAt).getTime() -
+          new Date(a.checkedInAt ?? a.createdAt).getTime()
+      )
       .slice(0, 10);
 
     return {
       profile: resolvedProfile,
       bookableOccurrences: [...this.occurrences.values()]
-        .filter((o) => o.tenantId === member.tenantId && o.status === "scheduled" && new Date(o.startsAt) >= nowTime)
+        .filter(
+          (o) =>
+            o.tenantId === member.tenantId &&
+            o.status === "scheduled" &&
+            new Date(o.startsAt) >= nowTime
+        )
         .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
         .slice(0, 50),
       upcomingBookings,
@@ -3865,7 +4453,9 @@ export class InMemoryFitosRepository implements FitosRepository {
     const entries = [...this.creditLedger.values()].filter((c) => c.memberId === member.id);
     const creditBalance = entries.reduce((sum, e) => sum + e.delta, 0);
     if (creditBalance < creditsRequired) {
-      throw new Error(`Insufficient credits. This session requires ${creditsRequired} credit(s), you have ${creditBalance}.`);
+      throw new Error(
+        `Insufficient credits. This session requires ${creditsRequired} credit(s), you have ${creditBalance}.`
+      );
     }
 
     const activeMembership = [...this.memberMemberships.values()].find(
@@ -3912,7 +4502,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     return booking;
   }
 
-  async memberSelfCancel(memberId: string, bookingId: string, reason: string): Promise<BookingResponse> {
+  async memberSelfCancel(
+    memberId: string,
+    bookingId: string,
+    reason: string
+  ): Promise<BookingResponse> {
     const booking = this.bookings.get(bookingId);
     if (!booking || booking.memberId !== memberId) throw new Error("Booking not found.");
     if (booking.status !== "confirmed") throw new Error("Booking is already cancelled.");
@@ -3944,13 +4538,26 @@ export class InMemoryFitosRepository implements FitosRepository {
   // ───────────────────────────────────────────────────────────────────────────
   // Real Aggregate Analytics & Insights Engine
   // ───────────────────────────────────────────────────────────────────────────
-  async getInsightsOverview(scope: TenantScope, branchId?: string): Promise<InsightsOverviewResponse> {
+  async getInsightsOverview(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<InsightsOverviewResponse> {
     const tenantId = scope.tenantId;
-    const allMembers = [...this.members.values()].filter((m) => m.tenantId === tenantId && (!branchId || m.homeBranchId === branchId));
-    const allBookings = [...this.bookings.values()].filter((b) => b.tenantId === tenantId && (!branchId || b.branchId === branchId));
-    const allAttendance = [...this.attendance.values()].filter((a) => a.tenantId === tenantId && (!branchId || a.branchId === branchId));
-    const allLeads = [...this.leads.values()].filter((l) => l.tenantId === tenantId && (!branchId || l.branchId === branchId));
-    const allOccurrences = [...this.occurrences.values()].filter((o) => o.tenantId === tenantId && (!branchId || o.branchId === branchId));
+    const allMembers = [...this.members.values()].filter(
+      (m) => m.tenantId === tenantId && (!branchId || m.homeBranchId === branchId)
+    );
+    const allBookings = [...this.bookings.values()].filter(
+      (b) => b.tenantId === tenantId && (!branchId || b.branchId === branchId)
+    );
+    const allAttendance = [...this.attendance.values()].filter(
+      (a) => a.tenantId === tenantId && (!branchId || a.branchId === branchId)
+    );
+    const allLeads = [...this.leads.values()].filter(
+      (l) => l.tenantId === tenantId && (!branchId || l.branchId === branchId)
+    );
+    const allOccurrences = [...this.occurrences.values()].filter(
+      (o) => o.tenantId === tenantId && (!branchId || o.branchId === branchId)
+    );
 
     const totalActiveMembers = allMembers.filter((m) => m.status === "active").length;
     const totalLeadsInPipeline = allLeads.length;
@@ -3963,24 +4570,33 @@ export class InMemoryFitosRepository implements FitosRepository {
     let totalBookedSlots = 0;
     let totalCapacitySlots = 0;
     for (const occ of allOccurrences) {
-      const occBookings = allBookings.filter((b) => b.occurrenceId === occ.id && b.status === "confirmed").length;
+      const occBookings = allBookings.filter(
+        (b) => b.occurrenceId === occ.id && b.status === "confirmed"
+      ).length;
       totalBookedSlots += occBookings;
       totalCapacitySlots += occ.capacity || 20;
     }
-    const classOccupancyRate = totalCapacitySlots > 0 ? Math.round((totalBookedSlots / totalCapacitySlots) * 100) : 74;
+    const classOccupancyRate =
+      totalCapacitySlots > 0 ? Math.round((totalBookedSlots / totalCapacitySlots) * 100) : 74;
 
     // Retention Rate 90d
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const activeInLast90d = allMembers.filter((m) => {
-      const hasRecentAttendance = allAttendance.some((a) => a.memberId === m.id && new Date(a.checkedInAt ?? a.createdAt) >= ninetyDaysAgo);
+      const hasRecentAttendance = allAttendance.some(
+        (a) => a.memberId === m.id && new Date(a.checkedInAt ?? a.createdAt) >= ninetyDaysAgo
+      );
       return m.status === "active" || hasRecentAttendance;
     }).length;
-    const memberRetention90d = allMembers.length > 0 ? Math.round((activeInLast90d / allMembers.length) * 100) : 84;
+    const memberRetention90d =
+      allMembers.length > 0 ? Math.round((activeInLast90d / allMembers.length) * 100) : 84;
 
     // Lead Conversion Rate
-    const convertedLeads = allLeads.filter((l) => l.stage === "joined" || l.convertedMemberId).length;
-    const leadConversionRate = allLeads.length > 0 ? Math.round((convertedLeads / allLeads.length) * 100) : 31;
+    const convertedLeads = allLeads.filter(
+      (l) => l.stage === "joined" || l.convertedMemberId
+    ).length;
+    const leadConversionRate =
+      allLeads.length > 0 ? Math.round((convertedLeads / allLeads.length) * 100) : 31;
 
     // Weekly Attendance by day
     const dayMap: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 0: 0 };
@@ -4008,9 +4624,20 @@ export class InMemoryFitosRepository implements FitosRepository {
           const s = new Date(o.startsAt);
           return s.getDay() === d && s.getHours() >= h && s.getHours() < h + 2;
         });
-        const occPct = occAtSlot.length > 0
-          ? Math.min(100, Math.round((allBookings.filter((b) => occAtSlot.some((o) => o.id === b.occurrenceId)).length / (occAtSlot.length * 20)) * 100))
-          : (h === 6 || h === 18 ? 85 : 45);
+        const occPct =
+          occAtSlot.length > 0
+            ? Math.min(
+                100,
+                Math.round(
+                  (allBookings.filter((b) => occAtSlot.some((o) => o.id === b.occurrenceId))
+                    .length /
+                    (occAtSlot.length * 20)) *
+                    100
+                )
+              )
+            : h === 6 || h === 18
+              ? 85
+              : 45;
         occupancyHeatmap.push({
           dayOfWeek: d,
           hourOfDay: h,
@@ -4022,16 +4649,63 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     // Retention Cohorts
     const retentionCohorts: RetentionCohortRow[] = [
-      { cohortMonth: "2026-03", initialSize: 18, month1Retention: 94, month2Retention: 88, month3Retention: 82, month4Retention: 78, month5Retention: 75 },
-      { cohortMonth: "2026-04", initialSize: 22, month1Retention: 91, month2Retention: 86, month3Retention: 81, month4Retention: 77, month5Retention: 72 },
-      { cohortMonth: "2026-05", initialSize: 20, month1Retention: 95, month2Retention: 90, month3Retention: 85, month4Retention: 80, month5Retention: 76 },
-      { cohortMonth: "2026-06", initialSize: 25, month1Retention: 92, month2Retention: 88, month3Retention: 84, month4Retention: 79, month5Retention: 75 },
-      { cohortMonth: "2026-07", initialSize: 24, month1Retention: 96, month2Retention: 91, month3Retention: 87, month4Retention: 83, month5Retention: 80 }
+      {
+        cohortMonth: "2026-03",
+        initialSize: 18,
+        month1Retention: 94,
+        month2Retention: 88,
+        month3Retention: 82,
+        month4Retention: 78,
+        month5Retention: 75
+      },
+      {
+        cohortMonth: "2026-04",
+        initialSize: 22,
+        month1Retention: 91,
+        month2Retention: 86,
+        month3Retention: 81,
+        month4Retention: 77,
+        month5Retention: 72
+      },
+      {
+        cohortMonth: "2026-05",
+        initialSize: 20,
+        month1Retention: 95,
+        month2Retention: 90,
+        month3Retention: 85,
+        month4Retention: 80,
+        month5Retention: 76
+      },
+      {
+        cohortMonth: "2026-06",
+        initialSize: 25,
+        month1Retention: 92,
+        month2Retention: 88,
+        month3Retention: 84,
+        month4Retention: 79,
+        month5Retention: 75
+      },
+      {
+        cohortMonth: "2026-07",
+        initialSize: 24,
+        month1Retention: 96,
+        month2Retention: 91,
+        month3Retention: 87,
+        month4Retention: 83,
+        month5Retention: 80
+      }
     ];
 
     // At-Risk Members (> 21 days since last visit)
     const atRiskMembers: AtRiskMemberItem[] = allMembers
-      .filter((m) => m.status === "inactive" || m.memberNumber?.includes("0016") || m.memberNumber?.includes("0017") || m.memberNumber?.includes("0018") || m.memberNumber?.includes("0019"))
+      .filter(
+        (m) =>
+          m.status === "inactive" ||
+          m.memberNumber?.includes("0016") ||
+          m.memberNumber?.includes("0017") ||
+          m.memberNumber?.includes("0018") ||
+          m.memberNumber?.includes("0019")
+      )
       .slice(0, 8)
       .map((m) => {
         const contact = this.contacts.get(m.contactId);
@@ -4044,7 +4718,8 @@ export class InMemoryFitosRepository implements FitosRepository {
           lastName: contact?.lastName ?? null,
           phone: contact?.phone ?? null,
           email: contact?.email ?? null,
-          daysInactive: 24 + (m.memberNumber ? parseInt(m.memberNumber.replace(/\D/g, ""), 10) % 15 : 5),
+          daysInactive:
+            24 + (m.memberNumber ? parseInt(m.memberNumber.replace(/\D/g, ""), 10) % 15 : 5),
           planName: plan?.planSnapshot?.name ?? "10-Class Punch Pass",
           creditsRemaining: Math.max(0, creditBalance),
           lastVisitAt: new Date(Date.now() - 25 * 86400000).toISOString()
@@ -4066,12 +4741,42 @@ export class InMemoryFitosRepository implements FitosRepository {
     }
     const totalL = Math.max(1, allLeads.length);
     const leadFunnel: LeadFunnelStageCount[] = [
-      { stage: "new", label: "New Inquiries", count: stageCounts.new ?? 2, percentage: Math.round(((stageCounts.new ?? 2) / totalL) * 100) },
-      { stage: "contacted", label: "Contacted / Qualified", count: stageCounts.contacted ?? 2, percentage: Math.round(((stageCounts.contacted ?? 2) / totalL) * 100) },
-      { stage: "trial_booked", label: "Trial Class Booked", count: stageCounts.trial_booked ?? 1, percentage: Math.round(((stageCounts.trial_booked ?? 1) / totalL) * 100) },
-      { stage: "trial_completed", label: "Trial Completed", count: stageCounts.trial_completed ?? 1, percentage: Math.round(((stageCounts.trial_completed ?? 1) / totalL) * 100) },
-      { stage: "offer", label: "Membership Offered", count: stageCounts.offer ?? 1, percentage: Math.round(((stageCounts.offer ?? 1) / totalL) * 100) },
-      { stage: "joined", label: "Joined as Member", count: Math.max(1, stageCounts.joined ?? 1), percentage: Math.round((Math.max(1, stageCounts.joined ?? 1) / totalL) * 100) }
+      {
+        stage: "new",
+        label: "New Inquiries",
+        count: stageCounts.new ?? 2,
+        percentage: Math.round(((stageCounts.new ?? 2) / totalL) * 100)
+      },
+      {
+        stage: "contacted",
+        label: "Contacted / Qualified",
+        count: stageCounts.contacted ?? 2,
+        percentage: Math.round(((stageCounts.contacted ?? 2) / totalL) * 100)
+      },
+      {
+        stage: "trial_booked",
+        label: "Trial Class Booked",
+        count: stageCounts.trial_booked ?? 1,
+        percentage: Math.round(((stageCounts.trial_booked ?? 1) / totalL) * 100)
+      },
+      {
+        stage: "trial_completed",
+        label: "Trial Completed",
+        count: stageCounts.trial_completed ?? 1,
+        percentage: Math.round(((stageCounts.trial_completed ?? 1) / totalL) * 100)
+      },
+      {
+        stage: "offer",
+        label: "Membership Offered",
+        count: stageCounts.offer ?? 1,
+        percentage: Math.round(((stageCounts.offer ?? 1) / totalL) * 100)
+      },
+      {
+        stage: "joined",
+        label: "Joined as Member",
+        count: Math.max(1, stageCounts.joined ?? 1),
+        percentage: Math.round((Math.max(1, stageCounts.joined ?? 1) / totalL) * 100)
+      }
     ];
 
     return {
@@ -4102,7 +4807,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     return [...this.automations.values()].filter((a) => a.tenantId === scope.tenantId);
   }
 
-  async createAutomation(scope: TenantScope, input: CreateAutomationRuleRequest): Promise<AutomationRuleResponse> {
+  async createAutomation(
+    scope: TenantScope,
+    input: CreateAutomationRuleRequest
+  ): Promise<AutomationRuleResponse> {
     const id = randomUUID();
     const ts = now();
     const rule: AutomationRuleResponse = {
@@ -4125,7 +4833,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     return rule;
   }
 
-  async updateAutomation(scope: TenantScope, ruleId: string, input: UpdateAutomationRuleRequest): Promise<AutomationRuleResponse | null> {
+  async updateAutomation(
+    scope: TenantScope,
+    ruleId: string,
+    input: UpdateAutomationRuleRequest
+  ): Promise<AutomationRuleResponse | null> {
     const rule = this.automations.get(ruleId);
     if (!rule || rule.tenantId !== scope.tenantId) return null;
     if (input.name !== undefined) rule.name = input.name;
@@ -4151,7 +4863,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     return this.automationLogs.filter((l) => l.tenantId === scope.tenantId).slice(-50);
   }
 
-  async triggerAutomation(scope: TenantScope, ruleId: string): Promise<AutomationExecutionLogResponse> {
+  async triggerAutomation(
+    scope: TenantScope,
+    ruleId: string
+  ): Promise<AutomationExecutionLogResponse> {
     const rule = this.automations.get(ruleId);
     if (!rule || rule.tenantId !== scope.tenantId) throw new Error("Automation rule not found.");
     const ts = now();
@@ -4174,7 +4889,10 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   // ─── Platform & Self-Service SaaS ──────────────────────────────────────────
-  async signupTenant(input: SaaSTenantSignupRequest, passwordHash: string): Promise<SaaSTenantSignupResponse> {
+  async signupTenant(
+    input: SaaSTenantSignupRequest,
+    passwordHash: string
+  ): Promise<SaaSTenantSignupResponse> {
     const tenantId = randomUUID();
     const branchId = randomUUID();
     const userId = randomUUID();
@@ -4301,8 +5019,12 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   async getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse> {
-    const activeMembers = [...this.members.values()].filter((m) => m.tenantId === tenantId && m.status === "active").length;
-    const activeStaff = [...this.tenantUsers.values()].filter((tu) => tu.tenantId === tenantId && tu.status === "active").length;
+    const activeMembers = [...this.members.values()].filter(
+      (m) => m.tenantId === tenantId && m.status === "active"
+    ).length;
+    const activeStaff = [...this.tenantUsers.values()].filter(
+      (tu) => tu.tenantId === tenantId && tu.status === "active"
+    ).length;
     const branchCount = [...this.branches.values()].filter((b) => b.tenantId === tenantId).length;
     const autoRuns = this.automationLogs.filter((l) => l.tenantId === tenantId).length;
 
@@ -4322,47 +5044,301 @@ export class InMemoryFitosRepository implements FitosRepository {
 
   async listFeatureFlags(tenantId: string): Promise<FeatureFlagResponse[]> {
     return [
-      { key: "feature.assessments", enabled: true, name: "FITOS Assess Performance Lab", description: "InBody, VO2, force plate & ROM assessment engine", category: "advanced" },
-      { key: "feature.therapy", enabled: true, name: "FITOS Therapy & Recovery", description: "NEUBIE STIM, AlterG, Normatec compression protocols", category: "advanced" },
-      { key: "feature.inventory", enabled: true, name: "Inventory & Consumables", description: "Stock movements, purchase orders and session BOM", category: "core" },
-      { key: "feature.equipment", enabled: true, name: "Equipment & Asset Registry", description: "Resource scheduling, pools, maintenance & calibration", category: "core" },
-      { key: "feature.sites", enabled: true, name: "FITOS Sites Website Builder", description: "Modular block-based website CMS and publisher", category: "advanced" },
-      { key: "feature.integrations", enabled: true, name: "Vendor Hardware Integrations", description: "LookinBody, VALD Hub, COSMED and PNOE import adapters", category: "beta" }
+      {
+        key: "feature.assessments",
+        enabled: true,
+        name: "FITOS Assess Performance Lab",
+        description: "InBody, VO2, force plate & ROM assessment engine",
+        category: "advanced"
+      },
+      {
+        key: "feature.therapy",
+        enabled: true,
+        name: "FITOS Therapy & Recovery",
+        description: "NEUBIE STIM, AlterG, Normatec compression protocols",
+        category: "advanced"
+      },
+      {
+        key: "feature.inventory",
+        enabled: true,
+        name: "Inventory & Consumables",
+        description: "Stock movements, purchase orders and session BOM",
+        category: "core"
+      },
+      {
+        key: "feature.equipment",
+        enabled: true,
+        name: "Equipment & Asset Registry",
+        description: "Resource scheduling, pools, maintenance & calibration",
+        category: "core"
+      },
+      {
+        key: "feature.sites",
+        enabled: true,
+        name: "FITOS Sites Website Builder",
+        description: "Modular block-based website CMS and publisher",
+        category: "advanced"
+      },
+      {
+        key: "feature.integrations",
+        enabled: true,
+        name: "Vendor Hardware Integrations",
+        description: "LookinBody, VALD Hub, COSMED and PNOE import adapters",
+        category: "beta"
+      }
     ];
   }
 
-  async saveImplementationInquiry(input: import("@fitos/contracts").ImplementationInquiryDraft, submit: boolean): Promise<import("@fitos/contracts").ImplementationInquiryResponse> {
+  async saveImplementationInquiry(
+    input: import("@fitos/contracts").ImplementationInquiryDraft,
+    submit: boolean
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse> {
     const existing = input.id ? this.implementationInquiries.get(input.id) : undefined;
-    const ts = now(); const id = existing?.id ?? randomUUID();
-    const inquiry = { id, contactName: input.contactName, businessName: input.businessName, email: input.email, phone: input.phone, country: input.country, businessType: input.businessType, payload: input.payload, status: submit ? "submitted" : "draft", schemaVersion: 1, submittedAt: submit ? ts : null, createdAt: existing?.createdAt ?? ts, updatedAt: ts } as import("@fitos/contracts").ImplementationInquiryResponse;
-    this.implementationInquiries.set(id, inquiry); return inquiry;
+    const ts = now();
+    const id = existing?.id ?? randomUUID();
+    const inquiry = {
+      id,
+      contactName: input.contactName,
+      businessName: input.businessName,
+      email: input.email,
+      phone: input.phone,
+      country: input.country,
+      businessType: input.businessType,
+      payload: input.payload,
+      status: submit ? "submitted" : "draft",
+      schemaVersion: 1,
+      submittedAt: submit ? ts : null,
+      createdAt: existing?.createdAt ?? ts,
+      updatedAt: ts
+    } as import("@fitos/contracts").ImplementationInquiryResponse;
+    this.implementationInquiries.set(id, inquiry);
+    return inquiry;
   }
 
-  async listImplementationInquiries(status?: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse[]> {
-    return [...this.implementationInquiries.values()].filter((item) => !status || item.status === status).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  async listImplementationInquiries(
+    status?: import("@fitos/contracts").ImplementationInquiryStatus
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse[]> {
+    return [...this.implementationInquiries.values()]
+      .filter((item) => !status || item.status === status)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
-  async getImplementationInquiry(id: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> { return this.implementationInquiries.get(id) ?? null; }
-  async updateImplementationInquiryStatus(id: string, status: import("@fitos/contracts").ImplementationInquiryStatus): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
-    const item = this.implementationInquiries.get(id); if (!item) return null; const updated = { ...item, status, updatedAt: now() }; this.implementationInquiries.set(id, updated); return updated;
+  async getImplementationInquiry(
+    id: string
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
+    return this.implementationInquiries.get(id) ?? null;
   }
-  async buildTenantSeedManifest(id: string): Promise<import("@fitos/contracts").TenantSeedManifest | null> {
-    const item = this.implementationInquiries.get(id); if (!item) return null; const payload = item.payload as Record<string, any>;
-    return { schemaVersion: 1, sourceInquiryId: id, generatedAt: now(), business: { contactName: item.contactName, businessName: item.businessName, country: item.country, businessType: item.businessType }, branches: payload.locations ?? [], services: payload.services ?? [], team: payload.team ?? [], equipment: payload.equipment ?? [], assessments: payload.assessments ?? [], therapy: payload.therapy ?? [], inventory: payload.inventory ?? [], website: payload.website ?? {}, customRequirements: payload.customRequirements ?? [] };
+  async updateImplementationInquiryStatus(
+    id: string,
+    status: import("@fitos/contracts").ImplementationInquiryStatus
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
+    const item = this.implementationInquiries.get(id);
+    if (!item) return null;
+    const updated = { ...item, status, updatedAt: now() };
+    this.implementationInquiries.set(id, updated);
+    return updated;
+  }
+  async buildTenantSeedManifest(
+    id: string
+  ): Promise<import("@fitos/contracts").TenantSeedManifest | null> {
+    const item = this.implementationInquiries.get(id);
+    if (!item) return null;
+    const payload = item.payload as Record<string, any>;
+    return {
+      schemaVersion: 1,
+      sourceInquiryId: id,
+      generatedAt: now(),
+      business: {
+        contactName: item.contactName,
+        businessName: item.businessName,
+        country: item.country,
+        businessType: item.businessType
+      },
+      branches: payload.locations ?? [],
+      services: payload.services ?? [],
+      team: payload.team ?? [],
+      equipment: payload.equipment ?? [],
+      assessments: payload.assessments ?? [],
+      therapy: payload.therapy ?? [],
+      inventory: payload.inventory ?? [],
+      website: payload.website ?? {},
+      customRequirements: payload.customRequirements ?? []
+    };
   }
 
-  async listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]> { return [...this.sitePages.values()].filter((page) => page.tenantId === scope.tenantId); }
-  async saveSitePage(scope: TenantScope, input: import("@fitos/contracts").SaveSitePageRequest): Promise<import("@fitos/contracts").SitePageResponse> { const existing = [...this.sitePages.values()].find((page) => page.tenantId === scope.tenantId && page.slug === input.slug); const ts = now(); const page = { id: existing?.id ?? randomUUID(), tenantId: scope.tenantId, slug: input.slug, title: input.title, status: "draft" as const, sections: input.sections, seo: input.seo ?? {}, version: (existing?.version ?? 0) + 1, publishedAt: existing?.publishedAt ?? null, createdAt: existing?.createdAt ?? ts, updatedAt: ts }; this.sitePages.set(page.id, page); return page; }
-  async publishSitePage(scope: TenantScope, pageId: string): Promise<import("@fitos/contracts").SitePageResponse | null> { const page = this.sitePages.get(pageId); if (!page || page.tenantId !== scope.tenantId) return null; const published = { ...page, status: "published" as const, publishedAt: now(), updatedAt: now() }; this.sitePages.set(pageId, published); return published; }
-  async getPublicSitePage(tenantSlug: string, pageSlug = "home"): Promise<import("@fitos/contracts").SitePageResponse | null> { const tenant = [...this.tenants.values()].find((item) => item.slug === tenantSlug); return tenant ? [...this.sitePages.values()].find((page) => page.tenantId === tenant.id && page.slug === pageSlug && page.status === "published") ?? null : null; }
-  async listOccurrenceEquipmentAllocations(scope: TenantScope, occurrenceId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse[]> { return [...this.equipmentAllocations.values()].filter((item) => item.tenantId === scope.tenantId && item.occurrenceId === occurrenceId); }
-  async reserveOccurrenceEquipment(scope: TenantScope, occurrenceId: string, assetId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse> { const occurrence = this.occurrences.get(occurrenceId); const asset = this.equipmentAssets.get(assetId); if (!occurrence || !asset || occurrence.tenantId !== scope.tenantId || asset.tenantId !== scope.tenantId || occurrence.branchId !== asset.branchId || asset.status !== "available") throw new Error("Equipment asset is unavailable for this occurrence."); for (const allocation of this.equipmentAllocations.values()) { const other = this.occurrences.get(allocation.occurrenceId); if (allocation.assetId === assetId && allocation.status === "reserved" && other && other.startsAt < occurrence.endsAt && other.endsAt > occurrence.startsAt) throw new Error("Equipment asset is already reserved for an overlapping occurrence."); } const item = { id: randomUUID(), tenantId: scope.tenantId, occurrenceId, assetId, status: "reserved" as const, createdAt: now() }; this.equipmentAllocations.set(item.id, item); return item; }
-  async releaseOccurrenceEquipment(scope: TenantScope, allocationId: string): Promise<import("@fitos/contracts").EquipmentAllocationResponse | null> { const item = this.equipmentAllocations.get(allocationId); if (!item || item.tenantId !== scope.tenantId) return null; const updated = { ...item, status: "released" as const }; this.equipmentAllocations.set(allocationId, updated); return updated; }
-  async listServiceInventoryRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> { const service = this.services.get(serviceId); return service?.tenantId === scope.tenantId ? this.serviceInventoryRequirements.get(serviceId) ?? [] : []; }
-  async replaceServiceInventoryRequirements(scope: TenantScope, serviceId: string, requirements: import("@fitos/contracts").ServiceInventoryRequirement[]): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> { const service = this.services.get(serviceId); if (!service || service.tenantId !== scope.tenantId) throw new Error("Service not found."); this.serviceInventoryRequirements.set(serviceId, requirements); return requirements; }
-  async consumeInventory(scope: TenantScope, input: { branchId: string; serviceId?: string; referenceType: string; referenceId: string; items: import("@fitos/contracts").ServiceInventoryRequirement[] }): Promise<import("@fitos/contracts").InventoryConsumptionResponse[]> { const result: import("@fitos/contracts").InventoryConsumptionResponse[] = []; for (const req of input.items) { const key = `${scope.tenantId}:${req.itemId}:${input.referenceType}:${input.referenceId}`; if (this.inventoryConsumptions.has(key)) continue; const item = this.inventoryItems.get(req.itemId); if (!item || item.tenantId !== scope.tenantId || item.branchId !== input.branchId || item.stockOnHand < req.quantityPerSession) throw new Error("Insufficient inventory stock."); item.stockOnHand -= req.quantityPerSession; const row = { id: randomUUID(), tenantId: scope.tenantId, branchId: input.branchId, itemId: req.itemId, serviceId: input.serviceId ?? null, referenceType: input.referenceType, referenceId: input.referenceId, quantity: req.quantityPerSession, createdAt: now() }; this.inventoryConsumptions.set(key, row); result.push(row); } return result; }
+  async listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]> {
+    return [...this.sitePages.values()].filter((page) => page.tenantId === scope.tenantId);
+  }
+  async saveSitePage(
+    scope: TenantScope,
+    input: import("@fitos/contracts").SaveSitePageRequest
+  ): Promise<import("@fitos/contracts").SitePageResponse> {
+    const existing = [...this.sitePages.values()].find(
+      (page) => page.tenantId === scope.tenantId && page.slug === input.slug
+    );
+    const ts = now();
+    const page = {
+      id: existing?.id ?? randomUUID(),
+      tenantId: scope.tenantId,
+      slug: input.slug,
+      title: input.title,
+      status: "draft" as const,
+      sections: input.sections,
+      seo: input.seo ?? {},
+      version: (existing?.version ?? 0) + 1,
+      publishedAt: existing?.publishedAt ?? null,
+      createdAt: existing?.createdAt ?? ts,
+      updatedAt: ts
+    };
+    this.sitePages.set(page.id, page);
+    return page;
+  }
+  async publishSitePage(
+    scope: TenantScope,
+    pageId: string
+  ): Promise<import("@fitos/contracts").SitePageResponse | null> {
+    const page = this.sitePages.get(pageId);
+    if (!page || page.tenantId !== scope.tenantId) return null;
+    const published = {
+      ...page,
+      status: "published" as const,
+      publishedAt: now(),
+      updatedAt: now()
+    };
+    this.sitePages.set(pageId, published);
+    return published;
+  }
+  async getPublicSitePage(
+    tenantSlug: string,
+    pageSlug = "home"
+  ): Promise<import("@fitos/contracts").SitePageResponse | null> {
+    const tenant = [...this.tenants.values()].find((item) => item.slug === tenantSlug);
+    return tenant
+      ? ([...this.sitePages.values()].find(
+          (page) =>
+            page.tenantId === tenant.id && page.slug === pageSlug && page.status === "published"
+        ) ?? null)
+      : null;
+  }
+  async listOccurrenceEquipmentAllocations(
+    scope: TenantScope,
+    occurrenceId: string
+  ): Promise<import("@fitos/contracts").EquipmentAllocationResponse[]> {
+    return [...this.equipmentAllocations.values()].filter(
+      (item) => item.tenantId === scope.tenantId && item.occurrenceId === occurrenceId
+    );
+  }
+  async reserveOccurrenceEquipment(
+    scope: TenantScope,
+    occurrenceId: string,
+    assetId: string
+  ): Promise<import("@fitos/contracts").EquipmentAllocationResponse> {
+    const occurrence = this.occurrences.get(occurrenceId);
+    const asset = this.equipmentAssets.get(assetId);
+    if (
+      !occurrence ||
+      !asset ||
+      occurrence.tenantId !== scope.tenantId ||
+      asset.tenantId !== scope.tenantId ||
+      occurrence.branchId !== asset.branchId ||
+      asset.status !== "available"
+    )
+      throw new Error("Equipment asset is unavailable for this occurrence.");
+    for (const allocation of this.equipmentAllocations.values()) {
+      const other = this.occurrences.get(allocation.occurrenceId);
+      if (
+        allocation.assetId === assetId &&
+        allocation.status === "reserved" &&
+        other &&
+        other.startsAt < occurrence.endsAt &&
+        other.endsAt > occurrence.startsAt
+      )
+        throw new Error("Equipment asset is already reserved for an overlapping occurrence.");
+    }
+    const item = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      occurrenceId,
+      assetId,
+      status: "reserved" as const,
+      createdAt: now()
+    };
+    this.equipmentAllocations.set(item.id, item);
+    return item;
+  }
+  async releaseOccurrenceEquipment(
+    scope: TenantScope,
+    allocationId: string
+  ): Promise<import("@fitos/contracts").EquipmentAllocationResponse | null> {
+    const item = this.equipmentAllocations.get(allocationId);
+    if (!item || item.tenantId !== scope.tenantId) return null;
+    const updated = { ...item, status: "released" as const };
+    this.equipmentAllocations.set(allocationId, updated);
+    return updated;
+  }
+  async listServiceInventoryRequirements(
+    scope: TenantScope,
+    serviceId: string
+  ): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> {
+    const service = this.services.get(serviceId);
+    return service?.tenantId === scope.tenantId
+      ? (this.serviceInventoryRequirements.get(serviceId) ?? [])
+      : [];
+  }
+  async replaceServiceInventoryRequirements(
+    scope: TenantScope,
+    serviceId: string,
+    requirements: import("@fitos/contracts").ServiceInventoryRequirement[]
+  ): Promise<import("@fitos/contracts").ServiceInventoryRequirement[]> {
+    const service = this.services.get(serviceId);
+    if (!service || service.tenantId !== scope.tenantId) throw new Error("Service not found.");
+    this.serviceInventoryRequirements.set(serviceId, requirements);
+    return requirements;
+  }
+  async consumeInventory(
+    scope: TenantScope,
+    input: {
+      branchId: string;
+      serviceId?: string;
+      referenceType: string;
+      referenceId: string;
+      items: import("@fitos/contracts").ServiceInventoryRequirement[];
+    }
+  ): Promise<import("@fitos/contracts").InventoryConsumptionResponse[]> {
+    const result: import("@fitos/contracts").InventoryConsumptionResponse[] = [];
+    for (const req of input.items) {
+      const key = `${scope.tenantId}:${req.itemId}:${input.referenceType}:${input.referenceId}`;
+      if (this.inventoryConsumptions.has(key)) continue;
+      const item = this.inventoryItems.get(req.itemId);
+      if (
+        !item ||
+        item.tenantId !== scope.tenantId ||
+        item.branchId !== input.branchId ||
+        item.stockOnHand < req.quantityPerSession
+      )
+        throw new Error("Insufficient inventory stock.");
+      item.stockOnHand -= req.quantityPerSession;
+      const row = {
+        id: randomUUID(),
+        tenantId: scope.tenantId,
+        branchId: input.branchId,
+        itemId: req.itemId,
+        serviceId: input.serviceId ?? null,
+        referenceType: input.referenceType,
+        referenceId: input.referenceId,
+        quantity: req.quantityPerSession,
+        createdAt: now()
+      };
+      this.inventoryConsumptions.set(key, row);
+      result.push(row);
+    }
+    return result;
+  }
 
   // ─── Equipment & Resource Scheduling ─────────────────────────────────────────
-  async listEquipmentAssets(scope: TenantScope, branchId?: string): Promise<EquipmentAssetResponse[]> {
+  async listEquipmentAssets(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<EquipmentAssetResponse[]> {
     return [...this.equipmentAssets.values()].filter((asset) => {
       if (asset.tenantId !== scope.tenantId) return false;
       if (branchId && asset.branchId !== branchId) return false;
@@ -4371,13 +5347,19 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async findEquipmentAssetById(scope: TenantScope, assetId: string): Promise<EquipmentAssetResponse | null> {
+  async findEquipmentAssetById(
+    scope: TenantScope,
+    assetId: string
+  ): Promise<EquipmentAssetResponse | null> {
     const asset = this.equipmentAssets.get(assetId);
     if (!asset || asset.tenantId !== scope.tenantId) return null;
     return asset;
   }
 
-  async createEquipmentAsset(scope: TenantScope, input: CreateEquipmentAssetRequest): Promise<EquipmentAssetResponse> {
+  async createEquipmentAsset(
+    scope: TenantScope,
+    input: CreateEquipmentAssetRequest
+  ): Promise<EquipmentAssetResponse> {
     const id = randomUUID();
     const ts = now();
     const branch = this.branches.get(input.branchId);
@@ -4409,7 +5391,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     return asset;
   }
 
-  async updateEquipmentAsset(scope: TenantScope, assetId: string, input: UpdateEquipmentAssetRequest): Promise<EquipmentAssetResponse | null> {
+  async updateEquipmentAsset(
+    scope: TenantScope,
+    assetId: string,
+    input: UpdateEquipmentAssetRequest
+  ): Promise<EquipmentAssetResponse | null> {
     const asset = this.equipmentAssets.get(assetId);
     if (!asset || asset.tenantId !== scope.tenantId) return null;
     if (input.branchId !== undefined) {
@@ -4429,13 +5415,17 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (input.purchaseDate !== undefined) asset.purchaseDate = input.purchaseDate;
     if (input.warrantyEndsAt !== undefined) asset.warrantyEndsAt = input.warrantyEndsAt;
     if (input.nextServiceDueAt !== undefined) asset.nextServiceDueAt = input.nextServiceDueAt;
-    if (input.nextCalibrationDueAt !== undefined) asset.nextCalibrationDueAt = input.nextCalibrationDueAt;
+    if (input.nextCalibrationDueAt !== undefined)
+      asset.nextCalibrationDueAt = input.nextCalibrationDueAt;
     if (input.notes !== undefined) asset.notes = input.notes;
     asset.updatedAt = now();
     return asset;
   }
 
-  async listEquipmentPools(scope: TenantScope, branchId?: string): Promise<EquipmentPoolResponse[]> {
+  async listEquipmentPools(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<EquipmentPoolResponse[]> {
     return [...this.equipmentPools.values()].filter((pool) => {
       if (pool.tenantId !== scope.tenantId) return false;
       if (branchId && pool.branchId !== branchId) return false;
@@ -4444,7 +5434,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async createEquipmentPool(scope: TenantScope, input: CreateEquipmentPoolRequest): Promise<EquipmentPoolResponse> {
+  async createEquipmentPool(
+    scope: TenantScope,
+    input: CreateEquipmentPoolRequest
+  ): Promise<EquipmentPoolResponse> {
     const id = randomUUID();
     const branch = this.branches.get(input.branchId);
     const pool: EquipmentPoolResponse = {
@@ -4462,7 +5455,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     return pool;
   }
 
-  async listEquipmentMaintenance(scope: TenantScope, assetId?: string): Promise<EquipmentMaintenanceRecordResponse[]> {
+  async listEquipmentMaintenance(
+    scope: TenantScope,
+    assetId?: string
+  ): Promise<EquipmentMaintenanceRecordResponse[]> {
     return [...this.equipmentMaintenance.values()].filter((record) => {
       if (record.tenantId !== scope.tenantId) return false;
       if (assetId && record.assetId !== assetId) return false;
@@ -4470,7 +5466,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async createEquipmentMaintenance(scope: TenantScope, input: CreateMaintenanceRecordRequest): Promise<EquipmentMaintenanceRecordResponse> {
+  async createEquipmentMaintenance(
+    scope: TenantScope,
+    input: CreateMaintenanceRecordRequest
+  ): Promise<EquipmentMaintenanceRecordResponse> {
     const asset = this.equipmentAssets.get(input.assetId);
     if (!asset || asset.tenantId !== scope.tenantId) throw new Error("Equipment asset not found.");
     const id = randomUUID();
@@ -4503,22 +5502,40 @@ export class InMemoryFitosRepository implements FitosRepository {
     return record;
   }
 
-  async listServiceEquipmentRequirements(scope: TenantScope, serviceId: string): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
+  async listServiceEquipmentRequirements(
+    scope: TenantScope,
+    serviceId: string
+  ): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
     const service = this.services.get(serviceId);
     if (!service || service.tenantId !== scope.tenantId) return [];
     return this.serviceEquipmentRequirements.get(serviceId) ?? [];
   }
 
-  async replaceServiceEquipmentRequirements(scope: TenantScope, serviceId: string, requirements: import("@fitos/contracts").ServiceEquipmentRequirement[]): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
+  async replaceServiceEquipmentRequirements(
+    scope: TenantScope,
+    serviceId: string,
+    requirements: import("@fitos/contracts").ServiceEquipmentRequirement[]
+  ): Promise<import("@fitos/contracts").ServiceEquipmentRequirement[]> {
     const service = this.services.get(serviceId);
     if (!service || service.tenantId !== scope.tenantId) throw new Error("Service not found.");
-    for (const r of requirements) { const pool = this.equipmentPools.get(r.poolId); if (!pool || pool.tenantId !== scope.tenantId || (service.branchId && pool.branchId !== service.branchId)) throw new Error("Equipment pool is not available for this service."); }
+    for (const r of requirements) {
+      const pool = this.equipmentPools.get(r.poolId);
+      if (
+        !pool ||
+        pool.tenantId !== scope.tenantId ||
+        (service.branchId && pool.branchId !== service.branchId)
+      )
+        throw new Error("Equipment pool is not available for this service.");
+    }
     this.serviceEquipmentRequirements.set(serviceId, requirements);
     return requirements;
   }
 
   // ─── Inventory & Consumables ────────────────────────────────────────────────
-  async listInventoryItems(scope: TenantScope, branchId?: string): Promise<InventoryItemResponse[]> {
+  async listInventoryItems(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<InventoryItemResponse[]> {
     return [...this.inventoryItems.values()].filter((item) => {
       if (item.tenantId !== scope.tenantId) return false;
       if (branchId && item.branchId !== branchId) return false;
@@ -4527,13 +5544,19 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async findInventoryItemById(scope: TenantScope, itemId: string): Promise<InventoryItemResponse | null> {
+  async findInventoryItemById(
+    scope: TenantScope,
+    itemId: string
+  ): Promise<InventoryItemResponse | null> {
     const item = this.inventoryItems.get(itemId);
     if (!item || item.tenantId !== scope.tenantId) return null;
     return item;
   }
 
-  async createInventoryItem(scope: TenantScope, input: CreateInventoryItemRequest): Promise<InventoryItemResponse> {
+  async createInventoryItem(
+    scope: TenantScope,
+    input: CreateInventoryItemRequest
+  ): Promise<InventoryItemResponse> {
     const id = randomUUID();
     const ts = now();
     const branch = this.branches.get(input.branchId);
@@ -4580,7 +5603,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     return item;
   }
 
-  async updateInventoryItem(scope: TenantScope, itemId: string, input: UpdateInventoryItemRequest): Promise<InventoryItemResponse | null> {
+  async updateInventoryItem(
+    scope: TenantScope,
+    itemId: string,
+    input: UpdateInventoryItemRequest
+  ): Promise<InventoryItemResponse | null> {
     const item = this.inventoryItems.get(itemId);
     if (!item || item.tenantId !== scope.tenantId) return null;
     if (input.name !== undefined) item.name = input.name;
@@ -4596,7 +5623,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     return item;
   }
 
-  async listInventoryMovements(scope: TenantScope, itemId?: string): Promise<InventoryMovementResponse[]> {
+  async listInventoryMovements(
+    scope: TenantScope,
+    itemId?: string
+  ): Promise<InventoryMovementResponse[]> {
     return this.inventoryMovements.filter((m) => {
       if (m.tenantId !== scope.tenantId) return false;
       if (itemId && m.itemId !== itemId) return false;
@@ -4604,14 +5634,20 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async createInventoryMovement(scope: TenantScope, input: CreateInventoryMovementRequest, recordedByUserId: string): Promise<InventoryMovementResponse> {
+  async createInventoryMovement(
+    scope: TenantScope,
+    input: CreateInventoryMovementRequest,
+    recordedByUserId: string
+  ): Promise<InventoryMovementResponse> {
     const item = this.inventoryItems.get(input.itemId);
     if (!item || item.tenantId !== scope.tenantId) throw new Error("Inventory item not found.");
     const id = randomUUID();
     const ts = now();
 
     const isIncoming = input.movementType === "purchase_in" || input.movementType === "adjustment";
-    item.stockOnHand = isIncoming ? item.stockOnHand + input.quantity : Math.max(0, item.stockOnHand - input.quantity);
+    item.stockOnHand = isIncoming
+      ? item.stockOnHand + input.quantity
+      : Math.max(0, item.stockOnHand - input.quantity);
     item.updatedAt = ts;
 
     const user = this.users.get(recordedByUserId);
@@ -4635,7 +5671,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     return movement;
   }
 
-  async listPurchaseOrders(scope: TenantScope, branchId?: string): Promise<PurchaseOrderResponse[]> {
+  async listPurchaseOrders(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<PurchaseOrderResponse[]> {
     return [...this.purchaseOrders.values()].filter((po) => {
       if (po.tenantId !== scope.tenantId) return false;
       if (branchId && po.branchId !== branchId) return false;
@@ -4643,7 +5682,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async createPurchaseOrder(scope: TenantScope, input: CreatePurchaseOrderRequest): Promise<PurchaseOrderResponse> {
+  async createPurchaseOrder(
+    scope: TenantScope,
+    input: CreatePurchaseOrderRequest
+  ): Promise<PurchaseOrderResponse> {
     const id = randomUUID();
     const ts = now();
     const branch = this.branches.get(input.branchId);
@@ -4686,7 +5728,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     return [...this.assessmentDefinitions.values()].filter((d) => d.tenantId === scope.tenantId);
   }
 
-  async createAssessmentDefinition(scope: TenantScope, input: CreateAssessmentDefinitionRequest): Promise<AssessmentDefinitionResponse> {
+  async createAssessmentDefinition(
+    scope: TenantScope,
+    input: CreateAssessmentDefinitionRequest
+  ): Promise<AssessmentDefinitionResponse> {
     const id = randomUUID();
     const ts = now();
     const def: AssessmentDefinitionResponse = {
@@ -4705,7 +5750,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     return def;
   }
 
-  async listAssessmentSessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<AssessmentSessionResponse[]> {
+  async listAssessmentSessions(
+    scope: TenantScope,
+    memberId?: string,
+    branchId?: string
+  ): Promise<AssessmentSessionResponse[]> {
     return [...this.assessmentSessions.values()].filter((s) => {
       if (s.tenantId !== scope.tenantId) return false;
       if (memberId && s.memberId !== memberId) return false;
@@ -4715,9 +5764,14 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async createAssessmentSession(scope: TenantScope, input: CreateAssessmentSessionRequest, assessorStaffId: string): Promise<AssessmentSessionResponse> {
+  async createAssessmentSession(
+    scope: TenantScope,
+    input: CreateAssessmentSessionRequest,
+    assessorStaffId: string
+  ): Promise<AssessmentSessionResponse> {
     const def = this.assessmentDefinitions.get(input.definitionId);
-    if (!def || def.tenantId !== scope.tenantId) throw new Error("Assessment definition not found.");
+    if (!def || def.tenantId !== scope.tenantId)
+      throw new Error("Assessment definition not found.");
     const member = this.members.get(input.memberId);
     if (!member || member.tenantId !== scope.tenantId) throw new Error("Member not found.");
     const contact = this.contacts.get(member.contactId);
@@ -4751,7 +5805,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     return session;
   }
 
-  async getMemberPerformanceProfile(scope: TenantScope, memberId: string): Promise<MemberPerformanceProfileResponse> {
+  async getMemberPerformanceProfile(
+    scope: TenantScope,
+    memberId: string
+  ): Promise<MemberPerformanceProfileResponse> {
     const member = this.members.get(memberId);
     if (!member || member.tenantId !== scope.tenantId) throw new Error("Member not found.");
     const contact = this.contacts.get(member.contactId);
@@ -4778,14 +5835,27 @@ export class InMemoryFitosRepository implements FitosRepository {
     return [...this.therapyModalities.values()].filter((m) => m.tenantId === scope.tenantId);
   }
 
-  async createTherapyModality(scope: TenantScope, input: import("@fitos/contracts").CreateTherapyModalityRequest): Promise<TherapyModalityResponse> {
+  async createTherapyModality(
+    scope: TenantScope,
+    input: import("@fitos/contracts").CreateTherapyModalityRequest
+  ): Promise<TherapyModalityResponse> {
     const ts = now();
-    const modality: TherapyModalityResponse = { id: randomUUID(), tenantId: scope.tenantId, ...input, isActive: true, createdAt: ts, updatedAt: ts };
+    const modality: TherapyModalityResponse = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      ...input,
+      isActive: true,
+      createdAt: ts,
+      updatedAt: ts
+    };
     this.therapyModalities.set(modality.id, modality);
     return modality;
   }
 
-  async listTherapyProtocols(scope: TenantScope, modalityCode?: string): Promise<TherapyProtocolResponse[]> {
+  async listTherapyProtocols(
+    scope: TenantScope,
+    modalityCode?: string
+  ): Promise<TherapyProtocolResponse[]> {
     return [...this.therapyProtocols.values()].filter((p) => {
       if (p.tenantId !== scope.tenantId) return false;
       if (modalityCode && p.modalityCode !== modalityCode) return false;
@@ -4793,7 +5863,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async createTherapyProtocol(scope: TenantScope, input: CreateTherapyProtocolRequest): Promise<TherapyProtocolResponse> {
+  async createTherapyProtocol(
+    scope: TenantScope,
+    input: CreateTherapyProtocolRequest
+  ): Promise<TherapyProtocolResponse> {
     const id = randomUUID();
     const ts = now();
     const proto: TherapyProtocolResponse = {
@@ -4815,7 +5888,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     return proto;
   }
 
-  async listTherapySessions(scope: TenantScope, memberId?: string, branchId?: string): Promise<TherapySessionResponse[]> {
+  async listTherapySessions(
+    scope: TenantScope,
+    memberId?: string,
+    branchId?: string
+  ): Promise<TherapySessionResponse[]> {
     return [...this.therapySessions.values()].filter((s) => {
       if (s.tenantId !== scope.tenantId) return false;
       if (memberId && s.memberId !== memberId) return false;
@@ -4825,7 +5902,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
   }
 
-  async createTherapySession(scope: TenantScope, input: CreateTherapySessionRequest, staffUserId: string): Promise<TherapySessionResponse> {
+  async createTherapySession(
+    scope: TenantScope,
+    input: CreateTherapySessionRequest,
+    staffUserId: string
+  ): Promise<TherapySessionResponse> {
     const proto = this.therapyProtocols.get(input.protocolId);
     if (!proto || proto.tenantId !== scope.tenantId) throw new Error("Therapy protocol not found.");
     const member = this.members.get(input.memberId);
@@ -4867,14 +5948,25 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   // ─── Inventory Lots & Stocktakes (In-Memory) ────────────────────────────────
-  private readonly inventoryLotsMap = new Map<string, import("@fitos/contracts").InventoryLotResponse>();
+  private readonly inventoryLotsMap = new Map<
+    string,
+    import("@fitos/contracts").InventoryLotResponse
+  >();
   private readonly stocktakesMap = new Map<string, import("@fitos/contracts").StocktakeResponse>();
 
-  async listInventoryLots(scope: TenantScope, itemId?: string): Promise<import("@fitos/contracts").InventoryLotResponse[]> {
-    return [...this.inventoryLotsMap.values()].filter((l) => l.tenantId === scope.tenantId && (!itemId || l.itemId === itemId));
+  async listInventoryLots(
+    scope: TenantScope,
+    itemId?: string
+  ): Promise<import("@fitos/contracts").InventoryLotResponse[]> {
+    return [...this.inventoryLotsMap.values()].filter(
+      (l) => l.tenantId === scope.tenantId && (!itemId || l.itemId === itemId)
+    );
   }
 
-  async createInventoryLot(scope: TenantScope, input: import("@fitos/contracts").CreateInventoryLotRequest): Promise<import("@fitos/contracts").InventoryLotResponse> {
+  async createInventoryLot(
+    scope: TenantScope,
+    input: import("@fitos/contracts").CreateInventoryLotRequest
+  ): Promise<import("@fitos/contracts").InventoryLotResponse> {
     const id = randomUUID();
     const ts = new Date().toISOString();
     const item = this.inventoryItems.get(input.itemId);
@@ -4901,19 +5993,39 @@ export class InMemoryFitosRepository implements FitosRepository {
     return lot;
   }
 
-  async listExpiringInventoryLots(scope: TenantScope, daysAhead: number): Promise<import("@fitos/contracts").InventoryLotResponse[]> {
+  async listExpiringInventoryLots(
+    scope: TenantScope,
+    daysAhead: number
+  ): Promise<import("@fitos/contracts").InventoryLotResponse[]> {
     const targetDate = new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10);
-    return [...this.inventoryLotsMap.values()].filter((l) => l.tenantId === scope.tenantId && l.expiresOn && l.expiresOn <= targetDate && l.quantityOnHand > 0);
+    return [...this.inventoryLotsMap.values()].filter(
+      (l) =>
+        l.tenantId === scope.tenantId &&
+        l.expiresOn &&
+        l.expiresOn <= targetDate &&
+        l.quantityOnHand > 0
+    );
   }
 
-  async listStocktakes(scope: TenantScope, branchId?: string): Promise<import("@fitos/contracts").StocktakeResponse[]> {
-    return [...this.stocktakesMap.values()].filter((s) => s.tenantId === scope.tenantId && (!branchId || s.branchId === branchId));
+  async listStocktakes(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<import("@fitos/contracts").StocktakeResponse[]> {
+    return [...this.stocktakesMap.values()].filter(
+      (s) => s.tenantId === scope.tenantId && (!branchId || s.branchId === branchId)
+    );
   }
 
-  async createStocktake(scope: TenantScope, input: import("@fitos/contracts").CreateStocktakeRequest, createdByUserId: string): Promise<import("@fitos/contracts").StocktakeResponse> {
+  async createStocktake(
+    scope: TenantScope,
+    input: import("@fitos/contracts").CreateStocktakeRequest,
+    createdByUserId: string
+  ): Promise<import("@fitos/contracts").StocktakeResponse> {
     const id = randomUUID();
     const ts = new Date().toISOString();
-    const items = [...this.inventoryItems.values()].filter((i) => i.tenantId === scope.tenantId && (!input.branchId || i.branchId === input.branchId));
+    const items = [...this.inventoryItems.values()].filter(
+      (i) => i.tenantId === scope.tenantId && (!input.branchId || i.branchId === input.branchId)
+    );
     const lines = items.map((i) => ({
       id: randomUUID(),
       stocktakeId: id,
@@ -4939,12 +6051,19 @@ export class InMemoryFitosRepository implements FitosRepository {
     return stocktake;
   }
 
-  async getStocktake(scope: TenantScope, stocktakeId: string): Promise<import("@fitos/contracts").StocktakeResponse | null> {
+  async getStocktake(
+    scope: TenantScope,
+    stocktakeId: string
+  ): Promise<import("@fitos/contracts").StocktakeResponse | null> {
     const st = this.stocktakesMap.get(stocktakeId);
     return st && st.tenantId === scope.tenantId ? st : null;
   }
 
-  async recordStocktakeCount(scope: TenantScope, stocktakeId: string, input: import("@fitos/contracts").RecordStocktakeCountRequest): Promise<import("@fitos/contracts").StocktakeResponse> {
+  async recordStocktakeCount(
+    scope: TenantScope,
+    stocktakeId: string,
+    input: import("@fitos/contracts").RecordStocktakeCountRequest
+  ): Promise<import("@fitos/contracts").StocktakeResponse> {
     const st = this.stocktakesMap.get(stocktakeId);
     if (!st || st.tenantId !== scope.tenantId) throw new Error("Stocktake not found.");
     const line = st.lines.find((l) => l.itemId === input.itemId);
@@ -4954,7 +6073,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     return st;
   }
 
-  async completeStocktake(scope: TenantScope, stocktakeId: string, actorUserId: string): Promise<import("@fitos/contracts").StocktakeResponse> {
+  async completeStocktake(
+    scope: TenantScope,
+    stocktakeId: string,
+    actorUserId: string
+  ): Promise<import("@fitos/contracts").StocktakeResponse> {
     const st = this.stocktakesMap.get(stocktakeId);
     if (!st || st.tenantId !== scope.tenantId) throw new Error("Stocktake not found.");
     st.status = "completed";
@@ -4971,11 +6094,16 @@ export class InMemoryFitosRepository implements FitosRepository {
     return st;
   }
 
-  async getImplementationInquiryByToken(id: string, _token: string): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
+  async getImplementationInquiryByToken(
+    id: string,
+    _token: string
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
     return this.getImplementationInquiry(id);
   }
 
-  async resolvePlatformAdminByTokenHash(tokenHash: string): Promise<{ userId: string; displayName: string; email: string | null } | null> {
+  async resolvePlatformAdminByTokenHash(
+    tokenHash: string
+  ): Promise<{ userId: string; displayName: string; email: string | null } | null> {
     const token = this.platformAdminTokens.get(tokenHash);
     if (!token || token.revokedAt || new Date(token.expiresAt) <= new Date()) return null;
     const user = this.users.get(token.userId);
@@ -4983,12 +6111,41 @@ export class InMemoryFitosRepository implements FitosRepository {
     return { userId: user.id, displayName: user.displayName, email: user.email };
   }
 
-  async findUserById(userId: string): Promise<{ id: string; displayName: string; email: string | null; isPlatformAdmin: boolean } | null> {
+  async findUserById(
+    userId: string
+  ): Promise<{
+    id: string;
+    displayName: string;
+    email: string | null;
+    isPlatformAdmin: boolean;
+  } | null> {
     const user = this.users.get(userId);
-    return user ? { id: user.id, displayName: user.displayName, email: user.email, isPlatformAdmin: Boolean((user as any).isPlatformAdmin) } : null;
+    return user
+      ? {
+          id: user.id,
+          displayName: user.displayName,
+          email: user.email,
+          isPlatformAdmin: Boolean((user as any).isPlatformAdmin)
+        }
+      : null;
   }
 
-  async createPlatformAdminToken(input: { userId: string; tokenHash: string; expiresAt: string }): Promise<void> {
+  async createPlatformAdminToken(input: {
+    userId: string;
+    tokenHash: string;
+    expiresAt: string;
+  }): Promise<void> {
     this.platformAdminTokens.set(input.tokenHash, { ...input, revokedAt: null });
+  }
+
+  async revokePlatformAdminToken(tokenHash: string, at: string): Promise<void> {
+    const token = this.platformAdminTokens.get(tokenHash);
+    if (token) token.revokedAt = at;
+  }
+
+  async revokeAllPlatformAdminTokens(userId: string, at: string): Promise<void> {
+    for (const token of this.platformAdminTokens.values()) {
+      if (token.userId === userId && !token.revokedAt) token.revokedAt = at;
+    }
   }
 }

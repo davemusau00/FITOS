@@ -218,7 +218,7 @@ export function ConfigureFitosPage() {
 
   if (submitted) {
     return (
-      <main style={{ minHeight: "100vh", backgroundColor: "#090d16", color: "#f8fafc", padding: "5rem 2rem", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <main className="saas-public-page saas-complete-page">
         <div style={{ maxWidth: "42rem", background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(59, 130, 246, 0.4)", borderRadius: "1.25rem", padding: "3.5rem 2.5rem", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.8)" }}>
           <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🚀</div>
           <h1 style={{ fontSize: "2.25rem", fontWeight: 800, marginBottom: "1rem" }}>FITOS Configuration Brief Received</h1>
@@ -240,7 +240,7 @@ export function ConfigureFitosPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#090d16", color: "#f1f5f9", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div className="saas-public-page saas-configure-page">
       {/* ── Top Bar ── */}
       <header style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(15, 23, 42, 0.85)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: "76rem", margin: "0 auto", padding: "1rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
