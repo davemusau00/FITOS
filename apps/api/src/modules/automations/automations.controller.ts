@@ -1,7 +1,23 @@
-import { Body, Controller, Delete, Get, Inject, NotFoundException, Param, Patch, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  Patch,
+  Post
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
-import type { AutomationActionType, AutomationTriggerType, CreateAutomationRuleRequest, RequestActor, UpdateAutomationRuleRequest } from "@fitos/contracts";
+import type {
+  AutomationActionType,
+  AutomationTriggerType,
+  CreateAutomationRuleRequest,
+  RequestActor,
+  UpdateAutomationRuleRequest
+} from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor } from "../../common/request-context/actor.decorator.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
@@ -13,8 +29,7 @@ const triggerTypes = [
   "member_joined",
   "membership_expiring_soon",
   "member_inactive",
-  "trial_completed",
-  "payment_failed"
+  "trial_completed"
 ] as const;
 
 const actionTypes = [
@@ -31,13 +46,15 @@ const conditionSchema = z.object({
   value: z.union([z.string(), z.number(), z.boolean()])
 });
 
-const actionConfigSchema = z.object({
-  template: z.string().optional(),
-  recipientType: z.enum(["member", "staff", "lead"]).optional(),
-  subject: z.string().optional(),
-  body: z.string().optional(),
-  targetStage: z.string().optional()
-}).passthrough();
+const actionConfigSchema = z
+  .object({
+    template: z.string().optional(),
+    recipientType: z.enum(["member", "staff", "lead"]).optional(),
+    subject: z.string().optional(),
+    body: z.string().optional(),
+    targetStage: z.string().optional()
+  })
+  .passthrough();
 
 const createSchema = z
   .object({
@@ -75,25 +92,23 @@ const toScope = (actor: RequestActor) => ({
 @ApiTags("automations")
 @Controller("automations")
 export class AutomationsController {
-  constructor(
-    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
-  ) {}
+  constructor(@Inject(FitosRepositoryToken) private readonly repository: FitosRepository) {}
 
   @Get()
-  @RequirePermission("attendance:read")
+  @RequirePermission("automation:read")
   list(@Actor() actor: RequestActor) {
     return this.repository.listAutomations(toScope(actor));
   }
 
   @Post()
-  @RequirePermission("attendance:checkin")
+  @RequirePermission("automation:create")
   create(@Actor() actor: RequestActor, @Body() body: unknown) {
     const input = createSchema.parse(body) as CreateAutomationRuleRequest;
     return this.repository.createAutomation(toScope(actor), input);
   }
 
   @Patch(":ruleId")
-  @RequirePermission("attendance:checkin")
+  @RequirePermission("automation:update")
   async update(
     @Actor() actor: RequestActor,
     @Param("ruleId") ruleId: string,
@@ -106,7 +121,7 @@ export class AutomationsController {
   }
 
   @Delete(":ruleId")
-  @RequirePermission("attendance:checkin")
+  @RequirePermission("automation:delete")
   async remove(@Actor() actor: RequestActor, @Param("ruleId") ruleId: string) {
     const deleted = await this.repository.deleteAutomation(toScope(actor), ruleId);
     if (!deleted) throw new NotFoundException("Automation rule not found.");
@@ -114,13 +129,13 @@ export class AutomationsController {
   }
 
   @Post(":ruleId/trigger")
-  @RequirePermission("attendance:checkin")
+  @RequirePermission("automation:execute")
   trigger(@Actor() actor: RequestActor, @Param("ruleId") ruleId: string) {
     return this.repository.triggerAutomation(toScope(actor), ruleId);
   }
 
   @Get("logs")
-  @RequirePermission("attendance:read")
+  @RequirePermission("automation:read")
   logs(@Actor() actor: RequestActor) {
     return this.repository.listAutomationLogs(toScope(actor));
   }

@@ -45,7 +45,14 @@ export const PERMISSION_KEYS = [
   "audit:read",
   "assessment:read",
   "assessment:write",
-  "assessment:export"
+  "assessment:export",
+  "automation:read",
+  "automation:create",
+  "automation:update",
+  "automation:delete",
+  "automation:execute",
+  "insights:read",
+  "insights:export"
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -62,7 +69,6 @@ export const PLATFORM_PERMISSION_KEYS = [
   "platform:tenant:create"
 ] as const;
 export type PlatformPermissionKey = (typeof PLATFORM_PERMISSION_KEYS)[number];
-
 
 export const ROLE_KEYS = ["owner", "manager", "reception", "trainer", "finance"] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];

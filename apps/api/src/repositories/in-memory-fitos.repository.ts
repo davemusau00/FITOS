@@ -4881,7 +4881,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       triggerEvent: "manual.test",
       targetEntityId: null,
       targetEntityName: "Test Run",
-      message: `Manual test execution completed successfully for action: ${rule.actionType}`,
+      message: `SIMULATION: evaluated action ${rule.actionType}; no customer communication was sent.`,
       executedAt: ts
     };
     this.automationLogs.push(log);
@@ -6111,9 +6111,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     return { userId: user.id, displayName: user.displayName, email: user.email };
   }
 
-  async findUserById(
-    userId: string
-  ): Promise<{
+  async findUserById(userId: string): Promise<{
     id: string;
     displayName: string;
     email: string | null;

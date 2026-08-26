@@ -4024,7 +4024,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         tenantId: scope.tenantId,
         status: "success",
         triggerEvent: "manual",
-        message: `Triggered manually for rule: ${rule.name}`,
+        message: `SIMULATION: evaluated rule ${rule.name}; no customer communication was sent.`,
         executedAt: now
       })
       .returning();
@@ -4038,7 +4038,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       triggerEvent: "manual",
       targetEntityId: null,
       targetEntityName: null,
-      message: `Triggered manually for rule: ${rule.name}`,
+      message: `SIMULATION: evaluated rule ${rule.name}; no customer communication was sent.`,
       executedAt: now.toISOString()
     };
   }
@@ -4105,27 +4105,25 @@ export class DrizzleFitosRepository implements FitosRepository {
             permissionRows.map((permission) => ({ roleId: role.id, permissionKey: permission.key }))
           );
       const trialEnds = new Date(Date.now() + 14 * 86400000);
-      await tx
-        .insert(tenantSubscriptions)
-        .values({
-          tenantId: tenant.id,
-          plan: "pro",
-          status: "trial",
-          trialEndsAt: trialEnds,
-          currentPeriodEndsAt: trialEnds,
-          capabilitiesJson: [
-            "feature.crm",
-            "feature.automations",
-            "feature.insights",
-            "feature.portal",
-            "feature.assessments",
-            "feature.therapy",
-            "feature.inventory",
-            "feature.equipment",
-            "feature.sites",
-            "feature.integrations"
-          ]
-        });
+      await tx.insert(tenantSubscriptions).values({
+        tenantId: tenant.id,
+        plan: "pro",
+        status: "trial",
+        trialEndsAt: trialEnds,
+        currentPeriodEndsAt: trialEnds,
+        capabilitiesJson: [
+          "feature.crm",
+          "feature.automations",
+          "feature.insights",
+          "feature.portal",
+          "feature.assessments",
+          "feature.therapy",
+          "feature.inventory",
+          "feature.equipment",
+          "feature.sites",
+          "feature.integrations"
+        ]
+      });
 
       const sessionToken = createOpaqueSessionToken();
       const csrfToken = createCsrfToken(sessionToken);
@@ -4403,9 +4401,7 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
-  async findUserById(
-    userId: string
-  ): Promise<{
+  async findUserById(userId: string): Promise<{
     id: string;
     displayName: string;
     email: string | null;
@@ -4449,13 +4445,11 @@ export class DrizzleFitosRepository implements FitosRepository {
     tokenHash: string;
     expiresAt: string;
   }): Promise<void> {
-    await this.db
-      .insert(platformAdminTokens)
-      .values({
-        userId: input.userId,
-        tokenHash: input.tokenHash,
-        expiresAt: new Date(input.expiresAt)
-      });
+    await this.db.insert(platformAdminTokens).values({
+      userId: input.userId,
+      tokenHash: input.tokenHash,
+      expiresAt: new Date(input.expiresAt)
+    });
   }
 
   async revokePlatformAdminToken(tokenHash: string, at: string): Promise<void> {
@@ -5489,16 +5483,14 @@ export class DrizzleFitosRepository implements FitosRepository {
           )
         );
       if (requirements.length)
-        await tx
-          .insert(serviceInventoryRequirements)
-          .values(
-            requirements.map((item) => ({
-              tenantId: scope.tenantId,
-              serviceId,
-              itemId: item.itemId,
-              quantityPerSession: item.quantityPerSession
-            }))
-          );
+        await tx.insert(serviceInventoryRequirements).values(
+          requirements.map((item) => ({
+            tenantId: scope.tenantId,
+            serviceId,
+            itemId: item.itemId,
+            quantityPerSession: item.quantityPerSession
+          }))
+        );
     });
     return requirements;
   }
@@ -5917,16 +5909,14 @@ export class DrizzleFitosRepository implements FitosRepository {
           )
         );
       if (requirements.length)
-        await tx
-          .insert(serviceEquipmentRequirements)
-          .values(
-            requirements.map((r) => ({
-              tenantId: scope.tenantId,
-              serviceId,
-              poolId: r.poolId,
-              quantityRequired: r.quantityRequired
-            }))
-          );
+        await tx.insert(serviceEquipmentRequirements).values(
+          requirements.map((r) => ({
+            tenantId: scope.tenantId,
+            serviceId,
+            poolId: r.poolId,
+            quantityRequired: r.quantityRequired
+          }))
+        );
     });
     return requirements;
   }
