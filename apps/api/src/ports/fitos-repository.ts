@@ -463,6 +463,7 @@ export interface FitosRepository {
 
   // Insights Analytics
   getInsightsOverview(scope: TenantScope, branchId?: string): Promise<InsightsOverviewResponse>;
+  getTodayOverview(scope: TenantScope, branchId: string): Promise<import("@fitos/contracts").TodayOverviewResponse>;
 
   // Automations
   listAutomations(scope: TenantScope): Promise<AutomationRuleResponse[]>;

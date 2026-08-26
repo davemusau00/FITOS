@@ -107,7 +107,7 @@ import type {
   CreateTherapySessionRequest
 } from "@fitos/contracts";
 import { DEFAULT_ROLE_PERMISSIONS } from "@fitos/contracts";
-import { decodeCursor, encodeCursor } from "@fitos/shared";
+import { decodeCursor, encodeCursor, normalizePhone } from "@fitos/shared";
 import type {
   CreateSessionInput,
   FitosRepository,
@@ -4173,7 +4173,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       tenantId: tenant.id,
       firstName: input.firstName,
       lastName: input.lastName ?? null,
-      phone: input.phone ?? null,
+      phone: normalizePhone(input.phone) ?? input.phone?.trim() ?? null,
       email: input.email ?? null,
       dateOfBirth: null
     };
@@ -4902,6 +4902,68 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
     this.automationLogs.push(log);
     return log;
+  }
+
+  async getTodayOverview(
+    scope: TenantScope,
+    branchId: string
+  ): Promise<import("@fitos/contracts").TodayOverviewResponse> {
+    const date = new Date().toISOString().slice(0, 10);
+    const sameDay = (value: string | null | undefined) =>
+      Boolean(value && value.slice(0, 10) === date);
+    const members = [...this.members.values()].filter(
+      (m) => m.tenantId === scope.tenantId && m.homeBranchId === branchId
+    );
+    const bookings = [...this.bookings.values()].filter(
+      (b) => b.tenantId === scope.tenantId && b.branchId === branchId && sameDay(b.bookedAt)
+    );
+    const attendance = [...this.attendance.values()].filter(
+      (a) => a.tenantId === scope.tenantId && a.branchId === branchId && sameDay(a.checkedInAt)
+    );
+    const occurrences = [...this.occurrences.values()].filter(
+      (o) => o.tenantId === scope.tenantId && o.branchId === branchId && sameDay(o.startsAt)
+    );
+    const leads = [...this.leads.values()].filter(
+      (l) => l.tenantId === scope.tenantId && l.branchId === branchId && sameDay(l.createdAt)
+    );
+    const next = occurrences
+      .filter((o) => new Date(o.startsAt) >= new Date())
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
+    return {
+      branchId,
+      date,
+      members: {
+        active: members.filter((m) => m.status === "active").length,
+        joinedToday: members.filter((m) => sameDay(m.joinedAt)).length
+      },
+      bookings: {
+        today: bookings.length,
+        confirmed: bookings.filter((b) => b.status === "confirmed").length,
+        cancelled: bookings.filter((b) => b.status === "cancelled").length,
+        waitlisted: 0
+      },
+      attendance: {
+        checkedInToday: attendance.length,
+        expectedToday: occurrences.reduce(
+          (sum, o) =>
+            sum +
+            bookings.filter((b) => b.occurrenceId === o.id && b.status === "confirmed").length,
+          0
+        ),
+        noShows: 0
+      },
+      schedule: {
+        sessionsToday: occurrences.length,
+        nextSession: next
+          ? {
+              id: next.id,
+              name: this.services.get(next.serviceId)?.name ?? "Scheduled session",
+              startsAt: next.startsAt
+            }
+          : null
+      },
+      leads: { newToday: leads.length, followUpsDue: 0 }
+    };
   }
 
   // ─── Platform & Self-Service SaaS ──────────────────────────────────────────

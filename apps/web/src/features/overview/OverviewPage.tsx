@@ -19,6 +19,11 @@ const queryKeys = {
 export function OverviewPage() {
   const { auth } = useAuth();
   const { activeBranchId, activeBranch } = useBranch();
+  const today = useQuery({
+    queryKey: ["today-overview", activeBranchId],
+    queryFn: () => api.todayOverview(activeBranchId),
+    enabled: Boolean(activeBranchId)
+  });
 
   const members = useQuery({
     queryKey: ["members", activeBranchId, "overview"],
@@ -61,13 +66,13 @@ export function OverviewPage() {
 
   if (members.isLoading || branches.isLoading) return <PageLoading />;
 
-  const totalMembers = members.data?.data.length ?? 0;
-  const activeMembers = members.data?.data.filter((m) => m.status === "active").length ?? 0;
-  const totalBookings = bookings.data?.data.length ?? 0;
+  const totalMembers = today.data?.members.active ?? 0;
+  const activeMembers = today.data?.members.joinedToday ?? 0;
+  const totalBookings = today.data?.bookings.today ?? 0;
   const totalServices = services.data?.length ?? 0;
   const totalStaff = staff.data?.length ?? 0;
   const totalBranches = branches.data?.length ?? 0;
-  const totalLeads = leads.data?.data.length ?? 0;
+  const totalLeads = today.data?.leads.newToday ?? 0;
 
   const todayFormatted = new Intl.DateTimeFormat(undefined, {
     weekday: "long",
@@ -104,7 +109,14 @@ export function OverviewPage() {
       </div>
 
       <ErrorNotice
-        error={members.error ?? branches.error ?? staff.error ?? bookings.error ?? services.error}
+        error={
+          today.error ??
+          members.error ??
+          branches.error ??
+          staff.error ??
+          bookings.error ??
+          services.error
+        }
       />
 
       {/* ── 6-Stat KPI Card Row (Design Truth: Screen 1) ── */}
@@ -121,7 +133,9 @@ export function OverviewPage() {
         <div className="stat-card">
           <span className="stat-card__label">Bookings</span>
           <strong className="stat-card__value">{totalBookings}</strong>
-          <span className="stat-card__delta stat-card__delta--up">↑ 24% vs last 7 days</span>
+          <span className="stat-card__delta stat-card__delta--neutral">
+            {today.data?.bookings.confirmed ?? 0} confirmed today
+          </span>
         </div>
 
         <div className="stat-card">

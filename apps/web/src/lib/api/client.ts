@@ -47,6 +47,7 @@ import type {
   UpdateRosterStatusRequest,
   // New: insights, automations, public, member portal
   InsightsOverviewResponse,
+  TodayOverviewResponse,
   AutomationRuleResponse,
   CreateAutomationRuleRequest,
   UpdateAutomationRuleRequest,
@@ -434,6 +435,8 @@ export const api = {
     request<InsightsOverviewResponse>(
       `/insights/overview${branchId ? `?branchId=${branchId}` : ""}`
     ),
+  todayOverview: (branchId: string) =>
+    request<TodayOverviewResponse>(`/insights/today?branchId=${encodeURIComponent(branchId)}`),
 
   // ── Automations ───────────────────────────────────────────────────────────
   automations: () => request<AutomationRuleResponse[]>("/automations"),

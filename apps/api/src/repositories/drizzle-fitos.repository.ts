@@ -151,7 +151,7 @@ import type {
   TherapySessionResponse,
   CreateTherapySessionRequest
 } from "@fitos/contracts";
-import { decodeCursor, encodeCursor } from "@fitos/shared";
+import { decodeCursor, encodeCursor, normalizePhone } from "@fitos/shared";
 import type { Pool } from "pg";
 import type {
   CreateSessionInput,
@@ -4043,6 +4043,33 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
+  async getTodayOverview(
+    scope: TenantScope,
+    branchId: string
+  ): Promise<import("@fitos/contracts").TodayOverviewResponse> {
+    const result = await this.db.execute<any>(
+      sql`SELECT to_char(now(), 'YYYY-MM-DD') AS date, (SELECT count(*) FROM members WHERE tenant_id = ${scope.tenantId} AND home_branch_id = ${branchId} AND status = 'active')::int AS active_members, (SELECT count(*) FROM members WHERE tenant_id = ${scope.tenantId} AND home_branch_id = ${branchId} AND joined_at::date = now()::date)::int AS joined_today, (SELECT count(*) FROM bookings WHERE tenant_id = ${scope.tenantId} AND branch_id = ${branchId} AND created_at::date = now()::date)::int AS bookings_today, (SELECT count(*) FROM bookings WHERE tenant_id = ${scope.tenantId} AND branch_id = ${branchId} AND created_at::date = now()::date AND status = 'confirmed')::int AS confirmed_bookings, (SELECT count(*) FROM bookings WHERE tenant_id = ${scope.tenantId} AND branch_id = ${branchId} AND created_at::date = now()::date AND status = 'cancelled')::int AS cancelled_bookings, (SELECT count(*) FROM attendance_records WHERE tenant_id = ${scope.tenantId} AND branch_id = ${branchId} AND checked_in_at::date = now()::date)::int AS checked_in, (SELECT count(*) FROM schedule_occurrences WHERE tenant_id = ${scope.tenantId} AND branch_id = ${branchId} AND starts_at::date = now()::date)::int AS sessions_today, (SELECT count(*) FROM leads WHERE tenant_id = ${scope.tenantId} AND branch_id = ${branchId} AND created_at::date = now()::date)::int AS leads_today`
+    );
+    const row = result.rows[0] ?? {};
+    return {
+      branchId,
+      date: String(row.date ?? new Date().toISOString().slice(0, 10)),
+      members: {
+        active: Number(row.active_members ?? 0),
+        joinedToday: Number(row.joined_today ?? 0)
+      },
+      bookings: {
+        today: Number(row.bookings_today ?? 0),
+        confirmed: Number(row.confirmed_bookings ?? 0),
+        cancelled: Number(row.cancelled_bookings ?? 0),
+        waitlisted: 0
+      },
+      attendance: { checkedInToday: Number(row.checked_in ?? 0), expectedToday: 0, noShows: 0 },
+      schedule: { sessionsToday: Number(row.sessions_today ?? 0), nextSession: null },
+      leads: { newToday: Number(row.leads_today ?? 0), followUpsDue: 0 }
+    };
+  }
+
   // ─── Platform & Self-Service SaaS ──────────────────────────────────────────
   async signupTenant(
     input: import("@fitos/contracts").SaaSTenantSignupRequest,
@@ -5828,7 +5855,7 @@ export class DrizzleFitosRepository implements FitosRepository {
           status: reservationStatus,
           firstName: input.firstName.trim(),
           lastName: input.lastName?.trim() || null,
-          phone: input.phone?.trim() || null,
+          phone: (normalizePhone(input.phone) ?? input.phone?.trim()) || null,
           email: input.email?.trim().toLowerCase() || null,
           notes: input.notes?.trim() || null
         })
