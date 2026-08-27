@@ -6200,7 +6200,23 @@ export class DrizzleFitosRepository implements FitosRepository {
       ]);
     const poolById = new Map(pools.map((pool) => [pool.id, pool]));
     return occurrences.map((occurrence) => {
-      const warnings = (reqByService.get(occurrence.serviceId) ?? [])
+      const serviceRequirements = reqByService.get(occurrence.serviceId) ?? [];
+      let effectiveCapacity = occurrence.capacity;
+      for (const requirement of serviceRequirements) {
+        const available = assets.filter(
+          (asset) =>
+            asset.poolId === requirement.poolId &&
+            asset.branchId === occurrence.branchId &&
+            asset.status === "available"
+        ).length;
+        if (requirement.quantityRequired > 0) {
+          effectiveCapacity = Math.min(
+            effectiveCapacity,
+            Math.floor(available / requirement.quantityRequired)
+          );
+        }
+      }
+      const warnings = serviceRequirements
         .map((requirement) => {
           const pool = poolById.get(requirement.poolId);
           const available = assets.filter(
@@ -6234,7 +6250,11 @@ export class DrizzleFitosRepository implements FitosRepository {
           };
         })
         .filter((warning) => warning.shortage > 0);
-      return { ...this.occurrenceResponse(occurrence), resourceWarnings: warnings };
+      return {
+        ...this.occurrenceResponse(occurrence),
+        effectiveCapacity,
+        resourceWarnings: warnings
+      };
     });
   }
 
@@ -6290,8 +6310,37 @@ export class DrizzleFitosRepository implements FitosRepository {
               sql`${publicReservations.status} in ('requested', 'confirmed')`
             )
           );
+        let effectiveCapacity = occurrence.capacity;
+        const requirements = await tx
+          .select()
+          .from(serviceEquipmentRequirements)
+          .where(
+            and(
+              eq(serviceEquipmentRequirements.tenantId, tenant.id),
+              eq(serviceEquipmentRequirements.serviceId, occurrence.serviceId)
+            )
+          );
+        for (const requirement of requirements) {
+          const [available] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(equipmentAssets)
+            .where(
+              and(
+                eq(equipmentAssets.tenantId, tenant.id),
+                eq(equipmentAssets.poolId, requirement.poolId),
+                eq(equipmentAssets.branchId, occurrence.branchId),
+                eq(equipmentAssets.status, "available")
+              )
+            );
+          if (requirement.quantityRequired > 0) {
+            effectiveCapacity = Math.min(
+              effectiveCapacity,
+              Math.floor((available?.count ?? 0) / requirement.quantityRequired)
+            );
+          }
+        }
         reservationStatus =
-          (confirmed?.count ?? 0) + (pending?.count ?? 0) < occurrence.capacity
+          (confirmed?.count ?? 0) + (pending?.count ?? 0) < effectiveCapacity
             ? "confirmed"
             : "waitlisted";
       }

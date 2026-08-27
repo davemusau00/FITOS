@@ -86,6 +86,28 @@ describe("platform admin guard", () => {
   });
 });
 
+describe("platform logout", () => {
+  it("revokes the presented platform token before the client clears it", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.(await new ScryptPasswordHasher().hash("ChangeMe123!"));
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    const rawToken = "logout-token";
+    await repository.createPlatformAdminToken({
+      userId: owner.user.id,
+      tokenHash: hash(rawToken),
+      expiresAt: new Date(Date.now() + 60_000).toISOString()
+    });
+    const controller = new PlatformController(repository);
+    await expect(
+      controller.platformAdminLogout({
+        header: (name: string) => (name === "x-platform-token" ? rawToken : undefined)
+      } as never)
+    ).resolves.toEqual({ ok: true });
+    await expect(repository.resolvePlatformAdminByTokenHash(hash(rawToken))).resolves.toBeNull();
+  });
+});
+
 describe("platform overview", () => {
   it("returns aggregate lifecycle and explicit unknown provider health", async () => {
     const repository = new InMemoryFitosRepository();

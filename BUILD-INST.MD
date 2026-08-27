@@ -69,11 +69,14 @@ complete.
 - [x] In-memory tenancy coverage explicitly exercises cross-tenant member self-booking rejection.
 - [x] In-memory general booking creation now enforces resource-constrained effective capacity, matching Drizzle and staff advisories.
 - [x] In-memory public reservation capacity decisions now use effective capacity when resource constraints are present.
+- [x] Drizzle public reservations now calculate equipment-constrained effective capacity inside the locked transaction before confirming or waitlisting.
+- [x] Drizzle occurrence projections now expose the same equipment-derived `effectiveCapacity` used by member eligibility and public timetable consumers.
 - [x] Platform tenant lifecycle and entitlement mutations now emit consistent success/error toast feedback.
 - [x] Platform exposes an authenticated tenant-specific control-record endpoint with tenant-safe not-found behavior and a typed web client accessor.
 - [x] Platform tenant detail route now renders the safe control record with lifecycle, plan, quota usage, storage measurement state and enabled capabilities, without raw member records.
 - [x] Platform tenant detail renders enabled capabilities using authoritative registry names rather than opaque feature keys.
 - [x] Platform shell logout now revokes the server token before clearing the local credential, with a network-failure cleanup fallback.
+- [x] Platform authentication coverage now verifies the logout controller revokes the presented token and that it can no longer resolve.
 
 ### Verified checks
 
