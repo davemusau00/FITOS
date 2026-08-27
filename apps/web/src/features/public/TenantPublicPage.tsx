@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button, Card, Icon, Modal } from "@fitos/ui";
 import { api } from "../../lib/api/client";
-import type { CreatePublicReservationRequest } from "@fitos/contracts";
+import type { CreatePublicReservationRequest, PublicReservationResponse } from "@fitos/contracts";
 import { FitosLogo } from "../../app/logo";
 import { ErrorNotice } from "../shared";
 
@@ -28,6 +28,9 @@ export function TenantPublicPage() {
   const [trialModalOpen, setTrialModalOpen] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null);
+  const [reservationResult, setReservationResult] = useState<PublicReservationResponse | null>(
+    null
+  );
   const [leadForm, setLeadForm] = useState({
     firstName: "",
     lastName: "",
@@ -79,7 +82,10 @@ export function TenantPublicPage() {
 
   const reservationMutation = useMutation({
     mutationFn: (data: CreatePublicReservationRequest) => api.publicCreateReservation(slug, data),
-    onSuccess: () => setLeadSubmitted(true)
+    onSuccess: (result) => {
+      setReservationResult(result);
+      setLeadSubmitted(true);
+    }
   });
 
   const publicServices = services.data ?? [];
@@ -110,6 +116,7 @@ export function TenantPublicPage() {
   const handleOpenTrial = (serviceName?: string) => {
     setLeadForm((prev) => ({ ...prev, interest: serviceName ?? "General Membership" }));
     setLeadSubmitted(false);
+    setReservationResult(null);
     setTrialModalOpen(true);
   };
 
@@ -386,11 +393,28 @@ export function TenantPublicPage() {
               <div className="public-success-icon">
                 <Icon name="check" size={36} />
               </div>
-              <h3>You're All Set!</h3>
-              <p>
-                We received your request for <strong>{leadForm.interest || "General Trial"}</strong>
-                . Our team will contact you shortly with your confirmation.
-              </p>
+              <h3>
+                {reservationResult?.status === "waitlisted"
+                  ? "You’re on the waitlist"
+                  : reservationResult?.status === "confirmed"
+                    ? "Your spot is confirmed"
+                    : "You’re All Set!"}
+              </h3>
+              {reservationResult ? (
+                <p>
+                  {reservationResult.status === "waitlisted"
+                    ? "We’ll let you know if a place opens."
+                    : "Your reservation has been recorded."}
+                  <br />
+                  Reference: <strong>{reservationResult.id.slice(0, 8).toUpperCase()}</strong>
+                </p>
+              ) : (
+                <p>
+                  We received your request for{" "}
+                  <strong>{leadForm.interest || "General Trial"}</strong>. Our team will contact you
+                  shortly.
+                </p>
+              )}
               <Button onClick={() => setTrialModalOpen(false)} variant="primary">
                 Close
               </Button>

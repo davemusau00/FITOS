@@ -21,6 +21,8 @@ complete.
 - [x] Front Desk explicitly distinguishes confirmed session check-in from facility check-in when no booking exists.
 - [x] Public Member Portal navigation no longer points to staff login.
 - [x] Public tenant pages no longer claim trainer certification or invent timetable duration when configuration is absent.
+- [x] Public timetable weekday selection and filtering use the tenant timezone instead of browser-local `Date.getDay()`.
+- [x] Public reservation success state reflects the server response (`confirmed` or `waitlisted`) and displays a reservation reference.
 - [x] Plan-based quota definitions are centralized and shared by Drizzle and in-memory adapters; missing feature capability data fails closed.
 - [x] Metric definitions are documented in `docs/METRIC_DEFINITIONS.md`.
 - [x] Member portal now consumes a typed server-provided booking eligibility result instead of relying only on frontend credit checks.
