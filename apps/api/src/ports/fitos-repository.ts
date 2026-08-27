@@ -192,6 +192,7 @@ export interface FitosRepository {
   updateTenant(scope: TenantScope, input: UpdateOrganizationRequest): Promise<TenantSummary>;
 
   listBranches(scope: TenantScope): Promise<BranchResponse[]>;
+  listTenantBranches(tenantId: string): Promise<BranchResponse[]>;
   findBranchById(scope: TenantScope, branchId: string): Promise<BranchResponse | null>;
   createBranch(scope: TenantScope, input: CreateBranchRequest): Promise<BranchResponse>;
   updateBranch(

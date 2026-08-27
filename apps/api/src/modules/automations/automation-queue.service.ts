@@ -29,6 +29,7 @@ export class AutomationQueueService implements OnModuleDestroy {
         actionId: log.actionId,
         actionType: log.actionType,
         actionConfig: log.actionConfig,
+        targetEntityId: log.targetEntityId ?? undefined,
         simulation: process.env.FITOS_AUTOMATION_SIMULATION === "true"
       }
     });

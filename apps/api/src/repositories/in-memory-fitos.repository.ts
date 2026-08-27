@@ -2105,6 +2105,12 @@ export class InMemoryFitosRepository implements FitosRepository {
       .map((branch) => this.toBranchResponse(branch));
   }
 
+  async listTenantBranches(tenantId: string): Promise<BranchResponse[]> {
+    return [...this.branches.values()]
+      .filter((branch) => branch.tenantId === tenantId)
+      .map((branch) => this.toBranchResponse(branch));
+  }
+
   async findBranchById(scope: TenantScope, branchId: string): Promise<BranchResponse | null> {
     const branch = this.branches.get(branchId);
     if (!branch || branch.tenantId !== scope.tenantId || !scope.branchIds.includes(branchId))

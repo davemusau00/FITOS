@@ -1,5 +1,8 @@
 import type { WorkerJob } from "../jobs.js";
-import { dispatchAutomationAction } from "../automation/dispatcher.js";
+import {
+  ApiInternalAutomationExecutor,
+  dispatchAutomationAction
+} from "../automation/dispatcher.js";
 import type { AutomationActionResult } from "@fitos/contracts";
 
 /**
@@ -38,12 +41,14 @@ export async function processOperationsJob(job: WorkerJob): Promise<AutomationAc
       const result = await dispatchAutomationAction(job.payload.actionType, {
         actionId: job.payload.actionId ?? job.eventId,
         tenantId: job.tenantId,
+        targetEntityId: job.payload.targetEntityId,
         recipient:
           typeof job.payload.actionConfig?.recipient === "string"
             ? job.payload.actionConfig.recipient
             : undefined,
         config: job.payload.actionConfig ?? {},
-        simulation: job.payload.simulation
+        simulation: job.payload.simulation,
+        internalExecutor: new ApiInternalAutomationExecutor()
       });
       await persistAutomationResult(result);
       return result;

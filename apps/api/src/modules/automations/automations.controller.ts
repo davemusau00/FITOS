@@ -186,4 +186,57 @@ export class AutomationsController {
       throw new NotFoundException("Automation action not found.");
     return { recorded: true };
   }
+
+  @Post("internal-actions")
+  @AuthMode("public")
+  async internalAction(
+    @Headers("x-fitos-worker-token") token: string | undefined,
+    @Body() body: unknown
+  ) {
+    if (!token || token !== process.env.FITOS_WORKER_CALLBACK_TOKEN)
+      throw new UnauthorizedException();
+    const actorUserId = process.env.FITOS_AUTOMATION_ACTOR_USER_ID;
+    if (!actorUserId) throw new UnauthorizedException("Automation actor is not configured.");
+    const input = z
+      .object({
+        actionId: z.string().uuid(),
+        actionType: z.enum(["create_staff_task", "update_crm_stage"]),
+        tenantId: z.string().uuid(),
+        targetEntityId: z.string().uuid(),
+        config: z.record(z.unknown()).default({})
+      })
+      .strict()
+      .parse(body);
+    const branches = await this.repository.listTenantBranches(input.tenantId);
+    const scope = {
+      tenantId: input.tenantId,
+      tenantUserId: actorUserId,
+      userId: actorUserId,
+      branchIds: branches.map((branch) => branch.id)
+    };
+    if (input.actionType === "update_crm_stage") {
+      const stage = z.string().min(1).max(80).parse(input.config.targetStage);
+      const lead = await this.repository.updateLeadStage(
+        scope,
+        input.targetEntityId,
+        { stage: stage as never },
+        actorUserId
+      );
+      if (!lead) throw new NotFoundException("Automation lead target not found.");
+    } else {
+      const task = await this.repository.createLeadTask(scope, input.targetEntityId, {
+        body: z
+          .string()
+          .min(1)
+          .max(2_000)
+          .parse(input.config.body ?? input.config.template),
+        dueAt: typeof input.config.dueAt === "string" ? input.config.dueAt : null,
+        assigneeUserId:
+          typeof input.config.assigneeUserId === "string" ? input.config.assigneeUserId : null
+      });
+      if (!task) throw new NotFoundException("Automation lead target not found.");
+      return { externalId: task.id };
+    }
+    return { externalId: input.targetEntityId };
+  }
 }

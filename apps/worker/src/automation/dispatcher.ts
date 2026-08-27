@@ -6,6 +6,42 @@ export interface AutomationActionContext {
   recipient?: string;
   config: Record<string, unknown>;
   simulation: boolean;
+  targetEntityId?: string;
+  internalExecutor?: InternalAutomationExecutor;
+}
+
+export interface InternalAutomationExecutor {
+  execute(
+    actionType: "create_staff_task" | "update_crm_stage",
+    context: AutomationActionContext
+  ): Promise<string | undefined>;
+}
+
+export class ApiInternalAutomationExecutor implements InternalAutomationExecutor {
+  async execute(
+    actionType: "create_staff_task" | "update_crm_stage",
+    context: AutomationActionContext
+  ) {
+    const url = process.env.FITOS_AUTOMATION_INTERNAL_URL;
+    const token = process.env.FITOS_WORKER_CALLBACK_TOKEN;
+    if (!url || !token) throw new Error("Internal automation handler is not configured.");
+    if (!context.targetEntityId) throw new Error("Internal automation target entity is missing.");
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-fitos-worker-token": token },
+      body: JSON.stringify({
+        actionId: context.actionId,
+        actionType,
+        tenantId: context.tenantId,
+        targetEntityId: context.targetEntityId,
+        config: context.config
+      })
+    });
+    if (!response.ok)
+      throw new Error(`Internal automation handler failed with ${response.status}.`);
+    const result = (await response.json()) as { externalId?: string };
+    return result.externalId;
+  }
 }
 
 export interface AutomationProvider {
@@ -87,15 +123,28 @@ export async function dispatchAutomationAction(
       message: "Simulation mode enabled; no external side effect was performed.",
       completedAt
     };
-  if (actionType === "create_staff_task" || actionType === "update_crm_stage")
+  if (actionType === "create_staff_task" || actionType === "update_crm_stage") {
+    if (!context.internalExecutor) {
+      return {
+        actionId: context.actionId,
+        actionType,
+        status: "failed",
+        provider: "internal",
+        message: "No durable internal automation handler is configured.",
+        completedAt
+      };
+    }
+    const externalId = await context.internalExecutor.execute(actionType, context);
     return {
       actionId: context.actionId,
       actionType,
-      status: "skipped",
+      status: "delivered",
       provider: "internal",
-      message: "This action requires an API-side durable command handler.",
+      message: `${actionType} action completed durably.`,
+      ...(externalId ? { externalId } : {}),
       completedAt
     };
+  }
   const channel =
     actionType === "send_email" ? "email" : actionType === "send_sms" ? "sms" : "whatsapp";
   const externalId = await provider.send(channel, context);

@@ -365,6 +365,15 @@ export class DrizzleFitosRepository implements FitosRepository {
     return rows.map((branch) => this.branchResponse(branch));
   }
 
+  async listTenantBranches(tenantId: string): Promise<BranchResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(branches)
+      .where(eq(branches.tenantId, tenantId))
+      .orderBy(branches.name);
+    return rows.map((branch) => this.branchResponse(branch));
+  }
+
   async findBranchById(scope: TenantScope, branchId: string): Promise<BranchResponse | null> {
     if (!scope.branchIds.includes(branchId)) return null;
     const [branch] = await this.db

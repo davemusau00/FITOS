@@ -38,8 +38,27 @@ describe("automation action dispatcher", () => {
     });
   });
 
-  it("does not pretend internal actions were delivered", async () => {
+  it("fails clearly when an internal action has no durable handler", async () => {
     const result = await dispatchAutomationAction("create_staff_task", context);
-    expect(result.status).toBe("skipped");
+    expect(result).toMatchObject({ status: "failed", provider: "internal" });
+  });
+
+  it("routes internal actions through the durable executor", async () => {
+    const calls: string[] = [];
+    const result = await dispatchAutomationAction("update_crm_stage", {
+      ...context,
+      internalExecutor: {
+        async execute(actionType) {
+          calls.push(actionType);
+          return "crm-event-1";
+        }
+      }
+    });
+    expect(calls).toEqual(["update_crm_stage"]);
+    expect(result).toMatchObject({
+      status: "delivered",
+      provider: "internal",
+      externalId: "crm-event-1"
+    });
   });
 });
