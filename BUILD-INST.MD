@@ -57,7 +57,7 @@ complete.
 
 ### Verification snapshot — 2026-08-28
 
-- API: typecheck passed; PostgreSQL-enabled run passed 42/42 tests, including all 8 Drizzle integration tests.
+- API: typecheck passed; PostgreSQL-enabled run passed 43/43 tests, including all 8 Drizzle integration tests.
 - Worker: typecheck passed; 7 dispatcher/processor/metrics tests passed.
 - Web: typecheck passed; web test passed.
 - Full local `npm run check`: passed with PostgreSQL enabled, including lint, all package builds/typechecks, tests, and production build.
