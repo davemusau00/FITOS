@@ -270,7 +270,9 @@ test("owner completes the pilot operating river and reception is denied a refund
     await page.goto(`/app/members/${memberId}`);
     await page.getByRole("button", { name: "Bookings", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Booking History" })).toBeVisible();
-    await expect(page.getByText(serviceName, { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByText(serviceName, { exact: true }).filter({ visible: true }).first()
+    ).toBeVisible();
     await page.getByRole("button", { name: "Credits & Payments", exact: true }).click();
     const paymentHistory = page.getByRole("heading", { name: "Payment History" }).locator("../..");
     await expect(paymentHistory).toContainText("4,500.00");

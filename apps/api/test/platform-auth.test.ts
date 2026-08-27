@@ -157,4 +157,21 @@ describe("platform tenant lifecycle mutation", () => {
       defaultEnabled: false
     });
   });
+
+  it("replaces tenant capabilities without duplicate grants", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.(await new ScryptPasswordHasher().hash("ChangeMe123!"));
+    const [tenant] = await repository.listPlatformTenantControls();
+    if (!tenant) throw new Error("Seed tenant missing.");
+    const updated = await repository.updateTenantCapabilities(tenant.tenant.id, [
+      "feature.insights",
+      "feature.insights"
+    ]);
+    expect(updated?.capabilities).toEqual(["feature.insights"]);
+    expect(
+      (await repository.listFeatureFlags(tenant.tenant.id)).find(
+        (flag) => flag.key === "feature.insights"
+      )?.enabled
+    ).toBe(true);
+  });
 });

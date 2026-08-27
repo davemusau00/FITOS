@@ -48,12 +48,14 @@ complete.
 - [x] CRM lead task creation accepts an optional due date/time and persists it through the existing server contract for truthful follow-up queues.
 - [x] Platform tenant controls now support audited capability mutation through a platform-only API and entitlement toggles in the tenant directory.
 - [x] Member booking cancellation now requires an explicit confirmation modal and explains that credit restoration follows server cancellation policy.
+- [x] Platform capability mutation has focused coverage for replacement semantics, deduplication and resulting feature-flag state.
 
 ### Verified checks
 
 - [x] Formatting, lint, package typechecks, database-backed API tests and production build passed in the latest complete local run.
 - [x] Latest focused API/worker/web checks passed for the incremental slices above, including worker internal-dispatch tests and API tenancy/security tests.
 - [x] Configured Playwright suite passed 8/8, including role-boundary coverage and the pilot journey updated for the intentional Command access boundary.
+- [x] Configured Playwright suite was rerun after mobile-card changes and passed 8/8 with visible-instance selectors.
 
 ### Verification snapshot — 2026-08-28
 
