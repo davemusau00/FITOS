@@ -71,8 +71,15 @@ export function MemberPortalPage() {
 
   const cancelBookingMutation = useMutation({
     mutationFn: (bookingId: string) => api.memberCancel(bookingId),
-    onSuccess: () => {
-      toastSuccess("Booking cancelled");
+    onSuccess: (booking) => {
+      toastSuccess(
+        "Booking cancelled",
+        booking.lateCancelled && booking.creditsDebited > 0
+          ? "This was inside the cancellation window; the credit was not restored."
+          : booking.creditsDebited > 0
+            ? "Your credit was restored."
+            : "No credit was charged for this booking."
+      );
       void queryClient.invalidateQueries({ queryKey: ["member-auth", "overview"] });
     },
     onError: (cause) =>

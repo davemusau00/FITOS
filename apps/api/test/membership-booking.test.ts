@@ -135,6 +135,36 @@ describe("Memberships and Booking Credits Integration", () => {
     const balanceRestored = await repository.getCreditBalance(gymScope, member.id);
     expect(balanceRestored).toBe(10);
 
+    const strictService = await repository.createService(gymScope, {
+      name: "Strict Cancellation Class",
+      serviceType: "class",
+      durationMinutes: 60,
+      defaultCapacity: 10,
+      creditsRequired: 1,
+      cancellationCutoffMinutes: 999999,
+      branchId: gym.branchIds[0]
+    });
+    const strictOccurrence = await repository.createScheduleOccurrence(gymScope, {
+      branchId: gym.branchIds[0]!,
+      serviceId: strictService.id,
+      startsAt: new Date(Date.now() + 86400000).toISOString(),
+      endsAt: new Date(Date.now() + 86400000 + 3600000).toISOString(),
+      capacity: 10
+    });
+    const memberBooking = await repository.createBooking(
+      gymScope,
+      { occurrenceId: strictOccurrence.id, memberId: member.id, source: "member_portal" },
+      member.id,
+      false
+    );
+    const lateCancellation = await repository.memberSelfCancel(
+      member.id,
+      memberBooking.id,
+      "Too late to attend"
+    );
+    expect(lateCancellation.lateCancelled).toBe(true);
+    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(9);
+
     const adjustment = await repository.adjustCredit(
       gymScope,
       member.id,
@@ -146,7 +176,7 @@ describe("Memberships and Booking Credits Integration", () => {
       gym.user.id
     );
     expect(adjustment.reason).toBe("manual_adjustment");
-    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(8);
+    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(7);
     await expect(
       repository.adjustCredit(
         gymScope,

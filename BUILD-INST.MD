@@ -55,6 +55,8 @@ complete.
 - [x] CRM lead stage, conversion and follow-up mutations now emit consistent success/error toast feedback in addition to inline errors.
 - [x] Drizzle Today aggregates now derive expected arrivals, no-shows, next scheduled session and due follow-ups from tenant/branch-scoped records instead of hardcoded zero/null fallbacks.
 - [x] In-memory Today aggregates now match those truthful states by excluding cancelled sessions and deriving no-shows and overdue open follow-ups.
+- [x] In-memory member self-cancellation now applies the service cancellation cutoff, records `lateCancelled`, and restores credits only when policy permits.
+- [x] Membership/booking integration coverage now verifies late member self-cancellation preserves the consumed credit and exposes the late-cancel state.
 - [x] Member booking and cancellation mutations now emit consistent success/error toast feedback while retaining server-driven outcomes.
 
 ### Verified checks

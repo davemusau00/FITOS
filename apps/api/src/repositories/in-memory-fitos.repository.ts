@@ -4643,13 +4643,24 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (booking.status !== "confirmed") throw new Error("Booking is already cancelled.");
 
     const ts = now();
+    const occurrence = this.occurrences.get(booking.occurrenceId);
+    const service = occurrence ? this.services.get(occurrence.serviceId) : undefined;
+    const cutoffAt =
+      occurrence && service
+        ? new Date(occurrence.startsAt).getTime() - service.cancellationCutoffMinutes * 60_000
+        : Number.POSITIVE_INFINITY;
+    const lateCancelled = Date.now() >= cutoffAt;
     booking.status = "cancelled";
     booking.cancelledAt = ts;
     booking.cancellationReason = reason || "Member self-cancelled";
+    booking.lateCancelled = lateCancelled;
     booking.updatedAt = ts;
 
     // Refund credits
-    if (booking.creditsDebited > 0) {
+    if (
+      booking.creditsDebited > 0 &&
+      (!lateCancelled || Boolean(service?.restoreCreditOnLateCancel))
+    ) {
       const refundEntry: StoredCreditLedgerEntry = {
         id: randomUUID(),
         tenantId: booking.tenantId,
