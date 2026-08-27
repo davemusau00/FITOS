@@ -43,6 +43,9 @@ complete.
 - [x] Member detail booking and payment history tables have responsive mobile cards preserving status, timing, credits and allocation context.
 - [x] Lead-to-member conversion now has a database-enforced tenant/contact uniqueness invariant (`0026_unique_member_contact`) to prevent duplicate members under concurrent conversion.
 - [x] Drizzle lead conversion uses conflict-safe member insertion and canonical re-read, so concurrent conversions reuse the tenant/contact member instead of surfacing an insert conflict.
+- [x] CRM lead tasks now support durable completion through a tenant-scoped API endpoint, repository implementations, audit event and UI action with due-date display.
+- [x] CRM task completion has focused tenant-isolation and idempotency coverage in the in-memory integration suite.
+- [x] CRM lead task creation accepts an optional due date/time and persists it through the existing server contract for truthful follow-up queues.
 
 ### Verified checks
 

@@ -92,6 +92,7 @@ export function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<LeadResponse | null>(null);
   const [noteBody, setNoteBody] = useState("");
   const [taskBody, setTaskBody] = useState("");
+  const [taskDueAt, setTaskDueAt] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [lostReasonLead, setLostReasonLead] = useState<{
     lead: LeadResponse;
@@ -150,11 +151,21 @@ export function LeadsPage() {
     }
   });
   const addTask = useMutation({
-    mutationFn: (body: string) => api.addLeadTask(selectedLead!.id, { body }),
+    mutationFn: (body: string) =>
+      api.addLeadTask(selectedLead!.id, {
+        body,
+        dueAt: taskDueAt ? new Date(taskDueAt).toISOString() : null
+      }),
     onSuccess: () => {
       setTaskBody("");
+      setTaskDueAt("");
       void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "tasks"] });
     }
+  });
+  const completeTask = useMutation({
+    mutationFn: (taskId: string) => api.completeLeadTask(selectedLead!.id, taskId),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "tasks"] })
   });
 
   const set = (name: string, value: string) => {
@@ -576,6 +587,17 @@ export function LeadsPage() {
                   Add
                 </Button>
               </div>
+              <label className="form-field__label" htmlFor="lead-task-due-at">
+                Due date and time (optional)
+              </label>
+              <input
+                aria-label="Task due date and time"
+                className="fitos-control"
+                id="lead-task-due-at"
+                onChange={(event) => setTaskDueAt(event.target.value)}
+                type="datetime-local"
+                value={taskDueAt}
+              />
               {notes.data?.length ? (
                 <ul className="timeline">
                   {notes.data.map((note) => (
@@ -620,8 +642,24 @@ export function LeadsPage() {
                       <span />
                       <div>
                         <strong>{task.body}</strong>
-                        <p>{task.completedAt ? "✓ Completed" : "Open"}</p>
+                        <p>
+                          {task.completedAt
+                            ? "✓ Completed"
+                            : task.dueAt
+                              ? `Due ${formatDate(task.dueAt)}`
+                              : "Open"}
+                        </p>
                       </div>
+                      {!task.completedAt ? (
+                        <Button
+                          loading={completeTask.isPending && completeTask.variables === task.id}
+                          onClick={() => completeTask.mutate(task.id)}
+                          size="small"
+                          variant="ghost"
+                        >
+                          Complete
+                        </Button>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

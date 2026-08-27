@@ -906,11 +906,21 @@ export class DrizzleFitosRepository implements FitosRepository {
     return tasks.map((task) => this.leadTaskResponse(task));
   }
 
-  async completeLeadTask(scope: TenantScope, leadId: string, taskId: string): Promise<LeadTaskResponse | null> {
+  async completeLeadTask(
+    scope: TenantScope,
+    leadId: string,
+    taskId: string
+  ): Promise<LeadTaskResponse | null> {
     const [task] = await this.db
       .update(leadTasks)
       .set({ completedAt: new Date() })
-      .where(and(eq(leadTasks.id, taskId), eq(leadTasks.leadId, leadId), eq(leadTasks.tenantId, scope.tenantId)))
+      .where(
+        and(
+          eq(leadTasks.id, taskId),
+          eq(leadTasks.leadId, leadId),
+          eq(leadTasks.tenantId, scope.tenantId)
+        )
+      )
       .returning();
     return task ? this.leadTaskResponse(task) : null;
   }

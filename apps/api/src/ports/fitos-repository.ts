@@ -249,7 +249,11 @@ export interface FitosRepository {
     input: CreateLeadTaskRequest
   ): Promise<LeadTaskResponse | null>;
   listLeadTasks(scope: TenantScope, leadId: string): Promise<LeadTaskResponse[]>;
-  completeLeadTask(scope: TenantScope, leadId: string, taskId: string): Promise<LeadTaskResponse | null>;
+  completeLeadTask(
+    scope: TenantScope,
+    leadId: string,
+    taskId: string
+  ): Promise<LeadTaskResponse | null>;
 
   listServices(scope: TenantScope): Promise<ServiceResponse[]>;
   findServiceById(scope: TenantScope, serviceId: string): Promise<ServiceResponse | null>;

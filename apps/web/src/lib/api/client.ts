@@ -248,6 +248,8 @@ export const api = {
       method: "POST",
       body: json(payload)
     }),
+  completeLeadTask: (leadId: string, taskId: string) =>
+    request<LeadTaskResponse>(`/leads/${leadId}/tasks/${taskId}/complete`, { method: "PATCH" }),
   staff: () => request<StaffUserResponse[]>("/users"),
   inviteStaff: (payload: {
     email: string;

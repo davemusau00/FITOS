@@ -92,4 +92,39 @@ describe("tenant isolation", () => {
     });
     expect(updated?.roles?.map((role) => role.key)).toEqual(["trainer", "manager"]);
   });
+
+  it("completes lead tasks only within the owning lead and tenant", async () => {
+    const repository = new InMemoryFitosRepository();
+    const passwordHash = await new ScryptPasswordHasher().hash("ChangeMe123!");
+    await repository.seedDevelopmentData?.(passwordHash);
+    const gym = await repository.findLoginIdentity("owner@gym.fitos.test");
+    const pilates = await repository.findLoginIdentity("owner@pilates.fitos.test");
+    if (!gym || !pilates) throw new Error("Seed identities missing.");
+    const gymScope = {
+      tenantId: gym.tenant.id,
+      tenantUserId: gym.tenantUserId,
+      userId: gym.user.id,
+      branchIds: gym.branchIds
+    };
+    const pilatesScope = {
+      tenantId: pilates.tenant.id,
+      tenantUserId: pilates.tenantUserId,
+      userId: pilates.user.id,
+      branchIds: pilates.branchIds
+    };
+    const lead = (await repository.createLead(
+      gymScope,
+      {
+        contact: { firstName: "Task", lastName: "Lead", phone: "0712345678" },
+        branchId: gym.branchIds[0]
+      },
+      "+254712345678"
+    ))!;
+    const task = await repository.createLeadTask(gymScope, lead.id, { body: "Call prospect" });
+    expect(task?.completedAt).toBeNull();
+    await expect(repository.completeLeadTask(pilatesScope, lead.id, task!.id)).resolves.toBeNull();
+    const completed = await repository.completeLeadTask(gymScope, lead.id, task!.id);
+    expect(completed?.completedAt).not.toBeNull();
+    expect((await repository.completeLeadTask(gymScope, lead.id, task!.id))?.id).toBe(task!.id);
+  });
 });

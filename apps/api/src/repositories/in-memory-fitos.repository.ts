@@ -2534,9 +2534,19 @@ export class InMemoryFitosRepository implements FitosRepository {
       .map((task) => this.taskResponse(task));
   }
 
-  async completeLeadTask(scope: TenantScope, leadId: string, taskId: string): Promise<LeadTaskResponse | null> {
+  async completeLeadTask(
+    scope: TenantScope,
+    leadId: string,
+    taskId: string
+  ): Promise<LeadTaskResponse | null> {
     const task = this.leadTasks.get(taskId);
-    if (!task || task.tenantId !== scope.tenantId || task.leadId !== leadId || !(await this.findLeadById(scope, leadId))) return null;
+    if (
+      !task ||
+      task.tenantId !== scope.tenantId ||
+      task.leadId !== leadId ||
+      !(await this.findLeadById(scope, leadId))
+    )
+      return null;
     task.completedAt = task.completedAt ?? now();
     return this.taskResponse(task);
   }
