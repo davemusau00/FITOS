@@ -5,6 +5,8 @@ import {
   Get,
   Inject,
   NotFoundException,
+  Headers,
+  UnauthorizedException,
   Param,
   Patch,
   Post
@@ -17,6 +19,7 @@ import type {
   UpdateAutomationRuleRequest
 } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
+import { AuthMode } from "../../common/auth/auth-mode.decorator.js";
 import { Actor } from "../../common/request-context/actor.decorator.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository } from "../../ports/fitos-repository.js";
@@ -136,5 +139,29 @@ export class AutomationsController {
   @RequirePermission("automation:read")
   logs(@Actor() actor: RequestActor) {
     return this.repository.listAutomationLogs(toScope(actor));
+  }
+
+  @Post("action-results")
+  @AuthMode("public")
+  async actionResult(
+    @Headers("x-fitos-worker-token") token: string | undefined,
+    @Body() body: unknown
+  ) {
+    if (!token || token !== process.env.FITOS_WORKER_CALLBACK_TOKEN)
+      throw new UnauthorizedException();
+    const input = z
+      .object({
+        actionId: z.string().uuid(),
+        actionType: z.enum(actionTypes),
+        status: z.enum(["delivered", "simulated", "skipped", "failed"]),
+        provider: z.string(),
+        message: z.string(),
+        externalId: z.string().optional(),
+        completedAt: z.string().datetime()
+      })
+      .parse(body);
+    if (!(await this.repository.recordAutomationActionResult(input.actionId, input)))
+      throw new NotFoundException("Automation action not found.");
+    return { recorded: true };
   }
 }

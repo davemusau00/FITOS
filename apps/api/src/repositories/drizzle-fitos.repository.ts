@@ -57,7 +57,6 @@ import {
   assessmentDefinitions,
   assessmentSessions,
   assessmentMetricResults,
-  assessmentDeviceImports,
   therapyModalities,
   therapyProtocols,
   therapySessions,
@@ -4219,6 +4218,24 @@ export class DrizzleFitosRepository implements FitosRepository {
       provider: log.provider,
       externalId: log.externalId
     }));
+  }
+
+  async recordAutomationActionResult(
+    actionId: string,
+    result: import("@fitos/contracts").AutomationActionResult
+  ): Promise<boolean> {
+    const updated = await this.db
+      .update(automationRuns)
+      .set({
+        status: result.status === "delivered" ? "success" : result.status,
+        provider: result.provider,
+        externalId: result.externalId ?? null,
+        message: result.message,
+        executedAt: new Date(result.completedAt)
+      })
+      .where(eq(automationRuns.actionId, actionId))
+      .returning({ id: automationRuns.id });
+    return updated.length > 0;
   }
 
   async triggerAutomation(

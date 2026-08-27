@@ -123,16 +123,16 @@ export class AuthService {
     defaultWorkspace: WorkspaceKey;
     availableWorkspaces: WorkspaceKey[];
   } {
-    const workspace: WorkspaceKey =
+    const workspaces: WorkspaceKey[] =
       role === "owner"
-        ? "command"
+        ? ["command", "ops", "front_desk", "coach", "practice"]
         : role === "manager"
-          ? "ops"
+          ? ["ops", "front_desk"]
           : role === "reception"
-            ? "front_desk"
+            ? ["front_desk"]
             : role === "trainer"
-              ? "coach"
-              : "practice";
-    return { defaultWorkspace: workspace, availableWorkspaces: [workspace] };
+              ? ["coach"]
+              : ["practice"];
+    return { defaultWorkspace: workspaces[0]!, availableWorkspaces: workspaces };
   }
 }

@@ -32,10 +32,10 @@ export async function processOperationsJob(job: WorkerJob): Promise<AutomationAc
         }) + "\n"
       );
       return;
-    case "automations.execute":
+    case "automations.execute": {
       if (!job.payload.actionType)
         throw new Error("Automation actionType is required for execution.");
-      return dispatchAutomationAction(job.payload.actionType, {
+      const result = await dispatchAutomationAction(job.payload.actionType, {
         actionId: job.payload.actionId ?? job.eventId,
         tenantId: job.tenantId,
         recipient:
@@ -45,7 +45,22 @@ export async function processOperationsJob(job: WorkerJob): Promise<AutomationAc
         config: job.payload.actionConfig ?? {},
         simulation: job.payload.simulation
       });
+      await persistAutomationResult(result);
+      return result;
+    }
   }
+}
+
+async function persistAutomationResult(result: AutomationActionResult): Promise<void> {
+  const url = process.env.FITOS_AUTOMATION_RESULT_URL;
+  const token = process.env.FITOS_WORKER_CALLBACK_TOKEN;
+  if (!url || !token) return;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-fitos-worker-token": token },
+    body: JSON.stringify(result)
+  });
+  if (!response.ok) throw new Error(`Automation result callback failed with ${response.status}.`);
 }
 
 async function dispatchNotification(

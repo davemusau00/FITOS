@@ -480,6 +480,10 @@ export interface FitosRepository {
   deleteAutomation(scope: TenantScope, ruleId: string): Promise<boolean>;
   listAutomationLogs(scope: TenantScope): Promise<AutomationExecutionLogResponse[]>;
   triggerAutomation(scope: TenantScope, ruleId: string): Promise<AutomationExecutionLogResponse>;
+  recordAutomationActionResult(
+    actionId: string,
+    result: import("@fitos/contracts").AutomationActionResult
+  ): Promise<boolean>;
 
   // Platform & Self-Service SaaS
   signupTenant(

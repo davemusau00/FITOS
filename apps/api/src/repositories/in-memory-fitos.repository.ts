@@ -4879,6 +4879,22 @@ export class InMemoryFitosRepository implements FitosRepository {
     return this.automationLogs.filter((l) => l.tenantId === scope.tenantId).slice(-50);
   }
 
+  async recordAutomationActionResult(
+    actionId: string,
+    result: import("@fitos/contracts").AutomationActionResult
+  ): Promise<boolean> {
+    const log = this.automationLogs.find((entry) => entry.id === actionId);
+    if (!log) return false;
+    log.status =
+      result.status === "delivered"
+        ? "success"
+        : result.status === "simulated"
+          ? "skipped"
+          : result.status;
+    log.message = result.message;
+    return true;
+  }
+
   async triggerAutomation(
     scope: TenantScope,
     ruleId: string

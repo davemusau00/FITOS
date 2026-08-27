@@ -3,7 +3,6 @@ import { api } from "../../lib/api/client";
 import type {
   AssessmentDefinitionResponse,
   AssessmentSessionResponse,
-  CreateAssessmentSessionRequest,
   AssessmentCategory
 } from "@fitos/contracts";
 

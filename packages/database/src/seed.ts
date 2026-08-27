@@ -4,8 +4,6 @@ import { ScryptPasswordHasher } from "@fitos/auth";
 import { DEFAULT_ROLE_PERMISSIONS, PERMISSION_KEYS, type RoleKey } from "@fitos/contracts";
 import { createDatabase } from "./client.js";
 import {
-  attendanceRecords,
-  bookings,
   branches,
   contacts,
   creditLedger,
@@ -13,7 +11,6 @@ import {
   memberMemberships,
   members,
   membershipPlans,
-  paymentTransactions,
   permissions,
   rolePermissions,
   roles,

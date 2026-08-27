@@ -72,7 +72,7 @@ export function SitesPage() {
   const cache = useQueryClient();
   const pages = useQuery({ queryKey: ["site-pages"], queryFn: api.sitePages });
 
-  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+  const [selectedPageId] = useState<string | null>(null);
   const [title, setTitle] = useState("Home Page");
   const [slug, setSlug] = useState("home");
   const [blocks, setBlocks] = useState<SiteBlock[]>(DEFAULT_BLOCKS);

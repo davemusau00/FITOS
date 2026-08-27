@@ -34,8 +34,6 @@ export default function InventoryPage() {
   const [selectedStocktake, setSelectedStocktake] = useState<
     import("@fitos/contracts").StocktakeResponse | null
   >(null);
-  const [showNewLot, setShowNewLot] = useState(false);
-  const [showNewStocktake, setShowNewStocktake] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [selectedItem, setSelectedItem] = useState<InventoryItemResponse | null>(null);

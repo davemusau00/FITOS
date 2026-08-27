@@ -4436,6 +4436,7 @@ body {
 .surface-shell {
   min-height: 100vh;
   background: var(--fitos-paper, #f6f7f2);
+  overflow-x: clip;
 }
 .surface-shell-header {
   padding: 1.25rem clamp(1rem, 4vw, 3rem);
@@ -4461,6 +4462,7 @@ body {
   max-width: 90rem;
   margin: 0 auto;
   padding: clamp(1rem, 3vw, 2rem);
+  min-width: 0;
 }
 @media (max-width: 600px) {
   .surface-shell-header div {

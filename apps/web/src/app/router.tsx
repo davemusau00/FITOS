@@ -21,7 +21,6 @@ import {
   OnboardingPage,
   OrganizationSettingsPage,
   OverviewPage,
-  PaymentsPage,
   ReceptionPage,
   SchedulePage,
   SecuritySettingsPage,
@@ -29,7 +28,6 @@ import {
   SettingsPage,
   StaffPage,
   TenantPublicPage,
-  UnmatchedPaymentsPage,
   TenantSignupPage,
   EquipmentPage,
   InventoryPage,
@@ -60,20 +58,23 @@ export function AppRouter() {
       <Route element={<TenantSignupPage />} path="/signup" />
       <Route element={<MemberPortalPage />} path="/member/*" />
       <Route element={<ProtectedRoute />}>
-        <Route element={<SurfaceShell surface="ops" />} path="/ops">
+        <Route element={<SurfaceShell surface="ops" workspace="ops" />} path="/ops">
           <Route element={<OverviewPage />} index />
           <Route element={<SchedulePage />} path="schedule" />
           <Route element={<BookingsPage />} path="bookings" />
           <Route element={<AttendancePage />} path="attendance" />
         </Route>
-        <Route element={<SurfaceShell surface="front desk" />} path="/reception">
+        <Route
+          element={<SurfaceShell surface="front desk" workspace="front_desk" />}
+          path="/reception"
+        >
           <Route element={<ReceptionPage />} index />
         </Route>
-        <Route element={<SurfaceShell surface="coach" />} path="/coach">
+        <Route element={<SurfaceShell surface="coach" workspace="coach" />} path="/coach">
           <Route element={<SchedulePage />} index />
           <Route element={<ClassRosterPage />} path="roster/:occurrenceId" />
         </Route>
-        <Route element={<SurfaceShell surface="practice" />} path="/practice">
+        <Route element={<SurfaceShell surface="practice" workspace="practice" />} path="/practice">
           <Route element={<TherapyPage />} index />
           <Route element={<AssessmentsPage />} path="assessments" />
         </Route>

@@ -12,7 +12,7 @@ import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor } from "../../common/request-context/actor.decorator.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository } from "../../ports/fitos-repository.js";
-import { DeviceImportService } from "./device-import.service.js";
+import type { DeviceImportService } from "./device-import.service.js";
 
 const categories: readonly [AssessmentCategory, ...AssessmentCategory[]] = [
   "body_composition",

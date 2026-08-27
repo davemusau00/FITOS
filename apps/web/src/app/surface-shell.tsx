@@ -1,5 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { BranchProvider } from "./branch-context";
+import { useAuth } from "./auth";
+import type { WorkspaceKey } from "@fitos/contracts";
 
 type Surface = "ops" | "front desk" | "coach" | "practice";
 const surfaceCopy: Record<Surface, { name: string; question: string }> = {
@@ -12,8 +14,23 @@ const surfaceCopy: Record<Surface, { name: string; question: string }> = {
   practice: { name: "FITOS Practice", question: "Which appointments and records need care?" }
 };
 
-export function SurfaceShell({ surface }: { surface: Surface }) {
+export function SurfaceShell({
+  surface,
+  workspace
+}: {
+  surface: Surface;
+  workspace: WorkspaceKey;
+}) {
+  const { auth } = useAuth();
   const copy = surfaceCopy[surface];
+  if (!auth?.availableWorkspaces.includes(workspace)) {
+    return (
+      <main className="surface-shell-access-denied">
+        <h1>You don't have access to this workspace</h1>
+        <p>Ask your FITOS administrator if you think your role should include this area.</p>
+      </main>
+    );
+  }
   return (
     <BranchProvider>
       <div className={`surface-shell surface-shell-${surface.replace(" ", "-")}`}>

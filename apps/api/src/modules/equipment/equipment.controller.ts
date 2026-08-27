@@ -15,7 +15,6 @@ import type {
   CreateEquipmentAssetRequest,
   CreateEquipmentPoolRequest,
   CreateMaintenanceRecordRequest,
-  EquipmentStatus,
   RequestActor,
   UpdateEquipmentAssetRequest
 } from "@fitos/contracts";
