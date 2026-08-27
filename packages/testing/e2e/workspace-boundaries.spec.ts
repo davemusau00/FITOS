@@ -2,6 +2,15 @@ import { expect, test } from "@playwright/test";
 
 const PASSWORD = "ChangeMe123!";
 
+test("platform authentication has a separate entry point from tenant staff login", async ({
+  page
+}) => {
+  await page.goto("/platform/login");
+  await expect(page.getByText("FITOS PLATFORM")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Authorized personnel only." })).toBeVisible();
+  await expect(page).toHaveURL(/\/platform\/login$/);
+});
+
 test("staff authentication exposes purpose-built workspace entry points", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill("owner@gym.fitos.test");

@@ -45,6 +45,7 @@ import { TherapyController } from "./modules/therapy/therapy.controller.js";
 import { SitesController } from "./modules/sites/sites.controller.js";
 import { CoreService } from "./modules/core/core.service.js";
 import { DeviceImportService } from "./modules/assessments/device-import.service.js";
+import { AutomationQueueService } from "./modules/automations/automation-queue.service.js";
 
 class DevelopmentSeedService implements OnModuleInit {
   constructor(@Inject(FitosRepositoryToken) private readonly repository: FitosRepository) {}
@@ -108,6 +109,7 @@ const repositoryFactory = (): FitosRepository => {
     AuthService,
     CoreService,
     DeviceImportService,
+    AutomationQueueService,
     IdempotencyService,
     RateLimitService,
     MetricsService,

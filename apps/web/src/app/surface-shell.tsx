@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { BranchProvider } from "./branch-context";
 import { useAuth } from "./auth";
 import type { WorkspaceKey } from "@fitos/contracts";
@@ -12,6 +12,14 @@ const surfaceCopy: Record<Surface, { name: string; question: string }> = {
   },
   coach: { name: "FITOS Coach", question: "Who am I training today?" },
   practice: { name: "FITOS Practice", question: "Which appointments and records need care?" }
+};
+
+const workspaceLinks: Partial<Record<WorkspaceKey, { label: string; path: string }>> = {
+  command: { label: "Command", path: "/app/overview" },
+  ops: { label: "Ops", path: "/ops" },
+  front_desk: { label: "Front Desk", path: "/reception" },
+  coach: { label: "Coach", path: "/coach" },
+  practice: { label: "Practice", path: "/practice" }
 };
 
 export function SurfaceShell({
@@ -38,6 +46,16 @@ export function SurfaceShell({
           <div>
             <strong>{copy.name}</strong>
             <span>{copy.question}</span>
+            <nav aria-label="Available workspaces" className="surface-workspace-switcher">
+              {auth.availableWorkspaces.map((key) => {
+                const link = workspaceLinks[key];
+                return link ? (
+                  <NavLink key={key} to={link.path}>
+                    {link.label}
+                  </NavLink>
+                ) : null;
+              })}
+            </nav>
           </div>
         </header>
         <main className="surface-shell-content">

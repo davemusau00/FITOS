@@ -39,5 +39,13 @@ export default tseslint.config(
       "react/react-in-jsx-scope": "off",
       ...reactHooks.configs.recommended.rules
     }
+  },
+  {
+    files: ["apps/api/src/repositories/drizzle-fitos.repository.ts"],
+    rules: {
+      // Legacy Drizzle row adapters still contain checked boundary casts while
+      // the schema enums are migrated to generated domain types.
+      "@typescript-eslint/no-explicit-any": "off"
+    }
   }
 );

@@ -24,6 +24,8 @@ export interface BookingResponse {
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Denormalized display context; authorization still comes from the booking scope. */
+  serviceName?: string;
 }
 
 export interface CreateBookingRequest {

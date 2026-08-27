@@ -178,7 +178,7 @@ export function MemberDetailPage() {
         return (
           <div>
             <strong className="fitos-data-table__primary">
-              {service?.name ?? "Class session"}
+              {booking.serviceName ?? service?.name ?? "Class session"}
             </strong>
             <span className="fitos-data-table__muted">
               {occurrence ? formatDateTime(occurrence.startsAt) : booking.occurrenceId.slice(0, 8)}

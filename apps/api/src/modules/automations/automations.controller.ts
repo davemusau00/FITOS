@@ -20,6 +20,7 @@ import type {
 } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { AuthMode } from "../../common/auth/auth-mode.decorator.js";
+import { AutomationQueueService } from "./automation-queue.service.js";
 import { Actor } from "../../common/request-context/actor.decorator.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository } from "../../ports/fitos-repository.js";
@@ -50,6 +51,7 @@ const conditionSchema = z.object({
 const actionConfigSchema = z
   .object({
     template: z.string().optional(),
+    recipient: z.string().trim().min(1).max(320).optional(),
     recipientType: z.enum(["member", "staff", "lead"]).optional(),
     subject: z.string().optional(),
     body: z.string().optional(),
@@ -93,7 +95,11 @@ const toScope = (actor: RequestActor) => ({
 @ApiTags("automations")
 @Controller("automations")
 export class AutomationsController {
-  constructor(@Inject(FitosRepositoryToken) private readonly repository: FitosRepository) {}
+  constructor(
+    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository,
+    @Inject(AutomationQueueService)
+    private readonly automationQueue: AutomationQueueService
+  ) {}
 
   @Get()
   @RequirePermission("automation:read")
@@ -131,8 +137,24 @@ export class AutomationsController {
 
   @Post(":ruleId/trigger")
   @RequirePermission("automation:execute")
-  trigger(@Actor() actor: RequestActor, @Param("ruleId") ruleId: string) {
-    return this.repository.triggerAutomation(toScope(actor), ruleId);
+  async trigger(@Actor() actor: RequestActor, @Param("ruleId") ruleId: string) {
+    const log = await this.repository.triggerAutomation(toScope(actor), ruleId);
+    try {
+      await this.automationQueue.enqueue(log);
+    } catch (error) {
+      if (log.actionId && log.actionType) {
+        await this.repository.recordAutomationActionResult(log.actionId, {
+          actionId: log.actionId,
+          actionType: log.actionType,
+          status: "failed",
+          provider: "queue",
+          message: error instanceof Error ? error.message : "Automation queue handoff failed.",
+          completedAt: new Date().toISOString()
+        });
+      }
+      throw error;
+    }
+    return log;
   }
 
   @Get("logs")

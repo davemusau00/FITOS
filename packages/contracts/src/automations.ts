@@ -25,6 +25,7 @@ export interface AutomationRuleResponse {
   actionType: AutomationActionType;
   actionConfig: {
     template?: string;
+    recipient?: string;
     recipientType?: "member" | "staff" | "lead";
     subject?: string;
     body?: string;
@@ -50,6 +51,7 @@ export interface CreateAutomationRuleRequest {
   actionType: AutomationActionType;
   actionConfig: {
     template?: string;
+    recipient?: string;
     recipientType?: "member" | "staff" | "lead";
     subject?: string;
     body?: string;
@@ -71,6 +73,7 @@ export interface UpdateAutomationRuleRequest {
   actionType?: AutomationActionType;
   actionConfig?: {
     template?: string;
+    recipient?: string;
     recipientType?: "member" | "staff" | "lead";
     subject?: string;
     body?: string;
@@ -94,6 +97,7 @@ export interface AutomationExecutionLogResponse {
   actionType?: AutomationActionType | null;
   provider?: string | null;
   externalId?: string | null;
+  actionConfig?: Record<string, unknown>;
 }
 
 export type AutomationActionStatus = "delivered" | "simulated" | "skipped" | "failed";

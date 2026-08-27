@@ -23,6 +23,9 @@ describe("automation result durability", () => {
       isActive: true
     });
     const log = await repository.triggerAutomation(scope, rule.id);
+    expect(log.status).toBe("skipped");
+    expect(log.actionId).toBe(log.id);
+    expect(log.provider).toBe("simulation");
     const recorded = await repository.recordAutomationActionResult(log.id, {
       actionId: log.id,
       actionType: "send_email",

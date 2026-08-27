@@ -35,7 +35,7 @@ export function ImplementationInquiriesPage() {
             </p>
             <StatusBadge status={item.status} />
             <p className="muted">Updated {formatDateTime(item.updatedAt)}</p>
-            <Link to={`/app/platform/inquiries/${item.id}`}>Open inquiry →</Link>
+            <Link to={`/platform/inquiries/${item.id}`}>Open inquiry →</Link>
           </Card>
         ))}
         {!inquiries.data?.length && (
@@ -78,7 +78,7 @@ export function ImplementationInquiryDetailPage() {
       <PageHeader
         title={item.businessName ?? "Implementation inquiry"}
         description={`${item.contactName ?? "Unknown contact"} · ${item.email ?? "No email"}`}
-        actions={<Link to="/app/platform/inquiries">Back to inquiries</Link>}
+        actions={<Link to="/platform">Back to inquiries</Link>}
       />
       <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
         {statuses.map((next) => (

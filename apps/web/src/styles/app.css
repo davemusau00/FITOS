@@ -4458,18 +4458,62 @@ body {
   color: #68706a;
   font-size: 0.9rem;
 }
+.surface-workspace-switcher {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+.surface-workspace-switcher a {
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  color: #68706a;
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+.surface-workspace-switcher a.active {
+  background: #d9f99d;
+  color: #172018;
+  font-weight: 700;
+}
 .surface-shell-content {
   max-width: 90rem;
   margin: 0 auto;
   padding: clamp(1rem, 3vw, 2rem);
   min-width: 0;
 }
-@media (max-width: 600px) {
+.surface-shell--platform {
+  background: #101311;
+  color: #f4f7ef;
+}
+.surface-shell--platform .surface-shell__header {
+  align-items: center;
+  background: #171b18;
+  border-bottom: 1px solid #303831;
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem clamp(1rem, 4vw, 3rem);
+}
+.surface-shell--platform .surface-shell__header button {
+  background: transparent;
+  border: 1px solid #536052;
+  border-radius: 999px;
+  color: #d9f99d;
+  cursor: pointer;
+  padding: 0.4rem 0.75rem;
+}
+.surface-shell--platform .surface-shell__content {
+  color: #f4f7ef;
+}
+@media (max-width: 760px) {
   .surface-shell-header div {
     display: block;
   }
   .surface-shell-header span {
     display: block;
     margin-top: 0.35rem;
+  }
+  .surface-workspace-switcher {
+    margin-top: 0.75rem;
+    overflow-x: auto;
   }
 }

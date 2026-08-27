@@ -206,7 +206,7 @@ export function ConfigureFitosPage() {
     }
   });
 
-  const handleFieldChange = (key: keyof WizardPayload, val: any) => {
+  const handleFieldChange = (key: keyof WizardPayload, val: unknown) => {
     setForm((prev) => ({ ...prev, [key]: val }));
   };
 

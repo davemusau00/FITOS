@@ -155,6 +155,20 @@
       "when": 1788211200000,
       "tag": "0021_platform_admin_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788297600000,
+      "tag": "0022_public_reservation_waitlist",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1788384000000,
+      "tag": "0023_automation_action_results",
+      "breakpoints": true
     }
   ]
 }

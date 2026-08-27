@@ -5,7 +5,7 @@ const PASSWORD = "ChangeMe123!";
 async function signIn(page: Page, email = "owner@gym.fitos.test") {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/app\/overview$/);
   await expect(page.getByRole("complementary", { name: "Primary navigation" })).toBeVisible();
@@ -37,7 +37,7 @@ test("owner completes the pilot operating river and reception is denied a refund
   await signIn(page);
 
   await test.step("create a lead, add follow-up work, and convert it", async () => {
-    await page.getByRole("link", { name: "Leads", exact: true }).click();
+    await page.getByRole("link", { name: "Leads & CRM", exact: true }).click();
     await page.getByRole("link", { name: "Add lead" }).click();
     await page.getByLabel("First name").fill(firstName);
     await page.getByLabel("Last name").fill(lastName);
@@ -48,22 +48,22 @@ test("owner completes the pilot operating river and reception is denied a refund
     await page.getByLabel("Source").fill("Playwright pilot acceptance");
     await page.getByRole("button", { name: "Create lead" }).click();
 
-    const leadRow = page.getByRole("row").filter({ hasText: fullName });
-    await expect(leadRow).toBeVisible();
-    await leadRow.getByRole("button", { name: "Open" }).click();
+    const leadCard = page.getByRole("button", { name: new RegExp(fullName) });
+    await expect(leadCard).toBeVisible();
+    await leadCard.click();
 
-    const dialog = page.getByRole("dialog", { name: "Lead follow-up" });
+    const dialog = page.getByRole("dialog", { name: "Lead Profile" });
     await dialog.getByLabel("Lead note").fill("Called and confirmed a trial session.");
-    await dialog.getByRole("button", { name: "Add note" }).click();
+    await dialog.getByRole("button", { name: "Add", exact: true }).first().click();
     await expect(dialog.getByText("Called and confirmed a trial session.")).toBeVisible();
     await dialog.getByLabel("Lead task").fill("Send the class preparation details.");
-    await dialog.getByRole("button", { name: "Add task" }).click();
+    await dialog.getByRole("button", { name: "Add", exact: true }).last().click();
     await expect(dialog.getByText("Send the class preparation details.")).toBeVisible();
     await dialog.getByRole("button", { name: "Convert to member" }).click();
     await expect(dialog.getByRole("link", { name: "Open member profile" })).toBeVisible();
   });
 
-  const memberLink = page.getByRole("dialog", { name: "Lead follow-up" }).getByRole("link", {
+  const memberLink = page.getByRole("dialog", { name: "Lead Profile" }).getByRole("link", {
     name: "Open member profile"
   });
   const memberHref = await memberLink.getAttribute("href");
@@ -73,7 +73,7 @@ test("owner completes the pilot operating river and reception is denied a refund
   await expect(page.getByRole("heading", { name: fullName })).toBeVisible();
 
   await test.step("configure a credit-backed service and room", async () => {
-    await page.getByRole("link", { name: "Services", exact: true }).click();
+    await page.getByRole("link", { name: "Services & Classes", exact: true }).click();
     await page.getByRole("button", { name: "Add service" }).click();
     const serviceDialog = page.getByRole("dialog", { name: "Add service" });
     await serviceDialog.getByLabel("Service name").fill(serviceName);
@@ -163,17 +163,17 @@ test("owner completes the pilot operating river and reception is denied a refund
   await test.step("create and activate a membership entitlement", async () => {
     await page.getByRole("link", { name: "Memberships", exact: true }).click();
     await page.getByRole("button", { name: "New membership plan" }).click();
-    const dialog = page.getByRole("dialog", { name: "New membership plan" });
+    const dialog = page.getByRole("dialog", { name: "Create membership plan" });
     await dialog.getByLabel("Plan name").fill(planName);
-    await dialog.getByLabel("Price (KES/amount)").fill("4500");
-    await dialog.getByLabel("Validity (days)").fill("30");
+    await dialog.getByLabel("Price amount").fill("4500");
+    await dialog.getByLabel("Plan duration (days)").fill("30");
     await dialog.getByLabel("Included class credits").fill("3");
-    await dialog.getByLabel("Branch limitation").selectOption({ label: "Kilimani" });
-    await dialog.getByRole("button", { name: "Create membership plan" }).click();
+    await dialog.getByLabel("Branch availability").selectOption({ label: "Kilimani" });
+    await dialog.getByRole("button", { name: "Create plan" }).click();
     await expect(page.getByRole("cell", { name: planName })).toBeVisible();
 
     await page.goto(`/app/members/${memberId}`);
-    await page.getByRole("button", { name: "Activate membership" }).click();
+    await page.getByRole("button", { name: "Assign Plan", exact: true }).click();
     const activationDialog = page.getByRole("dialog", { name: "Activate membership" });
     const planOption = activationDialog
       .getByLabel("Membership plan")

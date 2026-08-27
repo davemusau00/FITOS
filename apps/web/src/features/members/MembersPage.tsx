@@ -36,7 +36,7 @@ export function MembersPage() {
     if (activeBranchId) next.set("branchId", activeBranchId);
     next.set("limit", "100");
     return next;
-  }, [params, query, status, activeSegment, activeBranchId]);
+  }, [query, status, activeSegment, activeBranchId]);
 
   const members = useQuery({
     queryKey: ["members", activeBranchId, requestParams.toString()],

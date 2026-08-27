@@ -3024,7 +3024,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
     const selected = rows.slice(0, limit + 1);
     return {
-      data: selected.slice(0, limit).map((booking) => ({ ...booking })),
+      data: selected.slice(0, limit).map((booking) => ({
+        ...booking,
+        serviceName: this.services.get(this.occurrences.get(booking.occurrenceId)?.serviceId ?? "")
+          ?.name
+      })),
       page: { hasMore: selected.length > limit, nextCursor: null }
     };
   }
@@ -4355,7 +4359,6 @@ export class InMemoryFitosRepository implements FitosRepository {
   async getMemberPortalOverview(memberId: string): Promise<MemberPortalOverviewResponse | null> {
     const member = this.members.get(memberId);
     if (!member) return null;
-    const profile = await this.resolveMemberSession("", "9999-99-99");
     const contact = this.contacts.get(member.contactId);
     if (!contact) return null;
     const tenant = this.tenants.get(member.tenantId);
@@ -4904,17 +4907,22 @@ export class InMemoryFitosRepository implements FitosRepository {
     const ts = now();
     rule.totalExecutions += 1;
     rule.lastExecutedAt = ts;
+    const actionId = randomUUID();
     const log: AutomationExecutionLogResponse = {
-      id: randomUUID(),
+      id: actionId,
       ruleId: rule.id,
       ruleName: rule.name,
       tenantId: scope.tenantId,
-      status: "success",
+      status: "skipped",
       triggerEvent: "manual.test",
       targetEntityId: null,
       targetEntityName: "Test Run",
       message: `SIMULATION: evaluated action ${rule.actionType}; no customer communication was sent.`,
-      executedAt: ts
+      executedAt: ts,
+      actionId,
+      actionType: rule.actionType,
+      provider: "simulation",
+      actionConfig: { ...rule.actionConfig }
     };
     this.automationLogs.push(log);
     return log;
@@ -5136,7 +5144,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
   }
 
-  async listFeatureFlags(tenantId: string): Promise<FeatureFlagResponse[]> {
+  async listFeatureFlags(_tenantId: string): Promise<FeatureFlagResponse[]> {
     return [
       {
         key: "feature.assessments",
@@ -5236,7 +5244,15 @@ export class InMemoryFitosRepository implements FitosRepository {
   ): Promise<import("@fitos/contracts").TenantSeedManifest | null> {
     const item = this.implementationInquiries.get(id);
     if (!item) return null;
-    const payload = item.payload as Record<string, any>;
+    const payload = item.payload as Record<string, unknown>;
+    const arrayValue = (key: string): unknown[] =>
+      Array.isArray(payload[key]) ? payload[key] : [];
+    const objectValue = (key: string): Record<string, unknown> => {
+      const value = payload[key];
+      return value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+    };
     return {
       schemaVersion: 1,
       sourceInquiryId: id,
@@ -5247,15 +5263,15 @@ export class InMemoryFitosRepository implements FitosRepository {
         country: item.country,
         businessType: item.businessType
       },
-      branches: payload.locations ?? [],
-      services: payload.services ?? [],
-      team: payload.team ?? [],
-      equipment: payload.equipment ?? [],
-      assessments: payload.assessments ?? [],
-      therapy: payload.therapy ?? [],
-      inventory: payload.inventory ?? [],
-      website: payload.website ?? {},
-      customRequirements: payload.customRequirements ?? []
+      branches: arrayValue("locations"),
+      services: arrayValue("services"),
+      team: arrayValue("team"),
+      equipment: arrayValue("equipment"),
+      assessments: arrayValue("assessments"),
+      therapy: arrayValue("therapy"),
+      inventory: arrayValue("inventory"),
+      website: objectValue("website"),
+      customRequirements: arrayValue("customRequirements")
     };
   }
 
@@ -6170,7 +6186,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   async completeStocktake(
     scope: TenantScope,
     stocktakeId: string,
-    actorUserId: string
+    _actorUserId: string
   ): Promise<import("@fitos/contracts").StocktakeResponse> {
     const st = this.stocktakesMap.get(stocktakeId);
     if (!st || st.tenantId !== scope.tenantId) throw new Error("Stocktake not found.");
@@ -6201,7 +6217,12 @@ export class InMemoryFitosRepository implements FitosRepository {
     const token = this.platformAdminTokens.get(tokenHash);
     if (!token || token.revokedAt || new Date(token.expiresAt) <= new Date()) return null;
     const user = this.users.get(token.userId);
-    if (!user || user.status !== "active" || !(user as any).isPlatformAdmin) return null;
+    if (
+      !user ||
+      user.status !== "active" ||
+      !(user as { isPlatformAdmin?: boolean }).isPlatformAdmin
+    )
+      return null;
     return { userId: user.id, displayName: user.displayName, email: user.email };
   }
 
@@ -6217,7 +6238,7 @@ export class InMemoryFitosRepository implements FitosRepository {
           id: user.id,
           displayName: user.displayName,
           email: user.email,
-          isPlatformAdmin: Boolean((user as any).isPlatformAdmin)
+          isPlatformAdmin: Boolean((user as { isPlatformAdmin?: boolean }).isPlatformAdmin)
         }
       : null;
   }

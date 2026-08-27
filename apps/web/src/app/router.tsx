@@ -1,7 +1,9 @@
-import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "./auth";
 import { AppShell } from "./shell";
 import { SurfaceShell } from "./surface-shell";
+import { api } from "../lib/api/client";
 import {
   AttendancePage,
   AutomationsPage,
@@ -14,6 +16,7 @@ import {
   MemberDetailPage,
   MemberPortalPage,
   MembershipsPage,
+  PaymentsPage,
   MembersPage,
   NewBookingPage,
   NewLeadPage,
@@ -38,8 +41,43 @@ import {
   ConfigureFitosPage,
   ImplementationInquiriesPage,
   ImplementationInquiryDetailPage,
+  PlatformLoginPage,
   SitesPage
 } from "../features";
+
+function PlatformRoute() {
+  const navigate = useNavigate();
+  const [state, setState] = useState<"loading" | "ready" | "denied">("loading");
+  useEffect(() => {
+    void api
+      .platformMe()
+      .then(() => setState("ready"))
+      .catch(() => {
+        window.localStorage.removeItem("fitos_platform_token");
+        setState("denied");
+      });
+  }, []);
+  if (state === "loading") return <main className="boot-screen">Loading FITOS Platform…</main>;
+  if (state === "denied") return <Navigate replace to="/platform/login" />;
+  return (
+    <div className="surface-shell surface-shell--platform">
+      <header className="surface-shell__header">
+        <strong>FITOS Platform</strong>
+        <button
+          onClick={() => {
+            window.localStorage.removeItem("fitos_platform_token");
+            navigate("/platform/login", { replace: true });
+          }}
+        >
+          Sign out
+        </button>
+      </header>
+      <main className="surface-shell__content">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
 
 function ProtectedRoute() {
   const { auth, isLoading } = useAuth();
@@ -55,6 +93,7 @@ export function AppRouter() {
       <Route element={<FitosLandingPage />} path="/" />
       <Route element={<ConfigureFitosPage />} path="/configure" />
       <Route element={<LoginPage />} path="/login" />
+      <Route element={<PlatformLoginPage />} path="/platform/login" />
       <Route element={<TenantSignupPage />} path="/signup" />
       <Route element={<MemberPortalPage />} path="/member/*" />
       <Route element={<ProtectedRoute />}>
@@ -101,6 +140,7 @@ export function AppRouter() {
           {/* Business */}
           <Route element={<ServicesPage />} path="services" />
           <Route element={<MembershipsPage />} path="memberships" />
+          <Route element={<PaymentsPage />} path="payments" />
 
           {/* Growth */}
           <Route element={<InsightsPage />} path="insights" />
@@ -128,6 +168,10 @@ export function AppRouter() {
           <Route element={<SitesPage />} path="sites" />
         </Route>
         <Route element={<OnboardingPage />} path="/onboarding" />
+      </Route>
+      <Route element={<PlatformRoute />} path="/platform">
+        <Route element={<ImplementationInquiriesPage />} index />
+        <Route element={<ImplementationInquiryDetailPage />} path="inquiries/:inquiryId" />
       </Route>
 
       {/* Public Tenant Website */}

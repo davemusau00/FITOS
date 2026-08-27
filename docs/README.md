@@ -7,6 +7,10 @@
 
 **Role surfaces:** The role-specific shell, workspace, route, and authentication architecture is defined in [`10_ROLE_SURFACES_AND_AUTH_ARCHITECTURE.md`](10_ROLE_SURFACES_AND_AUTH_ARCHITECTURE.md). FITOS uses one shared operating system with distinct Command, Ops, Front Desk, Coach, Practice, Member, and Platform cockpits.
 
+## Current integration sprint status
+
+The current sprint has wired the role-specific staff shells and the isolated Platform surface. Canonical platform routes are `/platform/login`, `/platform`, and `/platform/inquiries/:inquiryId`; platform requests use a separate bearer token and never fall back to a tenant session. Automation actions now use typed provider dispatch, BullMQ handoff, simulation mode, and durable callback outcomes. The authoritative release gate remains the CI workflow in `.github/workflows/ci.yml`; local PostgreSQL, Docker image, backup, and full pilot checks must still be executed in an environment with Docker and the required services available.
+
 ## Already materially implemented and NOT to be rebuilt
 
 The current codebase already includes substantial implementations for the React/Vite SaaS shell, permission-aware grouped navigation, branch switcher UI, Quick Create, command palette, staff authentication, members, leads/CRM, services, recurring schedules, bookings, memberships/credit ledger, attendance, roster, Reception UI, onboarding UI, richer Today/Overview UI, public tenant website UI prototype, member portal UI prototype, automations UI prototype, insights UI prototype, internal payment ledger/refund/reconciliation, CI, Playwright pilot flow, backup/restore, and monitoring foundations.

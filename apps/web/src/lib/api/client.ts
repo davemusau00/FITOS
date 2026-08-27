@@ -130,6 +130,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const method = init.method ?? "GET";
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
+  if (path.startsWith("/platform/") && !headers.has("X-Platform-Token")) {
+    const platformToken = window.localStorage.getItem("fitos_platform_token");
+    if (platformToken) headers.set("X-Platform-Token", platformToken);
+  }
   if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const csrf = cookie("fitos_csrf");
@@ -167,6 +171,14 @@ const json = (payload: unknown) => JSON.stringify(payload);
 const idempotency = () => crypto.randomUUID();
 
 export const api = {
+  platformLogin: (payload: { email: string; password: string }) =>
+    request<{
+      token: string;
+      expiresAt: string;
+      user: { id: string; displayName: string; email: string };
+    }>("/platform/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+  platformMe: () =>
+    request<{ userId: string; email: string; displayName: string }>("/platform/auth/me"),
   login: (payload: { email: string; password: string }) =>
     request<AuthMeResponse>("/auth/login", { method: "POST", body: json(payload) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),

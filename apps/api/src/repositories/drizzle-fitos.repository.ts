@@ -1586,8 +1586,10 @@ export class DrizzleFitosRepository implements FitosRepository {
   ): Promise<CursorPage<BookingResponse>> {
     const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
     const rows = await this.db
-      .select()
+      .select({ booking: bookings, serviceName: services.name })
       .from(bookings)
+      .leftJoin(scheduleOccurrences, eq(bookings.occurrenceId, scheduleOccurrences.id))
+      .leftJoin(services, eq(scheduleOccurrences.serviceId, services.id))
       .where(
         and(
           eq(bookings.tenantId, scope.tenantId),
@@ -1600,7 +1602,10 @@ export class DrizzleFitosRepository implements FitosRepository {
       .orderBy(desc(bookings.bookedAt))
       .limit(limit + 1);
     return {
-      data: rows.slice(0, limit).map((booking) => this.bookingResponse(booking)),
+      data: rows.slice(0, limit).map((row) => ({
+        ...this.bookingResponse(row.booking),
+        ...(row.serviceName ? { serviceName: row.serviceName } : {})
+      })),
       page: { hasMore: rows.length > limit, nextCursor: null }
     };
   }
@@ -4285,7 +4290,11 @@ export class DrizzleFitosRepository implements FitosRepository {
       targetEntityId: null,
       targetEntityName: null,
       message: `SIMULATION: evaluated action ${rule.actionType}; no customer communication was sent.`,
-      executedAt: now.toISOString()
+      executedAt: now.toISOString(),
+      actionId: run!.actionId,
+      actionType: rule.actionType as import("@fitos/contracts").AutomationActionType,
+      provider: "simulation",
+      actionConfig: (rule.actionConfig ?? {}) as Record<string, unknown>
     };
   }
 

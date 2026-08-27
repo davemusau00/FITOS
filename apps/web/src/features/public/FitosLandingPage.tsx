@@ -521,7 +521,7 @@ export function FitosLandingPage() {
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActiveSolution(tab.key as any)}
+                onClick={() => setActiveSolution(tab.key as "gym" | "studio" | "lab" | "therapy")}
                 style={{
                   padding: "0.75rem 1.5rem",
                   borderRadius: "0.5rem",

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, PageHeader, StatusBadge } from "@fitos/ui";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading } from "../shared";
+import type { SiteSection } from "@fitos/contracts";
 
 export type SiteBlockType =
   | "hero"
@@ -88,7 +89,7 @@ export function SitesPage() {
       api.saveSitePage({
         title,
         slug,
-        sections: blocks as any,
+        sections: blocks as unknown as SiteSection[],
         seo: { title: metaTitle, description: metaDesc, themeColor }
       }),
     onSuccess: () => void cache.invalidateQueries({ queryKey: ["site-pages"] })
@@ -146,7 +147,7 @@ export function SitesPage() {
     setBlocks(next);
   };
 
-  const updateBlockField = (id: string, field: keyof SiteBlock, value: any) => {
+  const updateBlockField = (id: string, field: keyof SiteBlock, value: unknown) => {
     setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
   };
 
