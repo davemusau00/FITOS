@@ -32,6 +32,7 @@ export function SettingsPage() {
         title="Settings"
         description="Configure the organization, branches, people, and security rules behind your daily operations."
       />
+      <h2 className="settings-section-title">Organization</h2>
       <section className="settings-grid">
         <SettingsLink
           icon="building"
@@ -45,6 +46,9 @@ export function SettingsPage() {
           description="Locations and operational context"
           to="/app/settings/branches"
         />
+      </section>
+      <h2 className="settings-section-title">Access &amp; safety</h2>
+      <section className="settings-grid">
         <SettingsLink
           icon="team"
           title="Team & permissions"
@@ -56,6 +60,15 @@ export function SettingsPage() {
           title="Security"
           description="Sessions and safe operation"
           to="/app/settings/security"
+        />
+      </section>
+      <h2 className="settings-section-title">Account &amp; capabilities</h2>
+      <section className="settings-grid">
+        <SettingsLink
+          icon="building"
+          title="Subscription & usage"
+          description="Plan, quotas, and enabled capabilities"
+          to="/app/settings/subscription"
         />
       </section>
     </>

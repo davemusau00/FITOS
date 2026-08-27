@@ -173,6 +173,35 @@ export const tenantUsers = pgTable(
   ]
 );
 
+export const tenantUserRoles = pgTable(
+  "tenant_user_roles",
+  {
+    tenantUserId: uuid("tenant_user_id")
+      .notNull()
+      .references(() => tenantUsers.id, { onDelete: "cascade" }),
+    roleId: uuid("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [primaryKey({ columns: [table.tenantUserId, table.roleId] })]
+);
+
+export const userWorkspacePreferences = pgTable(
+  "user_workspace_preferences",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    workspace: varchar("workspace", { length: 30 }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.tenantId] })]
+);
+
 export const userBranchAccess = pgTable(
   "user_branch_access",
   {
@@ -1574,6 +1603,8 @@ export const schema = {
   permissions,
   rolePermissions,
   tenantUsers,
+  tenantUserRoles,
+  userWorkspacePreferences,
   userBranchAccess,
   sessions,
   contacts,

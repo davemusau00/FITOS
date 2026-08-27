@@ -55,6 +55,8 @@ export interface AuthMeResponse {
   tenant: TenantSummary;
   branches: BranchResponse[];
   permissions: PermissionKey[];
+  /** All tenant role assignments; role remains the primary-role compatibility alias. */
+  roles: RoleResponse[];
   selectedBranchId: string | null;
   role: RoleResponse;
   defaultWorkspace: WorkspaceKey;

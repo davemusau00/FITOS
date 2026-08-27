@@ -67,6 +67,7 @@ export class AuthService {
           (branch) => identity.branchIds.includes(branch.id)
         ),
         permissions: identity.role.permissions,
+        roles: [identity.role],
         selectedBranchId: identity.branchIds[0] ?? null,
         role: identity.role,
         ...this.workspaceForRole(identity.role.key)
@@ -86,6 +87,7 @@ export class AuthService {
       tenant: session.tenant,
       branches: await this.repository.listBranches(scope),
       permissions: session.permissions,
+      roles: [session.role],
       selectedBranchId: session.branchIds[0] ?? null,
       role: session.role,
       ...this.workspaceForRole(session.role.key)

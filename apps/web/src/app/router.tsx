@@ -163,11 +163,6 @@ export function AppRouter() {
           <Route element={<StaffPage />} path="settings/team" />
           <Route element={<SecuritySettingsPage />} path="settings/security" />
           <Route element={<AccountSubscriptionPage />} path="settings/subscription" />
-          <Route element={<ImplementationInquiriesPage />} path="platform/inquiries" />
-          <Route
-            element={<ImplementationInquiryDetailPage />}
-            path="platform/inquiries/:inquiryId"
-          />
           <Route element={<SitesPage />} path="sites" />
         </Route>
         <Route element={<OnboardingPage />} path="/onboarding" />
