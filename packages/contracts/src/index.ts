@@ -10,6 +10,7 @@ export * from "./leads.js";
 export * from "./member-auth.js";
 export * from "./members.js";
 export * from "./memberships.js";
+export * from "./policies.js";
 export * from "./payments.js";
 export * from "./permissions.js";
 export * from "./platform.js";

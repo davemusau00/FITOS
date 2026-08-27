@@ -163,10 +163,6 @@ export function TenantPublicPage() {
               <strong>Configured</strong>
               <span>Certified Trainers</span>
             </div>
-            <div className="public-hero__stat">
-              <strong>5★</strong>
-              <span>Member Experience</span>
-            </div>
           </div>
         </div>
       </section>
@@ -319,17 +315,14 @@ export function TenantPublicPage() {
                 <Icon name="building" size={24} />
               </div>
               <h3>{branch.name}</h3>
-              <p>Central Facility, Main Avenue · {tenantInfo.data?.timezone ?? "EAT"}</p>
-              <div className="public-location-hours">
-                <div>
-                  <span>Mon – Fri:</span>
-                  <strong>05:30 AM – 09:30 PM</strong>
-                </div>
-                <div>
-                  <span>Sat – Sun:</span>
-                  <strong>07:00 AM – 07:00 PM</strong>
-                </div>
-              </div>
+              {(branch.addressLine1 || branch.city) && (
+                <p>
+                  {[branch.addressLine1, branch.city].filter(Boolean).join(", ")} ·{" "}
+                  {tenantInfo.data?.timezone}
+                </p>
+              )}
+              {branch.phone && <p>{branch.phone}</p>}
+              {branch.email && <p>{branch.email}</p>}
               <button
                 className="fitos-button fitos-button--secondary fitos-button--small"
                 onClick={() => handleOpenTrial()}

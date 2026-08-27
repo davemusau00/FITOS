@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { normalizePhone } from "@fitos/shared";
+import {
+  ATTENDANCE_TRANSITIONS,
+  ACTIVE_MEMBERSHIP_STATUSES,
+  BOOKING_ACTIVE_STATUS
+} from "@fitos/contracts";
 import type {
   AuditEventResponse,
   BranchResponse,
@@ -1374,17 +1379,7 @@ export class CoreService {
   ): Promise<AttendanceRecordResponse> {
     const existing = await this.getAttendanceRecord(actor, recordId);
     if (existing.status === input.status) return existing;
-    const normalTransitions: Record<
-      AttendanceRecordResponse["status"],
-      readonly AttendanceRecordResponse["status"][]
-    > = {
-      booked: ["checked_in", "no_show", "late_cancel"],
-      checked_in: ["attended"],
-      attended: [],
-      no_show: [],
-      late_cancel: []
-    };
-    const normalTransition = normalTransitions[existing.status].includes(input.status);
+    const normalTransition = ATTENDANCE_TRANSITIONS[existing.status].includes(input.status);
     const allowOverride = !normalTransition && Boolean(input.overrideReason);
     if (!normalTransition && !allowOverride) {
       throw new DomainError(
@@ -1575,7 +1570,7 @@ export class CoreService {
       if (
         booking.memberId !== memberId ||
         booking.branchId !== branchId ||
-        booking.status !== "confirmed"
+        booking.status !== BOOKING_ACTIVE_STATUS
       ) {
         throw new DomainError(
           "VALIDATION_FAILED",
@@ -1597,7 +1592,7 @@ export class CoreService {
       if (
         !membership ||
         membership.memberId !== memberId ||
-        !["scheduled", "active"].includes(membership.status) ||
+        !(ACTIVE_MEMBERSHIP_STATUSES as readonly string[]).includes(membership.status) ||
         (membership.planSnapshot.branchId !== null && membership.planSnapshot.branchId !== branchId)
       ) {
         throw new DomainError(
