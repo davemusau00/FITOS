@@ -4064,6 +4064,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     const user = this.users.get(membership.userId);
     const role = this.roles.get(membership.roleId);
     if (!user || !role) return null;
+    const assignedRoleIds = this.staffRoleAssignments.get(membership.id) ?? new Set([role.id]);
+    const assignedRoles = [...assignedRoleIds]
+      .map((roleId) => this.roles.get(roleId))
+      .filter((item): item is StoredRole => Boolean(item))
+      .map((item) => this.toRoleResponse(item));
     const branchIds = this.resolveBranchIds(membership, role);
     const branches = branchIds
       .map((branchId) => this.branches.get(branchId))
@@ -4072,6 +4077,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     return {
       user: this.toUserSummary(user),
       role: this.toRoleResponse(role),
+      roles: assignedRoles,
       branches,
       tenantUserId: membership.id
     };

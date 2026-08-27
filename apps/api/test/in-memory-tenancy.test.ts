@@ -62,4 +62,34 @@ describe("tenant isolation", () => {
       repository.resolveSession(tokenHash, new Date().toISOString())
     ).resolves.toBeNull();
   });
+
+  it("persists and resolves multiple staff role assignments", async () => {
+    const repository = new InMemoryFitosRepository();
+    const passwordHash = await new ScryptPasswordHasher().hash("ChangeMe123!");
+    await repository.seedDevelopmentData?.(passwordHash);
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Owner identity missing.");
+    const scope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const roles = await repository.listRoles(scope);
+    const trainer = roles.find((role) => role.key === "trainer");
+    const manager = roles.find((role) => role.key === "manager");
+    if (!trainer || !manager) throw new Error("Expected seeded roles missing.");
+    const invited = await repository.inviteStaff(scope, {
+      email: "multi-role@gym.fitos.test",
+      displayName: "Multi Role",
+      roleId: trainer.id,
+      branchIds: [owner.branchIds[0]!]
+    });
+    const updated = await repository.updateStaffAccess(scope, invited.user.id, {
+      roleId: trainer.id,
+      roleIds: [trainer.id, manager.id],
+      branchIds: [owner.branchIds[0]!]
+    });
+    expect(updated?.roles?.map((role) => role.key)).toEqual(["trainer", "manager"]);
+  });
 });
