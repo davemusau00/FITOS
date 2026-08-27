@@ -15,7 +15,8 @@ test("staff authentication exposes purpose-built workspace entry points", async 
   await page.goto("/login");
   await page.getByLabel("Email").fill("owner@gym.fitos.test");
   await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: /Sign in/ }).click();
+  await expect(page).toHaveURL(/\/app\/overview$/);
   await expect(page).toHaveURL(/\/app\/overview$/);
 
   for (const route of ["/ops", "/reception", "/coach", "/practice"]) {
@@ -80,4 +81,19 @@ test("staff login selects the server-resolved cockpit by role", async ({ browser
     await expect(page).toHaveURL(new RegExp(`${expectedPath}$`));
     await context.close();
   }
+});
+
+test("staff access surface exposes role assignments without entering the Platform control plane", async ({
+  page
+}) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("owner@gym.fitos.test");
+  await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
+  await page.getByRole("button", { name: /Sign in/ }).click();
+  await expect(page).toHaveURL(/\/app\/overview$/);
+  await page.goto("/app/settings/team");
+  await expect(page.getByRole("heading", { name: "Staff" })).toBeVisible();
+  await expect(page.getByText("Roles", { exact: true })).toBeVisible();
+  await page.goto("/app/platform/inquiries");
+  await expect(page).not.toHaveURL(/\/platform\/inquiries$/);
 });
