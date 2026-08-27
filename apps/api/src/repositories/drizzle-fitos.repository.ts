@@ -4564,6 +4564,28 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
+  async transitionTenantSubscriptionStatus(
+    tenantId: string,
+    status: import("@fitos/contracts").TenantAccountStatus
+  ) {
+    const [row] = await this.db
+      .update(tenantSubscriptions)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(tenantSubscriptions.tenantId, tenantId))
+      .returning();
+    return row
+      ? {
+          tenantId: row.tenantId,
+          plan: row.plan as import("@fitos/contracts").SaaSPlan,
+          planName: `FITOS ${row.plan[0]!.toUpperCase()}${row.plan.slice(1)}`,
+          status: row.status as import("@fitos/contracts").TenantAccountStatus,
+          trialEndsAt: row.trialEndsAt?.toISOString() ?? null,
+          currentPeriodEndsAt: row.currentPeriodEndsAt?.toISOString() ?? null,
+          capabilities: row.capabilitiesJson as import("@fitos/contracts").SaaSCapabilityKey[]
+        }
+      : null;
+  }
+
   async listFeatureFlags(
     tenantId: string
   ): Promise<import("@fitos/contracts").FeatureFlagResponse[]> {

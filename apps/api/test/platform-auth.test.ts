@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { ScryptPasswordHasher } from "@fitos/auth";
 import { InMemoryFitosRepository } from "../src/repositories/in-memory-fitos.repository.js";
 import { PlatformAdminGuard } from "../src/common/auth/platform-admin.guard.js";
+import { PlatformController } from "../src/modules/platform/signup.controller.js";
+import { canTransitionTenantStatus, canUseCapability } from "@fitos/contracts";
 
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
 
@@ -80,6 +82,79 @@ describe("platform admin guard", () => {
     );
     await expect(guard.canActivate(context(token))).rejects.toMatchObject({
       status: token ? 403 : 401
+    });
+  });
+});
+
+describe("platform overview", () => {
+  it("returns aggregate lifecycle and explicit unknown provider health", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.(await new ScryptPasswordHasher().hash("ChangeMe123!"));
+    const overview = await new PlatformController(repository).overview();
+
+    expect(overview.tenants.total).toBeGreaterThan(0);
+    expect(overview.activity.activeMembers).toBeGreaterThanOrEqual(0);
+    expect(overview.health.redis).toBe("unknown");
+    expect(overview.activity.bookingsToday).toBeNull();
+    expect(Object.keys(overview.implementation)).toEqual(
+      expect.arrayContaining(["submitted", "approved", "converted"])
+    );
+  });
+});
+
+describe("platform lifecycle and capability policy", () => {
+  it("allows only declared lifecycle transitions", () => {
+    expect(canTransitionTenantStatus("trial", "active")).toBe(true);
+    expect(canTransitionTenantStatus("trial", "archived")).toBe(false);
+    expect(canTransitionTenantStatus("archived", "active")).toBe(false);
+  });
+
+  it("requires entitlement, rollout, and an operational tenant status", () => {
+    const input = {
+      capability: "feature.insights" as const,
+      entitlements: ["feature.insights" as const],
+      enabledFlags: ["feature.insights"],
+      status: "active" as const
+    };
+    expect(canUseCapability(input)).toBe(true);
+    expect(canUseCapability({ ...input, enabledFlags: [] })).toBe(false);
+    expect(canUseCapability({ ...input, status: "suspended" })).toBe(false);
+  });
+});
+
+describe("platform tenant lifecycle mutation", () => {
+  it("requires a valid transition, reason, and records the mutation", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.(await new ScryptPasswordHasher().hash("ChangeMe123!"));
+    const [tenant] = await repository.listPlatformTenantControls();
+    if (!tenant) throw new Error("Seed tenant missing.");
+    const controller = new PlatformController(repository);
+    const request = { platformActor: { userId: "platform-admin" } } as never;
+
+    const updated = await controller.transitionTenantStatus(
+      tenant.tenant.id,
+      { status: "active", reason: "Pilot approved" },
+      "request-1",
+      request
+    );
+    expect(updated.status).toBe("active");
+    await expect(
+      controller.transitionTenantStatus(
+        tenant.tenant.id,
+        { status: "trial", reason: "Invalid rollback" },
+        "request-2",
+        request
+      )
+    ).rejects.toThrow(/cannot transition/i);
+  });
+
+  it("exposes one canonical platform feature registry", async () => {
+    const controller = new PlatformController(new InMemoryFitosRepository());
+    const features = controller.listPlatformFeatures();
+    expect(features.map((feature) => feature.key)).toContain("feature.insights");
+    expect(features.find((feature) => feature.key === "feature.automations")).toMatchObject({
+      maturity: "beta",
+      defaultEnabled: false
     });
   });
 });

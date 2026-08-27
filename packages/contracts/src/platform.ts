@@ -76,6 +76,39 @@ export interface PlatformTenantControlRecord {
   usage: UsageQuotaMetricsResponse;
 }
 
+export type PlatformHealthState = "ok" | "degraded" | "unknown";
+export interface PlatformOverview {
+  tenants: {
+    total: number;
+    active: number;
+    trial: number;
+    onboarding: number;
+    suspended: number;
+    cancelled: number;
+    archived: number;
+  };
+  activity: {
+    activeMembers: number;
+    automationRunsToday: number | null;
+    bookingsToday: number | null;
+    sessionsToday: number | null;
+  };
+  implementation: Record<ImplementationInquiryStatus, number>;
+  health: {
+    api: PlatformHealthState;
+    database: PlatformHealthState;
+    redis: PlatformHealthState;
+    workers: PlatformHealthState;
+    queues: PlatformHealthState;
+  };
+  attention: Array<{
+    key: string;
+    severity: "info" | "warning" | "critical";
+    label: string;
+    count: number;
+  }>;
+}
+
 export interface FeatureFlagResponse {
   key: string;
   enabled: boolean;
@@ -83,6 +116,27 @@ export interface FeatureFlagResponse {
   description: string;
   category: "core" | "advanced" | "beta";
 }
+
+export type FeatureMaturity = "stable" | "beta" | "internal";
+export interface FeatureDefinition {
+  key: SaaSCapabilityKey;
+  name: string;
+  maturity: FeatureMaturity;
+  defaultEnabled: boolean;
+}
+
+export const PLATFORM_FEATURE_REGISTRY: readonly FeatureDefinition[] = [
+  { key: "feature.crm", name: "CRM", maturity: "stable", defaultEnabled: true },
+  { key: "feature.insights", name: "Insights", maturity: "stable", defaultEnabled: true },
+  { key: "feature.portal", name: "Member Portal", maturity: "stable", defaultEnabled: true },
+  { key: "feature.automations", name: "Automations", maturity: "beta", defaultEnabled: false },
+  { key: "feature.assessments", name: "Assessments", maturity: "beta", defaultEnabled: false },
+  { key: "feature.therapy", name: "Therapy", maturity: "beta", defaultEnabled: false },
+  { key: "feature.inventory", name: "Inventory", maturity: "beta", defaultEnabled: false },
+  { key: "feature.equipment", name: "Equipment", maturity: "beta", defaultEnabled: false },
+  { key: "feature.sites", name: "FITOS Sites", maturity: "beta", defaultEnabled: false },
+  { key: "feature.integrations", name: "Integrations", maturity: "beta", defaultEnabled: false }
+];
 
 export type ImplementationInquiryStatus =
   | "draft"

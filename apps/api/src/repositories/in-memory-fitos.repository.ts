@@ -5210,6 +5210,18 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
   }
 
+  async transitionTenantSubscriptionStatus(
+    tenantId: string,
+    status: import("@fitos/contracts").TenantAccountStatus
+  ) {
+    const subscription =
+      this.tenantSubscriptions.get(tenantId) ?? (await this.getTenantSubscription(tenantId));
+    if (!subscription) return null;
+    const updated = { ...subscription, status };
+    this.tenantSubscriptions.set(tenantId, updated);
+    return updated;
+  }
+
   async listFeatureFlags(_tenantId: string): Promise<FeatureFlagResponse[]> {
     return [
       {

@@ -509,6 +509,10 @@ export interface FitosRepository {
   ): Promise<void>;
   listPlatformTenantControls(): Promise<PlatformTenantControlRecord[]>;
   getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
+  transitionTenantSubscriptionStatus(
+    tenantId: string,
+    status: import("@fitos/contracts").TenantAccountStatus
+  ): Promise<TenantSubscriptionResponse | null>;
   listFeatureFlags(tenantId: string): Promise<FeatureFlagResponse[]>;
   saveImplementationInquiry(
     input: import("@fitos/contracts").ImplementationInquiryDraft,

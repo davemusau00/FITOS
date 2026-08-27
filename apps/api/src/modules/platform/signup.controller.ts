@@ -11,6 +11,7 @@ import {
   Req,
   Res,
   ServiceUnavailableException,
+  BadRequestException,
   UnauthorizedException
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
@@ -19,8 +20,10 @@ import { z } from "zod";
 import type {
   ImplementationInquiryStatus,
   RequestActor,
-  SaaSTenantSignupRequest
+  SaaSTenantSignupRequest,
+  PlatformOverview
 } from "@fitos/contracts";
+import { PLATFORM_FEATURE_REGISTRY, canTransitionTenantStatus } from "@fitos/contracts";
 import { createHash } from "node:crypto";
 import { ScryptPasswordHasher, createOpaqueSessionToken } from "@fitos/auth";
 import { Public } from "../../common/auth/public.decorator.js";
@@ -30,6 +33,7 @@ import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository } from "../../ports/fitos-repository.js";
 import { RequirePlatformAdmin } from "../../common/auth/require-platform-admin.decorator.js";
 import type { FitosRequest } from "../../common/request-context/request-context.js";
+import { RequestId } from "../../common/request-context/actor.decorator.js";
 
 const signupSchema = z
   .object({
@@ -229,6 +233,131 @@ export class PlatformController {
   @RequirePlatformAdmin()
   listTenants() {
     return this.repository.listPlatformTenantControls();
+  }
+
+  @Get("features")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  listPlatformFeatures() {
+    return PLATFORM_FEATURE_REGISTRY;
+  }
+
+  @Patch("tenants/:tenantId/status")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async transitionTenantStatus(
+    @Param("tenantId") tenantId: string,
+    @Body() body: unknown,
+    @RequestId() requestId: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        status: z.enum(["trial", "active", "grace", "suspended", "cancelled", "archived"]),
+        reason: z.string().trim().min(3).max(500)
+      })
+      .strict()
+      .parse(body);
+    const current = (await this.repository.listPlatformTenantControls()).find(
+      (item) => item.tenant.id === tenantId
+    );
+    if (!current) throw new NotFoundException("Tenant not found.");
+    if (!canTransitionTenantStatus(current.subscription.status, input.status)) {
+      throw new BadRequestException(
+        `Cannot transition tenant from ${current.subscription.status} to ${input.status}.`
+      );
+    }
+    const updated = await this.repository.transitionTenantSubscriptionStatus(
+      tenantId,
+      input.status
+    );
+    if (!updated) throw new NotFoundException("Tenant subscription not found.");
+    await this.repository.recordAudit({
+      tenantId,
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "tenant.subscription_status_changed",
+      resourceType: "tenant_subscription",
+      resourceId: tenantId,
+      beforeSummary: { status: current.subscription.status },
+      afterSummary: { status: input.status, reason: input.reason },
+      requestId
+    });
+    return updated;
+  }
+
+  @Get("overview")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async overview(): Promise<PlatformOverview> {
+    const [tenants, inquiries, databaseReady] = await Promise.all([
+      this.repository.listPlatformTenantControls(),
+      this.repository.listImplementationInquiries(),
+      this.repository.ping()
+    ]);
+    const count = (status: string) =>
+      tenants.filter((item) => item.subscription.status === status).length;
+    const statuses = [
+      "draft",
+      "submitted",
+      "qualified",
+      "needs_clarification",
+      "approved",
+      "converted",
+      "archived"
+    ];
+    const implementation = Object.fromEntries(
+      statuses.map((status) => [status, inquiries.filter((item) => item.status === status).length])
+    ) as PlatformOverview["implementation"];
+    const attention: PlatformOverview["attention"] = tenants.flatMap(
+      (item): PlatformOverview["attention"] => {
+        const ratio = item.usage.maxMembers ? item.usage.activeMembers / item.usage.maxMembers : 0;
+        if (item.subscription.status === "suspended")
+          return [
+            {
+              key: `suspended:${item.tenant.id}`,
+              severity: "critical" as const,
+              label: `${item.tenant.name} is suspended`,
+              count: 1
+            }
+          ] satisfies PlatformOverview["attention"];
+        if (ratio >= 0.9)
+          return [
+            {
+              key: `quota:${item.tenant.id}`,
+              severity: "warning" as const,
+              label: `${item.tenant.name} is nearing its member quota`,
+              count: 1
+            }
+          ] satisfies PlatformOverview["attention"];
+        return [];
+      }
+    );
+    return {
+      tenants: {
+        total: tenants.length,
+        active: count("active"),
+        trial: count("trial"),
+        onboarding: 0,
+        suspended: count("suspended"),
+        cancelled: count("cancelled"),
+        archived: count("archived")
+      },
+      activity: {
+        activeMembers: tenants.reduce((sum, item) => sum + item.usage.activeMembers, 0),
+        automationRunsToday: null,
+        bookingsToday: null,
+        sessionsToday: null
+      },
+      implementation,
+      health: {
+        api: "ok",
+        database: databaseReady ? "ok" : "degraded",
+        redis: "unknown",
+        workers: "unknown",
+        queues: "unknown"
+      },
+      attention
+    };
   }
 
   @Get("implementation-inquiries/:id")

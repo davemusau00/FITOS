@@ -540,6 +540,10 @@ export const api = {
   featureFlags: () => request<FeatureFlagResponse[]>("/platform/feature-flags"),
   platformTenants: () =>
     request<import("@fitos/contracts").PlatformTenantControlRecord[]>("/platform/tenants"),
+  platformOverview: () =>
+    request<import("@fitos/contracts").PlatformOverview>("/platform/overview"),
+  platformFeatures: () =>
+    request<import("@fitos/contracts").FeatureDefinition[]>("/platform/features"),
   saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) =>
     request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", {
       method: "POST",
