@@ -437,7 +437,57 @@ export function LeadsPage() {
         </div>
       ) : (
         /* ── TABLE VIEW ── */
-        <DataTable columns={columns} data={allLeads} label="Leads" />
+        <DataTable
+          columns={columns}
+          data={allLeads}
+          label="Leads"
+          mobileRenderer={(lead) => {
+            const meta = STAGE_META[lead.stage as LeadStage];
+            return (
+              <Card className="fitos-mobile-data-card">
+                <div>
+                  <strong className="fitos-data-table__primary">
+                    {lead.contact.firstName} {lead.contact.lastName ?? ""}
+                  </strong>
+                  <span className="fitos-data-table__muted">
+                    {lead.contact.phone ?? lead.contact.email ?? "No contact method"}
+                  </span>
+                </div>
+                <div className="fitos-mobile-data-card__meta">
+                  <span
+                    className="lead-stage-badge"
+                    style={{
+                      background: `${meta.color}22`,
+                      color: meta.color,
+                      borderColor: `${meta.color}44`
+                    }}
+                  >
+                    {meta.label}
+                  </span>
+                  <span>
+                    {lead.nextFollowUpAt
+                      ? `Follow-up ${formatDate(lead.nextFollowUpAt)}`
+                      : "No follow-up"}
+                  </span>
+                </div>
+                <span className="fitos-data-table__muted">
+                  {lead.interest ?? "Interest not recorded"} ·{" "}
+                  {lead.source ?? "Source not recorded"}
+                </span>
+                <div className="form-actions">
+                  <Button onClick={() => setSelectedLead(lead)} size="small" variant="ghost">
+                    Open lead
+                  </Button>
+                  {lead.convertedMemberId ? (
+                    <Link className="text-link" to={`/app/members/${lead.convertedMemberId}`}>
+                      Member →
+                    </Link>
+                  ) : null}
+                </div>
+              </Card>
+            );
+          }}
+        />
       )}
 
       {/* ── LEAD DETAIL DRAWER ── */}

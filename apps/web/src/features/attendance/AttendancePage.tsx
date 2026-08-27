@@ -272,7 +272,49 @@ export function AttendancePage() {
             title="No check-ins recorded"
           />
         ) : (
-          <DataTable columns={columns} data={records} label="Attendance Log" />
+          <DataTable
+            columns={columns}
+            data={records}
+            label="Attendance Log"
+            mobileRenderer={(record) => (
+              <Card className="fitos-mobile-data-card">
+                <div className="fitos-mobile-data-card__meta">
+                  <StatusBadge status={record.status} />
+                  <span>
+                    {branches.data?.find((branch) => branch.id === record.branchId)?.name ??
+                      "Branch"}
+                  </span>
+                </div>
+                <div>
+                  <Link
+                    className="fitos-data-table__primary"
+                    to={`/app/members/${record.memberId}`}
+                  >
+                    Member {record.memberId.slice(0, 8)}...
+                  </Link>
+                  <span className="fitos-data-table__muted">
+                    {record.checkedInAt
+                      ? formatDateTime(record.checkedInAt)
+                      : "Check-in time unavailable"}
+                  </span>
+                </div>
+                {record.overrideReason ? (
+                  <span className="fitos-data-table__muted">Note: {record.overrideReason}</span>
+                ) : null}
+                {can(auth, "attendance:checkin") && record.status === "checked_in" ? (
+                  <Button
+                    onClick={() =>
+                      updateStatusMutation.mutate({ id: record.id, status: "attended" })
+                    }
+                    size="small"
+                    variant="ghost"
+                  >
+                    Mark Attended
+                  </Button>
+                ) : null}
+              </Card>
+            )}
+          />
         )}
       </Card>
 

@@ -5,6 +5,7 @@ import {
   Button,
   DataTable,
   type DataTableColumn,
+  Card,
   EmptyState,
   FormField,
   Icon,
@@ -222,7 +223,50 @@ export function BookingsPage() {
           title="No bookings found"
         />
       ) : (
-        <DataTable columns={columns} data={filteredBookings} label="Bookings" />
+        <DataTable
+          columns={columns}
+          data={filteredBookings}
+          label="Bookings"
+          mobileRenderer={(booking) => {
+            const member = members.data?.data.find((item) => item.id === booking.memberId);
+            const occurrence = occurrences.data?.data.find(
+              (item) => item.id === booking.occurrenceId
+            );
+            const service = services.data?.find((item) => item.id === occurrence?.serviceId);
+            return (
+              <Card className="fitos-mobile-data-card">
+                <div>
+                  <strong className="fitos-data-table__primary">
+                    {member
+                      ? `${member.firstName} ${member.lastName ?? ""}`
+                      : booking.memberId.slice(0, 8)}
+                  </strong>
+                  <span className="fitos-data-table__muted">
+                    {service?.name ?? "Class session"} ·{" "}
+                    {occurrence ? formatDateTime(occurrence.startsAt) : "Time unavailable"}
+                  </span>
+                </div>
+                <div className="fitos-mobile-data-card__meta">
+                  <StatusBadge status={booking.status} />
+                  <span>{booking.source}</span>
+                </div>
+                {booking.status === "confirmed" && can(auth, "booking:cancel") ? (
+                  <Button
+                    onClick={() => {
+                      setCancellingBooking(booking);
+                      setCancelReason("");
+                      setCancelError(null);
+                    }}
+                    size="small"
+                    variant="danger"
+                  >
+                    Cancel booking
+                  </Button>
+                ) : null}
+              </Card>
+            );
+          }}
+        />
       )}
 
       {/* Cancellation Modal */}

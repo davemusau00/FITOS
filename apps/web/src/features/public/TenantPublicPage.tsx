@@ -276,7 +276,9 @@ export function TenantPublicPage() {
                     <p>
                       Coach: {occ.trainerName ?? "Trainer TBA"}
                       {svc?.durationMinutes ? ` · ${svc.durationMinutes} mins` : ""}·{" "}
-                      {occ.availableSpots} spots left
+                      {occ.availableSpots > 0
+                        ? `${occ.availableSpots} spots left`
+                        : "Full · waitlist available"}
                     </p>
                   </div>
                   <div className="public-timetable-item__action">
@@ -288,7 +290,7 @@ export function TenantPublicPage() {
                       }}
                       type="button"
                     >
-                      Reserve Spot
+                      {occ.availableSpots > 0 ? "Reserve Spot" : "Join Waitlist"}
                     </button>
                   </div>
                 </div>

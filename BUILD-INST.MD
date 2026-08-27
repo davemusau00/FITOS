@@ -23,12 +23,19 @@ complete.
 - [x] Public tenant pages no longer claim trainer certification or invent timetable duration when configuration is absent.
 - [x] Public timetable weekday selection and filtering use the tenant timezone instead of browser-local `Date.getDay()`.
 - [x] Public reservation success state reflects the server response (`confirmed` or `waitlisted`) and displays a reservation reference.
+- [x] Public timetable exposes explicit available versus full/waitlist action labels from server capacity data.
 - [x] Plan-based quota definitions are centralized and shared by Drizzle and in-memory adapters; missing feature capability data fails closed.
 - [x] Metric definitions are documented in `docs/METRIC_DEFINITIONS.md`.
 - [x] Member portal now consumes a typed server-provided booking eligibility result instead of relying only on frontend credit checks.
 - [x] Eligibility projections honor membership expiry in both Drizzle and in-memory adapters; in-memory coverage also evaluates service credits, duplicate bookings and full sessions.
 - [x] Drizzle portal eligibility now evaluates each service's credit requirement, duplicate confirmed bookings, effective capacity/full state and active membership before presenting a bookable occurrence.
 - [x] Web destructive actions use FITOS confirmation modals; no native `alert`, `confirm` or `prompt` calls remain.
+- [x] Members table has a responsive mobile card renderer with quick-view and profile actions; the remaining priority tables still require the full mobile matrix.
+- [x] Bookings table has a responsive mobile card renderer with status, session context and authorized cancellation action.
+- [x] Attendance log has a responsive mobile card renderer with status, branch, member, notes and authorized status update action.
+- [x] Leads table has a responsive mobile card renderer with stage, contact, follow-up, detail and converted-member actions.
+- [x] Membership plan catalog has a responsive mobile card renderer with pricing, status, duration, credits, branch and visibility context.
+- [x] Services catalog has a responsive mobile card renderer with type, status, capacity, pricing, branch, visibility and authorized edit action.
 
 ### Verified checks
 

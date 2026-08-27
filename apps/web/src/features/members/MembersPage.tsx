@@ -242,6 +242,44 @@ export function MembersPage() {
           data={allMembers}
           label="Members"
           onRowClick={(member) => setSelectedQuickMember(member)}
+          mobileRenderer={(member) => (
+            <Card className="fitos-mobile-data-card">
+              <div className="table-member-cell">
+                <div className="table-member-avatar">
+                  {member.firstName[0] ?? ""}
+                  {member.lastName?.[0] ?? ""}
+                </div>
+                <div>
+                  <strong className="fitos-data-table__primary">
+                    {member.firstName} {member.lastName ?? ""}
+                  </strong>
+                  <span className="fitos-data-table__muted">
+                    {member.email ?? member.phone ?? "No contact"}
+                  </span>
+                </div>
+              </div>
+              <div className="fitos-mobile-data-card__meta">
+                <span>{member.memberNumber ? `#${member.memberNumber}` : "No member number"}</span>
+                <StatusBadge status={member.status} />
+              </div>
+              <div className="form-actions">
+                <button
+                  className="fitos-button fitos-button--ghost fitos-button--small"
+                  onClick={() => setSelectedQuickMember(member)}
+                  type="button"
+                >
+                  Quick View
+                </button>
+                <button
+                  className="fitos-button fitos-button--secondary fitos-button--small"
+                  onClick={() => navigate(`/app/members/${member.id}`)}
+                  type="button"
+                >
+                  Profile →
+                </button>
+              </div>
+            </Card>
+          )}
         />
       )}
 

@@ -210,7 +210,38 @@ export function MembershipsPage() {
               title="No membership plans"
             />
           ) : (
-            <DataTable columns={planColumns} data={plans.data} label="Membership Plans" />
+            <DataTable
+              columns={planColumns}
+              data={plans.data}
+              label="Membership Plans"
+              mobileRenderer={(plan) => (
+                <Card className="fitos-mobile-data-card">
+                  <div>
+                    <strong className="fitos-data-table__primary">{plan.name}</strong>
+                    <span className="fitos-data-table__muted">{plan.slug}</span>
+                  </div>
+                  <div className="fitos-mobile-data-card__meta">
+                    <span>
+                      {plan.price
+                        ? formatCurrency(plan.price.amountMinor, plan.price.currency)
+                        : "Free / Trial"}
+                    </span>
+                    <StatusBadge status={plan.isActive ? "active" : "inactive"} />
+                  </div>
+                  <span className="fitos-data-table__muted">
+                    {plan.durationDays ? `${plan.durationDays} days` : "Ongoing"} ·{" "}
+                    {plan.includedCredits} sessions ·{" "}
+                    {plan.branchId
+                      ? (branches.data?.find((branch) => branch.id === plan.branchId)?.name ??
+                        "Branch")
+                      : "All branches"}
+                  </span>
+                  <span className="fitos-data-table__muted">
+                    {plan.publicVisible ? "Public sale" : "Staff only"}
+                  </span>
+                </Card>
+              )}
+            />
           )}
         </>
       )}

@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  Card,
   Checkbox,
   DataTable,
   type DataTableColumn,
@@ -203,6 +204,38 @@ export function ServicesPage() {
           data={filteredServices}
           label="Services"
           onRowClick={(s) => can(auth, "service:manage") && setEditingService(s)}
+          mobileRenderer={(service) => (
+            <Card className="fitos-mobile-data-card">
+              <div>
+                <strong className="fitos-data-table__primary">{service.name}</strong>
+                <span className="fitos-data-table__muted">{service.slug}</span>
+              </div>
+              <div className="fitos-mobile-data-card__meta">
+                <StatusBadge status={service.isActive ? "active" : "inactive"} />
+                <StatusBadge status={service.serviceType} />
+              </div>
+              <span className="fitos-data-table__muted">
+                {service.durationMinutes} min ·{" "}
+                {service.defaultCapacity ? `${service.defaultCapacity} spots` : "Capacity not set"}{" "}
+                ·{" "}
+                {service.price
+                  ? formatCurrency(service.price.amountMinor, service.price.currency)
+                  : "Free"}
+              </span>
+              <span className="fitos-data-table__muted">
+                {service.branchId
+                  ? (branches.data?.find((branch) => branch.id === service.branchId)?.name ??
+                    "Assigned branch")
+                  : "All branches"}{" "}
+                · {service.publicVisible ? "Public" : "Internal only"}
+              </span>
+              {can(auth, "service:manage") ? (
+                <Button onClick={() => setEditingService(service)} size="small" variant="ghost">
+                  Edit service
+                </Button>
+              ) : null}
+            </Card>
+          )}
         />
       )}
 

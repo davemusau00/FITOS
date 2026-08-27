@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Alert,
+  Card,
   DataTable,
   type DataTableColumn,
   EmptyState,
@@ -86,7 +87,42 @@ export function StaffPage() {
           title="No staff access yet"
         />
       ) : (
-        <DataTable columns={staffColumns} data={rows} label="Staff" />
+        <DataTable
+          columns={staffColumns}
+          data={rows}
+          label="Staff"
+          mobileRenderer={(staffMember) => (
+            <Card className="fitos-mobile-data-card">
+              <div>
+                <strong className="fitos-data-table__primary">{staffMember.user.displayName}</strong>
+                <span className="fitos-data-table__muted">{staffMember.user.email}</span>
+              </div>
+              <div className="fitos-mobile-data-card__meta">
+                <span>{staffMember.branches.map((branch) => branch.name).join(", ") || "No branch access"}</span>
+                <StatusBadge status={staffMember.user.status} />
+              </div>
+              <div className="fitos-data-table__tag-list">
+                {(staffMember.roles?.length ? staffMember.roles : [staffMember.role]).map((role) => (
+                  <span className="fitos-data-table__tag" key={role.id}>{role.name}</span>
+                ))}
+              </div>
+              {can(auth, "staff:manage") ? (
+                <button
+                  className="fitos-button fitos-button--ghost fitos-button--small"
+                  onClick={() => {
+                    setEditingId(staffMember.user.id);
+                    setSelectedRoleIds(
+                      staffMember.roles?.map((role) => role.id) ?? [staffMember.role.id]
+                    );
+                  }}
+                  type="button"
+                >
+                  Edit role assignments
+                </button>
+              ) : null}
+            </Card>
+          )}
+        />
       )}
       {can(auth, "staff:manage") && rows.length ? (
         <section className="settings-panel">
