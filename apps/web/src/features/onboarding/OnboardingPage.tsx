@@ -16,7 +16,7 @@ export function OnboardingPage() {
   const { auth } = useAuth();
   const readiness = auth?.onboarding;
 
-  const steps: OnboardingStepItem[] = [
+  const ownerSteps: OnboardingStepItem[] = [
     {
       number: "01",
       title: "Business Profile & Identity",
@@ -51,6 +51,115 @@ export function OnboardingPage() {
       isComplete: readiness?.services ?? false
     }
   ];
+  const workspace = auth?.defaultWorkspace ?? "command";
+  const roleSteps: Record<string, OnboardingStepItem[]> = {
+    ops: [
+      {
+        number: "01",
+        title: "Review today's operating context",
+        description: "Confirm your assigned branches and open the operations board.",
+        icon: "dashboard",
+        to: "/ops",
+        isComplete: Boolean(auth?.branches?.length)
+      },
+      {
+        number: "02",
+        title: "Confirm schedule coverage",
+        description: "Review today's sessions, rooms, capacity and staff coverage.",
+        icon: "calendar",
+        to: "/ops",
+        isComplete: Boolean(auth?.branches?.length)
+      },
+      {
+        number: "03",
+        title: "Learn exception handling",
+        description: "Use operational alerts to resolve arrivals, waitlists and follow-ups.",
+        icon: "spark",
+        to: "/ops",
+        isComplete: false
+      }
+    ],
+    front_desk: [
+      {
+        number: "01",
+        title: "Choose your front desk branch",
+        description: "Confirm the branch where you are receiving members today.",
+        icon: "building",
+        to: "/reception",
+        isComplete: Boolean(auth?.selectedBranchId)
+      },
+      {
+        number: "02",
+        title: "Learn member search",
+        description: "Find members by name, phone or member number.",
+        icon: "search",
+        to: "/reception",
+        isComplete: false
+      },
+      {
+        number: "03",
+        title: "Practice check-in and booking",
+        description: "Use desk actions with server validation.",
+        icon: "check",
+        to: "/reception",
+        isComplete: false
+      }
+    ],
+    coach: [
+      {
+        number: "01",
+        title: "Complete your coach profile",
+        description: "Confirm the profile used for your sessions.",
+        icon: "user",
+        to: "/coach",
+        isComplete: Boolean(auth?.user.displayName)
+      },
+      {
+        number: "02",
+        title: "Set your availability",
+        description: "Review the times and branches where you deliver sessions.",
+        icon: "calendar",
+        to: "/coach",
+        isComplete: false
+      },
+      {
+        number: "03",
+        title: "Review assigned sessions",
+        description: "Confirm your upcoming rosters and notes.",
+        icon: "dashboard",
+        to: "/coach",
+        isComplete: false
+      }
+    ],
+    practice: [
+      {
+        number: "01",
+        title: "Complete your practitioner profile",
+        description: "Confirm the profile used for appointments and client records.",
+        icon: "user",
+        to: "/practice",
+        isComplete: Boolean(auth?.user.displayName)
+      },
+      {
+        number: "02",
+        title: "Review appointments",
+        description: "Open today's practice schedule and records needing completion.",
+        icon: "calendar",
+        to: "/practice",
+        isComplete: false
+      },
+      {
+        number: "03",
+        title: "Review documentation permissions",
+        description: "Access assessment and treatment information assigned to your role.",
+        icon: "spark",
+        to: "/practice",
+        isComplete: false
+      }
+    ]
+  };
+  const steps = roleSteps[workspace] ?? ownerSteps;
+  const isOwnerSetup = workspace === "command";
 
   const completedCount = steps.filter((s) => s.isComplete).length;
   const progressPercent = Math.round((completedCount / steps.length) * 100);
@@ -77,8 +186,9 @@ export function OnboardingPage() {
             <span className="page-header__eyebrow">Get Ready • Business Setup</span>
             <h1>Set up your FITOS Operating System</h1>
             <p>
-              Complete the essentials to start scheduling classes, managing coaches, and booking
-              members seamlessly.
+              {isOwnerSetup
+                ? "Complete the essentials to start scheduling classes, managing coaches, and booking members seamlessly."
+                : `Complete the essentials for your ${workspace.replace("_", " ")} workspace.`}
             </p>
           </div>
 
@@ -176,18 +286,20 @@ export function OnboardingPage() {
                 What happens next:
               </h4>
               <ul className="setup-list">
-                <li className={auth?.tenant?.name ? "is-done" : ""}>
+                <li className={isOwnerSetup && readiness?.businessProfile ? "is-done" : ""}>
                   <Icon name="check" size={14} />
                   <span>Branded member portal active</span>
                 </li>
-                <li className={auth?.branches?.length ? "is-done" : ""}>
+                <li className={isOwnerSetup && readiness?.firstBranch ? "is-done" : ""}>
                   <Icon name="check" size={14} />
                   <span>Timetable scheduling enabled</span>
                 </li>
-                <li className={readiness?.team && readiness.services ? "is-done" : ""}>
+                <li
+                  className={isOwnerSetup && readiness?.team && readiness.services ? "is-done" : ""}
+                >
                   <Icon name="spark" size={14} />
                   <span>
-                    {readiness?.team && readiness.services
+                    {isOwnerSetup && readiness?.team && readiness.services
                       ? "Core operations ready"
                       : "Complete team and service setup"}
                   </span>

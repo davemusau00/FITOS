@@ -542,6 +542,10 @@ export const api = {
   featureFlags: () => request<FeatureFlagResponse[]>("/platform/feature-flags"),
   platformTenants: () =>
     request<import("@fitos/contracts").PlatformTenantControlRecord[]>("/platform/tenants"),
+  platformTenant: (tenantId: string) =>
+    request<import("@fitos/contracts").PlatformTenantControlRecord>(
+      `/platform/tenants/${tenantId}`
+    ),
   platformOverview: () =>
     request<import("@fitos/contracts").PlatformOverview>("/platform/overview"),
   platformFeatures: () =>

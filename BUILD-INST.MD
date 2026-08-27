@@ -50,14 +50,24 @@ complete.
 - [x] Member booking cancellation now requires an explicit confirmation modal and explains that credit restoration follows server cancellation policy.
 - [x] Platform capability mutation has focused coverage for replacement semantics, deduplication and resulting feature-flag state.
 - [x] `/auth/me` and login responses now include server-derived onboarding readiness for business profile, first branch, team and services; the onboarding UI no longer hardcodes incomplete steps.
+- [x] Onboarding now selects role/workspace-specific checklists for Command, Ops, Front Desk, Coach and Practice while preserving server-derived owner readiness.
 - [x] HTTP security coverage asserts the server-derived onboarding payload and workspace contract on authenticated staff context.
 - [x] In-memory member portal eligibility now matches Drizzle branch access and ignores cancelled bookings when detecting duplicates.
 - [x] CRM lead stage, conversion and follow-up mutations now emit consistent success/error toast feedback in addition to inline errors.
 - [x] Drizzle Today aggregates now derive expected arrivals, no-shows, next scheduled session and due follow-ups from tenant/branch-scoped records instead of hardcoded zero/null fallbacks.
 - [x] In-memory Today aggregates now match those truthful states by excluding cancelled sessions and deriving no-shows and overdue open follow-ups.
 - [x] In-memory member self-cancellation now applies the service cancellation cutoff, records `lateCancelled`, and restores credits only when policy permits.
+- [x] In-memory Today date boundaries now use the tenant-configured IANA timezone instead of UTC date slicing.
+- [x] Drizzle Today date comparisons now use the tenant's configured timezone for joined, booking, attendance, session and lead-day boundaries.
 - [x] Membership/booking integration coverage now verifies late member self-cancellation preserves the consumed credit and exposes the late-cancel state.
+- [x] Member cancellation feedback now distinguishes late non-refunded cancellations, restored credits and bookings with no credit charge.
+- [x] Staff New Booking capacity advisories now use server-derived effective capacity when equipment constraints reduce a session's configured capacity.
 - [x] Member booking and cancellation mutations now emit consistent success/error toast feedback while retaining server-driven outcomes.
+- [x] In-memory member self-booking now matches server policy for effective capacity, home-branch access and membership expiry.
+- [x] Platform tenant lifecycle and entitlement mutations now emit consistent success/error toast feedback.
+- [x] Platform exposes an authenticated tenant-specific control-record endpoint with tenant-safe not-found behavior and a typed web client accessor.
+- [x] Platform tenant detail route now renders the safe control record with lifecycle, plan, quota usage, storage measurement state and enabled capabilities, without raw member records.
+- [x] Platform tenant detail renders enabled capabilities using authoritative registry names rather than opaque feature keys.
 
 ### Verified checks
 
@@ -65,6 +75,7 @@ complete.
 - [x] Latest focused API/worker/web checks passed for the incremental slices above, including worker internal-dispatch tests and API tenancy/security tests.
 - [x] Configured Playwright suite passed 8/8, including role-boundary coverage and the pilot journey updated for the intentional Command access boundary.
 - [x] Configured Playwright suite was rerun after mobile-card changes and passed 8/8 with visible-instance selectors.
+- [x] Configured Playwright suite was rerun after timezone/auth/aggregate changes and passed 8/8 in 55.8 seconds.
 
 ### Verification snapshot — 2026-08-28
 
@@ -73,6 +84,8 @@ complete.
 - Web: typecheck passed; web test passed.
 - Full local `npm run check`: passed with PostgreSQL enabled, including lint, all package builds/typechecks, tests, and production build.
 - Full local `npm run check` was rerun after Today aggregate parity changes and passed with PostgreSQL enabled; API remained 44/44, web 1/1 and worker 7/7.
+- Full local `npm run check` was rerun after Platform tenant-detail and role-onboarding changes; format, lint, typechecks, 44 API tests, 1 web test, 7 worker tests and production build passed with PostgreSQL enabled.
+- Configured Playwright suite was rerun after Platform tenant-detail and role-onboarding changes; all 8 tests passed in 59.6 seconds.
 - Focused pilot Playwright journey: passed after updating its Command-access assertion.
 - Full required golden/adversarial Playwright matrix: still pending; the configured 8-test suite is green but does not yet cover every journey listed below.
 
@@ -80,7 +93,7 @@ complete.
 
 - [ ] Full golden-path and adversarial E2E journeys covering all role handoffs, member self-service, public reservation outcomes and branch switching.
 - [ ] Full mobile acceptance matrix across every priority page, including mobile table-card coverage and modal focus behavior.
-- [ ] Complete CRM follow-up/conversion workflow and role-specific onboarding/settings coverage.
+- [ ] Complete CRM follow-up/conversion workflow and role-specific settings coverage; role-specific onboarding checklists are now implemented.
 - [ ] Full Platform entitlement mutation UI and support/audit workflows.
 - [ ] Complete end-to-end validation of worker-to-API internal automation execution with configured callback secrets and a real persisted lead target.
 - [ ] Complete remaining eligibility policy states for waitlist behavior, booking windows, service inclusion, branch access and cancellation/rescheduling rules.

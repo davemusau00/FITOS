@@ -101,7 +101,8 @@ export function NewBookingPage() {
 
   const isOccFull =
     selectedOccurrence &&
-    (occurrenceBookingCounts.get(selectedOccurrence.id) ?? 0) >= selectedOccurrence.capacity;
+    (occurrenceBookingCounts.get(selectedOccurrence.id) ?? 0) >=
+      (selectedOccurrence.effectiveCapacity ?? selectedOccurrence.capacity);
 
   if (membersQuery.isLoading || occurrencesQuery.isLoading) return <PageLoading />;
 
@@ -209,7 +210,8 @@ export function NewBookingPage() {
                   const srv = servicesQuery.data?.find((s) => s.id === occ.serviceId);
                   const br = branchesQuery.data?.find((b) => b.id === occ.branchId);
                   const booked = occurrenceBookingCounts.get(occ.id) ?? 0;
-                  const full = booked >= occ.capacity;
+                  const capacity = occ.effectiveCapacity ?? occ.capacity;
+                  const full = booked >= capacity;
 
                   return (
                     <li
@@ -225,7 +227,7 @@ export function NewBookingPage() {
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <span className={`fitos-badge fitos-badge--${full ? "danger" : "success"}`}>
-                          {booked}/{occ.capacity} booked
+                          {booked}/{capacity} booked
                         </span>
                         {!full ? (
                           <Button size="small" variant="secondary">

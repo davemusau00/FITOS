@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, PageHeader, StatusBadge } from "@fitos/ui";
 import { api } from "../../lib/api/client";
-import { ErrorNotice, PageLoading } from "../shared";
+import { ErrorNotice, PageLoading, useToast } from "../shared";
 
 export function PlatformTenantsPage() {
   const queryClient = useQueryClient();
+  const { success, error: toastError } = useToast();
   const [editing, setEditing] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const tenants = useQuery({ queryKey: ["platform-tenants"], queryFn: api.platformTenants });
@@ -19,14 +21,22 @@ export function PlatformTenantsPage() {
     onSuccess: () => {
       setEditing(null);
       setReason("");
+      success("Tenant lifecycle status updated.");
       void queryClient.invalidateQueries({ queryKey: ["platform-tenants"] });
       void queryClient.invalidateQueries({ queryKey: ["platform-overview"] });
-    }
+    },
+    onError: (error) =>
+      toastError(error instanceof Error ? error.message : "Unable to update tenant status.")
   });
   const capabilities = useMutation({
     mutationFn: ({ tenantId, values }: { tenantId: string; values: string[] }) =>
       api.updatePlatformTenantCapabilities(tenantId, values),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform-tenants"] })
+    onSuccess: () => {
+      success("Tenant entitlements updated.");
+      void queryClient.invalidateQueries({ queryKey: ["platform-tenants"] });
+    },
+    onError: (error) =>
+      toastError(error instanceof Error ? error.message : "Unable to update entitlements.")
   });
   if (tenants.isLoading) return <PageLoading />;
   return (
@@ -39,7 +49,9 @@ export function PlatformTenantsPage() {
       <div className="card-grid">
         {(tenants.data ?? []).map(({ tenant, subscription, usage }) => (
           <Card key={tenant.id}>
-            <h3>{tenant.name}</h3>
+            <h3>
+              <Link to={`/platform/tenants/${tenant.id}`}>{tenant.name}</Link>
+            </h3>
             <p className="muted">
               {tenant.slug} · {tenant.timezone}
             </p>

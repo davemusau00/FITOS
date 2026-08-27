@@ -235,6 +235,17 @@ export class PlatformController {
     return this.repository.listPlatformTenantControls();
   }
 
+  @Get("tenants/:tenantId")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async getTenant(@Param("tenantId") tenantId: string) {
+    const tenant = (await this.repository.listPlatformTenantControls()).find(
+      (record) => record.tenant.id === tenantId
+    );
+    if (!tenant) throw new NotFoundException("Tenant control record not found.");
+    return tenant;
+  }
+
   @Get("features")
   @AuthMode("platform")
   @RequirePlatformAdmin()

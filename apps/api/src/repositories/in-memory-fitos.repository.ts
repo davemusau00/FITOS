@@ -4535,7 +4535,7 @@ export class InMemoryFitosRepository implements FitosRepository {
                 reasonCode: "ALREADY_BOOKED" as const,
                 message: "You are already booked into this session."
               }
-            : confirmed >= occurrence.capacity
+            : confirmed >= (occurrence.effectiveCapacity ?? occurrence.capacity)
               ? { canBook: false, reasonCode: "FULL" as const, message: "This session is full." }
               : creditBalance < required
                 ? {
@@ -4571,7 +4571,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     const activeBookings = [...this.bookings.values()].filter(
       (b) => b.occurrenceId === occ.id && b.status === "confirmed"
     );
-    if (activeBookings.length >= occ.capacity) {
+    if (activeBookings.length >= (occ.effectiveCapacity ?? occ.capacity)) {
       throw new Error("Class is already at maximum capacity.");
     }
     const alreadyBooked = activeBookings.some((b) => b.memberId === memberId);
@@ -4589,9 +4589,15 @@ export class InMemoryFitosRepository implements FitosRepository {
       );
     }
 
-    const activeMembership = [...this.memberMemberships.values()].find(
-      (m) => m.memberId === member.id && m.status === "active"
-    );
+    if (member.homeBranchId && member.homeBranchId !== occ.branchId) {
+      throw new Error("This session is outside your branch access.");
+    }
+    const activeMembership = [...this.memberMemberships.values()].find((m) => {
+      if (m.memberId !== member.id || m.status !== "active") return false;
+      return !m.endsAt || new Date(m.endsAt).getTime() >= Date.now();
+    });
+    if (!activeMembership)
+      throw new Error("An active membership is required to book this session.");
 
     const bookingId = randomUUID();
     const ts = now();
@@ -5028,9 +5034,12 @@ export class InMemoryFitosRepository implements FitosRepository {
     scope: TenantScope,
     branchId: string
   ): Promise<import("@fitos/contracts").TodayOverviewResponse> {
-    const date = new Date().toISOString().slice(0, 10);
+    const timezone = this.tenants.get(scope.tenantId)?.timezone ?? "Africa/Nairobi";
+    const localDate = (value: string | Date) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date(value));
+    const date = localDate(new Date());
     const sameDay = (value: string | null | undefined) =>
-      Boolean(value && value.slice(0, 10) === date);
+      Boolean(value && localDate(value) === date);
     const members = [...this.members.values()].filter(
       (m) => m.tenantId === scope.tenantId && m.homeBranchId === branchId
     );
