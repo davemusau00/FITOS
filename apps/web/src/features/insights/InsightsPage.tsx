@@ -120,9 +120,13 @@ export function InsightsPage() {
 
               <Card className="kpi">
                 <span>Lead Conversion Rate</span>
-                <strong>{summary?.leadConversionRate ?? 0}%</strong>
+                <strong>
+                  {summary?.leadConversionRate == null ? "—" : `${summary.leadConversionRate}%`}
+                </strong>
                 <div className="kpi__change" style={{ color: "var(--success)" }}>
-                  ▲ +{summary?.leadConversionChangePct ?? 8}% vs last month
+                  {summary?.leadConversionChangePct == null
+                    ? "No comparison data"
+                    : `${summary.leadConversionChangePct}% vs last month`}
                 </div>
               </Card>
             </div>
@@ -244,22 +248,7 @@ export function InsightsPage() {
             {/* Popular Programs */}
             <Card>
               <h2>Active Programs</h2>
-              <div className="form-stack">
-                {[
-                  { name: "HIIT Bootcamp & Circuit", pct: 92, count: 18 },
-                  { name: "Morning Yoga Flow", pct: 84, count: 15 },
-                  { name: "Powerlifting & Strength", pct: 76, count: 12 },
-                  { name: "Spin & Cardio Rhythm", pct: 68, count: 10 }
-                ].map((cls) => (
-                  <div className="class-popularity-row" key={cls.name}>
-                    <span className="class-popularity-row__name">{cls.name}</span>
-                    <div className="class-popularity-row__bar-wrap">
-                      <div className="class-popularity-row__bar" style={{ width: `${cls.pct}%` }} />
-                    </div>
-                    <span className="class-popularity-row__count">{cls.count} classes</span>
-                  </div>
-                ))}
-              </div>
+              <p className="muted">Program performance data is not available for this period.</p>
             </Card>
           </div>
         )}
