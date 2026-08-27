@@ -65,7 +65,8 @@ export interface UsageQuotaMetricsResponse {
   maxBranches: number;
   automationRunsThisMonth: number;
   maxAutomationRuns: number;
-  storageUsedMb: number;
+  /** Null until storage is measured from an authoritative provider. */
+  storageUsedMb: number | null;
   maxStorageMb: number;
 }
 

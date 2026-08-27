@@ -158,9 +158,9 @@ export function MembersPage() {
           <strong>{activeCount}</strong>
         </Card>
         <Card className="kpi">
-          <span>Retention Rate</span>
+          <span>Active Rate</span>
           <strong>
-            {allMembers.length ? `${Math.round((activeCount / allMembers.length) * 100)}%` : "100%"}
+            {allMembers.length ? `${Math.round((activeCount / allMembers.length) * 100)}%` : "—"}
           </strong>
         </Card>
         <Card className="kpi">

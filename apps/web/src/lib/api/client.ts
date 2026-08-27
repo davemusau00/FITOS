@@ -544,6 +544,15 @@ export const api = {
     request<import("@fitos/contracts").PlatformOverview>("/platform/overview"),
   platformFeatures: () =>
     request<import("@fitos/contracts").FeatureDefinition[]>("/platform/features"),
+  transitionPlatformTenantStatus: (
+    tenantId: string,
+    status: import("@fitos/contracts").TenantAccountStatus,
+    reason: string
+  ) =>
+    request<import("@fitos/contracts").TenantSubscriptionResponse>(
+      `/platform/tenants/${tenantId}/status`,
+      { method: "PATCH", body: json({ status, reason }) }
+    ),
   saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) =>
     request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", {
       method: "POST",

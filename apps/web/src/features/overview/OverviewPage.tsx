@@ -52,7 +52,7 @@ export function OverviewPage() {
   if (members.isLoading || branches.isLoading) return <PageLoading />;
 
   const totalMembers = today.data?.members.active ?? 0;
-  const activeMembers = today.data?.members.joinedToday ?? 0;
+  const joinedToday = today.data?.members.joinedToday ?? 0;
   const totalBookings = today.data?.bookings.today ?? 0;
   const totalServices = services.data?.length ?? 0;
   const totalStaff = staff.data?.length ?? 0;
@@ -111,7 +111,7 @@ export function OverviewPage() {
           <strong className="stat-card__value">{totalMembers}</strong>
           <span className="stat-card__delta stat-card__delta--up">
             <Icon name="spark" size={12} />
-            {activeMembers} active
+            {joinedToday} joined today
           </span>
         </div>
 

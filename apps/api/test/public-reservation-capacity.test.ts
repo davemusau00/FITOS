@@ -46,4 +46,35 @@ describe("public reservation capacity", () => {
     ).toBe(true);
     expect(reservations.at(-1)?.status).toBe("waitlisted");
   });
+
+  it("keeps the in-memory adapter atomic under concurrent last-slot requests", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.(await new ScryptPasswordHasher().hash("ChangeMe123!"));
+    const identity = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!identity) throw new Error("Seed identity missing.");
+    const occurrences = await repository.listScheduleOccurrences(
+      {
+        tenantId: identity.tenant.id,
+        tenantUserId: identity.tenantUserId,
+        userId: identity.user.id,
+        branchIds: identity.branchIds
+      },
+      { branchId: identity.branchIds[0], limit: 1 }
+    );
+    const occurrence = occurrences.data[0];
+    if (!occurrence) throw new Error("Seed occurrence missing.");
+    const results = await Promise.all(
+      ["race-a", "race-b"].map((suffix) =>
+        repository.createPublicReservation("fitos-demo-gym", {
+          occurrenceId: occurrence.id,
+          reservationType: "class",
+          firstName: suffix,
+          phone: `+254711${suffix === "race-a" ? "0001" : "0002"}`
+        })
+      )
+    );
+    expect(results.filter((result) => result.status === "confirmed")).toHaveLength(
+      Math.min(2, occurrence.capacity)
+    );
+  });
 });

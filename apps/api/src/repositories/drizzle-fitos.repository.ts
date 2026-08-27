@@ -152,6 +152,7 @@ import type {
   TherapySessionResponse,
   CreateTherapySessionRequest
 } from "@fitos/contracts";
+import { PLATFORM_FEATURE_REGISTRY } from "@fitos/contracts";
 import { decodeCursor, encodeCursor, normalizePhone } from "@fitos/shared";
 import type { Pool } from "pg";
 import type {
@@ -4559,7 +4560,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       maxBranches: 5,
       automationRunsThisMonth: autoCount?.count ?? 0,
       maxAutomationRuns: 5000,
-      storageUsedMb: 12,
+      storageUsedMb: null,
       maxStorageMb: 2048
     };
   }
@@ -4609,50 +4610,14 @@ export class DrizzleFitosRepository implements FitosRepository {
       ]
     );
 
-    return [
-      {
-        key: "feature.assessments",
-        enabled: caps.has("feature.assessments"),
-        name: "FITOS Assess Performance Lab",
-        description: "InBody, VO2, force plate & ROM assessment engine",
-        category: "advanced"
-      },
-      {
-        key: "feature.therapy",
-        enabled: caps.has("feature.therapy"),
-        name: "FITOS Therapy & Recovery",
-        description: "NEUBIE STIM, AlterG, Normatec compression protocols",
-        category: "advanced"
-      },
-      {
-        key: "feature.inventory",
-        enabled: caps.has("feature.inventory"),
-        name: "Inventory & Consumables",
-        description: "Stock movements, lots, stocktakes and session BOM",
-        category: "core"
-      },
-      {
-        key: "feature.equipment",
-        enabled: caps.has("feature.equipment"),
-        name: "Equipment & Asset Registry",
-        description: "Resource scheduling, pools, maintenance & calibration",
-        category: "core"
-      },
-      {
-        key: "feature.sites",
-        enabled: caps.has("feature.sites"),
-        name: "FITOS Sites Website Builder",
-        description: "Modular block-based website CMS and publisher",
-        category: "advanced"
-      },
-      {
-        key: "feature.integrations",
-        enabled: caps.has("feature.integrations"),
-        name: "Vendor Hardware Integrations",
-        description: "LookinBody, VALD Hub, COSMED and PNOE import adapters",
-        category: "beta"
-      }
-    ];
+    return PLATFORM_FEATURE_REGISTRY.map((feature) => ({
+      key: feature.key,
+      enabled: caps.has(feature.key),
+      name: feature.name,
+      description: `${feature.name} capability`,
+      category:
+        feature.maturity === "stable" ? "core" : feature.maturity === "beta" ? "advanced" : "beta"
+    }));
   }
 
   private sitePageResponse(
@@ -6137,6 +6102,13 @@ export class DrizzleFitosRepository implements FitosRepository {
       let serviceId = input.serviceId ?? null;
       let reservationStatus = "requested";
       if (input.occurrenceId) {
+        // Serialize capacity decisions for this occurrence. Without the row lock,
+        // concurrent public requests can both observe the final available place.
+        await tx.execute(sql`
+          SELECT id FROM schedule_occurrences
+          WHERE id = ${input.occurrenceId} AND tenant_id = ${tenant.id}
+          FOR UPDATE
+        `);
         const [occurrence] = await tx
           .select()
           .from(scheduleOccurrences)

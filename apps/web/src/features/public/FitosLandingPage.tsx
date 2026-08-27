@@ -318,7 +318,7 @@ export function FitosLandingPage() {
                 }}
               />
               <span style={{ fontSize: "0.85rem", color: "#64748b", marginLeft: "0.5rem" }}>
-                FITOS Operations Hub • Live Dashboard
+                FITOS Operations Hub • Unified workspace
               </span>
             </div>
             <div
@@ -330,8 +330,8 @@ export function FitosLandingPage() {
                 fontWeight: 600
               }}
             >
-              <span>● Real-time sync active</span>
-              <span>12 Active Branches</span>
+              <span>● Secure by design</span>
+              <span>Branch-aware workflows</span>
             </div>
           </div>
 
@@ -345,27 +345,27 @@ export function FitosLandingPage() {
           >
             {[
               {
-                label: "Active Members",
-                value: "3,842",
-                change: "+12.4% vs last mo",
+                label: "Member operations",
+                value: "Connected",
+                change: "Profiles, memberships and attendance",
                 color: "#60a5fa"
               },
               {
-                label: "Class Occupancy",
-                value: "Configured",
-                change: "Resource-constrained capacity enforced",
+                label: "Scheduling",
+                value: "Controlled",
+                change: "Capacity and resource rules",
                 color: "#34d399"
               },
               {
-                label: "InBody & VALD Scans",
-                value: "419",
-                change: "Normalized SI metrics",
+                label: "Performance",
+                value: "Structured",
+                change: "Assessments and practitioner records",
                 color: "#a78bfa"
               },
               {
-                label: "Therapy Sessions",
-                value: "184",
-                change: "Zero adverse reactions",
+                label: "Workspaces",
+                value: "Purpose-built",
+                change: "Command, Ops, Coach and Front Desk",
                 color: "#f472b6"
               }
             ].map((card, i) => (

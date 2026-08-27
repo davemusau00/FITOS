@@ -45,7 +45,13 @@ export async function createApplication(): Promise<{
     origin: config.WEB_PUBLIC_URL,
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Idempotency-Key", "X-CSRF-Token", "X-Request-Id"]
+    allowedHeaders: [
+      "Content-Type",
+      "Idempotency-Key",
+      "X-CSRF-Token",
+      "X-Platform-Token",
+      "X-Request-Id"
+    ]
   });
   app.setGlobalPrefix("api/v1");
   const swagger = new DocumentBuilder()

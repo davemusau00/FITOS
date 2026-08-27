@@ -106,7 +106,7 @@ import type {
   TherapySessionResponse,
   CreateTherapySessionRequest
 } from "@fitos/contracts";
-import { DEFAULT_ROLE_PERMISSIONS } from "@fitos/contracts";
+import { DEFAULT_ROLE_PERMISSIONS, PLATFORM_FEATURE_REGISTRY } from "@fitos/contracts";
 import { decodeCursor, encodeCursor, normalizePhone } from "@fitos/shared";
 import type {
   CreateSessionInput,
@@ -5205,7 +5205,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       maxBranches: 5,
       automationRunsThisMonth: autoRuns,
       maxAutomationRuns: 5000,
-      storageUsedMb: 45,
+      storageUsedMb: null,
       maxStorageMb: 2048
     };
   }
@@ -5223,50 +5223,15 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   async listFeatureFlags(_tenantId: string): Promise<FeatureFlagResponse[]> {
-    return [
-      {
-        key: "feature.assessments",
-        enabled: true,
-        name: "FITOS Assess Performance Lab",
-        description: "InBody, VO2, force plate & ROM assessment engine",
-        category: "advanced"
-      },
-      {
-        key: "feature.therapy",
-        enabled: true,
-        name: "FITOS Therapy & Recovery",
-        description: "NEUBIE STIM, AlterG, Normatec compression protocols",
-        category: "advanced"
-      },
-      {
-        key: "feature.inventory",
-        enabled: true,
-        name: "Inventory & Consumables",
-        description: "Stock movements, purchase orders and session BOM",
-        category: "core"
-      },
-      {
-        key: "feature.equipment",
-        enabled: true,
-        name: "Equipment & Asset Registry",
-        description: "Resource scheduling, pools, maintenance & calibration",
-        category: "core"
-      },
-      {
-        key: "feature.sites",
-        enabled: true,
-        name: "FITOS Sites Website Builder",
-        description: "Modular block-based website CMS and publisher",
-        category: "advanced"
-      },
-      {
-        key: "feature.integrations",
-        enabled: true,
-        name: "Vendor Hardware Integrations",
-        description: "LookinBody, VALD Hub, COSMED and PNOE import adapters",
-        category: "beta"
-      }
-    ];
+    const capabilities = new Set((await this.getTenantSubscription(_tenantId)).capabilities);
+    return PLATFORM_FEATURE_REGISTRY.map((feature) => ({
+      key: feature.key,
+      enabled: capabilities.has(feature.key),
+      name: feature.name,
+      description: `${feature.name} capability`,
+      category:
+        feature.maturity === "stable" ? "core" : feature.maturity === "beta" ? "advanced" : "beta"
+    }));
   }
 
   async saveImplementationInquiry(

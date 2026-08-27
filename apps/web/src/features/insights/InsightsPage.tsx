@@ -101,7 +101,9 @@ export function InsightsPage() {
 
               <Card className="kpi">
                 <span>Member Retention (90d)</span>
-                <strong>{summary?.memberRetention90d ?? 0}%</strong>
+                <strong>
+                  {summary?.memberRetention90d == null ? "—" : `${summary.memberRetention90d}%`}
+                </strong>
                 <div
                   className="kpi__change"
                   style={{
@@ -298,7 +300,9 @@ export function InsightsPage() {
             <div className="kpi-grid">
               <Card className="kpi">
                 <span>90-Day Retention</span>
-                <strong>{summary?.memberRetention90d ?? 0}%</strong>
+                <strong>
+                  {summary?.memberRetention90d == null ? "—" : `${summary.memberRetention90d}%`}
+                </strong>
               </Card>
               <Card className="kpi">
                 <span>Active Members</span>

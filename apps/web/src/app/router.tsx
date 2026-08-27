@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "./auth";
 import { AppShell } from "./shell";
@@ -67,6 +67,11 @@ function PlatformRoute() {
     <div className="surface-shell surface-shell--platform">
       <header className="surface-shell__header">
         <strong>FITOS Platform</strong>
+        <nav aria-label="Platform navigation" className="surface-shell__nav">
+          <Link to="/platform">Overview</Link>
+          <Link to="/platform/tenants">Tenants</Link>
+          <Link to="/platform/inquiries">Implementation</Link>
+        </nav>
         <button
           onClick={() => {
             window.localStorage.removeItem("fitos_platform_token");

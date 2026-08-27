@@ -6,7 +6,17 @@ import type {
   FeatureFlagResponse
 } from "@fitos/contracts";
 
-function UsageBar({ used, max, label }: { used: number; max: number; label: string }) {
+function UsageBar({ used, max, label }: { used: number | null; max: number; label: string }) {
+  if (used === null) {
+    return (
+      <div className="usage-bar-item">
+        <div className="usage-bar-header">
+          <span className="usage-label">{label}</span>
+          <span className="usage-count">Not measured</span>
+        </div>
+      </div>
+    );
+  }
   const pct = max > 0 ? Math.min(100, (used / max) * 100) : 0;
   const warn = pct >= 80;
   const critical = pct >= 95;
