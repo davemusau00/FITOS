@@ -31,6 +31,7 @@ export * from "./public/TenantPublicPage";
 export * from "./public/FitosLandingPage";
 export * from "./public/ConfigureFitosPage";
 export * from "./platform/ImplementationInquiriesPage";
+export * from "./platform/PlatformTenantsPage";
 export * from "./platform/PlatformLoginPage";
 export * from "./sites/SitesPage";
 export * from "./member-portal/MemberPortalPage";

@@ -72,6 +72,7 @@ import type {
   TenantSubscriptionResponse,
   UsageQuotaMetricsResponse,
   FeatureFlagResponse,
+  PlatformTenantControlRecord,
   EquipmentAssetResponse,
   CreateEquipmentAssetRequest,
   UpdateEquipmentAssetRequest,
@@ -491,6 +492,7 @@ export interface FitosRepository {
     passwordHash: string
   ): Promise<SaaSTenantSignupResponse>;
   getTenantSubscription(tenantId: string): Promise<TenantSubscriptionResponse>;
+  listPlatformTenantControls(): Promise<PlatformTenantControlRecord[]>;
   getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
   listFeatureFlags(tenantId: string): Promise<FeatureFlagResponse[]>;
   saveImplementationInquiry(

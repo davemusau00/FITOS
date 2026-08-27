@@ -11,6 +11,7 @@ export * from "./member-auth.js";
 export * from "./members.js";
 export * from "./memberships.js";
 export * from "./policies.js";
+export * from "./workspace-aggregates.js";
 export * from "./payments.js";
 export * from "./permissions.js";
 export * from "./platform.js";

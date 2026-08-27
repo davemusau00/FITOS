@@ -4451,6 +4451,19 @@ export class DrizzleFitosRepository implements FitosRepository {
     };
   }
 
+  async listPlatformTenantControls(): Promise<
+    import("@fitos/contracts").PlatformTenantControlRecord[]
+  > {
+    const rows = await this.db.select().from(tenants);
+    return Promise.all(
+      rows.map(async (row) => ({
+        tenant: this.tenantResponse(row),
+        subscription: await this.getTenantSubscription(row.id),
+        usage: await this.getTenantUsageQuotas(row.id)
+      }))
+    );
+  }
+
   async getTenantUsageQuotas(
     tenantId: string
   ): Promise<import("@fitos/contracts").UsageQuotaMetricsResponse> {

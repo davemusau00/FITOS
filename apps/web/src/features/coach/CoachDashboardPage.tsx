@@ -14,19 +14,12 @@ export function CoachDashboardPage() {
     enabled: Boolean(activeBranchId)
   });
   const schedule = useQuery({
-    queryKey: ["coach-day", activeBranchId, auth?.user.id],
-    queryFn: () =>
-      api.scheduleOccurrences(
-        new URLSearchParams({
-          branchId: activeBranchId,
-          trainerUserId: auth!.user.id,
-          limit: "100"
-        })
-      ),
+    queryKey: ["coach-aggregate", activeBranchId, auth?.user.id],
+    queryFn: () => api.coachAggregate(activeBranchId),
     enabled: Boolean(activeBranchId && auth?.user.id)
   });
   if (schedule.isLoading) return <PageLoading />;
-  const sessions = schedule.data?.data ?? [];
+  const sessions = schedule.data?.sessions ?? [];
   return (
     <div className="workspace-dashboard workspace-dashboard--coach">
       <PageHeader

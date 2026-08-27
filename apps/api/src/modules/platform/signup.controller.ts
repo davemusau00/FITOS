@@ -222,6 +222,13 @@ export class PlatformController {
     );
   }
 
+  @Get("tenants")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  listTenants() {
+    return this.repository.listPlatformTenantControls();
+  }
+
   @Get("implementation-inquiries/:id")
   @AuthMode("platform")
   @RequirePlatformAdmin()

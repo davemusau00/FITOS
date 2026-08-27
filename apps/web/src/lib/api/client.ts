@@ -449,6 +449,14 @@ export const api = {
     ),
   todayOverview: (branchId: string) =>
     request<TodayOverviewResponse>(`/insights/today?branchId=${encodeURIComponent(branchId)}`),
+  opsAggregate: (branchId: string) =>
+    request<import("@fitos/contracts").OpsAggregateResponse>(
+      `/insights/ops/aggregate?branchId=${encodeURIComponent(branchId)}`
+    ),
+  coachAggregate: (branchId: string) =>
+    request<import("@fitos/contracts").CoachAggregateResponse>(
+      `/insights/coach/aggregate?branchId=${encodeURIComponent(branchId)}`
+    ),
 
   // ── Automations ───────────────────────────────────────────────────────────
   automations: () => request<AutomationRuleResponse[]>("/automations"),
@@ -521,6 +529,8 @@ export const api = {
   tenantSubscription: () => request<TenantSubscriptionResponse>("/platform/subscription"),
   tenantUsageQuotas: () => request<UsageQuotaMetricsResponse>("/platform/usage"),
   featureFlags: () => request<FeatureFlagResponse[]>("/platform/feature-flags"),
+  platformTenants: () =>
+    request<import("@fitos/contracts").PlatformTenantControlRecord[]>("/platform/tenants"),
   saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) =>
     request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", {
       method: "POST",

@@ -7,14 +7,8 @@ import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 export function OpsDashboardPage() {
   const { activeBranchId, activeBranch } = useBranch();
   const today = useQuery({
-    queryKey: ["today-overview", activeBranchId, "ops"],
-    queryFn: () => api.todayOverview(activeBranchId),
-    enabled: Boolean(activeBranchId)
-  });
-  const schedule = useQuery({
-    queryKey: ["schedule", activeBranchId, "ops-today"],
-    queryFn: () =>
-      api.scheduleOccurrences(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
+    queryKey: ["ops-aggregate", activeBranchId],
+    queryFn: () => api.opsAggregate(activeBranchId),
     enabled: Boolean(activeBranchId)
   });
   const services = useQuery({
@@ -24,8 +18,8 @@ export function OpsDashboardPage() {
   });
 
   if (today.isLoading) return <PageLoading />;
-  const metrics = today.data;
-  const sessions = schedule.data?.data ?? [];
+  const metrics = today.data?.overview;
+  const sessions = today.data?.sessions ?? [];
   return (
     <div className="workspace-dashboard workspace-dashboard--ops">
       <PageHeader
@@ -33,7 +27,7 @@ export function OpsDashboardPage() {
         title={`Today at ${activeBranch?.name ?? "your branch"}`}
         description="Operational signals and exceptions for the next several hours."
       />
-      <ErrorNotice error={today.error ?? schedule.error} />
+      <ErrorNotice error={today.error} />
       {metrics ? (
         <div className="kpi-grid">
           <Card className="kpi kpi--energy">

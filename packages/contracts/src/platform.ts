@@ -1,3 +1,5 @@
+import type { TenantSummary } from "./identity.js";
+
 export type SaaSPlan = "starter" | "pro" | "business";
 
 export type TenantAccountStatus =
@@ -65,6 +67,13 @@ export interface UsageQuotaMetricsResponse {
   maxAutomationRuns: number;
   storageUsedMb: number;
   maxStorageMb: number;
+}
+
+/** Safe platform control-plane projection; intentionally excludes member/customer records. */
+export interface PlatformTenantControlRecord {
+  tenant: TenantSummary;
+  subscription: TenantSubscriptionResponse;
+  usage: UsageQuotaMetricsResponse;
 }
 
 export interface FeatureFlagResponse {

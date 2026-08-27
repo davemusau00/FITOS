@@ -42,6 +42,7 @@ import {
   ImplementationInquiriesPage,
   ImplementationInquiryDetailPage,
   PlatformLoginPage,
+  PlatformTenantsPage,
   OpsDashboardPage,
   CoachDashboardPage,
   SitesPage
@@ -172,7 +173,8 @@ export function AppRouter() {
         <Route element={<OnboardingPage />} path="/onboarding" />
       </Route>
       <Route element={<PlatformRoute />} path="/platform">
-        <Route element={<ImplementationInquiriesPage />} index />
+        <Route element={<PlatformTenantsPage />} index />
+        <Route element={<ImplementationInquiriesPage />} path="inquiries" />
         <Route element={<ImplementationInquiryDetailPage />} path="inquiries/:inquiryId" />
       </Route>
 

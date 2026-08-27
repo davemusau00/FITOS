@@ -5120,6 +5120,18 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
   }
 
+  async listPlatformTenantControls(): Promise<
+    import("@fitos/contracts").PlatformTenantControlRecord[]
+  > {
+    return Promise.all(
+      [...this.tenants.values()].map(async (tenant) => ({
+        tenant,
+        subscription: await this.getTenantSubscription(tenant.id),
+        usage: await this.getTenantUsageQuotas(tenant.id)
+      }))
+    );
+  }
+
   async getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse> {
     const activeMembers = [...this.members.values()].filter(
       (m) => m.tenantId === tenantId && m.status === "active"
