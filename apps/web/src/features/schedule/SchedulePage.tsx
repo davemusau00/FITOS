@@ -101,6 +101,7 @@ export function SchedulePage() {
       // created for tomorrow or later in the current calendar view.
       params.set("startsAfter", new Date(Date.now() - 7 * 86_400_000).toISOString());
       params.set("endsBefore", new Date(Date.now() + 90 * 86_400_000).toISOString());
+      params.set("limit", "100");
       return api.scheduleOccurrences(params);
     }
   });

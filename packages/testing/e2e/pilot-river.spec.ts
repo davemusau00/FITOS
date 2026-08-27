@@ -244,7 +244,14 @@ test("owner completes the pilot operating river and reception is denied a refund
     await expect(page.getByRole("row").filter({ hasText: paymentReference })).toBeVisible();
 
     await page.getByRole("link", { name: "Schedule", exact: true }).click();
-    await page.locator(".fc-event").filter({ hasText: serviceName }).last().click();
+    // FullCalendar does not guarantee DOM ordering when events share a day.
+    // Target the second session by its displayed local start time instead of
+    // relying on `.last()`, which can reopen the cancelled 10:00 booking.
+    await page
+      .locator(".fc-event")
+      .filter({ hasText: serviceName })
+      .filter({ hasText: "12:00" })
+      .click();
     await page.getByRole("link", { name: "Open class roster" }).click();
     await expect(page.getByRole("heading", { name: "Class Roster & Check-in" })).toBeVisible();
     const rosterMember = page.getByText(fullName, { exact: true });
