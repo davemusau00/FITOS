@@ -14,6 +14,7 @@ type OnboardingStepItem = {
 
 export function OnboardingPage() {
   const { auth } = useAuth();
+  const readiness = auth?.onboarding;
 
   const steps: OnboardingStepItem[] = [
     {
@@ -22,7 +23,7 @@ export function OnboardingPage() {
       description: "Organization name, default timezone, and local operating currency.",
       icon: "building",
       to: "/app/settings/organization",
-      isComplete: Boolean(auth?.tenant?.name)
+      isComplete: readiness?.businessProfile ?? false
     },
     {
       number: "02",
@@ -30,7 +31,7 @@ export function OnboardingPage() {
       description: "Create and configure your main studio, gym facility, or training branch.",
       icon: "building",
       to: "/app/settings/branches",
-      isComplete: Boolean(auth?.branches && auth.branches.length > 0)
+      isComplete: readiness?.firstBranch ?? false
     },
     {
       number: "03",
@@ -38,7 +39,7 @@ export function OnboardingPage() {
       description: "Invite trainers, coaches, receptionists, and configure role-based permissions.",
       icon: "team",
       to: "/app/settings/team",
-      isComplete: false
+      isComplete: readiness?.team ?? false
     },
     {
       number: "04",
@@ -47,7 +48,7 @@ export function OnboardingPage() {
         "Define class types, personal training services, schedules, and membership passes.",
       icon: "spark",
       to: "/app/services",
-      isComplete: false
+      isComplete: readiness?.services ?? false
     }
   ];
 
@@ -183,9 +184,13 @@ export function OnboardingPage() {
                   <Icon name="check" size={14} />
                   <span>Timetable scheduling enabled</span>
                 </li>
-                <li>
+                <li className={readiness?.team && readiness.services ? "is-done" : ""}>
                   <Icon name="spark" size={14} />
-                  <span>Front desk reception ready</span>
+                  <span>
+                    {readiness?.team && readiness.services
+                      ? "Core operations ready"
+                      : "Complete team and service setup"}
+                  </span>
                 </li>
               </ul>
             </div>

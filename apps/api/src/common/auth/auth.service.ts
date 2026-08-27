@@ -57,15 +57,19 @@ export class AuthService {
       ...(metadata.userAgentSummary ? { userAgentSummary: metadata.userAgentSummary } : {})
     });
     await this.repository.markUserLoggedIn(identity.user.id, now.toISOString());
+    const identityScope = this.scopeFromIdentity(identity);
+    const [identityBranches, identityStaff, identityServices] = await Promise.all([
+      this.repository.listBranches(identityScope),
+      this.repository.listStaff(identityScope),
+      this.repository.listServices(identityScope)
+    ]);
     return {
       sessionToken,
       csrfToken,
       auth: {
         user: { ...identity.user, lastLoginAt: now.toISOString() },
         tenant: identity.tenant,
-        branches: (await this.repository.listBranches(this.scopeFromIdentity(identity))).filter(
-          (branch) => identity.branchIds.includes(branch.id)
-        ),
+        branches: identityBranches.filter((branch) => identity.branchIds.includes(branch.id)),
         permissions: this.mergePermissions(identity.roles ?? [identity.role]),
         roles: identity.roles ?? [identity.role],
         selectedBranchId: identity.branchIds[0] ?? null,
@@ -73,7 +77,15 @@ export class AuthService {
         ...(await this.workspaceForRoles(
           identity.roles ?? [identity.role],
           await this.repository.getWorkspacePreference(identity.user.id, identity.tenant.id)
-        ))
+        )),
+        onboarding: {
+          businessProfile: Boolean(
+            identity.tenant.name && identity.tenant.timezone && identity.tenant.currency
+          ),
+          firstBranch: identityBranches.length > 0,
+          team: identityStaff.length > 1,
+          services: identityServices.length > 0
+        }
       }
     };
   }
@@ -85,10 +97,15 @@ export class AuthService {
       userId: session.user.id,
       branchIds: session.branchIds
     };
+    const [branches, staff, services] = await Promise.all([
+      this.repository.listBranches(scope),
+      this.repository.listStaff(scope),
+      this.repository.listServices(scope)
+    ]);
     return {
       user: session.user,
       tenant: session.tenant,
-      branches: await this.repository.listBranches(scope),
+      branches,
       permissions: session.permissions,
       roles: session.roles ?? [session.role],
       selectedBranchId: session.branchIds[0] ?? null,
@@ -96,7 +113,15 @@ export class AuthService {
       ...(await this.workspaceForRoles(
         session.roles ?? [session.role],
         await this.repository.getWorkspacePreference(session.user.id, session.tenant.id)
-      ))
+      )),
+      onboarding: {
+        businessProfile: Boolean(
+          session.tenant.name && session.tenant.timezone && session.tenant.currency
+        ),
+        firstBranch: branches.length > 0,
+        team: staff.length > 1,
+        services: services.length > 0
+      }
     };
   }
 

@@ -49,6 +49,7 @@ complete.
 - [x] Platform tenant controls now support audited capability mutation through a platform-only API and entitlement toggles in the tenant directory.
 - [x] Member booking cancellation now requires an explicit confirmation modal and explains that credit restoration follows server cancellation policy.
 - [x] Platform capability mutation has focused coverage for replacement semantics, deduplication and resulting feature-flag state.
+- [x] `/auth/me` and login responses now include server-derived onboarding readiness for business profile, first branch, team and services; the onboarding UI no longer hardcodes incomplete steps.
 
 ### Verified checks
 

@@ -62,6 +62,12 @@ export interface AuthMeResponse {
   role: RoleResponse;
   defaultWorkspace: WorkspaceKey;
   availableWorkspaces: WorkspaceKey[];
+  onboarding: {
+    businessProfile: boolean;
+    firstBranch: boolean;
+    team: boolean;
+    services: boolean;
+  };
 }
 
 export const WORKSPACE_KEYS = [
