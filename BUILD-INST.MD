@@ -50,6 +50,8 @@ complete.
 - [x] Member booking cancellation now requires an explicit confirmation modal and explains that credit restoration follows server cancellation policy.
 - [x] Platform capability mutation has focused coverage for replacement semantics, deduplication and resulting feature-flag state.
 - [x] `/auth/me` and login responses now include server-derived onboarding readiness for business profile, first branch, team and services; the onboarding UI no longer hardcodes incomplete steps.
+- [x] HTTP security coverage asserts the server-derived onboarding payload and workspace contract on authenticated staff context.
+- [x] In-memory member portal eligibility now matches Drizzle branch access and ignores cancelled bookings when detecting duplicates.
 
 ### Verified checks
 
@@ -60,7 +62,7 @@ complete.
 
 ### Verification snapshot — 2026-08-28
 
-- API: typecheck passed; PostgreSQL-enabled run passed 43/43 tests, including all 8 Drizzle integration tests.
+- API: typecheck passed; PostgreSQL-enabled run passed 44/44 tests, including all 8 Drizzle integration tests.
 - Worker: typecheck passed; 7 dispatcher/processor/metrics tests passed.
 - Web: typecheck passed; web test passed.
 - Full local `npm run check`: passed with PostgreSQL enabled, including lint, all package builds/typechecks, tests, and production build.

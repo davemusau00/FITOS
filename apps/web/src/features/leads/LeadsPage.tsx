@@ -14,7 +14,7 @@ import {
 } from "@fitos/ui";
 import type { LeadResponse } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
-import { PageLoading, ErrorNotice, formatDate } from "../shared";
+import { PageLoading, ErrorNotice, formatDate, useToast } from "../shared";
 
 export const leadStages = [
   "new",
@@ -89,6 +89,7 @@ const LOST_REASONS = [
 export function LeadsPage() {
   const [params, setParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [selectedLead, setSelectedLead] = useState<LeadResponse | null>(null);
   const [noteBody, setNoteBody] = useState("");
   const [taskBody, setTaskBody] = useState("");
@@ -124,14 +125,20 @@ export function LeadsPage() {
       nextStage: LeadStage;
       lostReason?: string;
     }) => api.updateLeadStage(id, { stage: nextStage, ...(lostReason ? { lostReason } : {}) }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["leads"] })
+    onSuccess: () => {
+      toastSuccess("Lead stage updated");
+      void queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: (cause) => toastError("Could not update lead stage", cause instanceof Error ? cause.message : undefined)
   });
   const convert = useMutation({
     mutationFn: api.convertLead,
     onSuccess: (result) => {
+      toastSuccess(result.alreadyConverted ? "Lead already linked to member" : "Lead converted to member");
       setSelectedLead(result.lead);
       void queryClient.invalidateQueries({ queryKey: ["leads"] });
-    }
+    },
+    onError: (cause) => toastError("Could not convert lead", cause instanceof Error ? cause.message : undefined)
   });
   const notes = useQuery({
     queryKey: ["lead", selectedLead?.id ?? "", "notes"],
@@ -147,6 +154,7 @@ export function LeadsPage() {
     mutationFn: (body: string) => api.addLeadNote(selectedLead!.id, body),
     onSuccess: () => {
       setNoteBody("");
+      toastSuccess("Note added");
       void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "notes"] });
     }
   });
@@ -159,13 +167,18 @@ export function LeadsPage() {
     onSuccess: () => {
       setTaskBody("");
       setTaskDueAt("");
+      toastSuccess("Follow-up task created");
       void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "tasks"] });
-    }
+    },
+    onError: (cause) => toastError("Could not create follow-up task", cause instanceof Error ? cause.message : undefined)
   });
   const completeTask = useMutation({
     mutationFn: (taskId: string) => api.completeLeadTask(selectedLead!.id, taskId),
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "tasks"] })
+    onSuccess: () => {
+      toastSuccess("Follow-up completed");
+      void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "tasks"] });
+    },
+    onError: (cause) => toastError("Could not complete follow-up", cause instanceof Error ? cause.message : undefined)
   });
 
   const set = (name: string, value: string) => {

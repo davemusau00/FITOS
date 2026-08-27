@@ -85,7 +85,15 @@ describe("HTTP security boundary", () => {
     const me = await fetch(`${baseUrl}/api/v1/auth/me`, {
       headers: { cookie: `fitos_session=${gymOwner.session}; fitos_csrf=${gymOwner.csrf}` }
     });
-    const homeBranchId = (await me.json()).branches[0].id as string;
+    const meBody = await me.json();
+    const homeBranchId = meBody.branches[0].id as string;
+    expect(meBody.onboarding).toEqual({
+      businessProfile: true,
+      firstBranch: true,
+      team: true,
+      services: true
+    });
+    expect(meBody.availableWorkspaces).toContain("command");
 
     const rejected = await fetch(`${baseUrl}/api/v1/members`, {
       method: "POST",

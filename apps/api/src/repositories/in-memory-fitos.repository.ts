@@ -4512,6 +4512,7 @@ export class InMemoryFitosRepository implements FitosRepository {
           (o) =>
             o.tenantId === member.tenantId &&
             o.status === "scheduled" &&
+            (!member.homeBranchId || o.branchId === member.homeBranchId) &&
             new Date(o.startsAt) >= nowTime
         )
         .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
@@ -4520,7 +4521,10 @@ export class InMemoryFitosRepository implements FitosRepository {
           const service = this.services.get(occurrence.serviceId);
           const required = service?.creditsRequired ?? 1;
           const booked = [...this.bookings.values()].some(
-            (booking) => booking.occurrenceId === occurrence.id && booking.memberId === memberId
+            (booking) =>
+              booking.occurrenceId === occurrence.id &&
+              booking.memberId === memberId &&
+              booking.status === "confirmed"
           );
           const confirmed = [...this.bookings.values()].filter(
             (booking) => booking.occurrenceId === occurrence.id && booking.status === "confirmed"
