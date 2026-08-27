@@ -2,6 +2,39 @@ import type { TenantSummary } from "./identity.js";
 
 export type SaaSPlan = "starter" | "pro" | "business";
 
+export interface SaaSPlanQuotas {
+  maxMembers: number;
+  maxStaff: number;
+  maxBranches: number;
+  maxAutomationRuns: number;
+  maxStorageMb: number;
+}
+
+/** Product limits used by both adapters; usage itself is always measured from records. */
+export const SaaS_PLAN_QUOTAS: Record<SaaSPlan, SaaSPlanQuotas> = {
+  starter: {
+    maxMembers: 500,
+    maxStaff: 20,
+    maxBranches: 5,
+    maxAutomationRuns: 5000,
+    maxStorageMb: 2048
+  },
+  pro: {
+    maxMembers: 2000,
+    maxStaff: 75,
+    maxBranches: 15,
+    maxAutomationRuns: 25000,
+    maxStorageMb: 10240
+  },
+  business: {
+    maxMembers: 10000,
+    maxStaff: 250,
+    maxBranches: 50,
+    maxAutomationRuns: 100000,
+    maxStorageMb: 51200
+  }
+};
+
 export type TenantAccountStatus =
   "trial" | "active" | "grace" | "suspended" | "cancelled" | "archived";
 

@@ -42,13 +42,13 @@ export interface LeadFunnelStageCount {
 export interface InsightsOverviewResponse {
   summary: {
     avgWeeklyVisits: number;
-    avgWeeklyVisitsChangePct: number;
+    avgWeeklyVisitsChangePct: number | null;
     classOccupancyRate: number;
-    classOccupancyChangePct: number;
+    classOccupancyChangePct: number | null;
     memberRetention90d: number;
-    memberRetentionChangePct: number;
+    memberRetentionChangePct: number | null;
     leadConversionRate: number;
-    leadConversionChangePct: number;
+    leadConversionChangePct: number | null;
     totalActiveMembers: number;
     totalLeadsInPipeline: number;
   };

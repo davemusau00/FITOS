@@ -142,10 +142,9 @@ export function InsightsPage() {
                         : "var(--danger)"
                   }}
                 >
-                  {(summary?.memberRetentionChangePct ?? 0) >= 0 ? "▲" : "▼"}{" "}
                   {summary?.memberRetentionChangePct == null
                     ? "— No comparison period yet"
-                    : `${summary.memberRetentionChangePct}% vs last month`}
+                    : `${summary.memberRetentionChangePct >= 0 ? "▲" : "▼"} ${summary.memberRetentionChangePct}% vs last month`}
                 </div>
               </Card>
 

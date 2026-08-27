@@ -286,6 +286,7 @@ test("owner completes the pilot operating river and reception is denied a refund
     // Front Desk intentionally has a minimal shell without a Payments nav item;
     // verify the permitted read surface directly before checking refund denial.
     await page.goto("/app/payments");
+    await page.getByRole("combobox", { name: "Filter by branch" }).selectOption({ label: "Kilimani" });
     await expect(page.getByRole("row").filter({ hasText: paymentReference })).toBeVisible();
     await expect(page.getByRole("button", { name: "Refund" })).toHaveCount(0);
 

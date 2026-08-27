@@ -106,7 +106,11 @@ import type {
   TherapySessionResponse,
   CreateTherapySessionRequest
 } from "@fitos/contracts";
-import { DEFAULT_ROLE_PERMISSIONS, PLATFORM_FEATURE_REGISTRY } from "@fitos/contracts";
+import {
+  DEFAULT_ROLE_PERMISSIONS,
+  PLATFORM_FEATURE_REGISTRY,
+  SaaS_PLAN_QUOTAS
+} from "@fitos/contracts";
 import { decodeCursor, encodeCursor, normalizePhone } from "@fitos/shared";
 import type {
   CreateSessionInput,
@@ -4625,7 +4629,7 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     // Avg Weekly Visits
     const attendedCount = allAttendance.filter((a) => a.status === "attended").length;
-    const avgWeeklyVisits = Math.max(12, Math.round(attendedCount * 1.5));
+    const avgWeeklyVisits = attendedCount;
 
     // Class Occupancy
     let totalBookedSlots = 0;
@@ -4635,10 +4639,10 @@ export class InMemoryFitosRepository implements FitosRepository {
         (b) => b.occurrenceId === occ.id && b.status === "confirmed"
       ).length;
       totalBookedSlots += occBookings;
-      totalCapacitySlots += occ.capacity || 20;
+      totalCapacitySlots += occ.capacity ?? 0;
     }
     const classOccupancyRate =
-      totalCapacitySlots > 0 ? Math.round((totalBookedSlots / totalCapacitySlots) * 100) : 74;
+      totalCapacitySlots > 0 ? Math.round((totalBookedSlots / totalCapacitySlots) * 100) : 0;
 
     // Retention Rate 90d
     const ninetyDaysAgo = new Date();
@@ -4650,14 +4654,14 @@ export class InMemoryFitosRepository implements FitosRepository {
       return m.status === "active" || hasRecentAttendance;
     }).length;
     const memberRetention90d =
-      allMembers.length > 0 ? Math.round((activeInLast90d / allMembers.length) * 100) : 84;
+      allMembers.length > 0 ? Math.round((activeInLast90d / allMembers.length) * 100) : 0;
 
     // Lead Conversion Rate
     const convertedLeads = allLeads.filter(
       (l) => l.stage === "joined" || l.convertedMemberId
     ).length;
     const leadConversionRate =
-      allLeads.length > 0 ? Math.round((convertedLeads / allLeads.length) * 100) : 31;
+      allLeads.length > 0 ? Math.round((convertedLeads / allLeads.length) * 100) : 0;
 
     // Weekly Attendance by day
     const dayMap: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 0: 0 };
@@ -4668,13 +4672,13 @@ export class InMemoryFitosRepository implements FitosRepository {
       }
     }
     const weeklyAttendance: WeeklyAttendancePoint[] = [
-      { day: "Mon", count: Math.max(14, (dayMap[1] ?? 0) * 3 + 12) },
-      { day: "Tue", count: Math.max(18, (dayMap[2] ?? 0) * 3 + 15) },
-      { day: "Wed", count: Math.max(22, (dayMap[3] ?? 0) * 3 + 20) },
-      { day: "Thu", count: Math.max(19, (dayMap[4] ?? 0) * 3 + 17) },
-      { day: "Fri", count: Math.max(25, (dayMap[5] ?? 0) * 3 + 22) },
-      { day: "Sat", count: Math.max(28, (dayMap[6] ?? 0) * 3 + 26) },
-      { day: "Sun", count: Math.max(11, (dayMap[0] ?? 0) * 3 + 9) }
+      { day: "Mon", count: dayMap[1] ?? 0 },
+      { day: "Tue", count: dayMap[2] ?? 0 },
+      { day: "Wed", count: dayMap[3] ?? 0 },
+      { day: "Thu", count: dayMap[4] ?? 0 },
+      { day: "Fri", count: dayMap[5] ?? 0 },
+      { day: "Sat", count: dayMap[6] ?? 0 },
+      { day: "Sun", count: dayMap[0] ?? 0 }
     ];
 
     // Heatmap
@@ -4696,65 +4700,19 @@ export class InMemoryFitosRepository implements FitosRepository {
                     100
                 )
               )
-            : h === 6 || h === 18
-              ? 85
-              : 45;
+            : 0;
         occupancyHeatmap.push({
           dayOfWeek: d,
           hourOfDay: h,
           occupancyPercent: occPct,
-          sessionCount: occAtSlot.length || 1
+          sessionCount: occAtSlot.length
         });
       }
     }
 
     // Retention Cohorts
     const retentionCohorts: RetentionCohortRow[] = [
-      {
-        cohortMonth: "2026-03",
-        initialSize: 18,
-        month1Retention: 94,
-        month2Retention: 88,
-        month3Retention: 82,
-        month4Retention: 78,
-        month5Retention: 75
-      },
-      {
-        cohortMonth: "2026-04",
-        initialSize: 22,
-        month1Retention: 91,
-        month2Retention: 86,
-        month3Retention: 81,
-        month4Retention: 77,
-        month5Retention: 72
-      },
-      {
-        cohortMonth: "2026-05",
-        initialSize: 20,
-        month1Retention: 95,
-        month2Retention: 90,
-        month3Retention: 85,
-        month4Retention: 80,
-        month5Retention: 76
-      },
-      {
-        cohortMonth: "2026-06",
-        initialSize: 25,
-        month1Retention: 92,
-        month2Retention: 88,
-        month3Retention: 84,
-        month4Retention: 79,
-        month5Retention: 75
-      },
-      {
-        cohortMonth: "2026-07",
-        initialSize: 24,
-        month1Retention: 96,
-        month2Retention: 91,
-        month3Retention: 87,
-        month4Retention: 83,
-        month5Retention: 80
-      }
+      // Cohort retention requires a historical cohort query; do not fabricate rows.
     ];
 
     // At-Risk Members (> 21 days since last visit)
@@ -4762,10 +4720,13 @@ export class InMemoryFitosRepository implements FitosRepository {
       .filter(
         (m) =>
           m.status === "inactive" ||
-          m.memberNumber?.includes("0016") ||
-          m.memberNumber?.includes("0017") ||
-          m.memberNumber?.includes("0018") ||
-          m.memberNumber?.includes("0019")
+          (() => {
+            const visits = allAttendance
+              .filter((attendance) => attendance.memberId === m.id && attendance.checkedInAt)
+              .map((attendance) => new Date(attendance.checkedInAt!).getTime());
+            const lastVisit = visits.length ? Math.max(...visits) : 0;
+            return !lastVisit || lastVisit < ninetyDaysAgo.getTime();
+          })()
       )
       .slice(0, 8)
       .map((m) => {
@@ -4779,11 +4740,27 @@ export class InMemoryFitosRepository implements FitosRepository {
           lastName: contact?.lastName ?? null,
           phone: contact?.phone ?? null,
           email: contact?.email ?? null,
-          daysInactive:
-            24 + (m.memberNumber ? parseInt(m.memberNumber.replace(/\D/g, ""), 10) % 15 : 5),
+          daysInactive: Math.max(
+            0,
+            Math.floor(
+              (Date.now() -
+                Math.max(
+                  0,
+                  ...allAttendance
+                    .filter((attendance) => attendance.memberId === m.id && attendance.checkedInAt)
+                    .map((attendance) => new Date(attendance.checkedInAt!).getTime())
+                )) /
+                86400000
+            )
+          ),
           planName: plan?.planSnapshot?.name ?? "10-Class Punch Pass",
           creditsRemaining: Math.max(0, creditBalance),
-          lastVisitAt: new Date(Date.now() - 25 * 86400000).toISOString()
+          lastVisitAt:
+            allAttendance
+              .filter((attendance) => attendance.memberId === m.id && attendance.checkedInAt)
+              .sort(
+                (a, b) => new Date(b.checkedInAt!).getTime() - new Date(a.checkedInAt!).getTime()
+              )[0]?.checkedInAt ?? null
         };
       });
 
@@ -4800,56 +4777,56 @@ export class InMemoryFitosRepository implements FitosRepository {
     for (const l of allLeads) {
       if (l.stage in stageCounts) stageCounts[l.stage] = (stageCounts[l.stage] ?? 0) + 1;
     }
-    const totalL = Math.max(1, allLeads.length);
+    const totalL = allLeads.length;
     const leadFunnel: LeadFunnelStageCount[] = [
       {
         stage: "new",
         label: "New Inquiries",
-        count: stageCounts.new ?? 2,
-        percentage: Math.round(((stageCounts.new ?? 2) / totalL) * 100)
+        count: stageCounts.new ?? 0,
+        percentage: totalL ? Math.round(((stageCounts.new ?? 0) / totalL) * 100) : 0
       },
       {
         stage: "contacted",
         label: "Contacted / Qualified",
-        count: stageCounts.contacted ?? 2,
-        percentage: Math.round(((stageCounts.contacted ?? 2) / totalL) * 100)
+        count: stageCounts.contacted ?? 0,
+        percentage: totalL ? Math.round(((stageCounts.contacted ?? 0) / totalL) * 100) : 0
       },
       {
         stage: "trial_booked",
         label: "Trial Class Booked",
-        count: stageCounts.trial_booked ?? 1,
-        percentage: Math.round(((stageCounts.trial_booked ?? 1) / totalL) * 100)
+        count: stageCounts.trial_booked ?? 0,
+        percentage: totalL ? Math.round(((stageCounts.trial_booked ?? 0) / totalL) * 100) : 0
       },
       {
         stage: "trial_completed",
         label: "Trial Completed",
-        count: stageCounts.trial_completed ?? 1,
-        percentage: Math.round(((stageCounts.trial_completed ?? 1) / totalL) * 100)
+        count: stageCounts.trial_completed ?? 0,
+        percentage: totalL ? Math.round(((stageCounts.trial_completed ?? 0) / totalL) * 100) : 0
       },
       {
         stage: "offer",
         label: "Membership Offered",
-        count: stageCounts.offer ?? 1,
-        percentage: Math.round(((stageCounts.offer ?? 1) / totalL) * 100)
+        count: stageCounts.offer ?? 0,
+        percentage: totalL ? Math.round(((stageCounts.offer ?? 0) / totalL) * 100) : 0
       },
       {
         stage: "joined",
         label: "Joined as Member",
-        count: Math.max(1, stageCounts.joined ?? 1),
-        percentage: Math.round((Math.max(1, stageCounts.joined ?? 1) / totalL) * 100)
+        count: stageCounts.joined ?? 0,
+        percentage: totalL ? Math.round(((stageCounts.joined ?? 0) / totalL) * 100) : 0
       }
     ];
 
     return {
       summary: {
         avgWeeklyVisits,
-        avgWeeklyVisitsChangePct: 12,
+        avgWeeklyVisitsChangePct: null,
         classOccupancyRate,
-        classOccupancyChangePct: 5,
+        classOccupancyChangePct: null,
         memberRetention90d,
-        memberRetentionChangePct: -2,
+        memberRetentionChangePct: null,
         leadConversionRate,
-        leadConversionChangePct: 8,
+        leadConversionChangePct: null,
         totalActiveMembers,
         totalLeadsInPipeline
       },
@@ -5187,6 +5164,8 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   async getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse> {
+    const plan = this.tenantSubscriptions.get(tenantId)?.plan ?? "starter";
+    const limits = SaaS_PLAN_QUOTAS[plan];
     const activeMembers = [...this.members.values()].filter(
       (m) => m.tenantId === tenantId && m.status === "active"
     ).length;
@@ -5198,15 +5177,15 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     return {
       activeMembers,
-      maxMembers: 500,
+      maxMembers: limits.maxMembers,
       activeStaff,
-      maxStaff: 20,
+      maxStaff: limits.maxStaff,
       branches: branchCount,
-      maxBranches: 5,
+      maxBranches: limits.maxBranches,
       automationRunsThisMonth: autoRuns,
-      maxAutomationRuns: 5000,
+      maxAutomationRuns: limits.maxAutomationRuns,
       storageUsedMb: null,
-      maxStorageMb: 2048
+      maxStorageMb: limits.maxStorageMb
     };
   }
 

@@ -213,6 +213,39 @@ describeDatabase("Drizzle tenant isolation", () => {
     expect(cancelled?.status).toBe("cancelled");
   });
 
+  it("serializes competing public reservations for the final place", async () => {
+    const scope = scopeOf(gym);
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const service = await repository.createService(scope, {
+      branchId: gym.branchIds[0],
+      name: `Public Race ${suffix}`,
+      serviceType: "class",
+      durationMinutes: 30,
+      defaultCapacity: 1,
+      creditsRequired: 0
+    });
+    const startsAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    const occurrence = await repository.createScheduleOccurrence(scope, {
+      branchId: gym.branchIds[0]!,
+      serviceId: service.id,
+      startsAt: startsAt.toISOString(),
+      endsAt: new Date(startsAt.getTime() + 30 * 60 * 1000).toISOString(),
+      capacity: 1
+    });
+    const results = await Promise.all(
+      ["A", "B"].map((suffix) =>
+        repository.createPublicReservation("fitos-demo-gym", {
+          occurrenceId: occurrence.id,
+          reservationType: "class",
+          firstName: `Race ${suffix}`,
+          phone: `+25472200000${suffix}`
+        })
+      )
+    );
+    expect(results.filter((result) => result.status === "confirmed")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "waitlisted")).toHaveLength(1);
+  });
+
   it("serializes the final member credit across concurrent bookings", async () => {
     const gymScope = scopeOf(gym);
     const pilatesScope = scopeOf(pilates);

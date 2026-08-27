@@ -262,8 +262,8 @@ export function PaymentsPage() {
           defaultCurrency={auth?.tenant.currency ?? "KES"}
           isOpen={true}
           onClose={() => setIsRecordingPayment(false)}
-          onSuccess={() => {
-            void queryClient.invalidateQueries({ queryKey: ["payments"] });
+          onSuccess={async () => {
+            await queryClient.refetchQueries({ queryKey: ["payments"] });
             setIsRecordingPayment(false);
           }}
         />
@@ -377,7 +377,7 @@ function RecordPaymentModal({
   onClose: () => void;
   branches: BranchResponse[];
   defaultCurrency: string;
-  onSuccess: () => void;
+  onSuccess: () => Promise<void>;
 }) {
   const [error, setError] = useState<unknown>(null);
   const [memberSearch, setMemberSearch] = useState("");
@@ -426,7 +426,7 @@ function RecordPaymentModal({
         allocationType: selectedMember ? values.allocationType : null
       };
       await api.createPayment(payload);
-      onSuccess();
+      await onSuccess();
     } catch (cause) {
       setError(cause);
     }

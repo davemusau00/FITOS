@@ -176,6 +176,13 @@
       "when": 1788470400000,
       "tag": "0024_multi_role_workspace_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1788556800000,
+      "tag": "0025_fix_public_reservation_tenant_trigger",
+      "breakpoints": true
     }
   ]
 }

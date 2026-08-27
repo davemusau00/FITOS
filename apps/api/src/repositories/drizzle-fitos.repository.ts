@@ -152,6 +152,7 @@ import type {
   TherapySessionResponse,
   CreateTherapySessionRequest
 } from "@fitos/contracts";
+import { SaaS_PLAN_QUOTAS } from "@fitos/contracts";
 import { PLATFORM_FEATURE_REGISTRY } from "@fitos/contracts";
 import { decodeCursor, encodeCursor, normalizePhone } from "@fitos/shared";
 import type { Pool } from "pg";
@@ -3771,11 +3772,13 @@ export class DrizzleFitosRepository implements FitosRepository {
       dow: number;
       hour: number;
       avg_occupancy: number;
+      session_count: number;
     }>(sql`
       SELECT 
         EXTRACT(DOW FROM starts_at)::int as dow,
         EXTRACT(HOUR FROM starts_at)::int as hour,
-        ROUND(AVG(CASE WHEN capacity > 0 THEN (
+      COUNT(*)::int as session_count,
+      ROUND(AVG(CASE WHEN capacity > 0 THEN (
           SELECT COUNT(*)::float / capacity 
           FROM bookings 
           WHERE bookings.occurrence_id = schedule_occurrences.id 
@@ -3854,17 +3857,41 @@ export class DrizzleFitosRepository implements FitosRepository {
           weeklyVisitsArray.reduce((sum, w) => sum + w.count, 0) / weeklyVisitsArray.length
         )
       : 0;
+    const classOccupancyRate = heatmapRows.rows?.length
+      ? Math.round(
+          (heatmapRows.rows.reduce((sum, row) => sum + Number(row.avg_occupancy), 0) /
+            heatmapRows.rows.length) *
+            100
+        )
+      : 0;
+    const totalCohortMembers = (retentionRows.rows || []).reduce(
+      (sum, row) => sum + Number(row.total_joined),
+      0
+    );
+    const retainedCohortMembers = (retentionRows.rows || []).reduce(
+      (sum, row) => sum + Number(row.retained_90d),
+      0
+    );
+    const memberRetention90d = totalCohortMembers
+      ? Math.round((retainedCohortMembers / totalCohortMembers) * 100)
+      : 0;
+    const convertedLeads = (leadFunnelRows.rows || [])
+      .filter((row) => row.stage === "joined")
+      .reduce((sum, row) => sum + Number(row.count), 0);
+    const leadConversionRate = leadsCount?.count
+      ? Math.round((convertedLeads / leadsCount.count) * 100)
+      : 0;
 
     return {
       summary: {
         avgWeeklyVisits: avgWeekly,
-        avgWeeklyVisitsChangePct: 0,
-        classOccupancyRate: 0,
-        classOccupancyChangePct: 0,
-        memberRetention90d: 0,
-        memberRetentionChangePct: 0,
-        leadConversionRate: 0,
-        leadConversionChangePct: 0,
+        avgWeeklyVisitsChangePct: null,
+        classOccupancyRate,
+        classOccupancyChangePct: null,
+        memberRetention90d,
+        memberRetentionChangePct: null,
+        leadConversionRate,
+        leadConversionChangePct: null,
         totalActiveMembers: activeMembersCount?.count ?? 0,
         totalLeadsInPipeline: leadsCount?.count ?? 0
       },
@@ -3873,7 +3900,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         dayOfWeek: r.dow,
         hourOfDay: r.hour,
         occupancyPercent: Math.round(r.avg_occupancy * 100),
-        sessionCount: 0
+        sessionCount: r.session_count
       })),
       retentionCohorts: (retentionRows.rows || []).map((r) => ({
         cohortMonth: r.cohort_month,
@@ -4526,6 +4553,8 @@ export class DrizzleFitosRepository implements FitosRepository {
   async getTenantUsageQuotas(
     tenantId: string
   ): Promise<import("@fitos/contracts").UsageQuotaMetricsResponse> {
+    const subscription = await this.getTenantSubscription(tenantId);
+    const limits = SaaS_PLAN_QUOTAS[subscription.plan];
     const [membersCount] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(members)
@@ -4553,15 +4582,15 @@ export class DrizzleFitosRepository implements FitosRepository {
 
     return {
       activeMembers: membersCount?.count ?? 0,
-      maxMembers: 500,
-      activeStaff: staffCount?.count ?? 1,
-      maxStaff: 20,
-      branches: branchCount?.count ?? 1,
-      maxBranches: 5,
+      maxMembers: limits.maxMembers,
+      activeStaff: staffCount?.count ?? 0,
+      maxStaff: limits.maxStaff,
+      branches: branchCount?.count ?? 0,
+      maxBranches: limits.maxBranches,
       automationRunsThisMonth: autoCount?.count ?? 0,
-      maxAutomationRuns: 5000,
+      maxAutomationRuns: limits.maxAutomationRuns,
       storageUsedMb: null,
-      maxStorageMb: 2048
+      maxStorageMb: limits.maxStorageMb
     };
   }
 
@@ -4595,20 +4624,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .from(tenantSubscriptions)
       .where(eq(tenantSubscriptions.tenantId, tenantId))
       .limit(1);
-    const caps = new Set(
-      (subscription?.capabilitiesJson as string[]) || [
-        "feature.crm",
-        "feature.automations",
-        "feature.insights",
-        "feature.portal",
-        "feature.assessments",
-        "feature.therapy",
-        "feature.inventory",
-        "feature.equipment",
-        "feature.sites",
-        "feature.integrations"
-      ]
-    );
+    const caps = new Set((subscription?.capabilitiesJson as string[] | null | undefined) ?? []);
 
     return PLATFORM_FEATURE_REGISTRY.map((feature) => ({
       key: feature.key,

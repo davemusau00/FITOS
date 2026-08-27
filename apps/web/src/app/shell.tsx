@@ -154,6 +154,15 @@ function AppShellInner() {
 
   if (!auth) return null;
 
+  if (!auth.availableWorkspaces.includes("command")) {
+    return (
+      <main className="surface-shell-access-denied">
+        <h1>You don't have access to FITOS Command</h1>
+        <p>Use your assigned workspace or ask a FITOS administrator for access.</p>
+      </main>
+    );
+  }
+
   const currentBranch = ctxBranch ?? auth.branches[0];
 
   const logout = async () => {
