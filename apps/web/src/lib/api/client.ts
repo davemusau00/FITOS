@@ -179,6 +179,7 @@ export const api = {
     }>("/platform/auth/login", { method: "POST", body: JSON.stringify(payload) }),
   platformMe: () =>
     request<{ userId: string; email: string; displayName: string }>("/platform/auth/me"),
+  platformLogout: () => request<{ ok: boolean }>("/platform/auth/logout", { method: "POST" }),
   login: (payload: { email: string; password: string }) =>
     request<AuthMeResponse>("/auth/login", { method: "POST", body: json(payload) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),

@@ -75,8 +75,13 @@ function PlatformRoute() {
         </nav>
         <button
           onClick={() => {
-            window.localStorage.removeItem("fitos_platform_token");
-            navigate("/platform/login", { replace: true });
+            void api
+              .platformLogout()
+              .catch(() => undefined)
+              .finally(() => {
+                window.localStorage.removeItem("fitos_platform_token");
+                navigate("/platform/login", { replace: true });
+              });
           }}
         >
           Sign out

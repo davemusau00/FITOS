@@ -3771,6 +3771,9 @@ export class DrizzleFitosRepository implements FitosRepository {
       .where(eq(scheduleOccurrences.id, occurrenceId))
       .limit(1);
     if (!occurrence) throw new Error("Schedule occurrence not found.");
+    if (member.homeBranchId && member.homeBranchId !== occurrence.branchId) {
+      throw new Error("This session is outside your branch access.");
+    }
 
     const scope: TenantScope = {
       tenantId: member.tenantId,

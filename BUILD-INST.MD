@@ -64,10 +64,16 @@ complete.
 - [x] Staff New Booking capacity advisories now use server-derived effective capacity when equipment constraints reduce a session's configured capacity.
 - [x] Member booking and cancellation mutations now emit consistent success/error toast feedback while retaining server-driven outcomes.
 - [x] In-memory member self-booking now matches server policy for effective capacity, home-branch access and membership expiry.
+- [x] Drizzle member self-booking now enforces the same home-branch access boundary before entering the transactional booking path.
+- [x] In-memory member self-booking rejects occurrence IDs belonging to another tenant before creating a booking.
+- [x] In-memory tenancy coverage explicitly exercises cross-tenant member self-booking rejection.
+- [x] In-memory general booking creation now enforces resource-constrained effective capacity, matching Drizzle and staff advisories.
+- [x] In-memory public reservation capacity decisions now use effective capacity when resource constraints are present.
 - [x] Platform tenant lifecycle and entitlement mutations now emit consistent success/error toast feedback.
 - [x] Platform exposes an authenticated tenant-specific control-record endpoint with tenant-safe not-found behavior and a typed web client accessor.
 - [x] Platform tenant detail route now renders the safe control record with lifecycle, plan, quota usage, storage measurement state and enabled capabilities, without raw member records.
 - [x] Platform tenant detail renders enabled capabilities using authoritative registry names rather than opaque feature keys.
+- [x] Platform shell logout now revokes the server token before clearing the local credential, with a network-failure cleanup fallback.
 
 ### Verified checks
 
@@ -2305,6 +2311,9 @@ Not merely:
 ```text
 localStorage.removeItem(...)
 ```
+
+The Platform shell now calls the revocation endpoint before clearing its local
+credential, and clears/redirects in a finally path if the network is unavailable.
 
 ---
 

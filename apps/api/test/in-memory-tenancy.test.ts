@@ -40,6 +40,24 @@ describe("tenant isolation", () => {
     await expect(repository.searchMembers(pilatesScope, { query: "Amina" })).resolves.toMatchObject(
       { data: [] }
     );
+
+    const pilatesService = await repository.createService(pilatesScope, {
+      name: "Pilates Isolation Test",
+      serviceType: "class",
+      durationMinutes: 60,
+      defaultCapacity: 4,
+      branchId: pilates.branchIds[0]
+    });
+    const pilatesOccurrence = await repository.createScheduleOccurrence(pilatesScope, {
+      branchId: pilates.branchIds[0]!,
+      serviceId: pilatesService.id,
+      startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+      endsAt: new Date(Date.now() + 90_000_000).toISOString(),
+      capacity: 4
+    });
+    await expect(repository.memberSelfBook(member.id, pilatesOccurrence.id)).rejects.toThrow(
+      /occurrence not found/i
+    );
   });
 
   it("binds an opaque session to one tenant user and permits revocation", async () => {

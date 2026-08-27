@@ -2973,7 +2973,9 @@ export class InMemoryFitosRepository implements FitosRepository {
     const service = this.services.get(occurrence.serviceId);
     if (!service || service.tenantId !== scope.tenantId) throw new Error("Service unavailable.");
 
-    if (activeBookings.length >= occurrence.capacity) throw new Error("Occurrence is full.");
+    if (activeBookings.length >= (occurrence.effectiveCapacity ?? occurrence.capacity)) {
+      throw new Error("Occurrence is full.");
+    }
     const creditsRequired = service.creditsRequired;
     const eligibleMemberships = [...this.memberMemberships.values()]
       .filter(
@@ -4310,7 +4312,10 @@ export class InMemoryFitosRepository implements FitosRepository {
           r.occurrenceId === occurrence.id && (r.status === "requested" || r.status === "confirmed")
       ).length;
       status =
-        confirmedBookings + pendingReservations < occurrence.capacity ? "confirmed" : "waitlisted";
+        confirmedBookings + pendingReservations <
+        (occurrence.effectiveCapacity ?? occurrence.capacity)
+          ? "confirmed"
+          : "waitlisted";
     }
     const reservation = {
       id: randomUUID(),
@@ -4565,7 +4570,9 @@ export class InMemoryFitosRepository implements FitosRepository {
     const member = this.members.get(memberId);
     if (!member) throw new Error("Member not found.");
     const occ = this.occurrences.get(occurrenceId);
-    if (!occ) throw new Error("Class occurrence not found.");
+    if (!occ || occ.tenantId !== member.tenantId) {
+      throw new Error("Class occurrence not found.");
+    }
     if (occ.status !== "scheduled") throw new Error("This class is not open for booking.");
 
     const activeBookings = [...this.bookings.values()].filter(
