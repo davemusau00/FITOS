@@ -285,6 +285,45 @@ export class PlatformController {
     return updated;
   }
 
+  @Patch("tenants/:tenantId/capabilities")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async updateTenantCapabilities(
+    @Param("tenantId") tenantId: string,
+    @Body() body: unknown,
+    @RequestId() requestId: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({ capabilities: z.array(z.string()).max(100) })
+      .strict()
+      .parse(body);
+    const allowed = new Set(PLATFORM_FEATURE_REGISTRY.map((feature) => feature.key));
+    if (input.capabilities.some((key) => !allowed.has(key as never))) {
+      throw new BadRequestException("Unknown platform capability.");
+    }
+    const current = (await this.repository.listPlatformTenantControls()).find(
+      (item) => item.tenant.id === tenantId
+    );
+    if (!current) throw new NotFoundException("Tenant not found.");
+    const updated = await this.repository.updateTenantCapabilities(
+      tenantId,
+      input.capabilities as import("@fitos/contracts").SaaSCapabilityKey[]
+    );
+    if (!updated) throw new NotFoundException("Tenant subscription not found.");
+    await this.repository.recordAudit({
+      tenantId,
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "tenant.capabilities_changed",
+      resourceType: "tenant_subscription",
+      resourceId: tenantId,
+      beforeSummary: { capabilities: current.subscription.capabilities },
+      afterSummary: { capabilities: updated.capabilities },
+      requestId
+    });
+    return updated;
+  }
+
   @Get("overview")
   @AuthMode("platform")
   @RequirePlatformAdmin()

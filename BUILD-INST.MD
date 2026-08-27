@@ -46,6 +46,8 @@ complete.
 - [x] CRM lead tasks now support durable completion through a tenant-scoped API endpoint, repository implementations, audit event and UI action with due-date display.
 - [x] CRM task completion has focused tenant-isolation and idempotency coverage in the in-memory integration suite.
 - [x] CRM lead task creation accepts an optional due date/time and persists it through the existing server contract for truthful follow-up queues.
+- [x] Platform tenant controls now support audited capability mutation through a platform-only API and entitlement toggles in the tenant directory.
+- [x] Member booking cancellation now requires an explicit confirmation modal and explains that credit restoration follows server cancellation policy.
 
 ### Verified checks
 

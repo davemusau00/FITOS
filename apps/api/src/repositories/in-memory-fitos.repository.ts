@@ -5263,6 +5263,18 @@ export class InMemoryFitosRepository implements FitosRepository {
     return updated;
   }
 
+  async updateTenantCapabilities(
+    tenantId: string,
+    capabilities: import("@fitos/contracts").SaaSCapabilityKey[]
+  ) {
+    const subscription =
+      this.tenantSubscriptions.get(tenantId) ?? (await this.getTenantSubscription(tenantId));
+    if (!subscription) return null;
+    const updated = { ...subscription, capabilities: [...new Set(capabilities)] };
+    this.tenantSubscriptions.set(tenantId, updated);
+    return updated;
+  }
+
   async listFeatureFlags(_tenantId: string): Promise<FeatureFlagResponse[]> {
     const capabilities = new Set((await this.getTenantSubscription(_tenantId)).capabilities);
     return PLATFORM_FEATURE_REGISTRY.map((feature) => ({

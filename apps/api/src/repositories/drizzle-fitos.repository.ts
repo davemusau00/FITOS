@@ -4710,6 +4710,18 @@ export class DrizzleFitosRepository implements FitosRepository {
       : null;
   }
 
+  async updateTenantCapabilities(
+    tenantId: string,
+    capabilities: import("@fitos/contracts").SaaSCapabilityKey[]
+  ) {
+    const [row] = await this.db
+      .update(tenantSubscriptions)
+      .set({ capabilitiesJson: [...new Set(capabilities)], updatedAt: new Date() })
+      .where(eq(tenantSubscriptions.tenantId, tenantId))
+      .returning({ tenantId: tenantSubscriptions.tenantId });
+    return row ? this.getTenantSubscription(row.tenantId) : null;
+  }
+
   async listFeatureFlags(
     tenantId: string
   ): Promise<import("@fitos/contracts").FeatureFlagResponse[]> {

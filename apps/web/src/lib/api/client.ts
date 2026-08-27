@@ -555,6 +555,11 @@ export const api = {
       `/platform/tenants/${tenantId}/status`,
       { method: "PATCH", body: json({ status, reason }) }
     ),
+  updatePlatformTenantCapabilities: (tenantId: string, capabilities: string[]) =>
+    request<import("@fitos/contracts").TenantSubscriptionResponse>(
+      `/platform/tenants/${tenantId}/capabilities`,
+      { method: "PATCH", body: json({ capabilities }) }
+    ),
   saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) =>
     request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", {
       method: "POST",

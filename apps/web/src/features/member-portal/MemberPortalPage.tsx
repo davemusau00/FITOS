@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, Icon, StatusBadge } from "@fitos/ui";
+import { Button, Card, Icon, Modal, StatusBadge } from "@fitos/ui";
 import { api } from "../../lib/api/client";
 import { FitosLogo } from "../../app/logo";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
@@ -11,6 +11,11 @@ export function MemberPortalPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<MemberTab>("home");
   const [selectedOccurrence, setSelectedOccurrence] = useState<string | null>(null);
+  const [cancellationTarget, setCancellationTarget] = useState<{
+    id: string;
+    serviceName: string;
+    startsAt: string;
+  } | null>(null);
 
   // Login form state for unauthenticated members
   const [identifier, setIdentifier] = useState("");
@@ -263,7 +268,13 @@ export function MemberPortalPage() {
                       <StatusBadge status={b.status} />
                       <Button
                         loading={cancelBookingMutation.isPending}
-                        onClick={() => cancelBookingMutation.mutate(b.id)}
+                        onClick={() =>
+                          setCancellationTarget({
+                            id: b.id,
+                            serviceName: b.serviceName,
+                            startsAt: b.startsAt
+                          })
+                        }
                         size="small"
                         variant="ghost"
                       >
@@ -283,6 +294,32 @@ export function MemberPortalPage() {
             </Card>
           </div>
         )}
+
+        {cancellationTarget ? (
+          <Modal
+            description={`This will cancel ${cancellationTarget.serviceName} on ${formatDateTime(cancellationTarget.startsAt)}. Credit restoration is determined by the server cancellation policy.`}
+            isOpen={true}
+            onClose={() => setCancellationTarget(null)}
+            title="Cancel booking?"
+          >
+            <div className="form-actions" style={{ justifyContent: "flex-end" }}>
+              <Button onClick={() => setCancellationTarget(null)} variant="ghost">
+                Keep Booking
+              </Button>
+              <Button
+                loading={cancelBookingMutation.isPending}
+                onClick={() => {
+                  cancelBookingMutation.mutate(cancellationTarget.id, {
+                    onSuccess: () => setCancellationTarget(null)
+                  });
+                }}
+                variant="danger"
+              >
+                Cancel Booking
+              </Button>
+            </div>
+          </Modal>
+        ) : null}
 
         {/* ── SCHEDULE / BOOKING TAB ── */}
         {activeTab === "schedule" && (
