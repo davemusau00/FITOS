@@ -23,7 +23,7 @@ docker volume create "$backup_volume" >/dev/null
 docker volume create "$offsite_volume" >/dev/null
 docker volume create "$identity_volume" >/dev/null
 docker run --rm -v "${identity_volume}:/identity" --entrypoint sh "$image" -c \
-  'age-keygen -o /identity/key.txt >/dev/null 2>&1 && age-keygen -y /identity/key.txt > /identity/recipient.txt'
+  'age-keygen -o /identity/key.txt >/dev/null 2>&1 && age-keygen -y /identity/key.txt | sed "s/^Public key: //" > /identity/recipient.txt'
 recipient="$(docker run --rm -v "${identity_volume}:/identity:ro" --entrypoint sh "$image" -c 'cat /identity/recipient.txt')"
 
 docker run -d --name "$postgres" --network "$network" \

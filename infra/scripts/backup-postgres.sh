@@ -7,6 +7,10 @@ set -o pipefail
 : "${BACKUP_OFFSITE_DIRECTORY:?BACKUP_OFFSITE_DIRECTORY is required}"
 : "${BACKUP_ENCRYPTION_RECIPIENT:?BACKUP_ENCRYPTION_RECIPIENT is required}"
 
+# Accept both age's raw recipient and the human-readable `Public key: ...`
+# form emitted by age-keygen, so operator-provided values remain unambiguous.
+BACKUP_ENCRYPTION_RECIPIENT="$(printf '%s' "$BACKUP_ENCRYPTION_RECIPIENT" | sed 's/^Public key: //')"
+
 umask 077
 mkdir -p "$BACKUP_DIRECTORY" "$BACKUP_OFFSITE_DIRECTORY"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"

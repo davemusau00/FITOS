@@ -1,6 +1,8 @@
 export * from "./auth/LoginPage";
 export { default as TenantSignupPage } from "./auth/TenantSignupPage";
 export * from "./overview/OverviewPage";
+export * from "./ops/OpsDashboardPage";
+export * from "./coach/CoachDashboardPage";
 export * from "./members/MembersPage";
 export * from "./members/NewMemberPage";
 export * from "./members/MemberDetailPage";

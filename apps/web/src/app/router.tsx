@@ -42,6 +42,8 @@ import {
   ImplementationInquiriesPage,
   ImplementationInquiryDetailPage,
   PlatformLoginPage,
+  OpsDashboardPage,
+  CoachDashboardPage,
   SitesPage
 } from "../features";
 
@@ -98,7 +100,7 @@ export function AppRouter() {
       <Route element={<MemberPortalPage />} path="/member/*" />
       <Route element={<ProtectedRoute />}>
         <Route element={<SurfaceShell surface="ops" workspace="ops" />} path="/ops">
-          <Route element={<OverviewPage />} index />
+          <Route element={<OpsDashboardPage />} index />
           <Route element={<SchedulePage />} path="schedule" />
           <Route element={<BookingsPage />} path="bookings" />
           <Route element={<AttendancePage />} path="attendance" />
@@ -110,7 +112,7 @@ export function AppRouter() {
           <Route element={<ReceptionPage />} index />
         </Route>
         <Route element={<SurfaceShell surface="coach" workspace="coach" />} path="/coach">
-          <Route element={<SchedulePage />} index />
+          <Route element={<CoachDashboardPage />} index />
           <Route element={<ClassRosterPage />} path="roster/:occurrenceId" />
         </Route>
         <Route element={<SurfaceShell surface="practice" workspace="practice" />} path="/practice">
