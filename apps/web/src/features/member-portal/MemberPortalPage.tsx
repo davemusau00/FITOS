@@ -3,12 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Icon, Modal, StatusBadge } from "@fitos/ui";
 import { api } from "../../lib/api/client";
 import { FitosLogo } from "../../app/logo";
-import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
+import { ErrorNotice, PageLoading, formatDateTime, useToast } from "../shared";
 
 type MemberTab = "home" | "schedule" | "membership" | "attendance";
 
 export function MemberPortalPage() {
   const queryClient = useQueryClient();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [activeTab, setActiveTab] = useState<MemberTab>("home");
   const [selectedOccurrence, setSelectedOccurrence] = useState<string | null>(null);
   const [cancellationTarget, setCancellationTarget] = useState<{
@@ -60,16 +61,22 @@ export function MemberPortalPage() {
       return api.memberBook(occurrenceId);
     },
     onSuccess: () => {
+      toastSuccess("Class booked", "Your spot is confirmed.");
       setSelectedOccurrence(null);
       void queryClient.invalidateQueries({ queryKey: ["member-auth", "overview"] });
-    }
+    },
+    onError: (cause) =>
+      toastError("Could not book class", cause instanceof Error ? cause.message : undefined)
   });
 
   const cancelBookingMutation = useMutation({
     mutationFn: (bookingId: string) => api.memberCancel(bookingId),
     onSuccess: () => {
+      toastSuccess("Booking cancelled");
       void queryClient.invalidateQueries({ queryKey: ["member-auth", "overview"] });
-    }
+    },
+    onError: (cause) =>
+      toastError("Could not cancel booking", cause instanceof Error ? cause.message : undefined)
   });
 
   // Loading state while verifying cookie session

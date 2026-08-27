@@ -129,16 +129,20 @@ export function LeadsPage() {
       toastSuccess("Lead stage updated");
       void queryClient.invalidateQueries({ queryKey: ["leads"] });
     },
-    onError: (cause) => toastError("Could not update lead stage", cause instanceof Error ? cause.message : undefined)
+    onError: (cause) =>
+      toastError("Could not update lead stage", cause instanceof Error ? cause.message : undefined)
   });
   const convert = useMutation({
     mutationFn: api.convertLead,
     onSuccess: (result) => {
-      toastSuccess(result.alreadyConverted ? "Lead already linked to member" : "Lead converted to member");
+      toastSuccess(
+        result.alreadyConverted ? "Lead already linked to member" : "Lead converted to member"
+      );
       setSelectedLead(result.lead);
       void queryClient.invalidateQueries({ queryKey: ["leads"] });
     },
-    onError: (cause) => toastError("Could not convert lead", cause instanceof Error ? cause.message : undefined)
+    onError: (cause) =>
+      toastError("Could not convert lead", cause instanceof Error ? cause.message : undefined)
   });
   const notes = useQuery({
     queryKey: ["lead", selectedLead?.id ?? "", "notes"],
@@ -170,7 +174,11 @@ export function LeadsPage() {
       toastSuccess("Follow-up task created");
       void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "tasks"] });
     },
-    onError: (cause) => toastError("Could not create follow-up task", cause instanceof Error ? cause.message : undefined)
+    onError: (cause) =>
+      toastError(
+        "Could not create follow-up task",
+        cause instanceof Error ? cause.message : undefined
+      )
   });
   const completeTask = useMutation({
     mutationFn: (taskId: string) => api.completeLeadTask(selectedLead!.id, taskId),
@@ -178,7 +186,8 @@ export function LeadsPage() {
       toastSuccess("Follow-up completed");
       void queryClient.invalidateQueries({ queryKey: ["lead", selectedLead?.id, "tasks"] });
     },
-    onError: (cause) => toastError("Could not complete follow-up", cause instanceof Error ? cause.message : undefined)
+    onError: (cause) =>
+      toastError("Could not complete follow-up", cause instanceof Error ? cause.message : undefined)
   });
 
   const set = (name: string, value: string) => {
