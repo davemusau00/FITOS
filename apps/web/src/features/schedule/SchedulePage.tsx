@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentProps } from "react";
+import { useEffect, useMemo, useState, type ComponentProps } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,6 +29,7 @@ import type {
   StaffUserResponse
 } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
+import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
@@ -64,12 +65,17 @@ const calendarPlugins = [
 
 export function SchedulePage() {
   const { auth } = useAuth();
+  const { activeBranchId, setActiveBranch } = useBranch();
   const queryClient = useQueryClient();
-  const [selectedBranch, setSelectedBranch] = useState(auth?.branches[0]?.id ?? "");
+  const [selectedBranch, setSelectedBranch] = useState(activeBranchId);
   const [selectedTrainer, setSelectedTrainer] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeBranchId && activeBranchId !== selectedBranch) setSelectedBranch(activeBranchId);
+  }, [activeBranchId, selectedBranch]);
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const services = useQuery({ queryKey: ["services"], queryFn: api.services });
@@ -90,6 +96,11 @@ export function SchedulePage() {
       if (selectedBranch) params.set("branchId", selectedBranch);
       if (selectedTrainer) params.set("trainerUserId", selectedTrainer);
       if (selectedService) params.set("serviceId", selectedService);
+      // Keep the calendar useful across the current week and near-term bookings.
+      // The API otherwise defaults to today's local date, which hides sessions
+      // created for tomorrow or later in the current calendar view.
+      params.set("startsAfter", new Date(Date.now() - 7 * 86_400_000).toISOString());
+      params.set("endsBefore", new Date(Date.now() + 90 * 86_400_000).toISOString());
       return api.scheduleOccurrences(params);
     }
   });
@@ -211,7 +222,10 @@ export function SchedulePage() {
         <select
           aria-label="Filter by branch"
           className="fitos-control"
-          onChange={(e) => setSelectedBranch(e.target.value)}
+          onChange={(e) => {
+            setSelectedBranch(e.target.value);
+            if (e.target.value) setActiveBranch(e.target.value);
+          }}
           value={selectedBranch}
         >
           <option value="">All accessible branches</option>
