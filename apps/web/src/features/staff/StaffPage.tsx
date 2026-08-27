@@ -25,7 +25,19 @@ const staffColumns: Array<DataTableColumn<StaffRow>> = [
       </div>
     )
   },
-  { id: "role", header: "Role", cell: (staff) => staff.role.name },
+  {
+    id: "role",
+    header: "Roles",
+    cell: (staff) => (
+      <div className="fitos-data-table__tag-list">
+        {(staff.roles?.length ? staff.roles : [staff.role]).map((role) => (
+          <span className="fitos-data-table__tag" key={role.id}>
+            {role.name}
+          </span>
+        ))}
+      </div>
+    )
+  },
   {
     id: "branches",
     header: "Branches",
@@ -57,9 +69,9 @@ export function StaffPage() {
         <DataTable columns={staffColumns} data={rows} label="Staff" />
       )}
       {can(auth, "staff:manage") ? (
-        <Alert title="Staff invitations" tone="info">
-          The invitation and branch-access API is active. The acceptance flow will ship with secure
-          email delivery in the automation slice.
+        <Alert title="Staff access" tone="info">
+          Staff role assignments and branch access are enforced by the server and displayed here for
+          review.
         </Alert>
       ) : null}
     </>

@@ -46,6 +46,7 @@ export interface RoleResponse {
 export interface StaffUserResponse {
   user: UserSummary;
   role: RoleResponse;
+  roles?: RoleResponse[];
   branches: BranchResponse[];
   tenantUserId: string;
 }
@@ -109,6 +110,7 @@ export interface InviteStaffRequest {
 }
 
 export interface UpdateStaffAccessRequest {
-  roleId: string;
+  roleId?: string;
+  roleIds?: string[];
   branchIds: string[];
 }

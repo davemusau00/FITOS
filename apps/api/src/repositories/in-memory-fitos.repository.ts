@@ -190,6 +190,11 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly platformAdminTokens = new Map<string, StoredPlatformAdminToken>();
   private readonly roles = new Map<string, StoredRole>();
   private readonly tenantUsers = new Map<string, StoredTenantUser>();
+  private readonly workspacePreferences = new Map<
+    string,
+    import("@fitos/contracts").WorkspaceKey
+  >();
+  private readonly staffRoleAssignments = new Map<string, Set<string>>();
   private readonly branchAccess = new Map<string, Set<string>>();
   private readonly sessions = new Map<string, StoredSession>();
   private readonly memberSessions = new Map<string, StoredMemberSession>();
@@ -2027,12 +2032,14 @@ export class InMemoryFitosRepository implements FitosRepository {
     const tenant = this.tenants.get(tenantUser.tenantId);
     const role = this.roles.get(tenantUser.roleId);
     if (!tenant || !role) return null;
+    const roles = this.rolesForUserTenant(user.id, tenant.id);
     return {
       user: this.toUserSummary(user),
       passwordHash: user.passwordHash,
       tenantUserId: tenantUser.id,
       tenant,
       role: this.toRoleResponse(role),
+      roles,
       branchIds: this.resolveBranchIds(tenantUser, role)
     };
   }
@@ -2053,14 +2060,16 @@ export class InMemoryFitosRepository implements FitosRepository {
     const tenant = this.tenants.get(tenantUser.tenantId);
     const role = this.roles.get(tenantUser.roleId);
     if (!tenant || !role || tenant.status !== "active") return null;
+    const roles = this.rolesForUserTenant(user.id, tenant.id);
     return {
       sessionId: session.id,
       user: this.toUserSummary(user),
       tenantUserId: tenantUser.id,
       tenant,
       role: this.toRoleResponse(role),
+      roles,
       branchIds: this.resolveBranchIds(tenantUser, role),
-      permissions: [...role.permissions]
+      permissions: [...new Set(roles.flatMap((item) => item.permissions))]
     };
   }
 
@@ -3347,6 +3356,12 @@ export class InMemoryFitosRepository implements FitosRepository {
     return role && role.tenantId === scope.tenantId ? this.toRoleResponse(role) : null;
   }
 
+  async listRoles(scope: TenantScope): Promise<RoleResponse[]> {
+    return [...this.roles.values()]
+      .filter((role) => role.tenantId === scope.tenantId || role.tenantId === null)
+      .map((role) => this.toRoleResponse(role));
+  }
+
   async inviteStaff(scope: TenantScope, input: InviteStaffInput): Promise<StaffUserResponse> {
     if (await this.findStaffByEmail(scope, input.email))
       throw new Error("Staff member already exists.");
@@ -3392,6 +3407,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     )
       return null;
     membership.roleId = role.id;
+    this.staffRoleAssignments.set(
+      membership.id,
+      new Set(input.roleIds?.length ? input.roleIds : [role.id])
+    );
     this.branchAccess.set(membership.id, new Set(input.branchIds));
     return this.toStaff(membership);
   }
@@ -3872,6 +3891,23 @@ export class InMemoryFitosRepository implements FitosRepository {
     const tenant = this.tenants.get(tenantId);
     if (!tenant) throw new Error("Tenant is unavailable.");
     return tenant;
+  }
+
+  private rolesForUserTenant(userId: string, tenantId: string): RoleResponse[] {
+    return [...this.tenantUsers.values()]
+      .filter(
+        (membership) =>
+          membership.userId === userId &&
+          membership.tenantId === tenantId &&
+          membership.status === "active"
+      )
+      .flatMap((membership) => {
+        const roleIds =
+          this.staffRoleAssignments.get(membership.id) ?? new Set([membership.roleId]);
+        return [...roleIds].map((roleId) => this.roles.get(roleId));
+      })
+      .filter((role): role is StoredRole => Boolean(role))
+      .map((role) => this.toRoleResponse(role));
   }
 
   private resolveBranchIds(membership: StoredTenantUser, role: StoredRole): string[] {
@@ -5118,6 +5154,18 @@ export class InMemoryFitosRepository implements FitosRepository {
         "feature.integrations"
       ]
     };
+  }
+
+  async getWorkspacePreference(userId: string, tenantId: string) {
+    return this.workspacePreferences.get(`${userId}:${tenantId}`) ?? null;
+  }
+
+  async setWorkspacePreference(
+    userId: string,
+    tenantId: string,
+    workspace: import("@fitos/contracts").WorkspaceKey
+  ) {
+    this.workspacePreferences.set(`${userId}:${tenantId}`, workspace);
   }
 
   async listPlatformTenantControls(): Promise<

@@ -1453,7 +1453,13 @@ export class CoreService {
   ): Promise<StaffUserResponse> {
     const current = await this.repository.findStaffByUserId(scopeOf(actor), userId);
     if (!current) throw new DomainError("RESOURCE_NOT_FOUND", "Staff user not found.", 404);
-    const newRole = await this.requireAssignableRole(actor, input.roleId);
+    const roleIds = input.roleIds ?? (input.roleId ? [input.roleId] : []);
+    if (!roleIds.length)
+      throw new DomainError("VALIDATION_FAILED", "At least one role is required.", 400);
+    const assignedRoles = await Promise.all(
+      roleIds.map((roleId) => this.requireAssignableRole(actor, roleId))
+    );
+    const newRole = assignedRoles[0]!;
     this.assertBranchesAccessible(actor, input.branchIds);
     if (
       current.role.key === "owner" &&
@@ -1467,7 +1473,8 @@ export class CoreService {
       );
     }
     const updated = await this.repository.updateStaffAccess(scopeOf(actor), userId, {
-      roleId: input.roleId,
+      roleId: newRole.id,
+      roleIds,
       branchIds: input.branchIds
     });
     if (!updated) throw new DomainError("RESOURCE_NOT_FOUND", "Staff user not found.", 404);
@@ -1478,6 +1485,10 @@ export class CoreService {
     });
     await this.publish(eventOf(actor, "user.access_changed", { userId }));
     return updated;
+  }
+
+  async listRoles(actor: RequestActor): Promise<RoleResponse[]> {
+    return this.repository.listRoles(scopeOf(actor));
   }
 
   async deactivateStaff(

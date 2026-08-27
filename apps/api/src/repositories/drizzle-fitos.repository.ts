@@ -35,6 +35,7 @@ import {
   services,
   tenantUsers,
   tenantUserRoles,
+  userWorkspacePreferences,
   tenants,
   tenantSubscriptions,
   userBranchAccess,
@@ -2079,6 +2080,14 @@ export class DrizzleFitosRepository implements FitosRepository {
     return role ? this.roleResponse(role) : null;
   }
 
+  async listRoles(scope: TenantScope): Promise<RoleResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(roles)
+      .where(or(eq(roles.tenantId, scope.tenantId), isNull(roles.tenantId)));
+    return Promise.all(rows.map((role) => this.roleResponse(role)));
+  }
+
   async inviteStaff(scope: TenantScope, input: InviteStaffInput): Promise<StaffUserResponse> {
     const created = await this.db.transaction(async (tx) => {
       const [user] = await tx
@@ -2128,6 +2137,14 @@ export class DrizzleFitosRepository implements FitosRepository {
         .update(tenantUsers)
         .set({ roleId: input.roleId, updatedAt: new Date() })
         .where(eq(tenantUsers.id, current.tenantUserId));
+      if (input.roleIds?.length) {
+        await tx
+          .delete(tenantUserRoles)
+          .where(eq(tenantUserRoles.tenantUserId, current.tenantUserId));
+        await tx
+          .insert(tenantUserRoles)
+          .values(input.roleIds.map((roleId) => ({ tenantUserId: current.tenantUserId, roleId })));
+      }
       await tx
         .delete(userBranchAccess)
         .where(eq(userBranchAccess.tenantUserId, current.tenantUserId));
@@ -4463,6 +4480,33 @@ export class DrizzleFitosRepository implements FitosRepository {
       currentPeriodEndsAt: subscription.currentPeriodEndsAt?.toISOString() ?? null,
       capabilities: subscription.capabilitiesJson as any
     };
+  }
+
+  async getWorkspacePreference(userId: string, tenantId: string) {
+    const [row] = await this.db
+      .select({ workspace: userWorkspacePreferences.workspace })
+      .from(userWorkspacePreferences)
+      .where(
+        and(
+          eq(userWorkspacePreferences.userId, userId),
+          eq(userWorkspacePreferences.tenantId, tenantId)
+        )
+      );
+    return (row?.workspace as import("@fitos/contracts").WorkspaceKey | undefined) ?? null;
+  }
+
+  async setWorkspacePreference(
+    userId: string,
+    tenantId: string,
+    workspace: import("@fitos/contracts").WorkspaceKey
+  ) {
+    await this.db
+      .insert(userWorkspacePreferences)
+      .values({ userId, tenantId, workspace })
+      .onConflictDoUpdate({
+        target: [userWorkspacePreferences.userId, userWorkspacePreferences.tenantId],
+        set: { workspace, updatedAt: new Date() }
+      });
   }
 
   async listPlatformTenantControls(): Promise<

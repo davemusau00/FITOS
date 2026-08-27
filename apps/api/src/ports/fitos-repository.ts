@@ -115,6 +115,7 @@ export interface LoginIdentity {
   tenant: TenantSummary;
   role: RoleResponse;
   roles?: RoleResponse[];
+  preferredWorkspace?: import("@fitos/contracts").WorkspaceKey | null;
   branchIds: string[];
 }
 
@@ -125,6 +126,7 @@ export interface ResolvedSession {
   tenant: TenantSummary;
   role: RoleResponse;
   roles?: RoleResponse[];
+  preferredWorkspace?: import("@fitos/contracts").WorkspaceKey | null;
   branchIds: string[];
   permissions: PermissionKey[];
 }
@@ -140,6 +142,7 @@ export interface CreateSessionInput {
 
 export interface StaffAccessInput {
   roleId: string;
+  roleIds?: string[];
   branchIds: string[];
 }
 
@@ -364,6 +367,7 @@ export interface FitosRepository {
   findStaffByUserId(scope: TenantScope, userId: string): Promise<StaffUserResponse | null>;
   findStaffByEmail(scope: TenantScope, email: string): Promise<StaffUserResponse | null>;
   findRoleById(scope: TenantScope, roleId: string): Promise<RoleResponse | null>;
+  listRoles(scope: TenantScope): Promise<RoleResponse[]>;
   inviteStaff(scope: TenantScope, input: InviteStaffInput): Promise<StaffUserResponse>;
   updateStaffAccess(
     scope: TenantScope,
@@ -494,6 +498,15 @@ export interface FitosRepository {
     passwordHash: string
   ): Promise<SaaSTenantSignupResponse>;
   getTenantSubscription(tenantId: string): Promise<TenantSubscriptionResponse>;
+  getWorkspacePreference(
+    userId: string,
+    tenantId: string
+  ): Promise<import("@fitos/contracts").WorkspaceKey | null>;
+  setWorkspacePreference(
+    userId: string,
+    tenantId: string,
+    workspace: import("@fitos/contracts").WorkspaceKey
+  ): Promise<void>;
   listPlatformTenantControls(): Promise<PlatformTenantControlRecord[]>;
   getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
   listFeatureFlags(tenantId: string): Promise<FeatureFlagResponse[]>;

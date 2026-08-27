@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Inject, Post, Req, Res } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Inject, Patch, Post, Req, Res } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { z } from "zod";
@@ -7,10 +7,14 @@ import { Public } from "../../common/auth/public.decorator.js";
 import { RateLimitService } from "../../common/auth/rate-limit.service.js";
 import type { FitosRequest } from "../../common/request-context/request-context.js";
 import { DomainError } from "../../common/errors/domain-error.js";
+import type { WorkspaceKey } from "@fitos/contracts";
 
 const loginSchema = z.object({
   email: z.string().trim().email().max(255),
   password: z.string().min(1).max(512)
+});
+const workspaceSchema = z.object({
+  workspace: z.enum(["command", "ops", "front_desk", "coach", "practice"])
 });
 
 const cookieOptions = () => ({
@@ -70,5 +74,18 @@ export class AuthController {
     if (request.sessionToken) await this.auth.logout(request.sessionToken);
     response.clearCookie("fitos_session", { path: "/" });
     response.clearCookie("fitos_csrf", { path: "/" });
+  }
+
+  @Patch("workspace")
+  async setWorkspace(@Req() request: FitosRequest, @Body() body: unknown): Promise<unknown> {
+    if (!request.session)
+      throw new DomainError("UNAUTHENTICATED", "Your session has expired.", 401);
+    const { workspace } = workspaceSchema.parse(body) as { workspace: WorkspaceKey };
+    const auth = await this.auth.me(request.session);
+    if (!auth.availableWorkspaces.includes(workspace)) {
+      throw new DomainError("FORBIDDEN", "That workspace is not assigned to your account.", 403);
+    }
+    await this.auth.setWorkspace(request.session, workspace);
+    return this.auth.me(request.session);
   }
 }

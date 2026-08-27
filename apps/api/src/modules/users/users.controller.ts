@@ -16,8 +16,16 @@ const inviteSchema = z
   })
   .strict();
 const accessSchema = z
-  .object({ roleId: z.string().uuid(), branchIds: z.array(z.string().uuid()).min(1).max(100) })
-  .strict();
+  .object({
+    roleId: z.string().uuid().optional(),
+    roleIds: z.array(z.string().uuid()).min(1).max(20).optional(),
+    branchIds: z.array(z.string().uuid()).min(1).max(100)
+  })
+  .strict()
+  .refine((value) => Boolean(value.roleId || value.roleIds?.length), {
+    message: "At least one role is required.",
+    path: ["roleIds"]
+  });
 const uuid = z.string().uuid();
 
 @ApiTags("staff access")
@@ -32,6 +40,12 @@ export class UsersController {
   @RequirePermission("staff:read")
   list(@Actor() actor: RequestActor) {
     return this.core.listStaff(actor);
+  }
+
+  @Get("roles")
+  @RequirePermission("staff:read")
+  listRoles(@Actor() actor: RequestActor) {
+    return this.core.listRoles(actor);
   }
 
   @Post("invitations")
@@ -66,7 +80,10 @@ export class UsersController {
     @Body() body: unknown
   ) {
     const access = accessSchema.parse(body);
-    return this.core.updateStaffAccess(actor, requestId, uuid.parse(userId), access);
+    return this.core.updateStaffAccess(actor, requestId, uuid.parse(userId), {
+      ...access,
+      roleId: access.roleId ?? access.roleIds![0]!
+    });
   }
 
   @Post(":userId/deactivate")

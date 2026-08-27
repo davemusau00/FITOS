@@ -70,7 +70,10 @@ export class AuthService {
         roles: identity.roles ?? [identity.role],
         selectedBranchId: identity.branchIds[0] ?? null,
         role: identity.role,
-        ...this.workspaceForRoles(identity.roles ?? [identity.role])
+        ...(await this.workspaceForRoles(
+          identity.roles ?? [identity.role],
+          await this.repository.getWorkspacePreference(identity.user.id, identity.tenant.id)
+        ))
       }
     };
   }
@@ -90,12 +93,19 @@ export class AuthService {
       roles: session.roles ?? [session.role],
       selectedBranchId: session.branchIds[0] ?? null,
       role: session.role,
-      ...this.workspaceForRoles(session.roles ?? [session.role])
+      ...(await this.workspaceForRoles(
+        session.roles ?? [session.role],
+        await this.repository.getWorkspacePreference(session.user.id, session.tenant.id)
+      ))
     };
   }
 
   async logout(sessionToken: string): Promise<void> {
     await this.repository.revokeSession(hashSessionToken(sessionToken), new Date().toISOString());
+  }
+
+  async setWorkspace(session: ResolvedSession, workspace: WorkspaceKey): Promise<void> {
+    await this.repository.setWorkspacePreference(session.user.id, session.tenant.id, workspace);
   }
 
   static scope(actor: RequestActor): TenantScope {
@@ -125,10 +135,13 @@ export class AuthService {
     return [...new Set(roles.flatMap((role) => role.permissions))];
   }
 
-  private workspaceForRoles(roles: RoleResponse[]): {
+  private async workspaceForRoles(
+    roles: RoleResponse[],
+    preferredWorkspace: WorkspaceKey | null
+  ): Promise<{
     defaultWorkspace: WorkspaceKey;
     availableWorkspaces: WorkspaceKey[];
-  } {
+  }> {
     const workspaces = new Set<WorkspaceKey>();
     for (const role of roles) {
       const roleWorkspaces: WorkspaceKey[] =
@@ -144,6 +157,10 @@ export class AuthService {
       roleWorkspaces.forEach((workspace) => workspaces.add(workspace));
     }
     const availableWorkspaces = [...workspaces];
-    return { defaultWorkspace: availableWorkspaces[0]!, availableWorkspaces };
+    const defaultWorkspace =
+      preferredWorkspace && availableWorkspaces.includes(preferredWorkspace)
+        ? preferredWorkspace
+        : availableWorkspaces[0]!;
+    return { defaultWorkspace, availableWorkspaces };
   }
 }
