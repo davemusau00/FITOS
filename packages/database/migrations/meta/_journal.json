@@ -183,6 +183,13 @@
       "when": 1788556800000,
       "tag": "0025_fix_public_reservation_tenant_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1788633600000,
+      "tag": "0026_unique_member_contact",
+      "breakpoints": true
     }
   ]
 }

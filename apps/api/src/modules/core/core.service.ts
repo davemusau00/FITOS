@@ -430,6 +430,14 @@ export class CoreService {
     return this.repository.listLeadTasks(scopeOf(actor), leadId);
   }
 
+  async completeLeadTask(actor: RequestActor, requestId: string, leadId: string, taskId: string): Promise<LeadTaskResponse> {
+    const lead = await this.getLead(actor, leadId);
+    const task = await this.repository.completeLeadTask(scopeOf(actor), leadId, taskId);
+    if (!task) throw new DomainError("RESOURCE_NOT_FOUND", "Lead task not found.", 404);
+    await this.audit(actor, requestId, "lead.task_completed", "lead", leadId, lead.branchId, { taskId });
+    return task;
+  }
+
   async listServices(actor: RequestActor): Promise<ServiceResponse[]> {
     return this.repository.listServices(scopeOf(actor));
   }

@@ -130,6 +130,32 @@ export function UnmatchedPaymentsPage() {
               columns={columns}
               data={unmatched.data.data}
               label="Unmatched Transactions"
+              mobileRenderer={(transaction) => (
+                <Card className="fitos-mobile-data-card">
+                  <div>
+                    <strong className="fitos-data-table__primary">
+                      {formatCurrency(transaction.amount.amountMinor, transaction.amount.currency)}
+                    </strong>
+                    <span
+                      className="fitos-data-table__muted"
+                      style={{ textTransform: "capitalize" }}
+                    >
+                      {transaction.method.replace("_", " ")} ·{" "}
+                      {formatDateTime(transaction.recordedAt)}
+                    </span>
+                  </div>
+                  <span className="fitos-data-table__muted">
+                    {transaction.reference || transaction.note || "No reference"}
+                  </span>
+                  <Button
+                    onClick={() => setSelectedTransaction(transaction)}
+                    size="small"
+                    variant={selectedTransaction?.id === transaction.id ? "primary" : "ghost"}
+                  >
+                    {selectedTransaction?.id === transaction.id ? "Selected" : "Reconcile"}
+                  </Button>
+                </Card>
+              )}
             />
           )}
         </Card>

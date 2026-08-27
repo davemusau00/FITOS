@@ -252,7 +252,54 @@ export function PaymentsPage() {
           title="No payment records found"
         />
       ) : (
-        <DataTable columns={columns} data={data} label="Payments Ledger" />
+        <DataTable
+          columns={columns}
+          data={data}
+          label="Payments Ledger"
+          mobileRenderer={(payment) => (
+            <Card className="fitos-mobile-data-card">
+              <div>
+                <strong className="fitos-data-table__primary">
+                  {formatCurrency(payment.amount.amountMinor, payment.amount.currency)}
+                </strong>
+                <span className="fitos-data-table__muted" style={{ textTransform: "capitalize" }}>
+                  {payment.method.replace("_", " ")} · {formatDateTime(payment.recordedAt)}
+                </span>
+              </div>
+              <div className="fitos-mobile-data-card__meta">
+                <StatusBadge status={payment.status} />
+                <span>
+                  {branches.data?.find((branch) => branch.id === payment.branchId)?.name ??
+                    "Branch"}
+                </span>
+              </div>
+              <span className="fitos-data-table__muted">
+                {payment.reference || "No reference"} · {payment.allocationType || "Unallocated"}
+              </span>
+              {payment.note ? (
+                <span className="fitos-data-table__muted">{payment.note}</span>
+              ) : null}
+              {payment.status === "completed" && can(auth, "payment:refund") ? (
+                <div className="form-actions">
+                  <Button
+                    onClick={() => setRefundingPaymentId(payment.id)}
+                    size="small"
+                    variant="ghost"
+                  >
+                    Refund
+                  </Button>
+                  <Button
+                    onClick={() => setVoidingPaymentId(payment.id)}
+                    size="small"
+                    variant="ghost"
+                  >
+                    Void
+                  </Button>
+                </div>
+              ) : null}
+            </Card>
+          )}
+        />
       )}
 
       {/* Record Payment Modal */}

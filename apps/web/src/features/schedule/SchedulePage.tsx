@@ -325,6 +325,42 @@ export function SchedulePage() {
             columns={templateColumns}
             data={templatesQuery.data}
             label="Recurring schedules"
+            mobileRenderer={(template) => (
+              <Card className="fitos-mobile-data-card">
+                <div>
+                  <strong className="fitos-data-table__primary">
+                    {services.data?.find((service) => service.id === template.serviceId)?.name ??
+                      "Service"}
+                  </strong>
+                  <span className="fitos-data-table__muted">
+                    {template.daysOfWeek.map((day) => WEEKDAYS[day]).join(" / ")} at{" "}
+                    {template.localStartTime}
+                  </span>
+                </div>
+                <div className="fitos-mobile-data-card__meta">
+                  <StatusBadge status={template.isActive ? "active" : "inactive"} />
+                  <span>Through {template.materializedThrough ?? "not yet"}</span>
+                </div>
+                {template.effectiveEndDate ? (
+                  <span className="fitos-data-table__muted">Ends {template.effectiveEndDate}</span>
+                ) : null}
+                {template.isActive &&
+                (!template.effectiveEndDate ||
+                  template.materializedThrough !== template.effectiveEndDate) &&
+                can(auth, "schedule:manage") ? (
+                  <Button
+                    loading={
+                      extendTemplate.isPending && extendTemplate.variables?.id === template.id
+                    }
+                    onClick={() => extendTemplate.mutate(template)}
+                    size="small"
+                    variant="secondary"
+                  >
+                    Extend 12 weeks
+                  </Button>
+                ) : null}
+              </Card>
+            )}
           />
         ) : (
           <p className="muted">No recurring schedules have been created.</p>

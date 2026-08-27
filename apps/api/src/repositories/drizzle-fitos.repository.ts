@@ -797,10 +797,9 @@ export class DrizzleFitosRepository implements FitosRepository {
         .where(and(eq(members.tenantId, scope.tenantId), eq(members.contactId, contact.id)))
         .limit(1);
       const timestamp = new Date();
-      const member =
-        existing ??
-        (
-          await tx
+      const inserted = existing
+        ? []
+        : await tx
             .insert(members)
             .values({
               tenantId: scope.tenantId,
@@ -811,7 +810,17 @@ export class DrizzleFitosRepository implements FitosRepository {
               createdAt: timestamp,
               updatedAt: timestamp
             })
-            .returning()
+            .onConflictDoNothing({ target: [members.tenantId, members.contactId] })
+            .returning();
+      const member =
+        inserted[0] ??
+        existing ??
+        (
+          await tx
+            .select()
+            .from(members)
+            .where(and(eq(members.tenantId, scope.tenantId), eq(members.contactId, contact.id)))
+            .limit(1)
         )[0];
       if (!member) throw new Error("Unable to create member from lead.");
       const [updatedLead] = await tx
@@ -895,6 +904,15 @@ export class DrizzleFitosRepository implements FitosRepository {
       .where(and(eq(leadTasks.tenantId, scope.tenantId), eq(leadTasks.leadId, leadId)))
       .orderBy(leadTasks.dueAt, leadTasks.createdAt);
     return tasks.map((task) => this.leadTaskResponse(task));
+  }
+
+  async completeLeadTask(scope: TenantScope, leadId: string, taskId: string): Promise<LeadTaskResponse | null> {
+    const [task] = await this.db
+      .update(leadTasks)
+      .set({ completedAt: new Date() })
+      .where(and(eq(leadTasks.id, taskId), eq(leadTasks.leadId, leadId), eq(leadTasks.tenantId, scope.tenantId)))
+      .returning();
+    return task ? this.leadTaskResponse(task) : null;
   }
 
   async listServices(scope: TenantScope): Promise<ServiceResponse[]> {

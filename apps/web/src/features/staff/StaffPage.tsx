@@ -94,17 +94,26 @@ export function StaffPage() {
           mobileRenderer={(staffMember) => (
             <Card className="fitos-mobile-data-card">
               <div>
-                <strong className="fitos-data-table__primary">{staffMember.user.displayName}</strong>
+                <strong className="fitos-data-table__primary">
+                  {staffMember.user.displayName}
+                </strong>
                 <span className="fitos-data-table__muted">{staffMember.user.email}</span>
               </div>
               <div className="fitos-mobile-data-card__meta">
-                <span>{staffMember.branches.map((branch) => branch.name).join(", ") || "No branch access"}</span>
+                <span>
+                  {staffMember.branches.map((branch) => branch.name).join(", ") ||
+                    "No branch access"}
+                </span>
                 <StatusBadge status={staffMember.user.status} />
               </div>
               <div className="fitos-data-table__tag-list">
-                {(staffMember.roles?.length ? staffMember.roles : [staffMember.role]).map((role) => (
-                  <span className="fitos-data-table__tag" key={role.id}>{role.name}</span>
-                ))}
+                {(staffMember.roles?.length ? staffMember.roles : [staffMember.role]).map(
+                  (role) => (
+                    <span className="fitos-data-table__tag" key={role.id}>
+                      {role.name}
+                    </span>
+                  )
+                )}
               </div>
               {can(auth, "staff:manage") ? (
                 <button

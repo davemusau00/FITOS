@@ -540,6 +540,34 @@ export function MemberDetailPage() {
                     columns={bookingColumns}
                     data={bookings.data.data}
                     label="Member Bookings"
+                    mobileRenderer={(booking) => {
+                      const occurrence = occurrences.data?.data.find(
+                        (item) => item.id === booking.occurrenceId
+                      );
+                      const service = services.data?.find(
+                        (item) => item.id === occurrence?.serviceId
+                      );
+                      return (
+                        <Card className="fitos-mobile-data-card">
+                          <strong className="fitos-data-table__primary">
+                            {booking.serviceName ?? service?.name ?? "Class session"}
+                          </strong>
+                          <span className="fitos-data-table__muted">
+                            {occurrence
+                              ? formatDateTime(occurrence.startsAt)
+                              : "Session time unavailable"}
+                          </span>
+                          <div className="fitos-mobile-data-card__meta">
+                            <StatusBadge status={booking.status} />
+                            <span>
+                              {booking.creditsDebited
+                                ? `-${booking.creditsDebited} credits`
+                                : "No credits debited"}
+                            </span>
+                          </div>
+                        </Card>
+                      );
+                    }}
                   />
                 ) : (
                   <p className="muted">No bookings recorded for this member.</p>
@@ -610,6 +638,20 @@ export function MemberDetailPage() {
                     columns={paymentColumns}
                     data={payments.data.data}
                     label="Member Payments"
+                    mobileRenderer={(payment) => (
+                      <Card className="fitos-mobile-data-card">
+                        <strong className="fitos-data-table__primary">
+                          {formatCurrency(payment.amount.amountMinor, payment.amount.currency)}
+                        </strong>
+                        <span className="fitos-data-table__muted">
+                          {payment.method.replace("_", " ")} · {formatDateTime(payment.recordedAt)}
+                        </span>
+                        <div className="fitos-mobile-data-card__meta">
+                          <StatusBadge status={payment.status} />
+                          <span>{payment.allocationType ?? "Unallocated"}</span>
+                        </div>
+                      </Card>
+                    )}
                   />
                 ) : (
                   <p className="muted">No payments recorded for this member.</p>

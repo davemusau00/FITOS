@@ -36,6 +36,13 @@ complete.
 - [x] Leads table has a responsive mobile card renderer with stage, contact, follow-up, detail and converted-member actions.
 - [x] Membership plan catalog has a responsive mobile card renderer with pricing, status, duration, credits, branch and visibility context.
 - [x] Services catalog has a responsive mobile card renderer with type, status, capacity, pricing, branch, visibility and authorized edit action.
+- [x] Staff directory has a responsive mobile card renderer with multi-role assignments, branch access, status and authorized role-edit action.
+- [x] Recurring schedule catalog has a responsive mobile card renderer with weekday/time, materialization window, status and authorized extension action.
+- [x] Unmatched payments reconciliation has a responsive mobile card renderer with amount, method, reference, timestamp and reconciliation action.
+- [x] Payments ledger has a responsive mobile card renderer with amount, branch, allocation, status, timestamp and authorized refund/void actions.
+- [x] Member detail booking and payment history tables have responsive mobile cards preserving status, timing, credits and allocation context.
+- [x] Lead-to-member conversion now has a database-enforced tenant/contact uniqueness invariant (`0026_unique_member_contact`) to prevent duplicate members under concurrent conversion.
+- [x] Drizzle lead conversion uses conflict-safe member insertion and canonical re-read, so concurrent conversions reuse the tenant/contact member instead of surfacing an insert conflict.
 
 ### Verified checks
 

@@ -284,6 +284,7 @@ export const members = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
+    uniqueIndex("uq_members_tenant_contact").on(table.tenantId, table.contactId),
     uniqueIndex("uq_members_tenant_number").on(table.tenantId, table.memberNumber),
     index("idx_members_tenant_branch_status").on(table.tenantId, table.homeBranchId, table.status)
   ]

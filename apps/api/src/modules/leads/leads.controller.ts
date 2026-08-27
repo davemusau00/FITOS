@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Inject, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Inject, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type {
@@ -170,6 +170,22 @@ export class LeadsController {
       requestId,
       z.string().uuid().parse(leadId),
       taskSchema.parse(body)
+    );
+  }
+
+  @Patch(":leadId/tasks/:taskId/complete")
+  @RequirePermission("lead:update")
+  completeTask(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("leadId") leadId: string,
+    @Param("taskId") taskId: string
+  ) {
+    return this.core.completeLeadTask(
+      actor,
+      requestId,
+      z.string().uuid().parse(leadId),
+      z.string().uuid().parse(taskId)
     );
   }
 }
