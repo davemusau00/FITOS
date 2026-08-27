@@ -10,6 +10,7 @@ import {
   Query,
   Req,
   Res,
+  ServiceUnavailableException,
   UnauthorizedException
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
@@ -208,8 +209,9 @@ export class PlatformController {
     const parsed = z.object({ email: z.string().email() }).parse(body);
     const inquiry = await this.repository.getImplementationInquiry(id);
     if (!inquiry) throw new NotFoundException("Inquiry not found.");
-    // Log/trigger email with resume token
-    return { ok: true, message: `Resume link generated for ${parsed.email}` };
+    throw new ServiceUnavailableException(
+      `Resume email delivery is not configured for ${parsed.email}.`
+    );
   }
 
   // ─── Platform Admin Protected Endpoints ─────────────────────────────────────

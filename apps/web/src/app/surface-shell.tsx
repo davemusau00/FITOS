@@ -1,7 +1,9 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { BranchProvider } from "./branch-context";
 import { useAuth } from "./auth";
 import type { WorkspaceKey } from "@fitos/contracts";
+import { api } from "../lib/api/client";
 
 type Surface = "ops" | "front desk" | "coach" | "practice";
 const surfaceCopy: Record<Surface, { name: string; question: string }> = {
@@ -30,6 +32,8 @@ export function SurfaceShell({
   workspace: WorkspaceKey;
 }) {
   const { auth } = useAuth();
+  const navigate = useNavigate();
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const copy = surfaceCopy[surface];
   if (!auth?.availableWorkspaces.includes(workspace)) {
     return (
@@ -50,12 +54,32 @@ export function SurfaceShell({
               {auth.availableWorkspaces.map((key) => {
                 const link = workspaceLinks[key];
                 return link ? (
-                  <NavLink key={key} to={link.path}>
+                  <NavLink
+                    key={key}
+                    to={link.path}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setWorkspaceError(null);
+                      void api
+                        .setWorkspace(key)
+                        .then(() => navigate(link.path))
+                        .catch((error: unknown) => {
+                          setWorkspaceError(
+                            error instanceof Error ? error.message : "Unable to switch workspace."
+                          );
+                        });
+                    }}
+                  >
                     {link.label}
                   </NavLink>
                 ) : null;
               })}
             </nav>
+            {workspaceError ? (
+              <p className="surface-shell-error" role="alert">
+                {workspaceError}
+              </p>
+            ) : null}
           </div>
         </header>
         <main className="surface-shell-content">

@@ -360,9 +360,11 @@ export function InsightsPage() {
                     </div>
                     <button
                       className="fitos-button fitos-button--secondary fitos-button--small"
+                      disabled
+                      title="Messaging provider is not configured."
                       type="button"
                     >
-                      Send WhatsApp Nudge
+                      Messaging unavailable
                     </button>
                   </div>
                 ))}

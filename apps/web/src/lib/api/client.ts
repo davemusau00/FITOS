@@ -183,6 +183,11 @@ export const api = {
     request<AuthMeResponse>("/auth/login", { method: "POST", body: json(payload) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   me: () => request<AuthMeResponse>("/auth/me"),
+  setWorkspace: (workspace: import("@fitos/contracts").WorkspaceKey) =>
+    request<AuthMeResponse>("/auth/workspace", {
+      method: "PATCH",
+      body: json({ workspace })
+    }),
   organization: () => request<TenantSummary>("/organization"),
   updateOrganization: (payload: UpdateOrganizationRequest) =>
     request<TenantSummary>("/organization", { method: "PATCH", body: json(payload) }),

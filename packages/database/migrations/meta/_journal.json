@@ -169,6 +169,13 @@
       "when": 1788384000000,
       "tag": "0023_automation_action_results",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1788470400000,
+      "tag": "0024_multi_role_workspace_preferences",
+      "breakpoints": true
     }
   ]
 }
