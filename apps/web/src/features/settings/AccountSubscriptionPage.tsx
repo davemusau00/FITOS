@@ -138,7 +138,14 @@ export default function AccountSubscriptionPage() {
               {new Date(sub.trialEndsAt).toLocaleDateString("en-KE", { dateStyle: "long" })}
             </p>
           )}
-          <button className="btn-upgrade">Upgrade Plan</button>
+          <button
+            className="btn-upgrade"
+            disabled
+            title="Plan changes will be available when billing is implemented."
+            type="button"
+          >
+            Upgrade Plan (coming later)
+          </button>
         </div>
 
         {/* Usage quotas */}
@@ -235,6 +242,7 @@ export default function AccountSubscriptionPage() {
           border: none; cursor: pointer; transition: all .2s; text-align: center;
         }
         .btn-upgrade:hover { opacity: .9; transform: translateY(-1px); }
+        .btn-upgrade:disabled { cursor: not-allowed; opacity: .55; transform: none; }
 
         .card-section-title { font-size: .9rem; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 1.25rem; }
         .usage-bars { display: flex; flex-direction: column; gap: 1rem; }

@@ -126,7 +126,7 @@ export function OverviewPage() {
         <div className="stat-card">
           <span className="stat-card__label">Services</span>
           <strong className="stat-card__value">{totalServices}</strong>
-          <span className="stat-card__delta stat-card__delta--neutral">Active programs</span>
+          <span className="stat-card__delta stat-card__delta--neutral">Configured services</span>
         </div>
 
         <div className="stat-card">
@@ -138,7 +138,7 @@ export function OverviewPage() {
         <div className="stat-card">
           <span className="stat-card__label">Team / Staff</span>
           <strong className="stat-card__value">{totalStaff || "—"}</strong>
-          <span className="stat-card__delta stat-card__delta--neutral">Coaches & Admin</span>
+          <span className="stat-card__delta stat-card__delta--neutral">Staff with access</span>
         </div>
 
         <div className="stat-card">

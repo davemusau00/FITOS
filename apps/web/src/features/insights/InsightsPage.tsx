@@ -4,6 +4,7 @@ import { Card, Icon, PageHeader } from "@fitos/ui";
 import { api } from "../../lib/api/client";
 import { useBranch } from "../../app/branch-context";
 import { ErrorNotice, PageLoading } from "../shared";
+import type { InsightsOverviewResponse } from "@fitos/contracts";
 
 type InsightsTab = "overview" | "attendance" | "bookings" | "retention" | "leads";
 
@@ -17,6 +18,30 @@ const INSIGHT_TABS: { id: InsightsTab; label: string; icon: string }[] = [
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const HOURS = ["6AM", "8AM", "10AM", "12PM", "2PM", "4PM", "6PM", "8PM"];
+
+function csvCell(value: unknown): string {
+  const text = String(value ?? "");
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function downloadInsightsCsv(data: InsightsOverviewResponse): void {
+  const rows = [
+    ["Metric", "Value"],
+    ["Average weekly visits", data.summary.avgWeeklyVisits],
+    ["Class occupancy rate", `${data.summary.classOccupancyRate}%`],
+    ["Member retention (90d)", `${data.summary.memberRetention90d}%`],
+    ["Lead conversion rate", `${data.summary.leadConversionRate}%`],
+    ["Active members", data.summary.totalActiveMembers],
+    ["Leads in pipeline", data.summary.totalLeadsInPipeline]
+  ];
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `fitos-insights-${new Date().toISOString().slice(0, 10)}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
 
 export function InsightsPage() {
   const [activeTab, setActiveTab] = useState<InsightsTab>("overview");
@@ -48,6 +73,10 @@ export function InsightsPage() {
         actions={
           <button
             className="fitos-button fitos-button--secondary fitos-button--small"
+            disabled={!data}
+            onClick={() => {
+              if (data) downloadInsightsCsv(data);
+            }}
             type="button"
           >
             <Icon name="spark" size={14} />
