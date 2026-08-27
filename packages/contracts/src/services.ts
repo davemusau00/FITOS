@@ -127,6 +127,23 @@ export interface ScheduleOccurrenceResponse {
   status: OccurrenceStatus;
   createdAt: string;
   updatedAt: string;
+  /** Server-resolved member self-booking policy, present in member portal responses. */
+  bookingEligibility?: {
+    canBook: boolean;
+    reasonCode:
+      | "FULL"
+      | "WAITLIST_ONLY"
+      | "ALREADY_BOOKED"
+      | "INSUFFICIENT_CREDITS"
+      | "MEMBERSHIP_EXPIRED"
+      | "MEMBERSHIP_INACTIVE"
+      | "OUTSIDE_BOOKING_WINDOW"
+      | "SERVICE_NOT_INCLUDED"
+      | "WRONG_BRANCH"
+      | "CANCEL_WINDOW_PASSED"
+      | "ELIGIBLE";
+    message: string;
+  };
 }
 
 export interface ScheduleTemplateResponse {

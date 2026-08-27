@@ -1,6 +1,65 @@
 Yes. The next FITOS sprint should be treated as a **product-completion sprint**, not a feature-expansion sprint.
 
-The architecture is now broad enough. FITOS already has separate Command, Ops, Front Desk, Coach, Practice, Member and Platform surfaces, which is the correct direction for “same operating system, different cockpit.”  The repo also now implements those separate routes rather than forcing everyone through one giant `/app` shell.
+## Implementation status ledger
+
+Last updated: 2026-08-28. This ledger records work verified in the current
+worktree; it is intentionally conservative and does not claim the sprint is
+complete.
+
+### Verified complete
+
+- [x] Separate Command, Ops, Front Desk, Coach, Practice, Member and Platform routes/shells exist.
+- [x] Staff multi-role assignments, persisted workspace preference, server-resolved `defaultWorkspace` and `availableWorkspaces` are implemented.
+- [x] Platform authentication has separate token lifecycle, logout/revoke-all/current-user behavior, and token hashes are not returned.
+- [x] Platform overview, tenant directory/control records, lifecycle transitions and feature registry are implemented.
+- [x] Public reservations use transactional capacity locking with confirmed/waitlist outcomes; Drizzle concurrency coverage passes.
+- [x] Automation provider dispatch, simulation mode, durable action results and authenticated internal task/CRM action callback are implemented.
+- [x] Internal automation branch resolution uses a dedicated tenant projection and does not weaken normal user branch-scope rules.
+- [x] Internal automation commands require an explicit configured actor identity for audit integrity.
+- [x] Insights and dashboard projections have had fabricated fallback values removed; CSV export and neutral no-data states are present.
+- [x] Branch-aware Front Desk search, keyboard controls, session-aware check-in, duplicate protection, quick member drawer and responsive drawer styling are implemented.
+- [x] Front Desk explicitly distinguishes confirmed session check-in from facility check-in when no booking exists.
+- [x] Public Member Portal navigation no longer points to staff login.
+- [x] Public tenant pages no longer claim trainer certification or invent timetable duration when configuration is absent.
+- [x] Plan-based quota definitions are centralized and shared by Drizzle and in-memory adapters; missing feature capability data fails closed.
+- [x] Metric definitions are documented in `docs/METRIC_DEFINITIONS.md`.
+- [x] Member portal now consumes a typed server-provided booking eligibility result instead of relying only on frontend credit checks.
+- [x] Eligibility projections honor membership expiry in both Drizzle and in-memory adapters; in-memory coverage also evaluates service credits, duplicate bookings and full sessions.
+- [x] Drizzle portal eligibility now evaluates each service's credit requirement, duplicate confirmed bookings, effective capacity/full state and active membership before presenting a bookable occurrence.
+- [x] Web destructive actions use FITOS confirmation modals; no native `alert`, `confirm` or `prompt` calls remain.
+
+### Verified checks
+
+- [x] Formatting, lint, package typechecks, database-backed API tests and production build passed in the latest complete local run.
+- [x] Latest focused API/worker/web checks passed for the incremental slices above, including worker internal-dispatch tests and API tenancy/security tests.
+- [x] Configured Playwright suite passed 8/8, including role-boundary coverage and the pilot journey updated for the intentional Command access boundary.
+
+### Verification snapshot — 2026-08-28
+
+- API: typecheck passed; PostgreSQL-enabled run passed 42/42 tests, including all 8 Drizzle integration tests.
+- Worker: typecheck passed; 7 dispatcher/processor/metrics tests passed.
+- Web: typecheck passed; web test passed.
+- Full local `npm run check`: passed with PostgreSQL enabled, including lint, all package builds/typechecks, tests, and production build.
+- Focused pilot Playwright journey: passed after updating its Command-access assertion.
+- Full required golden/adversarial Playwright matrix: still pending; the configured 8-test suite is green but does not yet cover every journey listed below.
+
+### Still in progress / not yet verified complete
+
+- [ ] Full golden-path and adversarial E2E journeys covering all role handoffs, member self-service, public reservation outcomes and branch switching.
+- [ ] Full mobile acceptance matrix across every priority page, including mobile table-card coverage and modal focus behavior.
+- [ ] Complete CRM follow-up/conversion workflow and role-specific onboarding/settings coverage.
+- [ ] Full Platform entitlement mutation UI and support/audit workflows.
+- [ ] Complete end-to-end validation of worker-to-API internal automation execution with configured callback secrets and a real persisted lead target.
+- [ ] Complete remaining eligibility policy states for waitlist behavior, booking windows, service inclusion, branch access and cancellation/rescheduling rules.
+- [ ] Final accessibility, terminology, activity timeline and archive/delete audit across all modules.
+
+### Explicitly deferred for this sprint
+
+Payments/provider work, billing infrastructure, deployment, CI/branch protection,
+Prometheus/backups, AI, marketplace, native apps, payroll, accounting and
+other items listed in the deferred scope below remain out of scope.
+
+The architecture is now broad enough. FITOS already has separate Command, Ops, Front Desk, Coach, Practice, Member and Platform surfaces, which is the correct direction for “same operating system, different cockpit.” The repo also now implements those separate routes rather than forcing everyone through one giant `/app` shell.
 
 The development goal now should be:
 
@@ -45,16 +104,16 @@ Until the following completion work is finished:
 
 That means no major new:
 
-* finance functionality
-* payroll
-* AI assistant
-* marketplace
-* new fitness vertical
-* native app
-* accounting
-* payment provider work
-* subscription billing engine
-* complicated hardware integration
+- finance functionality
+- payroll
+- AI assistant
+- marketplace
+- new fitness vertical
+- native app
+- accounting
+- payment provider work
+- subscription billing engine
+- complicated hardware integration
 
 Assessments, therapy, inventory, equipment and Sites already stretch FITOS into a broad platform.
 
@@ -82,14 +141,14 @@ Do not gradually stuff everything back into `/app`.
 
 Each workspace must have its own:
 
-* navigation
-* information density
-* primary actions
-* landing page
-* mobile behavior
-* terminology
-* shortcuts
-* empty states
+- navigation
+- information density
+- primary actions
+- landing page
+- mobile behavior
+- terminology
+- shortcuts
+- empty states
 
 The owner sees the business.
 
@@ -105,7 +164,7 @@ The member sees bookings and membership.
 
 Platform staff see SaaS health and tenant administration.
 
-This distinction was established in the FITOS workspace architecture and should remain foundational. 
+This distinction was established in the FITOS workspace architecture and should remain foundational.
 
 ---
 
@@ -265,11 +324,11 @@ not merely:
 
 This pattern should appear differently in:
 
-* Command
-* Ops
-* Coach
-* Front Desk
-* Platform
+- Command
+- Ops
+- Coach
+- Front Desk
+- Platform
 
 but share a common underlying design system.
 
@@ -735,7 +794,7 @@ The repository now performs row-level locking for public capacity decisions, whi
 Avoid:
 
 ```ts
-new Date(x).getDay()
+new Date(x).getDay();
 ```
 
 for tenant-business scheduling logic.
@@ -751,13 +810,13 @@ everywhere class-day boundaries matter.
 
 This affects:
 
-* public timetable
-* Today's sessions
-* booking windows
-* reporting
-* reminders
-* attendance windows
-* opening hours
+- public timetable
+- Today's sessions
+- booking windows
+- reporting
+- reminders
+- attendance windows
+- opening hours
 
 A Nairobi gym should not suddenly think Tuesday has become Wednesday because someone's browser happens to be elsewhere.
 
@@ -952,7 +1011,7 @@ The attached platform/tenant settings architecture correctly distinguishes:
 **Platform owns the SaaS.
 Tenant owns the business.
 Branch owns local operations.
-Users own personal settings.** 
+Users own personal settings.**
 
 Turn `/app/settings` into a real control centre.
 
@@ -1770,9 +1829,9 @@ Use only where rollback semantics are safe.
 No:
 
 ```js
-confirm()
-alert()
-prompt()
+confirm();
+alert();
+prompt();
 ```
 
 Use FITOS:
@@ -2142,7 +2201,7 @@ Implementation
 
 before adding advanced operations.
 
-The Platform/Tenant/Branch/User sovereignty model from the planning material should guide every settings decision. 
+The Platform/Tenant/Branch/User sovereignty model from the planning material should guide every settings decision.
 
 ---
 

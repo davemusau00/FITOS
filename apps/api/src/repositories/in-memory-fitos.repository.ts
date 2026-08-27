@@ -4418,8 +4418,12 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     const entries = [...this.creditLedger.values()].filter((c) => c.memberId === member.id);
     const creditBalance = entries.reduce((sum, e) => sum + e.delta, 0);
+    const nowTime = new Date();
     const memberships = [...this.memberMemberships.values()].filter(
-      (m) => m.memberId === member.id && m.status === "active"
+      (m) =>
+        m.memberId === member.id &&
+        m.status === "active" &&
+        (!m.endsAt || new Date(m.endsAt) >= nowTime)
     );
     const latestPlan = memberships[0];
 
@@ -4447,7 +4451,6 @@ export class InMemoryFitosRepository implements FitosRepository {
         : null
     };
 
-    const nowTime = new Date();
     const upcomingBookings = [...this.bookings.values()]
       .filter((b) => b.memberId === memberId && b.status === "confirmed")
       .map((b) => {
@@ -4495,7 +4498,43 @@ export class InMemoryFitosRepository implements FitosRepository {
             new Date(o.startsAt) >= nowTime
         )
         .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
-        .slice(0, 50),
+        .slice(0, 50)
+        .map((occurrence) => {
+          const service = this.services.get(occurrence.serviceId);
+          const required = service?.creditsRequired ?? 1;
+          const booked = [...this.bookings.values()].some(
+            (booking) => booking.occurrenceId === occurrence.id && booking.memberId === memberId
+          );
+          const confirmed = [...this.bookings.values()].filter(
+            (booking) => booking.occurrenceId === occurrence.id && booking.status === "confirmed"
+          ).length;
+          const eligibility = booked
+            ? {
+                canBook: false,
+                reasonCode: "ALREADY_BOOKED" as const,
+                message: "You are already booked into this session."
+              }
+            : confirmed >= occurrence.capacity
+              ? { canBook: false, reasonCode: "FULL" as const, message: "This session is full." }
+              : creditBalance < required
+                ? {
+                    canBook: false,
+                    reasonCode: "INSUFFICIENT_CREDITS" as const,
+                    message: `You need ${required} credit(s) but have ${creditBalance} remaining.`
+                  }
+                : !memberships.length
+                  ? {
+                      canBook: false,
+                      reasonCode: "MEMBERSHIP_INACTIVE" as const,
+                      message: "An active membership is required to book this session."
+                    }
+                  : {
+                      canBook: true,
+                      reasonCode: "ELIGIBLE" as const,
+                      message: "You can book this session."
+                    };
+          return { ...occurrence, bookingEligibility: eligibility };
+        }),
       upcomingBookings,
       recentAttendance
     };

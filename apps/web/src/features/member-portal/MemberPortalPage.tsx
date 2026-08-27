@@ -300,6 +300,7 @@ export function MemberPortalPage() {
                 <div className="member-portal-schedule-grid">
                   {overview.bookableOccurrences.map((occ) => {
                     const isBooked = upcomingBookings.some((b) => b.occurrenceId === occ.id);
+                    const eligibility = occ.bookingEligibility;
                     const start = new Date(occ.startsAt);
                     return (
                       <div className="member-portal-class-item" key={occ.id}>
@@ -329,7 +330,9 @@ export function MemberPortalPage() {
                             </span>
                           ) : (
                             <Button
-                              disabled={profile.creditBalance <= 0}
+                              disabled={
+                                eligibility ? !eligibility.canBook : profile.creditBalance <= 0
+                              }
                               loading={bookClassMutation.isPending && selectedOccurrence === occ.id}
                               onClick={() => {
                                 setSelectedOccurrence(occ.id);
@@ -338,7 +341,9 @@ export function MemberPortalPage() {
                               size="small"
                               variant="primary"
                             >
-                              {profile.creditBalance > 0 ? "Book Class" : "0 Credits Left"}
+                              {eligibility && !eligibility.canBook
+                                ? eligibility.message
+                                : "Book Class"}
                             </Button>
                           )}
                         </div>

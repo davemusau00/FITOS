@@ -3533,7 +3533,8 @@ export class DrizzleFitosRepository implements FitosRepository {
         and(
           eq(memberMemberships.memberId, memberId),
           eq(memberMemberships.tenantId, row.member.tenantId),
-          eq(memberMemberships.status, "active")
+          eq(memberMemberships.status, "active"),
+          or(isNull(memberMemberships.endsAt), gte(memberMemberships.endsAt, new Date()))
         )
       )
       .orderBy(desc(memberMemberships.createdAt))
@@ -3605,6 +3606,62 @@ export class DrizzleFitosRepository implements FitosRepository {
       .limit(50);
 
     const planSnapshot = activeMembership?.planSnapshot as any;
+    const occurrencesWithWarnings = await this.withResourceWarnings(bookableRows);
+    const portalEligibility = await Promise.all(
+      occurrencesWithWarnings.map(async (occurrence) => {
+        const [service] = await this.db
+          .select({ creditsRequired: services.creditsRequired })
+          .from(services)
+          .where(eq(services.id, occurrence.serviceId))
+          .limit(1);
+        const [bookingCount] = await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(bookings)
+          .where(and(eq(bookings.occurrenceId, occurrence.id), eq(bookings.status, "confirmed")));
+        const [memberBooking] = await this.db
+          .select({ id: bookings.id })
+          .from(bookings)
+          .where(
+            and(
+              eq(bookings.occurrenceId, occurrence.id),
+              eq(bookings.memberId, memberId),
+              eq(bookings.status, "confirmed")
+            )
+          )
+          .limit(1);
+        const required = service?.creditsRequired ?? 1;
+        const eligibility = !activeMembership
+          ? {
+              canBook: false,
+              reasonCode: "MEMBERSHIP_INACTIVE" as const,
+              message: "An active membership is required to book this session."
+            }
+          : memberBooking
+            ? {
+                canBook: false,
+                reasonCode: "ALREADY_BOOKED" as const,
+                message: "You are already booked into this session."
+              }
+            : (bookingCount?.count ?? 0) >= (occurrence.effectiveCapacity ?? occurrence.capacity)
+              ? {
+                  canBook: false,
+                  reasonCode: "FULL" as const,
+                  message: "This session is full."
+                }
+              : (balanceRow?.total ?? 0) < required
+                ? {
+                    canBook: false,
+                    reasonCode: "INSUFFICIENT_CREDITS" as const,
+                    message: `You need ${required} credit(s) but have ${balanceRow?.total ?? 0} remaining.`
+                  }
+                : {
+                    canBook: true,
+                    reasonCode: "ELIGIBLE" as const,
+                    message: "You can book this session."
+                  };
+        return { ...occurrence, bookingEligibility: eligibility };
+      })
+    );
 
     return {
       profile: {
@@ -3654,7 +3711,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         startsAt: occurrence.startsAt.toISOString(),
         endsAt: occurrence.endsAt.toISOString()
       })),
-      bookableOccurrences: await this.withResourceWarnings(bookableRows),
+      bookableOccurrences: portalEligibility,
       recentAttendance: attendanceRows.map(({ attendance, occurrence, service }) => ({
         id: attendance.id,
         tenantId: attendance.tenantId,

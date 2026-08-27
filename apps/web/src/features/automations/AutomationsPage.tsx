@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, Icon, PageHeader } from "@fitos/ui";
+import { Button, Card, Icon, Modal, PageHeader } from "@fitos/ui";
 import type {
   AutomationActionType,
   AutomationRuleResponse,
@@ -110,6 +110,7 @@ export function AutomationsPage() {
   const [selectedAction, setSelectedAction] = useState<AutomationActionType>("send_email");
   const [formError, setFormError] = useState<unknown>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AutomationRuleResponse | null>(null);
 
   const automationsQuery = useQuery({
     queryKey: ["automations"],
@@ -323,11 +324,7 @@ export function AutomationsPage() {
                       <button
                         aria-label="Delete rule"
                         className="fitos-button fitos-button--ghost fitos-button--small"
-                        onClick={() => {
-                          if (confirm(`Delete automation rule "${rule.name}"?`)) {
-                            deleteMutation.mutate(rule.id);
-                          }
-                        }}
+                        onClick={() => setPendingDelete(rule)}
                         style={{ color: "var(--danger)" }}
                         type="button"
                       >
@@ -534,6 +531,31 @@ export function AutomationsPage() {
           </div>
         )}
       </div>
+      {pendingDelete ? (
+        <Modal
+          description={`This will permanently remove “${pendingDelete.name}”. Existing execution history will remain.`}
+          isOpen={true}
+          onClose={() => setPendingDelete(null)}
+          title="Delete automation rule?"
+        >
+          <div className="form-actions">
+            <Button onClick={() => setPendingDelete(null)} variant="ghost">
+              Keep Rule
+            </Button>
+            <Button
+              loading={deleteMutation.isPending}
+              onClick={() => {
+                deleteMutation.mutate(pendingDelete.id, {
+                  onSuccess: () => setPendingDelete(null)
+                });
+              }}
+              variant="danger"
+            >
+              Delete Rule
+            </Button>
+          </div>
+        </Modal>
+      ) : null}
     </>
   );
 }

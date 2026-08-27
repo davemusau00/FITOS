@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button, Card, Icon, Modal } from "@fitos/ui";
@@ -7,9 +7,24 @@ import type { CreatePublicReservationRequest } from "@fitos/contracts";
 import { FitosLogo } from "../../app/logo";
 import { ErrorNotice } from "../shared";
 
+const WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6
+};
+
+function weekdayInTimezone(value: Date, timeZone: string): number {
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone }).format(value);
+  return WEEKDAY_INDEX[weekday] ?? 0;
+}
+
 export function TenantPublicPage() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
-  const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
+  const [selectedDay, setSelectedDay] = useState<number>(0);
   const [trialModalOpen, setTrialModalOpen] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [selectedOccurrenceId, setSelectedOccurrenceId] = useState<string | null>(null);
@@ -69,8 +84,9 @@ export function TenantPublicPage() {
 
   const publicServices = services.data ?? [];
   const scheduleItems = schedule.data ?? [];
+  const tenantTimeZone = tenantInfo.data?.timezone ?? "Africa/Nairobi";
   const visibleSchedule = scheduleItems.filter(
-    (occ) => new Date(occ.startsAt).getDay() === selectedDay
+    (occ) => weekdayInTimezone(new Date(occ.startsAt), tenantTimeZone) === selectedDay
   );
   const activeCoaches = coaches.data ?? [];
 
@@ -80,6 +96,10 @@ export function TenantPublicPage() {
     (tenantSlug
       ? tenantSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
       : "FITOS facility");
+
+  useEffect(() => {
+    setSelectedDay(weekdayInTimezone(new Date(), tenantTimeZone));
+  }, [tenantTimeZone]);
 
   if (publishedSite.data) {
     return (
@@ -161,7 +181,7 @@ export function TenantPublicPage() {
             </div>
             <div className="public-hero__stat">
               <strong>Configured</strong>
-              <span>Certified Trainers</span>
+              <span>Trainers Listed</span>
             </div>
           </div>
         </div>
@@ -247,8 +267,9 @@ export function TenantPublicPage() {
                   <div className="public-timetable-item__details">
                     <h4>{svc?.name ?? occ.serviceName ?? "Class Session"}</h4>
                     <p>
-                      Coach: {occ.trainerName ?? "Trainer TBA"} · {svc?.durationMinutes ?? 45} mins
-                      · {occ.availableSpots} spots left
+                      Coach: {occ.trainerName ?? "Trainer TBA"}
+                      {svc?.durationMinutes ? ` · ${svc.durationMinutes} mins` : ""}·{" "}
+                      {occ.availableSpots} spots left
                     </p>
                   </div>
                   <div className="public-timetable-item__action">
@@ -280,7 +301,7 @@ export function TenantPublicPage() {
           <span className="public-section__eyebrow">EXPERT TEAM</span>
           <h2 className="public-section__title">Meet Your Instructors</h2>
           <p className="public-section__desc">
-            Certified performance coaches dedicated to your progress.
+            Meet the trainers and practitioners this facility has published.
           </p>
         </div>
 
