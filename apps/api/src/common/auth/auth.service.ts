@@ -9,7 +9,7 @@ import type {
   AuthMeResponse,
   LoginRequest,
   RequestActor,
-  RoleKey,
+  RoleResponse,
   WorkspaceKey
 } from "@fitos/contracts";
 import { DomainError } from "../errors/domain-error.js";
@@ -66,11 +66,11 @@ export class AuthService {
         branches: (await this.repository.listBranches(this.scopeFromIdentity(identity))).filter(
           (branch) => identity.branchIds.includes(branch.id)
         ),
-        permissions: identity.role.permissions,
-        roles: [identity.role],
+        permissions: this.mergePermissions(identity.roles ?? [identity.role]),
+        roles: identity.roles ?? [identity.role],
         selectedBranchId: identity.branchIds[0] ?? null,
         role: identity.role,
-        ...this.workspaceForRole(identity.role.key)
+        ...this.workspaceForRoles(identity.roles ?? [identity.role])
       }
     };
   }
@@ -87,10 +87,10 @@ export class AuthService {
       tenant: session.tenant,
       branches: await this.repository.listBranches(scope),
       permissions: session.permissions,
-      roles: [session.role],
+      roles: session.roles ?? [session.role],
       selectedBranchId: session.branchIds[0] ?? null,
       role: session.role,
-      ...this.workspaceForRole(session.role.key)
+      ...this.workspaceForRoles(session.roles ?? [session.role])
     };
   }
 
@@ -121,20 +121,29 @@ export class AuthService {
     };
   }
 
-  private workspaceForRole(role: RoleKey | null): {
+  private mergePermissions(roles: RoleResponse[]): AuthMeResponse["permissions"] {
+    return [...new Set(roles.flatMap((role) => role.permissions))];
+  }
+
+  private workspaceForRoles(roles: RoleResponse[]): {
     defaultWorkspace: WorkspaceKey;
     availableWorkspaces: WorkspaceKey[];
   } {
-    const workspaces: WorkspaceKey[] =
-      role === "owner"
-        ? ["command", "ops", "front_desk", "coach", "practice"]
-        : role === "manager"
-          ? ["ops", "front_desk"]
-          : role === "reception"
-            ? ["front_desk"]
-            : role === "trainer"
-              ? ["coach"]
-              : ["practice"];
-    return { defaultWorkspace: workspaces[0]!, availableWorkspaces: workspaces };
+    const workspaces = new Set<WorkspaceKey>();
+    for (const role of roles) {
+      const roleWorkspaces: WorkspaceKey[] =
+        role.key === "owner"
+          ? ["command", "ops", "front_desk", "coach", "practice"]
+          : role.key === "manager"
+            ? ["ops", "front_desk"]
+            : role.key === "reception"
+              ? ["front_desk"]
+              : role.key === "trainer"
+                ? ["coach"]
+                : ["practice"];
+      roleWorkspaces.forEach((workspace) => workspaces.add(workspace));
+    }
+    const availableWorkspaces = [...workspaces];
+    return { defaultWorkspace: availableWorkspaces[0]!, availableWorkspaces };
   }
 }

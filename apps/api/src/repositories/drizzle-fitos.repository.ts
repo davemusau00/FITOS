@@ -34,6 +34,7 @@ import {
   sitePages,
   services,
   tenantUsers,
+  tenantUserRoles,
   tenants,
   tenantSubscriptions,
   userBranchAccess,
@@ -232,12 +233,14 @@ export class DrizzleFitosRepository implements FitosRepository {
       .limit(1);
     if (!row) return null;
     const role = await this.roleResponse(row.role);
+    const assignedRoles = await this.rolesForTenantUser(row.tenantUser.id);
     return {
       user: this.userResponse(row.user),
       passwordHash: row.user.passwordHash,
       tenantUserId: row.tenantUser.id,
       tenant: this.tenantResponse(row.tenant),
       role,
+      roles: assignedRoles.length ? assignedRoles : [role],
       branchIds: await this.branchIdsFor(row.tenantUser.id, row.tenant.id, role.key)
     };
   }
@@ -289,15 +292,26 @@ export class DrizzleFitosRepository implements FitosRepository {
       .set({ lastSeenAt: new Date(currentTime) })
       .where(eq(sessions.id, row.session.id));
     const role = await this.roleResponse(row.role);
+    const assignedRoles = await this.rolesForTenantUser(row.tenantUser.id);
     return {
       sessionId: row.session.id,
       user: this.userResponse(row.user),
       tenantUserId: row.tenantUser.id,
       tenant: this.tenantResponse(row.tenant),
       role,
+      roles: assignedRoles.length ? assignedRoles : [role],
       branchIds: await this.branchIdsFor(row.tenantUser.id, row.tenant.id, role.key),
       permissions: role.permissions
     };
+  }
+
+  private async rolesForTenantUser(tenantUserId: string): Promise<RoleResponse[]> {
+    const rows = await this.db
+      .select({ role: roles })
+      .from(tenantUserRoles)
+      .innerJoin(roles, eq(roles.id, tenantUserRoles.roleId))
+      .where(eq(tenantUserRoles.tenantUserId, tenantUserId));
+    return Promise.all(rows.map((row) => this.roleResponse(row.role)));
   }
 
   async revokeSession(tokenHash: string, at: string): Promise<void> {

@@ -114,6 +114,7 @@ export interface LoginIdentity {
   tenantUserId: string;
   tenant: TenantSummary;
   role: RoleResponse;
+  roles?: RoleResponse[];
   branchIds: string[];
 }
 
@@ -123,6 +124,7 @@ export interface ResolvedSession {
   tenantUserId: string;
   tenant: TenantSummary;
   role: RoleResponse;
+  roles?: RoleResponse[];
   branchIds: string[];
   permissions: PermissionKey[];
 }
