@@ -54,6 +54,7 @@ complete.
 - [x] In-memory member portal eligibility now matches Drizzle branch access and ignores cancelled bookings when detecting duplicates.
 - [x] CRM lead stage, conversion and follow-up mutations now emit consistent success/error toast feedback in addition to inline errors.
 - [x] Drizzle Today aggregates now derive expected arrivals, no-shows, next scheduled session and due follow-ups from tenant/branch-scoped records instead of hardcoded zero/null fallbacks.
+- [x] In-memory Today aggregates now match those truthful states by excluding cancelled sessions and deriving no-shows and overdue open follow-ups.
 - [x] Member booking and cancellation mutations now emit consistent success/error toast feedback while retaining server-driven outcomes.
 
 ### Verified checks
@@ -69,6 +70,7 @@ complete.
 - Worker: typecheck passed; 7 dispatcher/processor/metrics tests passed.
 - Web: typecheck passed; web test passed.
 - Full local `npm run check`: passed with PostgreSQL enabled, including lint, all package builds/typechecks, tests, and production build.
+- Full local `npm run check` was rerun after Today aggregate parity changes and passed with PostgreSQL enabled; API remained 44/44, web 1/1 and worker 7/7.
 - Focused pilot Playwright journey: passed after updating its Command-access assertion.
 - Full required golden/adversarial Playwright matrix: still pending; the configured 8-test suite is green but does not yet cover every journey listed below.
 

@@ -5030,7 +5030,11 @@ export class InMemoryFitosRepository implements FitosRepository {
       (a) => a.tenantId === scope.tenantId && a.branchId === branchId && sameDay(a.checkedInAt)
     );
     const occurrences = [...this.occurrences.values()].filter(
-      (o) => o.tenantId === scope.tenantId && o.branchId === branchId && sameDay(o.startsAt)
+      (o) =>
+        o.tenantId === scope.tenantId &&
+        o.branchId === branchId &&
+        o.status === "scheduled" &&
+        sameDay(o.startsAt)
     );
     const leads = [...this.leads.values()].filter(
       (l) => l.tenantId === scope.tenantId && l.branchId === branchId && sameDay(l.createdAt)
@@ -5059,7 +5063,7 @@ export class InMemoryFitosRepository implements FitosRepository {
             bookings.filter((b) => b.occurrenceId === o.id && b.status === "confirmed").length,
           0
         ),
-        noShows: 0
+        noShows: attendance.filter((record) => record.status === "no_show").length
       },
       schedule: {
         sessionsToday: occurrences.length,
@@ -5071,7 +5075,18 @@ export class InMemoryFitosRepository implements FitosRepository {
             }
           : null
       },
-      leads: { newToday: leads.length, followUpsDue: 0 }
+      leads: {
+        newToday: leads.length,
+        followUpsDue: [...this.leads.values()].filter(
+          (lead) =>
+            lead.tenantId === scope.tenantId &&
+            lead.branchId === branchId &&
+            Boolean(lead.nextFollowUpAt) &&
+            new Date(lead.nextFollowUpAt!).getTime() <= Date.now() &&
+            lead.stage !== "joined" &&
+            lead.stage !== "lost"
+        ).length
+      }
     };
   }
 
