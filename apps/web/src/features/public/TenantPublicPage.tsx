@@ -347,7 +347,7 @@ export function TenantPublicPage() {
           </div>
           <div className="public-footer__links">
             <Link to="/login">Staff Login</Link>
-            <Link to="/login">Member Portal</Link>
+            <Link to="/member">Member Portal</Link>
           </div>
         </div>
       </footer>

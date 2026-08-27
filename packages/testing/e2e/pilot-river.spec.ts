@@ -283,11 +283,9 @@ test("owner completes the pilot operating river and reception is denied a refund
     await page.getByRole("button", { name: /Gym Owner/ }).click();
     await page.getByRole("button", { name: "Sign out" }).click();
     await signIn(page, "reception@gym.fitos.test", /\/reception$/);
-    // Front Desk intentionally has a minimal shell without a Payments nav item;
-    // verify the permitted read surface directly before checking refund denial.
+    // Front Desk intentionally cannot enter the Command payments surface.
     await page.goto("/app/payments");
-    await page.getByRole("combobox", { name: "Filter by branch" }).selectOption({ label: "Kilimani" });
-    await expect(page.getByRole("row").filter({ hasText: paymentReference })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /access to FITOS Command/i })).toBeVisible();
     await expect(page.getByRole("button", { name: "Refund" })).toHaveCount(0);
 
     const refundStatus = await page.evaluate(

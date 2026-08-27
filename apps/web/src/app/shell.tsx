@@ -5,6 +5,8 @@ import { can, useAuth } from "./auth";
 import { FitosLogo } from "./logo";
 import { CommandPalette } from "./command-palette";
 import { BranchProvider, useBranch } from "./branch-context";
+import { api } from "../lib/api/client";
+import type { WorkspaceKey } from "@fitos/contracts";
 
 type NavItem = {
   to: string;
@@ -17,6 +19,14 @@ type NavItem = {
 type NavGroup = {
   group: string;
   items: NavItem[];
+};
+
+const workspaceLinks: Partial<Record<WorkspaceKey, { label: string; path: string }>> = {
+  command: { label: "Command", path: "/app/overview" },
+  ops: { label: "Ops", path: "/ops" },
+  front_desk: { label: "Front Desk", path: "/reception" },
+  coach: { label: "Coach", path: "/coach" },
+  practice: { label: "Practice", path: "/practice" }
 };
 
 const navGroups: NavGroup[] = [
@@ -103,6 +113,7 @@ function AppShellInner() {
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [cmdOpen, setCmdOpen] = useState(false);
 
   const {
@@ -194,6 +205,37 @@ function AppShellInner() {
         </div>
 
         <div className="app-sidebar__body">
+          <div className="surface-workspace-switcher" aria-label="Available workspaces">
+            <span className="surface-workspace-switcher__label">Workspace</span>
+            {auth.availableWorkspaces.map((key) => {
+              const link = workspaceLinks[key];
+              return link ? (
+                <NavLink
+                  key={key}
+                  to={link.path}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setWorkspaceError(null);
+                    void api
+                      .setWorkspace(key)
+                      .then(() => navigate(link.path))
+                      .catch((error: unknown) =>
+                        setWorkspaceError(
+                          error instanceof Error ? error.message : "Unable to switch workspace."
+                        )
+                      );
+                  }}
+                >
+                  {link.label}
+                </NavLink>
+              ) : null;
+            })}
+          </div>
+          {workspaceError ? (
+            <p className="surface-shell-error" role="alert">
+              {workspaceError}
+            </p>
+          ) : null}
           {/* Branch Switcher */}
           <div ref={branchRef} style={{ position: "relative" }}>
             <button

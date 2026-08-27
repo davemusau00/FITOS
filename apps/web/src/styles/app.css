@@ -2815,6 +2815,10 @@ body {
 .reception-member-card--done {
   border-color: var(--success);
 }
+.reception-member-card--highlighted {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(198, 255, 0, 0.12);
+}
 .reception-member-card__avatar {
   align-items: center;
   background: var(--surface-3);
@@ -2854,6 +2858,80 @@ body {
   font-size: 0.9rem;
   font-weight: 600;
   gap: 0.4rem;
+}
+.reception-member-drawer {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.28);
+  max-width: 26rem;
+  padding: 1.25rem;
+  position: fixed;
+  right: 1.25rem;
+  top: 5rem;
+  width: min(calc(100vw - 2.5rem), 26rem);
+  z-index: 20;
+}
+.reception-member-drawer__header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.reception-member-drawer__header h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+.reception-member-drawer__body {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+.reception-member-drawer__body h3,
+.reception-member-drawer__body h4,
+.reception-member-drawer__body p {
+  margin: 0;
+}
+.reception-member-drawer__body h3 {
+  font-size: 1.35rem;
+}
+.reception-member-drawer__body h4 {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 0.6rem;
+  padding-top: 0.8rem;
+}
+.reception-member-drawer__booking {
+  align-items: center;
+  background: var(--surface-2);
+  border-radius: 0.65rem;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem;
+}
+.reception-member-drawer__booking span {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 639px) {
+  .reception-member-drawer {
+    border-radius: 1rem 1rem 0 0;
+    bottom: 0;
+    left: 0;
+    max-width: none;
+    right: 0;
+    top: auto;
+    width: auto;
+  }
+  .reception-member-card {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .reception-member-card__action {
+    margin-left: 3.75rem;
+    width: calc(100% - 3.75rem);
+  }
+  .reception-member-card__action .fitos-button {
+    width: 100%;
+  }
 }
 
 /* Today Sessions */
