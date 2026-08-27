@@ -1,4 +1,4 @@
-import { Reflector } from "@nestjs/core";
+import type { Reflector } from "@nestjs/core";
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { ScryptPasswordHasher } from "@fitos/auth";
@@ -78,6 +78,8 @@ describe("platform admin guard", () => {
       { getAllAndOverride: () => true } as unknown as Reflector,
       repository
     );
-    await expect(guard.canActivate(context(token))).rejects.toMatchObject({ status: token ? 403 : 401 });
+    await expect(guard.canActivate(context(token))).rejects.toMatchObject({
+      status: token ? 403 : 401
+    });
   });
 });

@@ -2,13 +2,19 @@ import { expect, test, type Page } from "@playwright/test";
 
 const PASSWORD = "ChangeMe123!";
 
-async function signIn(page: Page, email = "owner@gym.fitos.test") {
+async function signIn(
+  page: Page,
+  email = "owner@gym.fitos.test",
+  expectedPath: RegExp = /\/app\/overview$/
+) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/app\/overview$/);
-  await expect(page.getByRole("complementary", { name: "Primary navigation" })).toBeVisible();
+  await expect(page).toHaveURL(expectedPath);
+  if (expectedPath.source.includes("app/overview")) {
+    await expect(page.getByRole("complementary", { name: "Primary navigation" })).toBeVisible();
+  }
 }
 
 function localDateOffset(days: number): string {
@@ -262,18 +268,24 @@ test("owner completes the pilot operating river and reception is denied a refund
     await expect(page.getByText("Attended", { exact: true })).toBeVisible();
 
     await page.goto(`/app/members/${memberId}`);
-    const bookingHistory = page.getByRole("heading", { name: "Booking History" }).locator("..");
-    const paymentHistory = page.getByRole("heading", { name: "Payment History" }).locator("..");
+    await page.getByRole("button", { name: "Bookings", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Booking History" })).toBeVisible();
+    await expect(page.getByText(serviceName, { exact: true }).first()).toBeVisible();
+    await page.getByRole("button", { name: "Credits & Payments", exact: true }).click();
+    const paymentHistory = page.getByRole("heading", { name: "Payment History" }).locator("../..");
+    await expect(paymentHistory).toContainText("4,500.00");
+    await page.getByRole("button", { name: "Attendance", exact: true }).click();
     const attendanceHistory = page
       .getByRole("heading", { name: "Attendance History" })
       .locator("..");
-    await expect(bookingHistory.getByText(serviceName).first()).toBeVisible();
-    await expect(paymentHistory).toContainText("4,500.00");
     await expect(attendanceHistory.getByText("Attended", { exact: true })).toBeVisible();
 
+    await page.getByRole("button", { name: /Gym Owner/ }).click();
     await page.getByRole("button", { name: "Sign out" }).click();
-    await signIn(page, "reception@gym.fitos.test");
-    await page.getByRole("link", { name: "Payments", exact: true }).click();
+    await signIn(page, "reception@gym.fitos.test", /\/reception$/);
+    // Front Desk intentionally has a minimal shell without a Payments nav item;
+    // verify the permitted read surface directly before checking refund denial.
+    await page.goto("/app/payments");
     await expect(page.getByRole("row").filter({ hasText: paymentReference })).toBeVisible();
     await expect(page.getByRole("button", { name: "Refund" })).toHaveCount(0);
 
