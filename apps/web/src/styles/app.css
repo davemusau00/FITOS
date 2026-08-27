@@ -4517,3 +4517,27 @@ body {
     overflow-x: auto;
   }
 }
+
+.fitos-data-table__tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.fitos-data-table__tag {
+  background: var(--fitos-surface-muted, #eef2e8);
+  border: 1px solid var(--fitos-border, #d7ded0);
+  border-radius: 999px;
+  color: var(--fitos-ink, #192019);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  white-space: nowrap;
+}
+
+.settings-panel {
+  margin-top: 1.5rem;
+}
+
+.settings-panel select[multiple] {
+  min-height: 8rem;
+}
