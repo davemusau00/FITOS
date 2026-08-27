@@ -256,7 +256,10 @@ export const api = {
       headers: { "Idempotency-Key": idempotency() }
     }),
   staffRoles: () => request<import("@fitos/contracts").RoleResponse[]>("/users/roles"),
-  updateStaff: (userId: string, payload: { roleId: string; roleIds?: string[]; branchIds: string[] }) =>
+  updateStaff: (
+    userId: string,
+    payload: { roleId: string; roleIds?: string[]; branchIds: string[] }
+  ) =>
     request<StaffUserResponse>(`/users/${userId}/access`, { method: "PATCH", body: json(payload) }),
   deactivateStaff: (userId: string) =>
     request<StaffUserResponse>(`/users/${userId}/deactivate`, { method: "POST" }),

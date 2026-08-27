@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Alert,
   DataTable,
@@ -48,7 +49,26 @@ const staffColumns: Array<DataTableColumn<StaffRow>> = [
 
 export function StaffPage() {
   const { auth } = useAuth();
+  const queryClient = useQueryClient();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const staff = useQuery({ queryKey: ["staff"], queryFn: api.staff });
+  const roles = useQuery({ queryKey: ["staff-roles"], queryFn: api.staffRoles });
+  const update = useMutation({
+    mutationFn: ({
+      userId,
+      roleIds,
+      branchIds
+    }: {
+      userId: string;
+      roleIds: string[];
+      branchIds: string[];
+    }) => api.updateStaff(userId, { roleId: roleIds[0]!, roleIds, branchIds }),
+    onSuccess: async () => {
+      setEditingId(null);
+      await queryClient.invalidateQueries({ queryKey: ["staff"] });
+    }
+  });
   if (staff.isLoading) return <PageLoading />;
   const rows: StaffRow[] = (staff.data ?? []).map((record) => ({ ...record, id: record.user.id }));
   return (
@@ -68,6 +88,76 @@ export function StaffPage() {
       ) : (
         <DataTable columns={staffColumns} data={rows} label="Staff" />
       )}
+      {can(auth, "staff:manage") && rows.length ? (
+        <section className="settings-panel">
+          <h2>Role assignments</h2>
+          <p className="muted">
+            Select a staff member to review or update multiple workspace roles.
+          </p>
+          <div className="form-field">
+            <label htmlFor="staff-role-user">Staff member</label>
+            <select
+              id="staff-role-user"
+              value={editingId ?? ""}
+              onChange={(event) => {
+                const id = event.target.value;
+                const record = rows.find((item) => item.user.id === id);
+                setEditingId(id || null);
+                setSelectedRoleIds(
+                  record?.roles?.map((role) => role.id) ?? (record ? [record.role.id] : [])
+                );
+              }}
+            >
+              <option value="">Choose staff member</option>
+              {rows.map((record) => (
+                <option key={record.user.id} value={record.user.id}>
+                  {record.user.displayName}
+                </option>
+              ))}
+            </select>
+          </div>
+          {editingId ? (
+            <>
+              <div className="form-field">
+                <label htmlFor="staff-role-assignments">Roles</label>
+                <select
+                  id="staff-role-assignments"
+                  multiple
+                  value={selectedRoleIds}
+                  onChange={(event) =>
+                    setSelectedRoleIds(
+                      Array.from(event.target.selectedOptions, (option) => option.value)
+                    )
+                  }
+                >
+                  {(roles.data ?? []).map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                className="fitos-button fitos-button--primary"
+                disabled={!selectedRoleIds.length || update.isPending}
+                onClick={() => {
+                  const record = rows.find((item) => item.user.id === editingId);
+                  if (record)
+                    update.mutate({
+                      userId: editingId,
+                      roleIds: selectedRoleIds,
+                      branchIds: record.branches.map((branch) => branch.id)
+                    });
+                }}
+                type="button"
+              >
+                {update.isPending ? "Saving…" : "Save role assignments"}
+              </button>
+              {update.error ? <ErrorNotice error={update.error} /> : null}
+            </>
+          ) : null}
+        </section>
+      ) : null}
       {can(auth, "staff:manage") ? (
         <Alert title="Staff access" tone="info">
           Staff role assignments and branch access are enforced by the server and displayed here for
