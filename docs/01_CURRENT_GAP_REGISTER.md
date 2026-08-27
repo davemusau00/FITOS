@@ -3,18 +3,23 @@
 ## P0 correctness gaps
 
 ### Global branch context
+
 The current branch switcher must become a true product context. Switching branch must affect Today, Schedule, Bookings, Attendance, Reception, Members where appropriate, Services, Staff, Insights, Inventory, Equipment, Assessments and Therapy. Persist the selection and invalidate/requery branch-aware data consistently.
 
 ### Public API boundary
+
 The public tenant website must never rely on staff-authenticated internal controllers. Add explicit tenant-slug-scoped public read models and public lead/reservation mutations with rate limiting and narrow DTOs.
 
 ### Member identity
+
 The Member Portal must not infer identity by searching a member whose email matches a staff/user session. Add explicit member identities, member sessions/challenges and member-scoped server authorization.
 
 ### Analytics
+
 Remove all hard-coded operational KPIs and chart data from production-facing Insights. Every metric needs a real aggregate query, date window and branch scope.
 
 ### Automations
+
 Persist rules, templates and active/paused state. A UI toggle must not imply that an automation runs unless the worker is actually registered to execute it. Add run history, failure state and retry.
 
 ## Missing domains

@@ -13,35 +13,155 @@ type CommandItem = {
 
 const commands: CommandItem[] = [
   // Navigation
-  { id: "nav-today", label: "Today / Overview", type: "Navigation", icon: "dashboard", to: "/app/overview", keywords: "dashboard home kpis metrics" },
-  { id: "nav-schedule", label: "Schedule Calendar", type: "Navigation", icon: "calendar", to: "/app/schedule", keywords: "timetable classes sessions events calendar" },
-  { id: "nav-bookings", label: "Bookings List", type: "Navigation", icon: "calendar", to: "/app/bookings", keywords: "reservations bookings appointments" },
-  { id: "nav-attendance", label: "Attendance & Logs", type: "Navigation", icon: "check", to: "/app/attendance", keywords: "check-in checkin roster arrivals logs" },
-  { id: "nav-reception", label: "Front Desk Reception", type: "Navigation", icon: "check", to: "/app/reception", keywords: "front desk fast checkin scanner arrivals" },
-  { id: "nav-members", label: "Members Directory", type: "Navigation", icon: "users", to: "/app/members", keywords: "clients people customers users profiles" },
-  { id: "nav-memberships", label: "Memberships & Plans", type: "Navigation", icon: "shield", to: "/app/memberships", keywords: "subscriptions plans passes credits" },
-  { id: "nav-leads", label: "Leads Pipeline & CRM", type: "Navigation", icon: "user", to: "/app/leads", keywords: "prospects pipeline inquiries trials sales crm kanban" },
-  { id: "nav-insights", label: "Insights & Growth Analytics", type: "Navigation", icon: "dashboard", to: "/app/insights", keywords: "analytics reports charts heatmaps retention stats" },
-  { id: "nav-automations", label: "Automations & Workflows", type: "Navigation", icon: "spark", to: "/app/automations", keywords: "automation workflows rules triggers templates email sms" },
-  { id: "nav-services", label: "Services & Classes", type: "Navigation", icon: "spark", to: "/app/services", keywords: "classes workouts personal training packages" },
-  { id: "nav-staff", label: "Staff & Coaches", type: "Navigation", icon: "team", to: "/app/staff", keywords: "trainers coaches employees team instructors" },
-  { id: "nav-settings", label: "Settings", type: "Navigation", icon: "settings", to: "/app/settings", keywords: "organization branches preferences config security" },
+  {
+    id: "nav-today",
+    label: "Today / Overview",
+    type: "Navigation",
+    icon: "dashboard",
+    to: "/app/overview",
+    keywords: "dashboard home kpis metrics"
+  },
+  {
+    id: "nav-schedule",
+    label: "Schedule Calendar",
+    type: "Navigation",
+    icon: "calendar",
+    to: "/app/schedule",
+    keywords: "timetable classes sessions events calendar"
+  },
+  {
+    id: "nav-bookings",
+    label: "Bookings List",
+    type: "Navigation",
+    icon: "calendar",
+    to: "/app/bookings",
+    keywords: "reservations bookings appointments"
+  },
+  {
+    id: "nav-attendance",
+    label: "Attendance & Logs",
+    type: "Navigation",
+    icon: "check",
+    to: "/app/attendance",
+    keywords: "check-in checkin roster arrivals logs"
+  },
+  {
+    id: "nav-reception",
+    label: "Front Desk Reception",
+    type: "Navigation",
+    icon: "check",
+    to: "/app/reception",
+    keywords: "front desk fast checkin scanner arrivals"
+  },
+  {
+    id: "nav-members",
+    label: "Members Directory",
+    type: "Navigation",
+    icon: "users",
+    to: "/app/members",
+    keywords: "clients people customers users profiles"
+  },
+  {
+    id: "nav-memberships",
+    label: "Memberships & Plans",
+    type: "Navigation",
+    icon: "shield",
+    to: "/app/memberships",
+    keywords: "subscriptions plans passes credits"
+  },
+  {
+    id: "nav-leads",
+    label: "Leads Pipeline & CRM",
+    type: "Navigation",
+    icon: "user",
+    to: "/app/leads",
+    keywords: "prospects pipeline inquiries trials sales crm kanban"
+  },
+  {
+    id: "nav-insights",
+    label: "Insights & Growth Analytics",
+    type: "Navigation",
+    icon: "dashboard",
+    to: "/app/insights",
+    keywords: "analytics reports charts heatmaps retention stats"
+  },
+  {
+    id: "nav-automations",
+    label: "Automations & Workflows",
+    type: "Navigation",
+    icon: "spark",
+    to: "/app/automations",
+    keywords: "automation workflows rules triggers templates email sms"
+  },
+  {
+    id: "nav-services",
+    label: "Services & Classes",
+    type: "Navigation",
+    icon: "spark",
+    to: "/app/services",
+    keywords: "classes workouts personal training packages"
+  },
+  {
+    id: "nav-staff",
+    label: "Staff & Coaches",
+    type: "Navigation",
+    icon: "team",
+    to: "/app/staff",
+    keywords: "trainers coaches employees team instructors"
+  },
+  {
+    id: "nav-settings",
+    label: "Settings",
+    type: "Navigation",
+    icon: "settings",
+    to: "/app/settings",
+    keywords: "organization branches preferences config security"
+  },
 
   // Quick Actions
-  { id: "act-new-member", label: "Add New Member", type: "Action", icon: "plus", to: "/app/members/new", keywords: "create member new signup register client" },
-  { id: "act-new-booking", label: "Book a Class / Session", type: "Action", icon: "calendar", to: "/app/bookings/new", keywords: "reserve schedule class appointment booking" },
-  { id: "act-new-lead", label: "Create New Lead", type: "Action", icon: "plus", to: "/app/leads/new", keywords: "add prospect trial inquiry sales lead" },
-  { id: "act-org-settings", label: "Organization Profile", type: "Action", icon: "building", to: "/app/settings/organization", keywords: "brand timezone company details" },
-  { id: "act-branches", label: "Manage Branches", type: "Action", icon: "building", to: "/app/settings/branches", keywords: "locations gyms studios facilities" }
+  {
+    id: "act-new-member",
+    label: "Add New Member",
+    type: "Action",
+    icon: "plus",
+    to: "/app/members/new",
+    keywords: "create member new signup register client"
+  },
+  {
+    id: "act-new-booking",
+    label: "Book a Class / Session",
+    type: "Action",
+    icon: "calendar",
+    to: "/app/bookings/new",
+    keywords: "reserve schedule class appointment booking"
+  },
+  {
+    id: "act-new-lead",
+    label: "Create New Lead",
+    type: "Action",
+    icon: "plus",
+    to: "/app/leads/new",
+    keywords: "add prospect trial inquiry sales lead"
+  },
+  {
+    id: "act-org-settings",
+    label: "Organization Profile",
+    type: "Action",
+    icon: "building",
+    to: "/app/settings/organization",
+    keywords: "brand timezone company details"
+  },
+  {
+    id: "act-branches",
+    label: "Manage Branches",
+    type: "Action",
+    icon: "building",
+    to: "/app/settings/branches",
+    keywords: "locations gyms studios facilities"
+  }
 ];
 
-export function CommandPalette({
-  isOpen,
-  onClose
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-}) {
+export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
@@ -123,7 +243,14 @@ export function CommandPalette({
 
         <ul className="cmd-results">
           {filtered.length === 0 ? (
-            <li style={{ padding: "1.5rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.875rem" }}>
+            <li
+              style={{
+                padding: "1.5rem",
+                textAlign: "center",
+                color: "var(--text-muted)",
+                fontSize: "0.875rem"
+              }}
+            >
               No results found for &ldquo;{query}&rdquo;
             </li>
           ) : (

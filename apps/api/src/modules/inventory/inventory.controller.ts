@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Inject, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Query
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type {
@@ -58,7 +68,10 @@ const createMovementSchema = z
     branchId: z.string().uuid(),
     itemId: z.string().uuid(),
     movementType: z.enum(movementTypes),
-    quantity: z.number().int().refine((q) => q !== 0, "Quantity cannot be zero"),
+    quantity: z
+      .number()
+      .int()
+      .refine((q) => q !== 0, "Quantity cannot be zero"),
     referenceType: z.string().trim().max(50).optional(),
     referenceId: z.string().trim().max(100).optional(),
     costMinor: z.number().int().nonnegative().optional(),
@@ -82,8 +95,29 @@ const createPOSchema = z
     notes: z.string().trim().max(1000).optional()
   })
   .strict();
-const bomSchema = z.object({ requirements: z.array(z.object({ itemId: z.string().uuid(), quantityPerSession: z.number().int().positive() })).max(100) }).strict();
-const consumeSchema = z.object({ branchId: z.string().uuid(), serviceId: z.string().uuid().optional(), referenceType: z.string().trim().min(1).max(40), referenceId: z.string().uuid(), items: z.array(z.object({ itemId: z.string().uuid(), quantityPerSession: z.number().int().positive() })).min(1).max(100) }).strict();
+const bomSchema = z
+  .object({
+    requirements: z
+      .array(
+        z.object({ itemId: z.string().uuid(), quantityPerSession: z.number().int().positive() })
+      )
+      .max(100)
+  })
+  .strict();
+const consumeSchema = z
+  .object({
+    branchId: z.string().uuid(),
+    serviceId: z.string().uuid().optional(),
+    referenceType: z.string().trim().min(1).max(40),
+    referenceId: z.string().uuid(),
+    items: z
+      .array(
+        z.object({ itemId: z.string().uuid(), quantityPerSession: z.number().int().positive() })
+      )
+      .min(1)
+      .max(100)
+  })
+  .strict();
 
 const createLotSchema = z
   .object({
@@ -93,7 +127,10 @@ const createLotSchema = z
     purchaseOrderId: z.string().uuid().optional(),
     quantityReceived: z.number().positive(),
     unitCostMinor: z.number().int().nonnegative().optional(),
-    expiresOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").optional(),
+    expiresOn: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+      .optional(),
     notes: z.string().trim().max(500).optional()
   })
   .strict();
@@ -112,7 +149,6 @@ const recordCountSchema = z
   })
   .strict();
 
-
 const toScope = (actor: RequestActor) => ({
   tenantId: actor.tenantId,
   tenantUserId: actor.tenantUserId,
@@ -123,9 +159,7 @@ const toScope = (actor: RequestActor) => ({
 @ApiTags("inventory")
 @Controller("inventory")
 export class InventoryController {
-  constructor(
-    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
-  ) {}
+  constructor(@Inject(FitosRepositoryToken) private readonly repository: FitosRepository) {}
 
   @Get("items")
   @RequirePermission("tenant:read")
@@ -189,15 +223,32 @@ export class InventoryController {
 
   @Get("bom/:serviceId")
   @RequirePermission("service:read")
-  listBom(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string) { return this.repository.listServiceInventoryRequirements(toScope(actor), z.string().uuid().parse(serviceId)); }
+  listBom(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string) {
+    return this.repository.listServiceInventoryRequirements(
+      toScope(actor),
+      z.string().uuid().parse(serviceId)
+    );
+  }
 
   @Post("bom/:serviceId")
   @RequirePermission("service:manage")
-  replaceBom(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string, @Body() body: unknown) { return this.repository.replaceServiceInventoryRequirements(toScope(actor), z.string().uuid().parse(serviceId), bomSchema.parse(body).requirements); }
+  replaceBom(
+    @Actor() actor: RequestActor,
+    @Param("serviceId") serviceId: string,
+    @Body() body: unknown
+  ) {
+    return this.repository.replaceServiceInventoryRequirements(
+      toScope(actor),
+      z.string().uuid().parse(serviceId),
+      bomSchema.parse(body).requirements
+    );
+  }
 
   @Post("consume")
   @RequirePermission("tenant:settings")
-  consume(@Actor() actor: RequestActor, @Body() body: unknown) { return this.repository.consumeInventory(toScope(actor), consumeSchema.parse(body)); }
+  consume(@Actor() actor: RequestActor, @Body() body: unknown) {
+    return this.repository.consumeInventory(toScope(actor), consumeSchema.parse(body));
+  }
 
   // ─── Inventory Lots ──────────────────────────────────────────────────────────
   @Get("lots")
@@ -244,22 +295,14 @@ export class InventoryController {
 
   @Post("stocktakes/:id/count")
   @RequirePermission("tenant:settings")
-  async recordCount(
-    @Actor() actor: RequestActor,
-    @Param("id") id: string,
-    @Body() body: unknown
-  ) {
+  async recordCount(@Actor() actor: RequestActor, @Param("id") id: string, @Body() body: unknown) {
     const input = recordCountSchema.parse(body);
     return this.repository.recordStocktakeCount(toScope(actor), id, input);
   }
 
   @Post("stocktakes/:id/complete")
   @RequirePermission("tenant:settings")
-  async completeStocktake(
-    @Actor() actor: RequestActor,
-    @Param("id") id: string
-  ) {
+  async completeStocktake(@Actor() actor: RequestActor, @Param("id") id: string) {
     return this.repository.completeStocktake(toScope(actor), id, actor.userId);
   }
 }
-

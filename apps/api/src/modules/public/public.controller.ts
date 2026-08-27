@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Inject, NotFoundException, Param, Post, Query, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  Req
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type { CreatePublicLeadRequest } from "@fitos/contracts";
@@ -24,7 +34,26 @@ const scheduleQuerySchema = z
     daysAhead: z.coerce.number().int().min(1).max(90).optional()
   })
   .passthrough();
-const reservationSchema = z.object({ branchId: z.string().uuid().optional(), occurrenceId: z.string().uuid().optional(), serviceId: z.string().uuid().optional(), reservationType: z.enum(["class", "assessment", "therapy", "recovery", "consultation", "facility"]), firstName: z.string().trim().min(1).max(120), lastName: z.string().trim().max(120).optional(), phone: z.string().trim().max(60).optional(), email: z.string().trim().email().max(255).optional(), notes: z.string().trim().max(2000).optional() }).strict();
+const reservationSchema = z
+  .object({
+    branchId: z.string().uuid().optional(),
+    occurrenceId: z.string().uuid().optional(),
+    serviceId: z.string().uuid().optional(),
+    reservationType: z.enum([
+      "class",
+      "assessment",
+      "therapy",
+      "recovery",
+      "consultation",
+      "facility"
+    ]),
+    firstName: z.string().trim().min(1).max(120),
+    lastName: z.string().trim().max(120).optional(),
+    phone: z.string().trim().max(60).optional(),
+    email: z.string().trim().email().max(255).optional(),
+    notes: z.string().trim().max(2000).optional()
+  })
+  .strict();
 
 @ApiTags("public")
 @Public()
@@ -73,7 +102,11 @@ export class PublicController {
   }
 
   @Post("reservations")
-  createReservation(@Param("tenantSlug") slug: string, @Body() body: unknown, @Req() req: FitosRequest) {
+  createReservation(
+    @Param("tenantSlug") slug: string,
+    @Body() body: unknown,
+    @Req() req: FitosRequest
+  ) {
     this.rateLimit.consume(`public-reservation:${slug}:${req.ip ?? "unknown"}`, 5, 60 * 60 * 1_000);
     return this.repository.createPublicReservation(slug, reservationSchema.parse(body));
   }

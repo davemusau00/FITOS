@@ -5,7 +5,13 @@ import {
   hashSessionToken,
   ScryptPasswordHasher
 } from "@fitos/auth";
-import type { AuthMeResponse, LoginRequest, RequestActor } from "@fitos/contracts";
+import type {
+  AuthMeResponse,
+  LoginRequest,
+  RequestActor,
+  RoleKey,
+  WorkspaceKey
+} from "@fitos/contracts";
 import { DomainError } from "../errors/domain-error.js";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type {
@@ -61,7 +67,9 @@ export class AuthService {
           (branch) => identity.branchIds.includes(branch.id)
         ),
         permissions: identity.role.permissions,
-        selectedBranchId: identity.branchIds[0] ?? null
+        selectedBranchId: identity.branchIds[0] ?? null,
+        role: identity.role,
+        ...this.workspaceForRole(identity.role.key)
       }
     };
   }
@@ -78,7 +86,9 @@ export class AuthService {
       tenant: session.tenant,
       branches: await this.repository.listBranches(scope),
       permissions: session.permissions,
-      selectedBranchId: session.branchIds[0] ?? null
+      selectedBranchId: session.branchIds[0] ?? null,
+      role: session.role,
+      ...this.workspaceForRole(session.role.key)
     };
   }
 
@@ -107,5 +117,22 @@ export class AuthService {
       userId: identity.user.id,
       branchIds: identity.branchIds
     };
+  }
+
+  private workspaceForRole(role: RoleKey | null): {
+    defaultWorkspace: WorkspaceKey;
+    availableWorkspaces: WorkspaceKey[];
+  } {
+    const workspace: WorkspaceKey =
+      role === "owner"
+        ? "command"
+        : role === "manager"
+          ? "ops"
+          : role === "reception"
+            ? "front_desk"
+            : role === "trainer"
+              ? "coach"
+              : "practice";
+    return { defaultWorkspace: workspace, availableWorkspaces: [workspace] };
   }
 }

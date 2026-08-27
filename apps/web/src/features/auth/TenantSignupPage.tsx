@@ -6,8 +6,15 @@ import { FitosLogo } from "../../app/logo";
 const STEPS = ["Gym Details", "Location", "Owner Account", "Review"];
 
 const TIMEZONES = [
-  "Africa/Nairobi", "Africa/Lagos", "Africa/Johannesburg", "Africa/Cairo",
-  "Africa/Accra", "Europe/London", "Europe/Paris", "America/New_York", "Asia/Dubai"
+  "Africa/Nairobi",
+  "Africa/Lagos",
+  "Africa/Johannesburg",
+  "Africa/Cairo",
+  "Africa/Accra",
+  "Europe/London",
+  "Europe/Paris",
+  "America/New_York",
+  "Asia/Dubai"
 ];
 
 const CURRENCIES = [
@@ -21,12 +28,23 @@ const CURRENCIES = [
 ];
 
 const BUSINESS_TYPES = [
-  "gym", "pilates_studio", "yoga_studio", "sports_club", "wellness_center",
-  "physiotherapy_clinic", "crossfit_box", "martial_arts", "dance_studio", "spa"
+  "gym",
+  "pilates_studio",
+  "yoga_studio",
+  "sports_club",
+  "wellness_center",
+  "physiotherapy_clinic",
+  "crossfit_box",
+  "martial_arts",
+  "dance_studio",
+  "spa"
 ];
 
 function slugify(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 export default function TenantSignupPage() {
@@ -62,7 +80,13 @@ export default function TenantSignupPage() {
   const canGoNext = () => {
     if (step === 0) return form.gymName.length >= 2 && form.slug.length >= 2;
     if (step === 1) return form.country.length >= 1;
-    if (step === 2) return form.ownerName.length >= 2 && form.ownerEmail.includes("@") && form.password.length >= 8 && form.password === form.confirmPassword;
+    if (step === 2)
+      return (
+        form.ownerName.length >= 2 &&
+        form.ownerEmail.includes("@") &&
+        form.password.length >= 8 &&
+        form.password === form.confirmPassword
+      );
     return true;
   };
 
@@ -105,7 +129,10 @@ export default function TenantSignupPage() {
 
         <div className="signup-steps">
           {STEPS.map((label, i) => (
-            <div key={label} className={`signup-step ${i === step ? "active" : i < step ? "done" : ""}`}>
+            <div
+              key={label}
+              className={`signup-step ${i === step ? "active" : i < step ? "done" : ""}`}
+            >
               <div className="signup-step-dot">{i < step ? "✓" : i + 1}</div>
               <span className="signup-step-label">{label}</span>
             </div>
@@ -129,7 +156,9 @@ export default function TenantSignupPage() {
               <div className="form-group">
                 <label htmlFor="slug">
                   URL Slug
-                  <span className="form-hint">fitos.app/<strong>{form.slug || "your-gym"}</strong></span>
+                  <span className="form-hint">
+                    fitos.app/<strong>{form.slug || "your-gym"}</strong>
+                  </span>
                 </label>
                 <input
                   id="slug"
@@ -141,9 +170,15 @@ export default function TenantSignupPage() {
               </div>
               <div className="form-group">
                 <label htmlFor="businessType">Business Type</label>
-                <select id="businessType" value={form.businessType} onChange={(e) => set("businessType", e.target.value)}>
+                <select
+                  id="businessType"
+                  value={form.businessType}
+                  onChange={(e) => set("businessType", e.target.value)}
+                >
                   {BUSINESS_TYPES.map((t) => (
-                    <option key={t} value={t}>{t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+                    <option key={t} value={t}>
+                      {t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -166,15 +201,31 @@ export default function TenantSignupPage() {
                 </div>
                 <div className="form-group">
                   <label htmlFor="timezone">Time Zone</label>
-                  <select id="timezone" value={form.timezone} onChange={(e) => set("timezone", e.target.value)}>
-                    {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+                  <select
+                    id="timezone"
+                    value={form.timezone}
+                    onChange={(e) => set("timezone", e.target.value)}
+                  >
+                    {TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>
+                        {tz}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
               <div className="form-group">
                 <label htmlFor="currency">Currency</label>
-                <select id="currency" value={form.currency} onChange={(e) => set("currency", e.target.value)}>
-                  {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
+                <select
+                  id="currency"
+                  value={form.currency}
+                  onChange={(e) => set("currency", e.target.value)}
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="form-group">
@@ -265,21 +316,48 @@ export default function TenantSignupPage() {
             <div className="signup-review">
               <div className="review-section">
                 <h3>Gym</h3>
-                <div className="review-row"><span>Name</span><strong>{form.gymName}</strong></div>
-                <div className="review-row"><span>URL</span><strong>fitos.app/{form.slug}</strong></div>
-                <div className="review-row"><span>Type</span><strong>{form.businessType.replace(/_/g, " ")}</strong></div>
+                <div className="review-row">
+                  <span>Name</span>
+                  <strong>{form.gymName}</strong>
+                </div>
+                <div className="review-row">
+                  <span>URL</span>
+                  <strong>fitos.app/{form.slug}</strong>
+                </div>
+                <div className="review-row">
+                  <span>Type</span>
+                  <strong>{form.businessType.replace(/_/g, " ")}</strong>
+                </div>
               </div>
               <div className="review-section">
                 <h3>Location</h3>
-                <div className="review-row"><span>Country</span><strong>{form.country}</strong></div>
-                <div className="review-row"><span>Timezone</span><strong>{form.timezone}</strong></div>
-                <div className="review-row"><span>Currency</span><strong>{form.currency}</strong></div>
-                <div className="review-row"><span>Branch</span><strong>{form.branchName}</strong></div>
+                <div className="review-row">
+                  <span>Country</span>
+                  <strong>{form.country}</strong>
+                </div>
+                <div className="review-row">
+                  <span>Timezone</span>
+                  <strong>{form.timezone}</strong>
+                </div>
+                <div className="review-row">
+                  <span>Currency</span>
+                  <strong>{form.currency}</strong>
+                </div>
+                <div className="review-row">
+                  <span>Branch</span>
+                  <strong>{form.branchName}</strong>
+                </div>
               </div>
               <div className="review-section">
                 <h3>Owner Account</h3>
-                <div className="review-row"><span>Name</span><strong>{form.ownerName}</strong></div>
-                <div className="review-row"><span>Email</span><strong>{form.ownerEmail}</strong></div>
+                <div className="review-row">
+                  <span>Name</span>
+                  <strong>{form.ownerName}</strong>
+                </div>
+                <div className="review-row">
+                  <span>Email</span>
+                  <strong>{form.ownerEmail}</strong>
+                </div>
               </div>
               <div className="review-trial">
                 <span className="trial-badge">14-Day Free Trial</span>
@@ -320,8 +398,7 @@ export default function TenantSignupPage() {
         </div>
 
         <p className="signup-login-link">
-          Already have an account?{" "}
-          <a href="/login">Sign in</a>
+          Already have an account? <a href="/login">Sign in</a>
         </p>
       </div>
 

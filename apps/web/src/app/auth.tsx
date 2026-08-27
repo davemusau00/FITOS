@@ -52,3 +52,18 @@ export function useAuth(): AuthContextValue {
 export function can(auth: AuthMeResponse | null, permission: string): boolean {
   return Boolean(auth?.permissions.includes(permission as never));
 }
+
+export function workspacePath(auth: AuthMeResponse | null): string {
+  switch (auth?.defaultWorkspace) {
+    case "ops":
+      return "/ops";
+    case "front_desk":
+      return "/reception";
+    case "coach":
+      return "/coach";
+    case "practice":
+      return "/practice";
+    default:
+      return "/app/overview";
+  }
+}

@@ -1,10 +1,5 @@
 export type EquipmentStatus =
-  | "available"
-  | "in_use"
-  | "maintenance"
-  | "calibration_due"
-  | "out_of_service"
-  | "retired";
+  "available" | "in_use" | "maintenance" | "calibration_due" | "out_of_service" | "retired";
 
 export interface EquipmentAssetResponse {
   id: string;
@@ -104,4 +99,11 @@ export interface CreateMaintenanceRecordRequest {
   nextDueAt?: string | null;
 }
 
-export interface EquipmentAllocationResponse { id: string; tenantId: string; occurrenceId: string; assetId: string; status: "reserved" | "released"; createdAt: string; }
+export interface EquipmentAllocationResponse {
+  id: string;
+  tenantId: string;
+  occurrenceId: string;
+  assetId: string;
+  status: "reserved" | "released";
+  createdAt: string;
+}

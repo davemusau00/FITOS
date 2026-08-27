@@ -42,10 +42,7 @@ export default function AssessmentsPage() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [d, s] = await Promise.all([
-        api.assessmentDefinitions(),
-        api.assessmentSessions()
-      ]);
+      const [d, s] = await Promise.all([api.assessmentDefinitions(), api.assessmentSessions()]);
       setDefinitions(d);
       setSessions(s);
     } finally {
@@ -53,11 +50,18 @@ export default function AssessmentsPage() {
     }
   }, []);
 
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
   const filteredSessions = sessions.filter((s) => {
     if (categoryFilter !== "all" && s.category !== categoryFilter) return false;
-    if (search && !s.memberName.toLowerCase().includes(search.toLowerCase()) && !s.definitionName.toLowerCase().includes(search.toLowerCase())) return false;
+    if (
+      search &&
+      !s.memberName.toLowerCase().includes(search.toLowerCase()) &&
+      !s.definitionName.toLowerCase().includes(search.toLowerCase())
+    )
+      return false;
     return true;
   });
 
@@ -66,7 +70,9 @@ export default function AssessmentsPage() {
       <div className="assess-header">
         <div>
           <h1 className="assess-title">FITOS Assess • Performance Lab</h1>
-          <p className="assess-subtitle">Diagnostic biometrics, force plate kinetics, and body composition profiling.</p>
+          <p className="assess-subtitle">
+            Diagnostic biometrics, force plate kinetics, and body composition profiling.
+          </p>
         </div>
         <div className="assess-header-actions">
           <button className="btn-secondary" onClick={() => setShowImportModal(true)}>
@@ -92,13 +98,19 @@ export default function AssessmentsPage() {
         </div>
         <div className="assess-stat-card">
           <div className="stat-label">InBody 970 Scans</div>
-          <div className="stat-value">{sessions.filter((s) => s.category === "body_composition").length}</div>
+          <div className="stat-value">
+            {sessions.filter((s) => s.category === "body_composition").length}
+          </div>
           <div className="stat-sub">Body composition analyses</div>
         </div>
         <div className="assess-stat-card">
           <div className="stat-label">Kinetic & VO2 Tests</div>
           <div className="stat-value">
-            {sessions.filter((s) => s.category === "neuromuscular_force" || s.category === "cardiovascular_vo2").length}
+            {
+              sessions.filter(
+                (s) => s.category === "neuromuscular_force" || s.category === "cardiovascular_vo2"
+              ).length
+            }
           </div>
           <div className="stat-sub">Peak power & aerobic threshold</div>
         </div>
@@ -106,10 +118,16 @@ export default function AssessmentsPage() {
 
       {/* Tabs */}
       <div className="assess-tabs">
-        <button className={`assess-tab ${tab === "sessions" ? "active" : ""}`} onClick={() => setTab("sessions")}>
+        <button
+          className={`assess-tab ${tab === "sessions" ? "active" : ""}`}
+          onClick={() => setTab("sessions")}
+        >
           Assessment Sessions ({sessions.length})
         </button>
-        <button className={`assess-tab ${tab === "protocols" ? "active" : ""}`} onClick={() => setTab("protocols")}>
+        <button
+          className={`assess-tab ${tab === "protocols" ? "active" : ""}`}
+          onClick={() => setTab("protocols")}
+        >
           Protocols & Devices ({definitions.length})
         </button>
       </div>
@@ -124,10 +142,16 @@ export default function AssessmentsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <select className="filter-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <select
+              className="filter-select"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
               <option value="all">All Diagnostic Modalities</option>
               {Object.entries(CATEGORY_META).map(([k, v]) => (
-                <option key={k} value={k}>{v.icon} {v.label}</option>
+                <option key={k} value={k}>
+                  {v.icon} {v.label}
+                </option>
               ))}
             </select>
           </div>
@@ -137,19 +161,28 @@ export default function AssessmentsPage() {
           ) : (
             <div className="session-grid">
               {filteredSessions.map((s) => {
-                const cat = CATEGORY_META[s.category] ?? { label: s.category, color: "#6366f1", icon: "📊" };
+                const cat = CATEGORY_META[s.category] ?? {
+                  label: s.category,
+                  color: "#6366f1",
+                  icon: "📊"
+                };
                 return (
-                  <div
-                    key={s.id}
-                    className="session-card"
-                    onClick={() => setSelectedSession(s)}
-                  >
+                  <div key={s.id} className="session-card" onClick={() => setSelectedSession(s)}>
                     <div className="session-card-top">
-                      <span className="session-cat-badge" style={{ background: `${cat.color}15`, color: cat.color, borderColor: `${cat.color}35` }}>
+                      <span
+                        className="session-cat-badge"
+                        style={{
+                          background: `${cat.color}15`,
+                          color: cat.color,
+                          borderColor: `${cat.color}35`
+                        }}
+                      >
                         {cat.icon} {cat.label}
                       </span>
                       <span className="session-date">
-                        {new Date(s.conductedAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}
+                        {new Date(s.conductedAt).toLocaleDateString("en-KE", {
+                          dateStyle: "medium"
+                        })}
                       </span>
                     </div>
 
@@ -159,12 +192,18 @@ export default function AssessmentsPage() {
 
                     {/* Metric Chips */}
                     <div className="session-metrics-preview">
-                      {Object.entries(s.metrics).slice(0, 4).map(([k, v]) => (
-                        <div key={k} className="metric-chip">
-                          <span className="metric-k">{k.replace(/([A-Z])/g, " $1").replace(/Kg|Pct|Cm|Watts/g, "")}</span>
-                          <span className="metric-v">{typeof v === "number" ? v.toLocaleString() : v}</span>
-                        </div>
-                      ))}
+                      {Object.entries(s.metrics)
+                        .slice(0, 4)
+                        .map(([k, v]) => (
+                          <div key={k} className="metric-chip">
+                            <span className="metric-k">
+                              {k.replace(/([A-Z])/g, " $1").replace(/Kg|Pct|Cm|Watts/g, "")}
+                            </span>
+                            <span className="metric-v">
+                              {typeof v === "number" ? v.toLocaleString() : v}
+                            </span>
+                          </div>
+                        ))}
                     </div>
 
                     <div className="session-footer">
@@ -185,19 +224,34 @@ export default function AssessmentsPage() {
       {tab === "protocols" && (
         <div className="protocol-grid">
           {definitions.map((def) => {
-            const cat = CATEGORY_META[def.category] ?? { label: def.category, color: "#6366f1", icon: "📊" };
+            const cat = CATEGORY_META[def.category] ?? {
+              label: def.category,
+              color: "#6366f1",
+              icon: "📊"
+            };
             return (
               <div key={def.id} className="protocol-card">
                 <div className="protocol-card-top">
-                  <span className="session-cat-badge" style={{ background: `${cat.color}15`, color: cat.color, borderColor: `${cat.color}35` }}>
+                  <span
+                    className="session-cat-badge"
+                    style={{
+                      background: `${cat.color}15`,
+                      color: cat.color,
+                      borderColor: `${cat.color}35`
+                    }}
+                  >
                     {cat.icon} {cat.label}
                   </span>
-                  <span className="vendor-badge">{VENDOR_BADGES[def.deviceVendor] ?? def.deviceVendor}</span>
+                  <span className="vendor-badge">
+                    {VENDOR_BADGES[def.deviceVendor] ?? def.deviceVendor}
+                  </span>
                 </div>
                 <h3 className="protocol-title">{def.name}</h3>
                 <p className="protocol-desc">{def.description}</p>
                 <div className="protocol-metrics-list">
-                  <div className="protocol-metrics-header">Tracked Biomarkers ({def.metrics.length})</div>
+                  <div className="protocol-metrics-header">
+                    Tracked Biomarkers ({def.metrics.length})
+                  </div>
                   {def.metrics.map((m) => (
                     <div key={m.key} className="protocol-metric-row">
                       <span className="metric-name">{m.name}</span>
@@ -207,7 +261,10 @@ export default function AssessmentsPage() {
                 </div>
                 <button
                   className="btn-launch-scan"
-                  onClick={() => { setSelectedDefId(def.id); setShowNewSession(true); }}
+                  onClick={() => {
+                    setSelectedDefId(def.id);
+                    setShowNewSession(true);
+                  }}
                 >
                   + Launch New Scan
                 </button>
@@ -223,11 +280,17 @@ export default function AssessmentsPage() {
           <div className="drawer" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-header">
               <div>
-                <span className="drawer-sub">{new Date(selectedSession.conductedAt).toLocaleDateString("en-KE", { dateStyle: "long" })}</span>
+                <span className="drawer-sub">
+                  {new Date(selectedSession.conductedAt).toLocaleDateString("en-KE", {
+                    dateStyle: "long"
+                  })}
+                </span>
                 <h2 className="drawer-title">{selectedSession.memberName}</h2>
                 <div className="drawer-protocol-tag">{selectedSession.definitionName}</div>
               </div>
-              <button className="drawer-close" onClick={() => setSelectedSession(null)}>✕</button>
+              <button className="drawer-close" onClick={() => setSelectedSession(null)}>
+                ✕
+              </button>
             </div>
             <div className="drawer-body">
               <div className="drawer-summary-card">
@@ -241,7 +304,9 @@ export default function AssessmentsPage() {
                   {Object.entries(selectedSession.metrics).map(([k, v]) => (
                     <div key={k} className="metric-box">
                       <span className="metric-label">{k.replace(/([A-Z])/g, " $1")}</span>
-                      <span className="metric-val">{typeof v === "number" ? v.toLocaleString() : v}</span>
+                      <span className="metric-val">
+                        {typeof v === "number" ? v.toLocaleString() : v}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -255,8 +320,14 @@ export default function AssessmentsPage() {
               )}
 
               <div className="drawer-assessor-info">
-                <span>Conducted by: <strong>{selectedSession.assessorName}</strong></span>
-                {selectedSession.branchName && <span>Branch: <strong>{selectedSession.branchName}</strong></span>}
+                <span>
+                  Conducted by: <strong>{selectedSession.assessorName}</strong>
+                </span>
+                {selectedSession.branchName && (
+                  <span>
+                    Branch: <strong>{selectedSession.branchName}</strong>
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -268,8 +339,15 @@ export default function AssessmentsPage() {
         <NewSessionModal
           definitions={definitions}
           defaultDefId={selectedDefId}
-          onClose={() => { setShowNewSession(false); setSelectedDefId(""); }}
-          onCreated={() => { setShowNewSession(false); setSelectedDefId(""); void reload(); }}
+          onClose={() => {
+            setShowNewSession(false);
+            setSelectedDefId("");
+          }}
+          onCreated={() => {
+            setShowNewSession(false);
+            setSelectedDefId("");
+            void reload();
+          }}
         />
       )}
 
@@ -277,7 +355,10 @@ export default function AssessmentsPage() {
       {showImportModal && (
         <ImportDeviceDataModal
           onClose={() => setShowImportModal(false)}
-          onImported={() => { setShowImportModal(false); void reload(); }}
+          onImported={() => {
+            setShowImportModal(false);
+            void reload();
+          }}
         />
       )}
 
@@ -449,20 +530,36 @@ function NewSessionModal({
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "560px" }}>
         <div className="modal-header">
           <h2>Record Diagnostic Scan</h2>
-          <button className="drawer-close" onClick={onClose}>✕</button>
+          <button className="drawer-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <div className="modal-body">
           <div className="form-row">
             <div className="form-group">
               <label>Protocol / Device</label>
-              <select value={defId} onChange={(e) => { setDefId(e.target.value); setMetrics({}); }}>
-                {definitions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              <select
+                value={defId}
+                onChange={(e) => {
+                  setDefId(e.target.value);
+                  setMetrics({});
+                }}
+              >
+                {definitions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-group">
               <label>Member</label>
               <select value={memberId} onChange={(e) => setMemberId(e.target.value)}>
-                {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -470,18 +567,26 @@ function NewSessionModal({
           <div className="form-group">
             <label>Branch</label>
             <select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
             </select>
           </div>
 
           {/* Dynamic Metrics */}
           {selectedDef && (
             <div className="metrics-entry-section">
-              <label className="section-label">Biometric Inputs ({selectedDef.metrics.length})</label>
+              <label className="section-label">
+                Biometric Inputs ({selectedDef.metrics.length})
+              </label>
               <div className="metrics-entry-grid">
                 {selectedDef.metrics.map((m) => (
                   <div key={m.key} className="form-group">
-                    <label>{m.name} ({m.unit})</label>
+                    <label>
+                      {m.name} ({m.unit})
+                    </label>
                     <input
                       type="number"
                       step="any"
@@ -517,7 +622,9 @@ function NewSessionModal({
 
           {error && <p className="form-error">{error}</p>}
           <div className="modal-actions">
-            <button className="btn-secondary" onClick={onClose}>Cancel</button>
+            <button className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
             <button
               className="btn-primary"
               onClick={submit}
@@ -588,7 +695,7 @@ function ImportDeviceDataModal({
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (evt) => {
-      setFileContent(evt.target?.result as string || "");
+      setFileContent((evt.target?.result as string) || "");
     };
     reader.readAsText(file);
   };
@@ -619,7 +726,9 @@ function ImportDeviceDataModal({
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>⚡ Import Diagnostic Device Data</h2>
-          <button className="drawer-close" onClick={onClose}>✕</button>
+          <button className="drawer-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <div className="modal-body">
           <div className="form-row">
@@ -635,7 +744,11 @@ function ImportDeviceDataModal({
             <div className="form-group">
               <label>Target Member</label>
               <select value={memberId} onChange={(e) => setMemberId(e.target.value)}>
-                {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -644,7 +757,11 @@ function ImportDeviceDataModal({
             <div className="form-group">
               <label>Branch</label>
               <select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-group">
@@ -676,7 +793,9 @@ function ImportDeviceDataModal({
           {error && <p className="form-error">{error}</p>}
 
           <div className="modal-actions">
-            <button className="btn-secondary" onClick={onClose}>Cancel</button>
+            <button className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
             <button
               className="btn-primary"
               onClick={submit}
@@ -690,4 +809,3 @@ function ImportDeviceDataModal({
     </div>
   );
 }
-

@@ -10,7 +10,8 @@ export function FitosLandingPage() {
   const solutions = {
     gym: {
       title: "Commercial Health Clubs & Multi-Branch Gyms",
-      tagline: "Turnstile access, automated recurring billing, member CRM, and multi-location operations.",
+      tagline:
+        "Turnstile access, automated recurring billing, member CRM, and multi-location operations.",
       features: [
         "Multi-branch access governance & unified member roving",
         "Automated recurring subscriptions with M-Pesa, card & direct debit",
@@ -21,7 +22,8 @@ export function FitosLandingPage() {
     },
     studio: {
       title: "Boutique Fitness, Pilates & Reformer Studios",
-      tagline: "Resource-constrained capacity, equipment pool allocation, waitlists, and pack credits.",
+      tagline:
+        "Resource-constrained capacity, equipment pool allocation, waitlists, and pack credits.",
       features: [
         "Hard equipment-aware booking capacity (Reformer, Megaformer, Bike pools)",
         "Automated waitlist promotion and late-cancellation credit rules",
@@ -43,7 +45,8 @@ export function FitosLandingPage() {
     },
     therapy: {
       title: "Physical Therapy, Rehab & Recovery Facilities",
-      tagline: "NEUBIE direct current stim, AlterG anti-gravity, Normatec compression protocols, and clinical notes.",
+      tagline:
+        "NEUBIE direct current stim, AlterG anti-gravity, Normatec compression protocols, and clinical notes.",
       features: [
         "Modality safety checklists & contraindication screening before sessions",
         "Pre- and post-session numeric pain rating scales (NPRS)",
@@ -76,28 +79,92 @@ export function FitosLandingPage() {
   return (
     <div className="saas-public-page saas-landing-page">
       {/* ── Top Navigation ── */}
-      <header style={{ position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(16px)", backgroundColor: "rgba(9, 13, 22, 0.85)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <div style={{ maxWidth: "80rem", margin: "0 auto", padding: "1rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          backdropFilter: "blur(16px)",
+          backgroundColor: "rgba(9, 13, 22, 0.85)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)"
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "80rem",
+            margin: "0 auto",
+            padding: "1rem 2rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "2.5rem" }}>
             <Link to="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
               <FitosLogo height={28} />
             </Link>
             <nav style={{ display: "flex", gap: "1.75rem", fontSize: "0.9rem", fontWeight: 500 }}>
-              <a href="#features" style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}>Capabilities</a>
-              <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}>Solutions</a>
-              <a href="#performance" style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}>Performance Lab</a>
-              <a href="#pricing" style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}>Pricing</a>
-              <a href="#faq" style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}>FAQ</a>
+              <a
+                href="#features"
+                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+              >
+                Capabilities
+              </a>
+              <a
+                href="#solutions"
+                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+              >
+                Solutions
+              </a>
+              <a
+                href="#performance"
+                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+              >
+                Performance Lab
+              </a>
+              <a
+                href="#pricing"
+                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+              >
+                Pricing
+              </a>
+              <a
+                href="#faq"
+                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+              >
+                FAQ
+              </a>
             </nav>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <Link to="/login" style={{ color: "#e2e8f0", textDecoration: "none", fontSize: "0.9rem", fontWeight: 600, padding: "0.5rem 1rem" }}>
+            <Link
+              to="/login"
+              style={{
+                color: "#e2e8f0",
+                textDecoration: "none",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                padding: "0.5rem 1rem"
+              }}
+            >
               Sign In
             </Link>
-            <Link to="/configure" className="fitos-button fitos-button--secondary" style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}>
+            <Link
+              to="/configure"
+              className="fitos-button fitos-button--secondary"
+              style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
+            >
               Configure FITOS
             </Link>
-            <Link to="/signup" className="fitos-button fitos-button--primary" style={{ fontSize: "0.85rem", padding: "0.5rem 1.25rem", background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" }}>
+            <Link
+              to="/signup"
+              className="fitos-button fitos-button--primary"
+              style={{
+                fontSize: "0.85rem",
+                padding: "0.5rem 1.25rem",
+                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
+              }}
+            >
               Start Free Trial
             </Link>
           </div>
@@ -105,51 +172,225 @@ export function FitosLandingPage() {
       </header>
 
       {/* ── Hero Section ── */}
-      <section style={{ padding: "6rem 2rem 4rem", maxWidth: "80rem", margin: "0 auto", textAlign: "center" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.35rem 1rem", borderRadius: "9999px", background: "rgba(59, 130, 246, 0.12)", border: "1px solid rgba(59, 130, 246, 0.3)", color: "#60a5fa", fontSize: "0.82rem", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "1.5rem" }}>
+      <section
+        style={{
+          padding: "6rem 2rem 4rem",
+          maxWidth: "80rem",
+          margin: "0 auto",
+          textAlign: "center"
+        }}
+      >
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.35rem 1rem",
+            borderRadius: "9999px",
+            background: "rgba(59, 130, 246, 0.12)",
+            border: "1px solid rgba(59, 130, 246, 0.3)",
+            color: "#60a5fa",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+            marginBottom: "1.5rem"
+          }}
+        >
           <span>✨</span> The Fitness Operating System • Version 2026.1
         </div>
-        <h1 style={{ fontSize: "clamp(2.75rem, 6vw, 4.75rem)", fontWeight: 800, lineHeight: 1.05, letterSpacing: "-0.03em", maxWidth: "62rem", margin: "0 auto 1.5rem" }}>
-          Everything fitness. <span style={{ background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #93c5fd 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>One unified OS.</span>
+        <h1
+          style={{
+            fontSize: "clamp(2.75rem, 6vw, 4.75rem)",
+            fontWeight: 800,
+            lineHeight: 1.05,
+            letterSpacing: "-0.03em",
+            maxWidth: "62rem",
+            margin: "0 auto 1.5rem"
+          }}
+        >
+          Everything fitness.{" "}
+          <span
+            style={{
+              background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #93c5fd 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent"
+            }}
+          >
+            One unified OS.
+          </span>
         </h1>
-        <p style={{ fontSize: "1.25rem", lineHeight: 1.6, color: "#94a3b8", maxWidth: "46rem", margin: "0 auto 2.5rem" }}>
-          Run multi-branch memberships, resource-aware class scheduling, diagnostic sports science biometrics, recovery therapy, inventory consumables, and custom websites on one PostgreSQL engine.
+        <p
+          style={{
+            fontSize: "1.25rem",
+            lineHeight: 1.6,
+            color: "#94a3b8",
+            maxWidth: "46rem",
+            margin: "0 auto 2.5rem"
+          }}
+        >
+          Run multi-branch memberships, resource-aware class scheduling, diagnostic sports science
+          biometrics, recovery therapy, inventory consumables, and custom websites on one PostgreSQL
+          engine.
         </p>
 
-        <div style={{ display: "flex", justifyContent: "center", gap: "1rem", flexWrap: "wrap", marginBottom: "4rem" }}>
-          <Link to="/configure" className="fitos-button fitos-button--primary" style={{ padding: "0.9rem 2rem", fontSize: "1.05rem", fontWeight: 600, borderRadius: "0.5rem", boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.4)" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "1rem",
+            flexWrap: "wrap",
+            marginBottom: "4rem"
+          }}
+        >
+          <Link
+            to="/configure"
+            className="fitos-button fitos-button--primary"
+            style={{
+              padding: "0.9rem 2rem",
+              fontSize: "1.05rem",
+              fontWeight: 600,
+              borderRadius: "0.5rem",
+              boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.4)"
+            }}
+          >
             Configure FITOS for my business →
           </Link>
-          <Link to="/signup" className="fitos-button fitos-button--secondary" style={{ padding: "0.9rem 2rem", fontSize: "1.05rem", fontWeight: 600, borderRadius: "0.5rem" }}>
+          <Link
+            to="/signup"
+            className="fitos-button fitos-button--secondary"
+            style={{
+              padding: "0.9rem 2rem",
+              fontSize: "1.05rem",
+              fontWeight: 600,
+              borderRadius: "0.5rem"
+            }}
+          >
             Start 14-Day Free Trial
           </Link>
         </div>
 
         {/* Hero Interactive Dashboard Visual */}
-        <div style={{ borderRadius: "1rem", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(15, 23, 42, 0.75)", padding: "1.5rem", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)", overflow: "hidden", textAlign: "left" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "1rem", marginBottom: "1.5rem" }}>
+        <div
+          style={{
+            borderRadius: "1rem",
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(15, 23, 42, 0.75)",
+            padding: "1.5rem",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+            overflow: "hidden",
+            textAlign: "left"
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              paddingBottom: "1rem",
+              marginBottom: "1.5rem"
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#ef4444" }} />
-              <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#f59e0b" }} />
-              <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#10b981" }} />
-              <span style={{ fontSize: "0.85rem", color: "#64748b", marginLeft: "0.5rem" }}>FITOS Operations Hub • Live Dashboard</span>
+              <div
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "50%",
+                  background: "#ef4444"
+                }}
+              />
+              <div
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "50%",
+                  background: "#f59e0b"
+                }}
+              />
+              <div
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "50%",
+                  background: "#10b981"
+                }}
+              />
+              <span style={{ fontSize: "0.85rem", color: "#64748b", marginLeft: "0.5rem" }}>
+                FITOS Operations Hub • Live Dashboard
+              </span>
             </div>
-            <div style={{ display: "flex", gap: "1rem", fontSize: "0.8rem", color: "#10b981", fontWeight: 600 }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "1rem",
+                fontSize: "0.8rem",
+                color: "#10b981",
+                fontWeight: 600
+              }}
+            >
               <span>● Real-time sync active</span>
               <span>12 Active Branches</span>
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "1rem",
+              marginBottom: "1.5rem"
+            }}
+          >
             {[
-              { label: "Active Members", value: "3,842", change: "+12.4% vs last mo", color: "#60a5fa" },
-              { label: "Class Occupancy", value: "Configured", change: "Resource-constrained capacity enforced", color: "#34d399" },
-              { label: "InBody & VALD Scans", value: "419", change: "Normalized SI metrics", color: "#a78bfa" },
-              { label: "Therapy Sessions", value: "184", change: "Zero adverse reactions", color: "#f472b6" }
+              {
+                label: "Active Members",
+                value: "3,842",
+                change: "+12.4% vs last mo",
+                color: "#60a5fa"
+              },
+              {
+                label: "Class Occupancy",
+                value: "Configured",
+                change: "Resource-constrained capacity enforced",
+                color: "#34d399"
+              },
+              {
+                label: "InBody & VALD Scans",
+                value: "419",
+                change: "Normalized SI metrics",
+                color: "#a78bfa"
+              },
+              {
+                label: "Therapy Sessions",
+                value: "184",
+                change: "Zero adverse reactions",
+                color: "#f472b6"
+              }
             ].map((card, i) => (
-              <div key={i} style={{ background: "rgba(30, 41, 59, 0.6)", padding: "1.25rem", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.25rem" }}>{card.label}</div>
-                <div style={{ fontSize: "1.75rem", fontWeight: 700, color: card.color, marginBottom: "0.25rem" }}>{card.value}</div>
+              <div
+                key={i}
+                style={{
+                  background: "rgba(30, 41, 59, 0.6)",
+                  padding: "1.25rem",
+                  borderRadius: "0.75rem",
+                  border: "1px solid rgba(255,255,255,0.06)"
+                }}
+              >
+                <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.25rem" }}>
+                  {card.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.75rem",
+                    fontWeight: 700,
+                    color: card.color,
+                    marginBottom: "0.25rem"
+                  }}
+                >
+                  {card.value}
+                </div>
                 <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{card.change}</div>
               </div>
             ))}
@@ -160,12 +401,31 @@ export function FitosLandingPage() {
       {/* ── 6 Core Pillars ── */}
       <section id="features" style={{ padding: "5rem 2rem", maxWidth: "80rem", margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
-          <p style={{ color: "#60a5fa", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>Core Architecture</p>
+          <p
+            style={{
+              color: "#60a5fa",
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase"
+            }}
+          >
+            Core Architecture
+          </p>
           <h2 style={{ fontSize: "2.5rem", fontWeight: 700 }}>6 Engines. One Native Schema.</h2>
-          <p style={{ color: "#94a3b8", maxWidth: "38rem", margin: "0.75rem auto 0" }}>No brittle plugins, no sync delays. Every domain event coordinates across inventory, bookings, and athlete profiles.</p>
+          <p style={{ color: "#94a3b8", maxWidth: "38rem", margin: "0.75rem auto 0" }}>
+            No brittle plugins, no sync delays. Every domain event coordinates across inventory,
+            bookings, and athlete profiles.
+          </p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.5rem" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: "1.5rem"
+          }}
+        >
           {[
             {
               icon: "👥",
@@ -198,9 +458,20 @@ export function FitosLandingPage() {
               desc: "Built-in modular block CMS for fast public gym websites, plus a member self-service portal for class bookings and biometric histories."
             }
           ].map((feat, i) => (
-            <div key={i} style={{ padding: "2rem", borderRadius: "1rem", background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(255,255,255,0.08)", transition: "transform 0.2s, border-color 0.2s" }}>
+            <div
+              key={i}
+              style={{
+                padding: "2rem",
+                borderRadius: "1rem",
+                background: "rgba(15, 23, 42, 0.6)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                transition: "transform 0.2s, border-color 0.2s"
+              }}
+            >
               <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>{feat.icon}</div>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.75rem" }}>{feat.title}</h3>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+                {feat.title}
+              </h3>
               <p style={{ color: "#94a3b8", fontSize: "0.95rem", lineHeight: 1.6 }}>{feat.desc}</p>
             </div>
           ))}
@@ -208,14 +479,40 @@ export function FitosLandingPage() {
       </section>
 
       {/* ── Solutions by Business Model ── */}
-      <section id="solutions" style={{ padding: "5rem 2rem", background: "rgba(15, 23, 42, 0.4)", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <section
+        id="solutions"
+        style={{
+          padding: "5rem 2rem",
+          background: "rgba(15, 23, 42, 0.4)",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)"
+        }}
+      >
         <div style={{ maxWidth: "80rem", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-            <p style={{ color: "#60a5fa", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>Tailored Operations</p>
+            <p
+              style={{
+                color: "#60a5fa",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase"
+              }}
+            >
+              Tailored Operations
+            </p>
             <h2 style={{ fontSize: "2.5rem", fontWeight: 700 }}>Engineered for How You Operate</h2>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+              marginBottom: "2.5rem"
+            }}
+          >
             {[
               { key: "gym", label: "Commercial Gyms" },
               { key: "studio", label: "Boutique & Reformer Studios" },
@@ -231,8 +528,14 @@ export function FitosLandingPage() {
                   fontSize: "0.95rem",
                   fontWeight: 600,
                   cursor: "pointer",
-                  border: activeSolution === tab.key ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.1)",
-                  background: activeSolution === tab.key ? "rgba(59, 130, 246, 0.2)" : "rgba(30, 41, 59, 0.5)",
+                  border:
+                    activeSolution === tab.key
+                      ? "1px solid #3b82f6"
+                      : "1px solid rgba(255,255,255,0.1)",
+                  background:
+                    activeSolution === tab.key
+                      ? "rgba(59, 130, 246, 0.2)"
+                      : "rgba(30, 41, 59, 0.5)",
                   color: activeSolution === tab.key ? "#60a5fa" : "#94a3b8"
                 }}
               >
@@ -241,13 +544,53 @@ export function FitosLandingPage() {
             ))}
           </div>
 
-          <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "1rem", padding: "2.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem", alignItems: "center" }}>
+          <div
+            style={{
+              background: "rgba(15, 23, 42, 0.8)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "1rem",
+              padding: "2.5rem",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "3rem",
+              alignItems: "center"
+            }}
+          >
             <div>
-              <h3 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.75rem" }}>{solutions[activeSolution].title}</h3>
-              <p style={{ color: "#94a3b8", fontSize: "1.05rem", lineHeight: 1.6, marginBottom: "1.5rem" }}>{solutions[activeSolution].tagline}</p>
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 2rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <h3 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+                {solutions[activeSolution].title}
+              </h3>
+              <p
+                style={{
+                  color: "#94a3b8",
+                  fontSize: "1.05rem",
+                  lineHeight: 1.6,
+                  marginBottom: "1.5rem"
+                }}
+              >
+                {solutions[activeSolution].tagline}
+              </p>
+              <ul
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  margin: "0 0 2rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem"
+                }}
+              >
                 {solutions[activeSolution].features.map((f, i) => (
-                  <li key={i} style={{ display: "flex", alignItems: "center", gap: "0.75rem", color: "#e2e8f0", fontSize: "0.95rem" }}>
+                  <li
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      color: "#e2e8f0",
+                      fontSize: "0.95rem"
+                    }}
+                  >
                     <span style={{ color: "#10b981", fontWeight: 700 }}>✓</span> {f}
                   </li>
                 ))}
@@ -256,9 +599,30 @@ export function FitosLandingPage() {
                 Configure for this model →
               </Link>
             </div>
-            <div style={{ background: "rgba(30, 41, 59, 0.6)", borderRadius: "0.75rem", padding: "2rem", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ fontSize: "0.85rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Operational Metric Highlight</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 600, color: "#34d399", lineHeight: 1.5 }}>{solutions[activeSolution].metrics}</div>
+            <div
+              style={{
+                background: "rgba(30, 41, 59, 0.6)",
+                borderRadius: "0.75rem",
+                padding: "2rem",
+                border: "1px solid rgba(255,255,255,0.06)"
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.85rem",
+                  color: "#64748b",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  marginBottom: "0.5rem"
+                }}
+              >
+                Operational Metric Highlight
+              </div>
+              <div
+                style={{ fontSize: "1.1rem", fontWeight: 600, color: "#34d399", lineHeight: 1.5 }}
+              >
+                {solutions[activeSolution].metrics}
+              </div>
             </div>
           </div>
         </div>
@@ -267,57 +631,195 @@ export function FitosLandingPage() {
       {/* ── Pricing Section ── */}
       <section id="pricing" style={{ padding: "5rem 2rem", maxWidth: "80rem", margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-          <p style={{ color: "#60a5fa", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>Transparent Subscriptions</p>
-          <h2 style={{ fontSize: "2.5rem", fontWeight: 700 }}>Built for Operators, Scaled for Growth</h2>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", background: "rgba(30, 41, 59, 0.8)", padding: "0.25rem 0.5rem", borderRadius: "0.5rem", border: "1px solid rgba(255,255,255,0.1)", marginTop: "1rem" }}>
-            <button onClick={() => setBillingPeriod("monthly")} style={{ padding: "0.4rem 1rem", borderRadius: "0.35rem", border: "none", background: billingPeriod === "monthly" ? "#3b82f6" : "transparent", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>Monthly</button>
-            <button onClick={() => setBillingPeriod("annual")} style={{ padding: "0.4rem 1rem", borderRadius: "0.35rem", border: "none", background: billingPeriod === "annual" ? "#3b82f6" : "transparent", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>Annual (Save 20%)</button>
+          <p
+            style={{
+              color: "#60a5fa",
+              fontWeight: 600,
+              fontSize: "0.85rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase"
+            }}
+          >
+            Transparent Subscriptions
+          </p>
+          <h2 style={{ fontSize: "2.5rem", fontWeight: 700 }}>
+            Built for Operators, Scaled for Growth
+          </h2>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              background: "rgba(30, 41, 59, 0.8)",
+              padding: "0.25rem 0.5rem",
+              borderRadius: "0.5rem",
+              border: "1px solid rgba(255,255,255,0.1)",
+              marginTop: "1rem"
+            }}
+          >
+            <button
+              onClick={() => setBillingPeriod("monthly")}
+              style={{
+                padding: "0.4rem 1rem",
+                borderRadius: "0.35rem",
+                border: "none",
+                background: billingPeriod === "monthly" ? "#3b82f6" : "transparent",
+                color: "#fff",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "0.85rem"
+              }}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingPeriod("annual")}
+              style={{
+                padding: "0.4rem 1rem",
+                borderRadius: "0.35rem",
+                border: "none",
+                background: billingPeriod === "annual" ? "#3b82f6" : "transparent",
+                color: "#fff",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "0.85rem"
+              }}
+            >
+              Annual (Save 20%)
+            </button>
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "2rem"
+          }}
+        >
           {[
             {
               plan: "Starter",
               price: billingPeriod === "annual" ? "$79" : "$99",
               desc: "For single-location studios and boutique gyms launching self-service operations.",
-              features: ["1 Branch location", "Up to 500 active members", "Class booking & waitlists", "M-Pesa & Card payments", "Member Portal PWA", "Basic Inventory"]
+              features: [
+                "1 Branch location",
+                "Up to 500 active members",
+                "Class booking & waitlists",
+                "M-Pesa & Card payments",
+                "Member Portal PWA",
+                "Basic Inventory"
+              ]
             },
             {
               plan: "Pro",
               price: billingPeriod === "annual" ? "$199" : "$249",
               popular: true,
               desc: "For growing gyms, reformer studios, and recovery centers requiring full hardware and therapy.",
-              features: ["Up to 5 Branch locations", "Up to 3,000 active members", "Resource-aware equipment capacity", "InBody & VALD hardware ingestion", "NEUBIE & AlterG therapy protocols", "Inventory Lots & Stocktakes", "Automated marketing rules", "FITOS Sites CMS builder"]
+              features: [
+                "Up to 5 Branch locations",
+                "Up to 3,000 active members",
+                "Resource-aware equipment capacity",
+                "InBody & VALD hardware ingestion",
+                "NEUBIE & AlterG therapy protocols",
+                "Inventory Lots & Stocktakes",
+                "Automated marketing rules",
+                "FITOS Sites CMS builder"
+              ]
             },
             {
               plan: "Business",
               price: billingPeriod === "annual" ? "$399" : "$499",
               desc: "For multi-chain enterprise operators, franchise brands, and high-performance institutes.",
-              features: ["Unlimited Branch locations", "Unlimited active members", "Multi-branch roving & settlement", "Custom hardware API adapters", "Dedicated migration architect", "Full SLA & custom domain hosting"]
+              features: [
+                "Unlimited Branch locations",
+                "Unlimited active members",
+                "Multi-branch roving & settlement",
+                "Custom hardware API adapters",
+                "Dedicated migration architect",
+                "Full SLA & custom domain hosting"
+              ]
             }
           ].map((tier, i) => (
-            <div key={i} style={{ padding: "2.5rem", borderRadius: "1rem", background: tier.popular ? "rgba(30, 41, 59, 0.9)" : "rgba(15, 23, 42, 0.6)", border: tier.popular ? "2px solid #3b82f6" : "1px solid rgba(255,255,255,0.08)", position: "relative", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div
+              key={i}
+              style={{
+                padding: "2.5rem",
+                borderRadius: "1rem",
+                background: tier.popular ? "rgba(30, 41, 59, 0.9)" : "rgba(15, 23, 42, 0.6)",
+                border: tier.popular ? "2px solid #3b82f6" : "1px solid rgba(255,255,255,0.08)",
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between"
+              }}
+            >
               {tier.popular && (
-                <div style={{ position: "absolute", top: "-12px", right: "20px", background: "#3b82f6", color: "#fff", fontSize: "0.75rem", fontWeight: 700, padding: "0.2rem 0.75rem", borderRadius: "9999px" }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "-12px",
+                    right: "20px",
+                    background: "#3b82f6",
+                    color: "#fff",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    padding: "0.2rem 0.75rem",
+                    borderRadius: "9999px"
+                  }}
+                >
                   MOST POPULAR
                 </div>
               )}
               <div>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.5rem" }}>{tier.plan}</h3>
-                <p style={{ color: "#94a3b8", fontSize: "0.9rem", minHeight: "2.8rem", marginBottom: "1.5rem" }}>{tier.desc}</p>
+                <h3 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+                  {tier.plan}
+                </h3>
+                <p
+                  style={{
+                    color: "#94a3b8",
+                    fontSize: "0.9rem",
+                    minHeight: "2.8rem",
+                    marginBottom: "1.5rem"
+                  }}
+                >
+                  {tier.desc}
+                </p>
                 <div style={{ fontSize: "2.75rem", fontWeight: 800, marginBottom: "1.5rem" }}>
-                  {tier.price} <span style={{ fontSize: "1rem", fontWeight: 500, color: "#64748b" }}>/mo</span>
+                  {tier.price}{" "}
+                  <span style={{ fontSize: "1rem", fontWeight: 500, color: "#64748b" }}>/mo</span>
                 </div>
-                <ul style={{ listStyle: "none", padding: 0, margin: "0 0 2rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <ul
+                  style={{
+                    listStyle: "none",
+                    padding: 0,
+                    margin: "0 0 2rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem"
+                  }}
+                >
                   {tier.features.map((f, j) => (
-                    <li key={j} style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontSize: "0.9rem", color: "#cbd5e1" }}>
+                    <li
+                      key={j}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.6rem",
+                        fontSize: "0.9rem",
+                        color: "#cbd5e1"
+                      }}
+                    >
                       <span style={{ color: "#3b82f6" }}>✓</span> {f}
                     </li>
                   ))}
                 </ul>
               </div>
-              <Link to="/signup" className={`fitos-button ${tier.popular ? "fitos-button--primary" : "fitos-button--secondary"}`} style={{ width: "100%", textAlign: "center" }}>
+              <Link
+                to="/signup"
+                className={`fitos-button ${tier.popular ? "fitos-button--primary" : "fitos-button--secondary"}`}
+                style={{ width: "100%", textAlign: "center" }}
+              >
                 Start 14-day Pro Trial
               </Link>
             </div>
@@ -332,16 +834,52 @@ export function FitosLandingPage() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {faqs.map((faq, i) => (
-            <div key={i} style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.75rem", background: "rgba(15, 23, 42, 0.6)", overflow: "hidden" }}>
+            <div
+              key={i}
+              style={{
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "0.75rem",
+                background: "rgba(15, 23, 42, 0.6)",
+                overflow: "hidden"
+              }}
+            >
               <button
                 onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}
-                style={{ width: "100%", padding: "1.25rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", color: "#f8fafc", fontSize: "1.05rem", fontWeight: 600, textAlign: "left", cursor: "pointer" }}
+                style={{
+                  width: "100%",
+                  padding: "1.25rem 1.5rem",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  background: "none",
+                  border: "none",
+                  color: "#f8fafc",
+                  fontSize: "1.05rem",
+                  fontWeight: 600,
+                  textAlign: "left",
+                  cursor: "pointer"
+                }}
               >
                 <span>{faq.q}</span>
-                <span style={{ fontSize: "1.25rem", transform: expandedFaq === i ? "rotate(45deg)" : "rotate(0)", transition: "transform 0.2s" }}>+</span>
+                <span
+                  style={{
+                    fontSize: "1.25rem",
+                    transform: expandedFaq === i ? "rotate(45deg)" : "rotate(0)",
+                    transition: "transform 0.2s"
+                  }}
+                >
+                  +
+                </span>
               </button>
               {expandedFaq === i && (
-                <div style={{ padding: "0 1.5rem 1.5rem", color: "#94a3b8", fontSize: "0.95rem", lineHeight: 1.6 }}>
+                <div
+                  style={{
+                    padding: "0 1.5rem 1.5rem",
+                    color: "#94a3b8",
+                    fontSize: "0.95rem",
+                    lineHeight: 1.6
+                  }}
+                >
                   {faq.a}
                 </div>
               )}
@@ -352,28 +890,75 @@ export function FitosLandingPage() {
 
       {/* ── Implementation Brief Banner ── */}
       <section style={{ padding: "4rem 2rem", maxWidth: "80rem", margin: "0 auto 4rem" }}>
-        <div style={{ borderRadius: "1.25rem", background: "linear-gradient(135deg, rgba(30, 58, 138, 0.6) 0%, rgba(15, 23, 42, 0.9) 100%)", border: "1px solid rgba(59, 130, 246, 0.3)", padding: "3.5rem 2.5rem", textAlign: "center" }}>
-          <h2 style={{ fontSize: "2.25rem", fontWeight: 700, marginBottom: "1rem" }}>Need a Custom Multi-Location Deployment?</h2>
-          <p style={{ color: "#cbd5e1", maxWidth: "40rem", margin: "0 auto 2rem", fontSize: "1.1rem", lineHeight: 1.6 }}>
-            Submit an 18-step configuration brief. Our engineers generate a complete seed manifest with your timetable, team rosters, and equipment allocations.
+        <div
+          style={{
+            borderRadius: "1.25rem",
+            background:
+              "linear-gradient(135deg, rgba(30, 58, 138, 0.6) 0%, rgba(15, 23, 42, 0.9) 100%)",
+            border: "1px solid rgba(59, 130, 246, 0.3)",
+            padding: "3.5rem 2.5rem",
+            textAlign: "center"
+          }}
+        >
+          <h2 style={{ fontSize: "2.25rem", fontWeight: 700, marginBottom: "1rem" }}>
+            Need a Custom Multi-Location Deployment?
+          </h2>
+          <p
+            style={{
+              color: "#cbd5e1",
+              maxWidth: "40rem",
+              margin: "0 auto 2rem",
+              fontSize: "1.1rem",
+              lineHeight: 1.6
+            }}
+          >
+            Submit an 18-step configuration brief. Our engineers generate a complete seed manifest
+            with your timetable, team rosters, and equipment allocations.
           </p>
-          <Link to="/configure" className="fitos-button fitos-button--primary" style={{ padding: "0.85rem 2rem", fontSize: "1rem", fontWeight: 600 }}>
+          <Link
+            to="/configure"
+            className="fitos-button fitos-button--primary"
+            style={{ padding: "0.85rem 2rem", fontSize: "1rem", fontWeight: 600 }}
+          >
             Open Configuration Discovery Wizard →
           </Link>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "3rem 2rem", color: "#64748b", fontSize: "0.85rem" }}>
-        <div style={{ maxWidth: "80rem", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+      <footer
+        style={{
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          padding: "3rem 2rem",
+          color: "#64748b",
+          fontSize: "0.85rem"
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "80rem",
+            margin: "0 auto",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "1rem"
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
             <FitosLogo height={22} />
             <span>© 2026 FITOS Operating System. All rights reserved.</span>
           </div>
           <div style={{ display: "flex", gap: "1.5rem" }}>
-            <Link to="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>Staff Sign In</Link>
-            <Link to="/configure" style={{ color: "#94a3b8", textDecoration: "none" }}>Configure FITOS</Link>
-            <Link to="/signup" style={{ color: "#94a3b8", textDecoration: "none" }}>SaaS Trial</Link>
+            <Link to="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>
+              Staff Sign In
+            </Link>
+            <Link to="/configure" style={{ color: "#94a3b8", textDecoration: "none" }}>
+              Configure FITOS
+            </Link>
+            <Link to="/signup" style={{ color: "#94a3b8", textDecoration: "none" }}>
+              SaaS Trial
+            </Link>
           </div>
         </div>
       </footer>

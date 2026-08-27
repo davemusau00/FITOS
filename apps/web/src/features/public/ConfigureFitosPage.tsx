@@ -136,8 +136,12 @@ const STEPS = [
 export function ConfigureFitosPage() {
   const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
-  const [draftId, setDraftId] = useState<string | undefined>(() => localStorage.getItem("fitos_draft_id") || undefined);
-  const [resumeToken, setResumeToken] = useState<string | undefined>(() => searchParams.get("token") || localStorage.getItem("fitos_resume_token") || undefined);
+  const [draftId, setDraftId] = useState<string | undefined>(
+    () => localStorage.getItem("fitos_draft_id") || undefined
+  );
+  const [resumeToken, setResumeToken] = useState<string | undefined>(
+    () => searchParams.get("token") || localStorage.getItem("fitos_resume_token") || undefined
+  );
   const [form, setForm] = useState<WizardPayload>(initialPayload);
   const [submitted, setSubmitted] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -148,17 +152,19 @@ export function ConfigureFitosPage() {
   // Resume Draft query if token in URL or storage
   const resumeQuery = useQuery({
     queryKey: ["resumeInquiry", draftId, resumeToken],
-    queryFn: () => draftId && resumeToken ? api.resumeImplementationInquiry(draftId, resumeToken) : null,
+    queryFn: () =>
+      draftId && resumeToken ? api.resumeImplementationInquiry(draftId, resumeToken) : null,
     enabled: Boolean(draftId && resumeToken),
     staleTime: 60_000
   });
 
   useEffect(() => {
-    if (resumeQuery.data?.payload) {
-      setForm((prev) => ({ ...prev, ...(resumeQuery.data.payload as Partial<WizardPayload>) }));
-      if (resumeQuery.data.contactName) setForm((prev) => ({ ...prev, contactName: resumeQuery.data.contactName! }));
-      if (resumeQuery.data.businessName) setForm((prev) => ({ ...prev, gymName: resumeQuery.data.businessName! }));
-      if (resumeQuery.data.email) setForm((prev) => ({ ...prev, email: resumeQuery.data.email! }));
+    const draft = resumeQuery.data;
+    if (draft?.payload) {
+      setForm((prev) => ({ ...prev, ...(draft.payload as Partial<WizardPayload>) }));
+      if (draft.contactName) setForm((prev) => ({ ...prev, contactName: draft.contactName! }));
+      if (draft.businessName) setForm((prev) => ({ ...prev, gymName: draft.businessName! }));
+      if (draft.email) setForm((prev) => ({ ...prev, email: draft.email! }));
     }
   }, [resumeQuery.data]);
 
@@ -187,7 +193,10 @@ export function ConfigureFitosPage() {
   });
 
   const emailLinkMutation = useMutation({
-    mutationFn: () => draftId ? api.emailInquiryResumeLink(draftId, emailInput || form.email) : Promise.reject(new Error("No draft")),
+    mutationFn: () =>
+      draftId
+        ? api.emailInquiryResumeLink(draftId, emailInput || form.email)
+        : Promise.reject(new Error("No draft")),
     onSuccess: (res) => {
       setEmailSuccessMessage(res.message);
       setTimeout(() => {
@@ -219,19 +228,56 @@ export function ConfigureFitosPage() {
   if (submitted) {
     return (
       <main className="saas-public-page saas-complete-page">
-        <div style={{ maxWidth: "42rem", background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(59, 130, 246, 0.4)", borderRadius: "1.25rem", padding: "3.5rem 2.5rem", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.8)" }}>
+        <div
+          style={{
+            maxWidth: "42rem",
+            background: "rgba(15, 23, 42, 0.8)",
+            border: "1px solid rgba(59, 130, 246, 0.4)",
+            borderRadius: "1.25rem",
+            padding: "3.5rem 2.5rem",
+            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.8)"
+          }}
+        >
           <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🚀</div>
-          <h1 style={{ fontSize: "2.25rem", fontWeight: 800, marginBottom: "1rem" }}>FITOS Configuration Brief Received</h1>
-          <p style={{ color: "#94a3b8", fontSize: "1.1rem", lineHeight: 1.6, marginBottom: "2rem" }}>
-            Thank you, <strong style={{ color: "#fff" }}>{form.contactName || "Operator"}</strong>. Our implementation engineering team is now compiling your customized tenant launch manifest for <strong style={{ color: "#60a5fa" }}>{form.gymName}</strong>.
+          <h1 style={{ fontSize: "2.25rem", fontWeight: 800, marginBottom: "1rem" }}>
+            FITOS Configuration Brief Received
+          </h1>
+          <p
+            style={{ color: "#94a3b8", fontSize: "1.1rem", lineHeight: 1.6, marginBottom: "2rem" }}
+          >
+            Thank you, <strong style={{ color: "#fff" }}>{form.contactName || "Operator"}</strong>.
+            Our implementation engineering team is now compiling your customized tenant launch
+            manifest for <strong style={{ color: "#60a5fa" }}>{form.gymName}</strong>.
           </p>
-          <div style={{ background: "rgba(30, 41, 59, 0.6)", padding: "1.25rem", borderRadius: "0.75rem", textAlign: "left", marginBottom: "2rem", fontSize: "0.9rem", color: "#cbd5e1" }}>
-            <div><strong>Inquiry ID:</strong> {draftId}</div>
-            <div><strong>Locations:</strong> {form.branchCount} ({form.branchNames})</div>
-            <div><strong>Services:</strong> {form.serviceTypes.join(", ")}</div>
-            <div><strong>Equipment Pools:</strong> {form.equipmentPools}</div>
+          <div
+            style={{
+              background: "rgba(30, 41, 59, 0.6)",
+              padding: "1.25rem",
+              borderRadius: "0.75rem",
+              textAlign: "left",
+              marginBottom: "2rem",
+              fontSize: "0.9rem",
+              color: "#cbd5e1"
+            }}
+          >
+            <div>
+              <strong>Inquiry ID:</strong> {draftId}
+            </div>
+            <div>
+              <strong>Locations:</strong> {form.branchCount} ({form.branchNames})
+            </div>
+            <div>
+              <strong>Services:</strong> {form.serviceTypes.join(", ")}
+            </div>
+            <div>
+              <strong>Equipment Pools:</strong> {form.equipmentPools}
+            </div>
           </div>
-          <Link to="/" className="fitos-button fitos-button--primary" style={{ padding: "0.85rem 2rem", fontWeight: 600 }}>
+          <Link
+            to="/"
+            className="fitos-button fitos-button--primary"
+            style={{ padding: "0.85rem 2rem", fontWeight: 600 }}
+          >
             Return to FITOS Home
           </Link>
         </div>
@@ -242,22 +288,66 @@ export function ConfigureFitosPage() {
   return (
     <div className="saas-public-page saas-configure-page">
       {/* ── Top Bar ── */}
-      <header style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(15, 23, 42, 0.85)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: "76rem", margin: "0 auto", padding: "1rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <header
+        style={{
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(15, 23, 42, 0.85)",
+          backdropFilter: "blur(12px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 50
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "76rem",
+            margin: "0 auto",
+            padding: "1rem 2rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
             <Link to="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
               <FitosLogo height={24} />
             </Link>
             <span style={{ color: "#64748b" }}>|</span>
-            <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#94a3b8" }}>Configuration Discovery Wizard</span>
+            <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#94a3b8" }}>
+              Configuration Discovery Wizard
+            </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontSize: "0.85rem" }}>
-            <span style={{ color: autosaveStatus === "saving" ? "#f59e0b" : autosaveStatus === "saved" ? "#10b981" : "#64748b" }}>
-              {autosaveStatus === "saving" ? "● Autosaving draft…" : autosaveStatus === "saved" ? "✓ Draft saved" : "Autosave enabled on blur"}
+            <span
+              style={{
+                color:
+                  autosaveStatus === "saving"
+                    ? "#f59e0b"
+                    : autosaveStatus === "saved"
+                      ? "#10b981"
+                      : "#64748b"
+              }}
+            >
+              {autosaveStatus === "saving"
+                ? "● Autosaving draft…"
+                : autosaveStatus === "saved"
+                  ? "✓ Draft saved"
+                  : "Autosave enabled on blur"}
             </span>
             <button
-              onClick={() => { setEmailInput(form.email); setEmailModalOpen(true); }}
-              style={{ background: "rgba(59, 130, 246, 0.15)", border: "1px solid rgba(59, 130, 246, 0.3)", color: "#60a5fa", padding: "0.4rem 0.8rem", borderRadius: "0.4rem", cursor: "pointer", fontWeight: 600 }}
+              onClick={() => {
+                setEmailInput(form.email);
+                setEmailModalOpen(true);
+              }}
+              style={{
+                background: "rgba(59, 130, 246, 0.15)",
+                border: "1px solid rgba(59, 130, 246, 0.3)",
+                color: "#60a5fa",
+                padding: "0.4rem 0.8rem",
+                borderRadius: "0.4rem",
+                cursor: "pointer",
+                fontWeight: 600
+              }}
             >
               Email Me Resume Link
             </button>
@@ -265,34 +355,86 @@ export function ConfigureFitosPage() {
         </div>
         {/* Progress bar */}
         <div style={{ width: "100%", height: "4px", background: "rgba(255,255,255,0.06)" }}>
-          <div style={{ width: `${(currentStep / 18) * 100}%`, height: "100%", background: "linear-gradient(90deg, #3b82f6, #60a5fa)", transition: "width 0.3s ease" }} />
+          <div
+            style={{
+              width: `${(currentStep / 18) * 100}%`,
+              height: "100%",
+              background: "linear-gradient(90deg, #3b82f6, #60a5fa)",
+              transition: "width 0.3s ease"
+            }}
+          />
         </div>
       </header>
 
       {/* ── Main Container ── */}
       <main style={{ maxWidth: "60rem", margin: "0 auto", padding: "3rem 1.5rem 6rem" }}>
         <div style={{ marginBottom: "2.5rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.5rem" }}>
-            <span style={{ color: "#60a5fa", fontWeight: 700, fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+              marginBottom: "0.5rem"
+            }}
+          >
+            <span
+              style={{
+                color: "#60a5fa",
+                fontWeight: 700,
+                fontSize: "0.85rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em"
+              }}
+            >
               Step {currentStep} of 18
             </span>
             <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
               {Math.round((currentStep / 18) * 100)}% Complete
             </span>
           </div>
-          <h1 style={{ fontSize: "2rem", fontWeight: 800, margin: "0 0 0.5rem" }}>{STEPS[currentStep - 1].title}</h1>
-          <p style={{ color: "#94a3b8", fontSize: "1rem", margin: 0 }}>{STEPS[currentStep - 1].desc}</p>
+          <h1 style={{ fontSize: "2rem", fontWeight: 800, margin: "0 0 0.5rem" }}>
+            {STEPS[currentStep - 1]?.title ?? "Configure your workspace"}
+          </h1>
+          <p style={{ color: "#94a3b8", fontSize: "1rem", margin: 0 }}>
+            {STEPS[currentStep - 1]?.desc ?? "Tell us about your business."}
+          </p>
         </div>
 
         {/* Form Body with 18 steps */}
-        <form onSubmit={(e) => { e.preventDefault(); if (currentStep === 18) saveMutation.mutate(true); else handleNext(); }} style={{ background: "rgba(15, 23, 42, 0.7)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "1rem", padding: "2.5rem", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (currentStep === 18) saveMutation.mutate(true);
+            else handleNext();
+          }}
+          style={{
+            background: "rgba(15, 23, 42, 0.7)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "1rem",
+            padding: "2.5rem",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
+          }}
+        >
           {currentStep === 1 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Business / Gym Name
-                <input required autoFocus value={form.gymName} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("gymName", e.target.value)} placeholder="e.g. Apex Performance Club" />
+              <label>
+                Business / Gym Name
+                <input
+                  required
+                  autoFocus
+                  value={form.gymName}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("gymName", e.target.value)}
+                  placeholder="e.g. Apex Performance Club"
+                />
               </label>
-              <label>Facility Model
-                <select value={form.businessType} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("businessType", e.target.value)}>
+              <label>
+                Facility Model
+                <select
+                  value={form.businessType}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("businessType", e.target.value)}
+                >
                   <option value="Commercial Gym">Commercial Gym & Health Club</option>
                   <option value="Reformer Studio">Boutique & Reformer Pilates Studio</option>
                   <option value="Performance Lab">Sports Science & Performance Lab</option>
@@ -301,14 +443,29 @@ export function ConfigureFitosPage() {
                 </select>
               </label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
-                <label>Country
-                  <input value={form.country} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("country", e.target.value)} />
+                <label>
+                  Country
+                  <input
+                    value={form.country}
+                    onBlur={handleBlurAutosave}
+                    onChange={(e) => handleFieldChange("country", e.target.value)}
+                  />
                 </label>
-                <label>Currency
-                  <input value={form.currency} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("currency", e.target.value)} />
+                <label>
+                  Currency
+                  <input
+                    value={form.currency}
+                    onBlur={handleBlurAutosave}
+                    onChange={(e) => handleFieldChange("currency", e.target.value)}
+                  />
                 </label>
-                <label>Timezone
-                  <input value={form.timezone} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("timezone", e.target.value)} />
+                <label>
+                  Timezone
+                  <input
+                    value={form.timezone}
+                    onBlur={handleBlurAutosave}
+                    onChange={(e) => handleFieldChange("timezone", e.target.value)}
+                  />
                 </label>
               </div>
             </div>
@@ -316,83 +473,184 @@ export function ConfigureFitosPage() {
 
           {currentStep === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Primary Contact Name
-                <input required autoFocus value={form.contactName} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("contactName", e.target.value)} placeholder="Full Name" />
+              <label>
+                Primary Contact Name
+                <input
+                  required
+                  autoFocus
+                  value={form.contactName}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("contactName", e.target.value)}
+                  placeholder="Full Name"
+                />
               </label>
-              <label>Work Email Address
-                <input required type="email" value={form.email} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("email", e.target.value)} placeholder="name@facility.com" />
+              <label>
+                Work Email Address
+                <input
+                  required
+                  type="email"
+                  value={form.email}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("email", e.target.value)}
+                  placeholder="name@facility.com"
+                />
               </label>
-              <label>Phone / WhatsApp Number
-                <input value={form.phone} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("phone", e.target.value)} placeholder="+254 700 000 000" />
+              <label>
+                Phone / WhatsApp Number
+                <input
+                  value={form.phone}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("phone", e.target.value)}
+                  placeholder="+254 700 000 000"
+                />
               </label>
-              <label>Your Role in the Organization
-                <input value={form.roleTitle} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("roleTitle", e.target.value)} />
+              <label>
+                Your Role in the Organization
+                <input
+                  value={form.roleTitle}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("roleTitle", e.target.value)}
+                />
               </label>
             </div>
           )}
 
           {currentStep === 3 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Number of Branch Locations
-                <input type="number" min={1} max={50} value={form.branchCount} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("branchCount", parseInt(e.target.value, 10))} />
+              <label>
+                Number of Branch Locations
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={form.branchCount}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("branchCount", parseInt(e.target.value, 10))}
+                />
               </label>
-              <label>Branch Names
-                <input value={form.branchNames} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("branchNames", e.target.value)} placeholder="e.g. Westlands Main, Karen Hub" />
+              <label>
+                Branch Names
+                <input
+                  value={form.branchNames}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("branchNames", e.target.value)}
+                  placeholder="e.g. Westlands Main, Karen Hub"
+                />
               </label>
-              <label>Primary Location Address
-                <input value={form.primaryAddress} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("primaryAddress", e.target.value)} placeholder="Street, Building, City" />
+              <label>
+                Primary Location Address
+                <input
+                  value={form.primaryAddress}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("primaryAddress", e.target.value)}
+                  placeholder="Street, Building, City"
+                />
               </label>
             </div>
           )}
 
           {currentStep === 4 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Class & Service Descriptions
-                <textarea rows={3} value={form.classTypes} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("classTypes", e.target.value)} placeholder="List group classes, 1:1 sessions, drop-in passes" />
+              <label>
+                Class & Service Descriptions
+                <textarea
+                  rows={3}
+                  value={form.classTypes}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("classTypes", e.target.value)}
+                  placeholder="List group classes, 1:1 sessions, drop-in passes"
+                />
               </label>
             </div>
           )}
 
           {currentStep === 5 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Peak Timetable Hours
-                <input value={form.peakHours} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("peakHours", e.target.value)} />
+              <label>
+                Peak Timetable Hours
+                <input
+                  value={form.peakHours}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("peakHours", e.target.value)}
+                />
               </label>
-              <label>Weekly Class Volume
-                <input value={form.weeklyClassVolume} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("weeklyClassVolume", e.target.value)} />
+              <label>
+                Weekly Class Volume
+                <input
+                  value={form.weeklyClassVolume}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("weeklyClassVolume", e.target.value)}
+                />
               </label>
-              <label>Default Studio Room Capacity
-                <input type="number" value={form.defaultClassCapacity} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("defaultClassCapacity", parseInt(e.target.value, 10))} />
+              <label>
+                Default Studio Room Capacity
+                <input
+                  type="number"
+                  value={form.defaultClassCapacity}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) =>
+                    handleFieldChange("defaultClassCapacity", parseInt(e.target.value, 10))
+                  }
+                />
               </label>
             </div>
           )}
 
           {currentStep === 6 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Membership Plan Types
-                <input value={form.membershipTiers} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("membershipTiers", e.target.value)} />
+              <label>
+                Membership Plan Types
+                <input
+                  value={form.membershipTiers}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("membershipTiers", e.target.value)}
+                />
               </label>
-              <label>Price Range / Bands
-                <input value={form.pricingBands} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("pricingBands", e.target.value)} />
+              <label>
+                Price Range / Bands
+                <input
+                  value={form.pricingBands}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("pricingBands", e.target.value)}
+                />
               </label>
             </div>
           )}
 
           {currentStep === 7 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Approximate Number of Coaches / Trainers
-                <input type="number" value={form.trainerCount} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("trainerCount", parseInt(e.target.value, 10))} />
+              <label>
+                Approximate Number of Coaches / Trainers
+                <input
+                  type="number"
+                  value={form.trainerCount}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("trainerCount", parseInt(e.target.value, 10))}
+                />
               </label>
-              <label>Total Staff (Operations, Reception, Management)
-                <input type="number" value={form.staffCount} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("staffCount", parseInt(e.target.value, 10))} />
+              <label>
+                Total Staff (Operations, Reception, Management)
+                <input
+                  type="number"
+                  value={form.staffCount}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("staffCount", parseInt(e.target.value, 10))}
+                />
               </label>
             </div>
           )}
 
           {currentStep === 8 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Equipment Pools & Assets (for resource-aware capacity)
-                <textarea rows={3} value={form.equipmentPools} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("equipmentPools", e.target.value)} placeholder="e.g. 12 Reformers, 6 Assault Bikes, 8 Squat Racks" />
+              <label>
+                Equipment Pools & Assets (for resource-aware capacity)
+                <textarea
+                  rows={3}
+                  value={form.equipmentPools}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("equipmentPools", e.target.value)}
+                  placeholder="e.g. 12 Reformers, 6 Assault Bikes, 8 Squat Racks"
+                />
               </label>
             </div>
           )}
@@ -400,12 +658,25 @@ export function ConfigureFitosPage() {
           {currentStep === 9 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <input type="checkbox" checked={form.hasAssessments} onChange={(e) => handleFieldChange("hasAssessments", e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={form.hasAssessments}
+                  onChange={(e) => handleFieldChange("hasAssessments", e.target.checked)}
+                />
                 Facility operates diagnostic performance assessments (InBody, VALD, VO2, etc.)
               </label>
               {form.hasAssessments && (
-                <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "1rem", borderRadius: "0.5rem" }}>
-                  <p style={{ margin: "0 0 0.5rem", fontSize: "0.9rem", color: "#cbd5e1" }}>Configured hardware adapters: LookinBody InBody 970/770, VALD ForceDecks, COSMED K5, PNOE</p>
+                <div
+                  style={{
+                    background: "rgba(30, 41, 59, 0.5)",
+                    padding: "1rem",
+                    borderRadius: "0.5rem"
+                  }}
+                >
+                  <p style={{ margin: "0 0 0.5rem", fontSize: "0.9rem", color: "#cbd5e1" }}>
+                    Configured hardware adapters: LookinBody InBody 970/770, VALD ForceDecks, COSMED
+                    K5, PNOE
+                  </p>
                 </div>
               )}
             </div>
@@ -414,12 +685,25 @@ export function ConfigureFitosPage() {
           {currentStep === 10 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <input type="checkbox" checked={form.hasTherapy} onChange={(e) => handleFieldChange("hasTherapy", e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={form.hasTherapy}
+                  onChange={(e) => handleFieldChange("hasTherapy", e.target.checked)}
+                />
                 Facility offers therapy, rehab, or recovery protocols
               </label>
               {form.hasTherapy && (
-                <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "1rem", borderRadius: "0.5rem" }}>
-                  <p style={{ margin: 0, fontSize: "0.9rem", color: "#cbd5e1" }}>Supported protocols: NEUBIE Direct Current Stim, AlterG Anti-Gravity Treadmill, Normatec Compression</p>
+                <div
+                  style={{
+                    background: "rgba(30, 41, 59, 0.5)",
+                    padding: "1rem",
+                    borderRadius: "0.5rem"
+                  }}
+                >
+                  <p style={{ margin: 0, fontSize: "0.9rem", color: "#cbd5e1" }}>
+                    Supported protocols: NEUBIE Direct Current Stim, AlterG Anti-Gravity Treadmill,
+                    Normatec Compression
+                  </p>
                 </div>
               )}
             </div>
@@ -427,68 +711,130 @@ export function ConfigureFitosPage() {
 
           {currentStep === 11 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Inventory Categories & Retail Products
-                <input value={form.inventoryCategories} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("inventoryCategories", e.target.value)} />
+              <label>
+                Inventory Categories & Retail Products
+                <input
+                  value={form.inventoryCategories}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("inventoryCategories", e.target.value)}
+                />
               </label>
             </div>
           )}
 
           {currentStep === 12 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Lead Sources & Acquisition Channels
-                <input value={form.leadSources} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("leadSources", e.target.value)} />
+              <label>
+                Lead Sources & Acquisition Channels
+                <input
+                  value={form.leadSources}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("leadSources", e.target.value)}
+                />
               </label>
             </div>
           )}
 
           {currentStep === 13 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Desired Custom Domain
-                <input value={form.customDomain} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("customDomain", e.target.value)} placeholder="gymname.com" />
+              <label>
+                Desired Custom Domain
+                <input
+                  value={form.customDomain}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("customDomain", e.target.value)}
+                  placeholder="gymname.com"
+                />
               </label>
-              <label>Brand Theme & Colors
-                <input value={form.brandColors} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("brandColors", e.target.value)} />
+              <label>
+                Brand Theme & Colors
+                <input
+                  value={form.brandColors}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("brandColors", e.target.value)}
+                />
               </label>
             </div>
           )}
 
           {currentStep === 14 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Hardware & Payment Gateways
-                <input value={form.hardwareIntegrations} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("hardwareIntegrations", e.target.value)} />
+              <label>
+                Hardware & Payment Gateways
+                <input
+                  value={form.hardwareIntegrations}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("hardwareIntegrations", e.target.value)}
+                />
               </label>
             </div>
           )}
 
           {currentStep === 15 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Currently Migrating From
-                <input value={form.migratingFrom} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("migratingFrom", e.target.value)} />
+              <label>
+                Currently Migrating From
+                <input
+                  value={form.migratingFrom}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("migratingFrom", e.target.value)}
+                />
               </label>
-              <label>Approximate Active Member Database Count
-                <input type="number" value={form.approximateMembers} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("approximateMembers", parseInt(e.target.value, 10))} />
+              <label>
+                Approximate Active Member Database Count
+                <input
+                  type="number"
+                  value={form.approximateMembers}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) =>
+                    handleFieldChange("approximateMembers", parseInt(e.target.value, 10))
+                  }
+                />
               </label>
             </div>
           )}
 
           {currentStep === 16 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Target Go-Live Timeline
-                <input value={form.targetGoLiveDate} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("targetGoLiveDate", e.target.value)} />
+              <label>
+                Target Go-Live Timeline
+                <input
+                  value={form.targetGoLiveDate}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("targetGoLiveDate", e.target.value)}
+                />
               </label>
-              <label>Top 3 Operational Priorities
-                <textarea rows={3} value={form.topPriorities} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("topPriorities", e.target.value)} />
+              <label>
+                Top 3 Operational Priorities
+                <textarea
+                  rows={3}
+                  value={form.topPriorities}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("topPriorities", e.target.value)}
+                />
               </label>
             </div>
           )}
 
           {currentStep === 17 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <label>Late-Cancellation Cutoff Window (Hours)
-                <input type="number" value={form.cancellationCutoffHours} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("cancellationCutoffHours", parseInt(e.target.value, 10))} />
+              <label>
+                Late-Cancellation Cutoff Window (Hours)
+                <input
+                  type="number"
+                  value={form.cancellationCutoffHours}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) =>
+                    handleFieldChange("cancellationCutoffHours", parseInt(e.target.value, 10))
+                  }
+                />
               </label>
               <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <input type="checkbox" checked={form.waitlistAutoPromote} onChange={(e) => handleFieldChange("waitlistAutoPromote", e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={form.waitlistAutoPromote}
+                  onChange={(e) => handleFieldChange("waitlistAutoPromote", e.target.checked)}
+                />
                 Automatically promote waitlisted members when a spot opens
               </label>
             </div>
@@ -496,36 +842,111 @@ export function ConfigureFitosPage() {
 
           {currentStep === 18 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <div style={{ background: "rgba(30, 41, 59, 0.6)", padding: "1.5rem", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <h3 style={{ margin: "0 0 1rem", fontSize: "1.1rem", color: "#60a5fa" }}>Configuration Brief Summary</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", fontSize: "0.9rem", color: "#cbd5e1" }}>
-                  <div><strong>Facility:</strong> {form.gymName} ({form.businessType})</div>
-                  <div><strong>Contact:</strong> {form.contactName} ({form.email})</div>
-                  <div><strong>Locations:</strong> {form.branchCount} branches</div>
-                  <div><strong>Timetable:</strong> {form.weeklyClassVolume}</div>
-                  <div><strong>Equipment:</strong> {form.equipmentPools}</div>
-                  <div><strong>Diagnostics:</strong> {form.hasAssessments ? "Enabled (InBody/VALD)" : "Disabled"}</div>
+              <div
+                style={{
+                  background: "rgba(30, 41, 59, 0.6)",
+                  padding: "1.5rem",
+                  borderRadius: "0.75rem",
+                  border: "1px solid rgba(255,255,255,0.08)"
+                }}
+              >
+                <h3 style={{ margin: "0 0 1rem", fontSize: "1.1rem", color: "#60a5fa" }}>
+                  Configuration Brief Summary
+                </h3>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "0.75rem",
+                    fontSize: "0.9rem",
+                    color: "#cbd5e1"
+                  }}
+                >
+                  <div>
+                    <strong>Facility:</strong> {form.gymName} ({form.businessType})
+                  </div>
+                  <div>
+                    <strong>Contact:</strong> {form.contactName} ({form.email})
+                  </div>
+                  <div>
+                    <strong>Locations:</strong> {form.branchCount} branches
+                  </div>
+                  <div>
+                    <strong>Timetable:</strong> {form.weeklyClassVolume}
+                  </div>
+                  <div>
+                    <strong>Equipment:</strong> {form.equipmentPools}
+                  </div>
+                  <div>
+                    <strong>Diagnostics:</strong>{" "}
+                    {form.hasAssessments ? "Enabled (InBody/VALD)" : "Disabled"}
+                  </div>
                 </div>
               </div>
-              <label>Any Additional Special Requirements or Custom Workflows?
-                <textarea rows={3} value={form.specialRequirements} onBlur={handleBlurAutosave} onChange={(e) => handleFieldChange("specialRequirements", e.target.value)} placeholder="Describe any unique studio or clinic rules..." />
+              <label>
+                Any Additional Special Requirements or Custom Workflows?
+                <textarea
+                  rows={3}
+                  value={form.specialRequirements}
+                  onBlur={handleBlurAutosave}
+                  onChange={(e) => handleFieldChange("specialRequirements", e.target.value)}
+                  placeholder="Describe any unique studio or clinic rules..."
+                />
               </label>
             </div>
           )}
 
           {/* Navigation Controls */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2.5rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            <button type="button" onClick={handlePrev} disabled={currentStep === 1} style={{ padding: "0.65rem 1.25rem", borderRadius: "0.4rem", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", cursor: currentStep === 1 ? "not-allowed" : "pointer", opacity: currentStep === 1 ? 0.4 : 1 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: "2.5rem",
+              paddingTop: "1.5rem",
+              borderTop: "1px solid rgba(255,255,255,0.08)"
+            }}
+          >
+            <button
+              type="button"
+              onClick={handlePrev}
+              disabled={currentStep === 1}
+              style={{
+                padding: "0.65rem 1.25rem",
+                borderRadius: "0.4rem",
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                color: "#fff",
+                cursor: currentStep === 1 ? "not-allowed" : "pointer",
+                opacity: currentStep === 1 ? 0.4 : 1
+              }}
+            >
               ← Previous Step
             </button>
 
             {currentStep < 18 ? (
-              <button type="button" onClick={handleNext} className="fitos-button fitos-button--primary" style={{ padding: "0.75rem 1.75rem", fontWeight: 600 }}>
+              <button
+                type="button"
+                onClick={handleNext}
+                className="fitos-button fitos-button--primary"
+                style={{ padding: "0.75rem 1.75rem", fontWeight: 600 }}
+              >
                 Next Step →
               </button>
             ) : (
-              <button type="submit" disabled={saveMutation.isPending} className="fitos-button fitos-button--primary" style={{ padding: "0.85rem 2.25rem", fontWeight: 700, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)" }}>
-                {saveMutation.isPending ? "Submitting Brief…" : "Submit Final Configuration Brief 🚀"}
+              <button
+                type="submit"
+                disabled={saveMutation.isPending}
+                className="fitos-button fitos-button--primary"
+                style={{
+                  padding: "0.85rem 2.25rem",
+                  fontWeight: 700,
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                }}
+              >
+                {saveMutation.isPending
+                  ? "Submitting Brief…"
+                  : "Submit Final Configuration Brief 🚀"}
               </button>
             )}
           </div>
@@ -534,11 +955,39 @@ export function ConfigureFitosPage() {
 
       {/* Email Resume Link Modal */}
       {emailModalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: "1rem" }}>
-          <div style={{ background: "#0f172a", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "1rem", padding: "2rem", maxWidth: "28rem", width: "100%" }}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+            padding: "1rem"
+          }}
+        >
+          <div
+            style={{
+              background: "#0f172a",
+              border: "1px solid rgba(59, 130, 246, 0.3)",
+              borderRadius: "1rem",
+              padding: "2rem",
+              maxWidth: "28rem",
+              width: "100%"
+            }}
+          >
             <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.25rem" }}>Save & Email Resume Link</h3>
-            <p style={{ color: "#94a3b8", fontSize: "0.9rem", lineHeight: 1.5, marginBottom: "1.25rem" }}>
-              We'll send you a secure link containing your unique challenge token so you can resume this 18-step brief at any time.
+            <p
+              style={{
+                color: "#94a3b8",
+                fontSize: "0.9rem",
+                lineHeight: 1.5,
+                marginBottom: "1.25rem"
+              }}
+            >
+              We'll send you a secure link containing your unique challenge token so you can resume
+              this 18-step brief at any time.
             </p>
             <input
               type="email"
@@ -547,10 +996,25 @@ export function ConfigureFitosPage() {
               placeholder="operator@gym.com"
               style={{ width: "100%", marginBottom: "1rem" }}
             />
-            {emailSuccessMessage && <div style={{ color: "#10b981", fontSize: "0.9rem", marginBottom: "1rem" }}>✓ {emailSuccessMessage}</div>}
+            {emailSuccessMessage && (
+              <div style={{ color: "#10b981", fontSize: "0.9rem", marginBottom: "1rem" }}>
+                ✓ {emailSuccessMessage}
+              </div>
+            )}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-              <button type="button" onClick={() => setEmailModalOpen(false)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}>Cancel</button>
-              <button type="button" onClick={() => emailLinkMutation.mutate()} disabled={emailLinkMutation.isPending} className="fitos-button fitos-button--primary">
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => emailLinkMutation.mutate()}
+                disabled={emailLinkMutation.isPending}
+                className="fitos-button fitos-button--primary"
+              >
                 {emailLinkMutation.isPending ? "Sending…" : "Send Resume Link"}
               </button>
             </div>

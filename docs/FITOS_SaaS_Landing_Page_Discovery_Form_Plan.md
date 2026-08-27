@@ -12,6 +12,7 @@ Recent `v2` work already includes tenant signup, public tenant APIs, member auth
 ## 2. New public SaaS routes
 
 ### Marketing
+
 - `/` — FITOS SaaS landing page
 - `/features`
 - `/solutions`
@@ -40,6 +41,7 @@ The assisted-setup route is the primary discovery flow.
 ## 4. SaaS landing-page structure
 
 ### Hero
+
 **Everything fitness. One OS.**
 
 Run members, bookings, schedules, memberships, attendance, performance testing, therapy, equipment, inventory, websites and growth from one operating system.
@@ -49,29 +51,37 @@ Secondary CTA: **Start FITOS**
 Tertiary CTA: **See how it works**
 
 ### Product proof
+
 Members, Bookings, Front Desk, Assess, Therapy, Equipment, Inventory, Automations, Insights, Sites.
 
 ### Solutions
+
 Gyms; Pilates/Yoga/Boutique Studios; Personal Training; Physio/Rehab; Performance Labs; Recovery/Wellness; Multi-location Facilities.
 
 ### Built around how you operate
+
 Explain that FITOS can be configured around branches, staff, memberships, classes, equipment, testing, therapy, inventory and custom workflows.
 
 CTA: **Tell us how your business works**.
 
 ### Advanced facility
+
 Body composition, metabolic testing, strength/power testing, therapy/recovery protocols, equipment scheduling, consumables and longitudinal progress. Do not imply a vendor API exists unless the connector is live.
 
 ### Website + customer experience
+
 Public schedule, tenant website, member portal, booking and FITOS Sites roadmap.
 
 ### Automation / Insights
+
 Use only actual or clearly marked upcoming capabilities.
 
 ### Plans
+
 Explain conceptual SaaS tiers without payment collection.
 
 ### Final CTA
+
 **Build your FITOS setup plan**.
 
 ## 5. Discovery wizard UX
@@ -108,75 +118,97 @@ Conditional logic hides irrelevant sections, for example no therapy → hide The
 ## 6. Form content
 
 ### About Your Business
+
 Contact name, role, business name, email, phone/WhatsApp, website, social links, country, city, timezone, currency, business category, free-text description, acquisition source.
 
 Business categories include Gym, Fitness Studio, Pilates, Yoga, PT, Physio/Rehab, Sports Performance, Wellness, Recovery, Medical Fitness, Nutrition, Martial Arts, Swimming, Dance, Functional Fitness, Corporate Wellness, Longevity and Other.
 
 ### What You Need
+
 Problem/capability checklist covering bookings, members, memberships, attendance, scheduling, CRM, follow-ups, website, member portal, equipment, inventory, assessments, therapy, automations, retention, analytics, multi-location, permissions, spreadsheet/software replacement and custom workflows.
 
 Each capability is tagged Need at launch / Need soon / Nice to have / Not sure. Capture ranked top-five priorities.
 
 ### Locations
+
 Branch count and expansion plans. Per branch: name, address, contacts, hours, manager, member estimate, daily footfall, services and notes. Capture cross-branch access, branch-specific memberships/pricing, shared trainers and manager visibility.
 
 ### Services
+
 Repeater: name, category, booking type, description, duration, capacity, branches, trainer requirement, room, reference price, credits, public visibility, trial availability, cancellation cutoff, booking notice and notes.
 
 Types: class, PT, appointment, consultation, assessment, therapy, recovery, facility, equipment, court, event, workshop, bootcamp and custom.
 
 ### Schedule & Booking
+
 Recurring session repeater plus booking horizon, notice, cancellation, no-show, waitlist, guest, walk-in, staff override, member/public eligibility, max daily bookings, equipment constraints and credential constraints. Allow timetable upload.
 
 ### Memberships / Packages
+
 Plan name, description, price reference, duration, credits, unlimited, eligible services/branches, trial, freeze, renewal, visibility and rules for expiry, rollover, family/corporate/trainer/service-specific plans.
 
 ### Team
+
 Counts by role plus optional staff repeater with name, email, phone, role, branches, services, specialties, credentials and permissions.
 
 ### Facilities & Equipment
+
 Rooms plus equipment repeater: name, manufacturer, model, category, quantity, branch, room, serials, maintenance/calibration, capacity impact and website visibility.
 
 ### Assessments / Performance
+
 Body composition, InBody, VO2max, RMR, CPET, strength, force plates, jump, dynamometry, ROM, movement, gait, sprint/agility, balance, vitals, lactate and custom. Device repeater captures manufacturer/model, current data storage, CSV/PDF/cloud availability and desired integration. Prompt examples can include InBody 970/970S, VALD systems, COSMED and PNOE. Capture assessor, consultation prerequisite, retest interval, member-visible metrics and assessment batteries.
 
 ### Therapy / Recovery
+
 Physio, manual therapy, NEUBIE/NeuFit, electrical stimulation, AlterG, pneumatic compression/Normatec, cryotherapy, hyperbaric oxygen, infrared sauna, sauna, cold immersion, red light, mobility, stretch therapy, sports massage and custom. Capture session duration, practitioner requirement, equipment, protocol, intake, consent, safety checklist, notes and follow-up.
 
 ### Members & Data Migration
+
 Active member count, current storage/software, fields collected, import requirement and file upload.
 
 ### CRM / Leads
+
 Sources, customizable pipeline, assignment, tasks, follow-up dates, attribution, lost reasons, trials and referrals.
 
 ### Website
+
 Current URL, keep/replace/integrate, pages wanted, visual style, domain and content. Upload brand assets, photography, trainer/facility images, testimonials and brochures.
 
 ### Member Experience
+
 Browse, book, cancel, reschedule, credits, membership, attendance, assessments, progress, therapy history, notifications, profile and FITOS Pass.
 
 ### Automations
+
 Channels plus booking confirmations/reminders, cancellations, trial/lead follow-up, expiry/renewal, inactivity, birthday, retest, therapy follow-up, maintenance, calibration, low stock, credential expiry and custom automations.
 
 ### Inventory
+
 Categories and requirements for suppliers, POs, branch stock, lot/batch, expiry, low stock, stocktakes and service-linked consumption.
 
 ### Analytics
+
 Rank members, growth, attendance, occupancy, cancellations, no-shows, expiry, retention, lead conversion, trainer use, branch performance, equipment use, assessment progress, therapy use and inventory. Ask: **What question do you wish your current software could answer?**
 
 ### Existing Software & Integrations
+
 Repeater for tool, purpose and keep/replace/integrate, including access-control systems.
 
 ### Branding & Customization
+
 Logo, brand guide, fonts, colors, photography, standard/branded/highly customized/white-label preference and free-text custom workflow.
 
 ### Files & Existing Data
+
 Uploads for members, leads, staff, timetable, pricing, services, equipment, inventory, branches, bios, branding, assessment protocols, therapy protocols, reports and current-system exports. Capture explicit permission for the implementation team to configure, seed and test the account.
 
 ### Priorities & Timeline
+
 Launch features, phase-two features, future ideas, target date, urgency, optional budget range and desired implementation assistance.
 
 ### Final Workflow Questions
+
 1. Describe the journey from discovery to regular member.
 2. Describe a normal busy day.
 3. Which administrative task wastes the most staff time?
@@ -188,6 +220,7 @@ Launch features, phase-two features, future ideas, target date, urgency, optiona
 Do not create a tenant automatically from every enquiry.
 
 ### implementation_inquiries
+
 - id
 - status: draft | submitted | qualified | needs_clarification | approved | converted | archived
 - contactName
@@ -202,6 +235,7 @@ Do not create a tenant automatically from every enquiry.
 - convertedTenantId nullable
 
 ### implementation_inquiry_payloads
+
 - inquiryId
 - schemaVersion
 - payloadJson
@@ -210,9 +244,11 @@ Do not create a tenant automatically from every enquiry.
 Use versioned JSON for discovery answers because this is draft configuration data, not the canonical production domain.
 
 ### implementation_inquiry_uploads
+
 Private uploaded files and metadata.
 
 ### implementation_inquiry_events
+
 Audit/status events.
 
 ## 8. Developer seed manifest
@@ -227,6 +263,7 @@ Inquiry submitted → normalize → implementation review → clarification → 
 ## 9. Platform admin UI
 
 Add:
+
 - `/platform/inquiries`
 - `/platform/inquiries/:inquiryId`
 
@@ -253,6 +290,7 @@ Add inside **Phase 2 — Self-Service SaaS Platform**.
 ### Phase 2A — SaaS Landing Page & Assisted Setup Funnel
 
 #### Sprint 2A.1 — FITOS Marketing Shell
+
 - `/` marketing route;
 - responsive landing page;
 - feature and solution sections;
@@ -263,6 +301,7 @@ Add inside **Phase 2 — Self-Service SaaS Platform**.
 - reserved-route handling before `/:tenantSlug`.
 
 #### Sprint 2A.2 — Discovery Wizard
+
 - adaptive wizard;
 - autosave;
 - progress;
@@ -275,6 +314,7 @@ Add inside **Phase 2 — Self-Service SaaS Platform**.
 - submission.
 
 #### Sprint 2A.3 — Implementation Inbox & Seed Manifest
+
 - inquiry persistence;
 - platform inquiry list/detail;
 - qualification;
@@ -289,6 +329,7 @@ Add inside **Phase 2 — Self-Service SaaS Platform**.
 ## 12. Backlog additions
 
 ### Epic B0 — SaaS Marketing & Assisted Onboarding
+
 - B0001 SaaS landing-page route
 - B0002 Responsive marketing shell
 - B0003 Solutions/feature sections

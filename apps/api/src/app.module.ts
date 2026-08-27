@@ -98,8 +98,8 @@ const repositoryFactory = (): FitosRepository => {
     EquipmentController,
     InventoryController,
     AssessmentsController,
-    TherapyController
-    ,SitesController
+    TherapyController,
+    SitesController
   ],
   providers: [
     { provide: FitosRepositoryToken, useFactory: repositoryFactory },

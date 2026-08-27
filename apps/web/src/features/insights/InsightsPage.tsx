@@ -46,7 +46,10 @@ export function InsightsPage() {
         title="Insights & Analytics"
         description="Live aggregate operational metrics across attendance, retention cohorts, class occupancy, and lead conversion."
         actions={
-          <button className="fitos-button fitos-button--secondary fitos-button--small" type="button">
+          <button
+            className="fitos-button fitos-button--secondary fitos-button--small"
+            type="button"
+          >
             <Icon name="spark" size={14} />
             Export CSV
           </button>
@@ -80,7 +83,9 @@ export function InsightsPage() {
                 <span>Avg Weekly Visits</span>
                 <strong>{summary?.avgWeeklyVisits ?? 0}</strong>
                 <div className="kpi__change" style={{ color: "var(--success)" }}>
-                  {summary?.avgWeeklyVisitsChangePct == null ? "No comparison data" : `${summary.avgWeeklyVisitsChangePct}% vs last month`}
+                  {summary?.avgWeeklyVisitsChangePct == null
+                    ? "No comparison data"
+                    : `${summary.avgWeeklyVisitsChangePct}% vs last month`}
                 </div>
               </Card>
 
@@ -88,7 +93,9 @@ export function InsightsPage() {
                 <span>Class Occupancy Rate</span>
                 <strong>{summary?.classOccupancyRate ?? 0}%</strong>
                 <div className="kpi__change" style={{ color: "var(--success)" }}>
-                  {summary?.classOccupancyChangePct == null ? "No comparison data" : `${summary.classOccupancyChangePct}% vs last month`}
+                  {summary?.classOccupancyChangePct == null
+                    ? "No comparison data"
+                    : `${summary.classOccupancyChangePct}% vs last month`}
                 </div>
               </Card>
 
@@ -98,11 +105,16 @@ export function InsightsPage() {
                 <div
                   className="kpi__change"
                   style={{
-                    color: (summary?.memberRetentionChangePct ?? 0) >= 0 ? "var(--success)" : "var(--danger)"
+                    color:
+                      (summary?.memberRetentionChangePct ?? 0) >= 0
+                        ? "var(--success)"
+                        : "var(--danger)"
                   }}
                 >
                   {(summary?.memberRetentionChangePct ?? 0) >= 0 ? "▲" : "▼"}{" "}
-                  {summary?.memberRetentionChangePct == null ? "— No comparison period yet" : `${summary.memberRetentionChangePct}% vs last month`}
+                  {summary?.memberRetentionChangePct == null
+                    ? "— No comparison period yet"
+                    : `${summary.memberRetentionChangePct}% vs last month`}
                 </div>
               </Card>
 
@@ -216,7 +228,12 @@ export function InsightsPage() {
                   {[0.08, 0.25, 0.45, 0.65, 0.9].map((v) => (
                     <div
                       key={v}
-                      style={{ background: `rgba(198,255,0,${v})`, width: 20, height: 14, borderRadius: 3 }}
+                      style={{
+                        background: `rgba(198,255,0,${v})`,
+                        width: 20,
+                        height: 14,
+                        borderRadius: 3
+                      }}
                     />
                   ))}
                 </div>
@@ -237,10 +254,7 @@ export function InsightsPage() {
                   <div className="class-popularity-row" key={cls.name}>
                     <span className="class-popularity-row__name">{cls.name}</span>
                     <div className="class-popularity-row__bar-wrap">
-                      <div
-                        className="class-popularity-row__bar"
-                        style={{ width: `${cls.pct}%` }}
-                      />
+                      <div className="class-popularity-row__bar" style={{ width: `${cls.pct}%` }} />
                     </div>
                     <span className="class-popularity-row__count">{cls.count} classes</span>
                   </div>
@@ -316,7 +330,9 @@ export function InsightsPage() {
               <div className="retention-cohort-chart">
                 {retentionCohorts.map((c) => (
                   <div className="retention-cohort-row" key={c.cohortMonth}>
-                    <span className="retention-cohort-row__label">{c.cohortMonth} ({c.initialSize} members)</span>
+                    <span className="retention-cohort-row__label">
+                      {c.cohortMonth} ({c.initialSize} members)
+                    </span>
                     <div className="retention-cohort-row__bar-wrap">
                       <div
                         className="retention-cohort-row__bar"
@@ -326,7 +342,9 @@ export function InsightsPage() {
                         }}
                       />
                     </div>
-                    <span className="retention-cohort-row__pct">{c.month3Retention}% (Month 3)</span>
+                    <span className="retention-cohort-row__pct">
+                      {c.month3Retention}% (Month 3)
+                    </span>
                   </div>
                 ))}
               </div>
@@ -343,16 +361,26 @@ export function InsightsPage() {
                   <div className="at-risk-row" key={m.id}>
                     <div className="at-risk-row__avatar">{m.firstName[0]}</div>
                     <div className="at-risk-row__info">
-                      <strong>{m.firstName} {m.lastName ?? ""}</strong>
-                      <span>{m.planName} · {m.creditsRemaining} credits remaining · {m.daysInactive} days inactive</span>
+                      <strong>
+                        {m.firstName} {m.lastName ?? ""}
+                      </strong>
+                      <span>
+                        {m.planName} · {m.creditsRemaining} credits remaining · {m.daysInactive}{" "}
+                        days inactive
+                      </span>
                     </div>
-                    <button className="fitos-button fitos-button--secondary fitos-button--small" type="button">
+                    <button
+                      className="fitos-button fitos-button--secondary fitos-button--small"
+                      type="button"
+                    >
                       Send WhatsApp Nudge
                     </button>
                   </div>
                 ))}
                 {!atRiskMembers.length ? (
-                  <p className="muted">All members have active attendance within the last 21 days.</p>
+                  <p className="muted">
+                    All members have active attendance within the last 21 days.
+                  </p>
                 ) : null}
               </div>
             </Card>

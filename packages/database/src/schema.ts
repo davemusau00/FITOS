@@ -36,7 +36,20 @@ export const tenants = pgTable(
   },
   (table) => [uniqueIndex("uq_tenants_slug").on(table.slug)]
 );
-export const tenantSubscriptions = pgTable("tenant_subscriptions", { tenantId: uuid("tenant_id").primaryKey().references(() => tenants.id, { onDelete: "cascade" }), plan: varchar("plan", { length: 30 }).notNull().default("pro"), status: varchar("status", { length: 30 }).notNull().default("trial"), trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }), currentPeriodEndsAt: timestamp("current_period_ends_at", { withTimezone: true }), capabilitiesJson: jsonb("capabilities_json").notNull().default(sql`'[]'::jsonb`), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow() });
+export const tenantSubscriptions = pgTable("tenant_subscriptions", {
+  tenantId: uuid("tenant_id")
+    .primaryKey()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  plan: varchar("plan", { length: 30 }).notNull().default("pro"),
+  status: varchar("status", { length: 30 }).notNull().default("trial"),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  currentPeriodEndsAt: timestamp("current_period_ends_at", { withTimezone: true }),
+  capabilitiesJson: jsonb("capabilities_json")
+    .notNull()
+    .default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+});
 
 export const branches = pgTable(
   "branches",
@@ -88,13 +101,18 @@ export const platformAdminTokens = pgTable(
   "platform_admin_tokens",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     tokenHash: text("token_hash").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
-  (table) => [uniqueIndex("uq_platform_admin_tokens_hash").on(table.tokenHash), index("idx_platform_admin_tokens_user").on(table.userId)]
+  (table) => [
+    uniqueIndex("uq_platform_admin_tokens_hash").on(table.tokenHash),
+    index("idx_platform_admin_tokens_user").on(table.userId)
+  ]
 );
 
 export const roles = pgTable(
@@ -242,26 +260,44 @@ export const members = pgTable(
   ]
 );
 
-export const memberIdentities = pgTable("member_identities", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
-  memberId: uuid("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  passwordHash: text("password_hash").notNull(),
-  passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }).notNull().defaultNow(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-}, (table) => [uniqueIndex("uq_member_identity_member").on(table.tenantId, table.memberId)]);
+export const memberIdentities = pgTable(
+  "member_identities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    passwordHash: text("password_hash").notNull(),
+    passwordChangedAt: timestamp("password_changed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [uniqueIndex("uq_member_identity_member").on(table.tenantId, table.memberId)]
+);
 
-export const memberSessions = pgTable("member_sessions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
-  memberId: uuid("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  tokenHash: text("token_hash").notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
-  revokedAt: timestamp("revoked_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
-}, (table) => [uniqueIndex("uq_member_sessions_token").on(table.tokenHash)]);
+export const memberSessions = pgTable(
+  "member_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [uniqueIndex("uq_member_sessions_token").on(table.tokenHash)]
+);
 
 export const leads = pgTable(
   "leads",
@@ -513,21 +549,31 @@ export const scheduleExceptions = pgTable(
   ]
 );
 
-export const publicReservations = pgTable("public_reservations", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
-  branchId: uuid("branch_id").references(() => branches.id, { onDelete: "restrict" }),
-  occurrenceId: uuid("occurrence_id").references(() => scheduleOccurrences.id, { onDelete: "restrict" }),
-  serviceId: uuid("service_id").references(() => services.id, { onDelete: "restrict" }),
-  reservationType: varchar("reservation_type", { length: 40 }).notNull(),
-  status: varchar("status", { length: 30 }).notNull().default("requested"),
-  firstName: varchar("first_name", { length: 120 }).notNull(),
-  lastName: varchar("last_name", { length: 120 }),
-  phone: varchar("phone", { length: 60 }),
-  email: varchar("email", { length: 255 }),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
-}, (table) => [index("idx_public_reservations_tenant_status").on(table.tenantId, table.branchId, table.status)]);
+export const publicReservations = pgTable(
+  "public_reservations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id").references(() => branches.id, { onDelete: "restrict" }),
+    occurrenceId: uuid("occurrence_id").references(() => scheduleOccurrences.id, {
+      onDelete: "restrict"
+    }),
+    serviceId: uuid("service_id").references(() => services.id, { onDelete: "restrict" }),
+    reservationType: varchar("reservation_type", { length: 40 }).notNull(),
+    status: varchar("status", { length: 30 }).notNull().default("requested"),
+    firstName: varchar("first_name", { length: 120 }).notNull(),
+    lastName: varchar("last_name", { length: 120 }),
+    phone: varchar("phone", { length: 60 }),
+    email: varchar("email", { length: 255 }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_public_reservations_tenant_status").on(table.tenantId, table.branchId, table.status)
+  ]
+);
 
 export const bookings = pgTable(
   "bookings",
@@ -912,7 +958,9 @@ export const equipmentMaintenanceRecords = pgTable(
     assetId: uuid("asset_id")
       .notNull()
       .references(() => equipmentAssets.id, { onDelete: "cascade" }),
-    performedByUserId: uuid("performed_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    performedByUserId: uuid("performed_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
     serviceType: varchar("service_type", { length: 80 }).notNull(),
     costMinor: integer("cost_minor").notNull().default(0),
     notes: text("notes").notNull(),
@@ -1019,7 +1067,9 @@ export const inventoryMovements = pgTable(
     balanceAfter: integer("balance_after").notNull(),
     reason: varchar("reason", { length: 255 }).notNull(),
     referenceId: varchar("reference_id", { length: 120 }),
-    recordedByUserId: uuid("recorded_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    recordedByUserId: uuid("recorded_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
@@ -1027,8 +1077,57 @@ export const inventoryMovements = pgTable(
     index("idx_inv_movements_tenant_branch").on(table.tenantId, table.branchId)
   ]
 );
-export const serviceInventoryRequirements = pgTable("service_inventory_requirements", { id: uuid("id").defaultRandom().primaryKey(), tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }), serviceId: uuid("service_id").notNull().references(() => services.id, { onDelete: "cascade" }), itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "restrict" }), quantityPerSession: integer("quantity_per_session").notNull() }, (table) => [uniqueIndex("uq_service_inventory_requirement").on(table.tenantId, table.serviceId, table.itemId)]);
-export const inventoryConsumptions = pgTable("inventory_consumptions", { id: uuid("id").defaultRandom().primaryKey(), tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }), branchId: uuid("branch_id").notNull().references(() => branches.id, { onDelete: "restrict" }), itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "restrict" }), serviceId: uuid("service_id").references(() => services.id, { onDelete: "set null" }), referenceType: varchar("reference_type", { length: 40 }).notNull(), referenceId: uuid("reference_id"), quantity: integer("quantity").notNull(), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow() }, (table) => [uniqueIndex("uq_inventory_consumption_reference").on(table.tenantId, table.itemId, table.referenceType, table.referenceId)]);
+export const serviceInventoryRequirements = pgTable(
+  "service_inventory_requirements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => inventoryItems.id, { onDelete: "restrict" }),
+    quantityPerSession: integer("quantity_per_session").notNull()
+  },
+  (table) => [
+    uniqueIndex("uq_service_inventory_requirement").on(
+      table.tenantId,
+      table.serviceId,
+      table.itemId
+    )
+  ]
+);
+export const inventoryConsumptions = pgTable(
+  "inventory_consumptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => inventoryItems.id, { onDelete: "restrict" }),
+    serviceId: uuid("service_id").references(() => services.id, { onDelete: "set null" }),
+    referenceType: varchar("reference_type", { length: 40 }).notNull(),
+    referenceId: uuid("reference_id"),
+    quantity: integer("quantity").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_inventory_consumption_reference").on(
+      table.tenantId,
+      table.itemId,
+      table.referenceType,
+      table.referenceId
+    )
+  ]
+);
 
 export const purchaseOrders = pgTable(
   "purchase_orders",
@@ -1045,25 +1144,33 @@ export const purchaseOrders = pgTable(
     status: varchar("status", { length: 40 }).notNull().default("draft"),
     totalAmountMinor: integer("total_amount_minor").notNull().default(0),
     currency: varchar("currency", { length: 3 }).notNull().default("KES"),
-    itemsJson: jsonb("items_json").notNull().default(sql`'[]'::jsonb`),
+    itemsJson: jsonb("items_json")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
     receivedAt: timestamp("received_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
-  (table) => [
-    uniqueIndex("uq_po_number").on(table.tenantId, table.branchId, table.poNumber)
-  ]
+  (table) => [uniqueIndex("uq_po_number").on(table.tenantId, table.branchId, table.poNumber)]
 );
 
 export const purchaseOrderLines = pgTable(
   "purchase_order_lines",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
-    branchId: uuid("branch_id").notNull().references(() => branches.id, { onDelete: "restrict" }),
-    purchaseOrderId: uuid("purchase_order_id").notNull().references(() => purchaseOrders.id, { onDelete: "cascade" }),
-    itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    purchaseOrderId: uuid("purchase_order_id")
+      .notNull()
+      .references(() => purchaseOrders.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => inventoryItems.id, { onDelete: "restrict" }),
     quantity: integer("quantity").notNull(),
     unitCostMinor: integer("unit_cost_minor").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
@@ -1083,15 +1190,15 @@ export const assessmentDefinitions = pgTable(
     name: varchar("name", { length: 160 }).notNull(),
     category: varchar("category", { length: 80 }).notNull(),
     deviceVendor: varchar("device_vendor", { length: 80 }).notNull(),
-    metricsJson: jsonb("metrics_json").notNull().default(sql`'[]'::jsonb`),
+    metricsJson: jsonb("metrics_json")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     description: text("description").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
-  (table) => [
-    uniqueIndex("uq_assessment_def_code").on(table.tenantId, table.code)
-  ]
+  (table) => [uniqueIndex("uq_assessment_def_code").on(table.tenantId, table.code)]
 );
 
 export const assessmentSessions = pgTable(
@@ -1115,7 +1222,9 @@ export const assessmentSessions = pgTable(
     status: varchar("status", { length: 40 }).notNull().default("completed"),
     conductedAt: timestamp("conducted_at", { withTimezone: true }).notNull().defaultNow(),
     summary: text("summary").notNull(),
-    metricsJson: jsonb("metrics_json").notNull().default(sql`'{}'::jsonb`),
+    metricsJson: jsonb("metrics_json")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     provenanceJson: jsonb("provenance_json").default(sql`'{}'::jsonb`),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1131,16 +1240,24 @@ export const assessmentMetricResults = pgTable(
   "assessment_metric_results",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
-    assessmentSessionId: uuid("assessment_session_id").notNull().references(() => assessmentSessions.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    assessmentSessionId: uuid("assessment_session_id")
+      .notNull()
+      .references(() => assessmentSessions.id, { onDelete: "cascade" }),
     metricKey: varchar("metric_key", { length: 80 }).notNull(),
     valueNumeric: numeric("value_numeric"),
     valueText: text("value_text"),
     unit: varchar("unit", { length: 30 }),
-    provenanceJson: jsonb("provenance_json").notNull().default(sql`'{}'::jsonb`),
+    provenanceJson: jsonb("provenance_json")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
-  (table) => [uniqueIndex("uq_assessment_metric_result").on(table.assessmentSessionId, table.metricKey)]
+  (table) => [
+    uniqueIndex("uq_assessment_metric_result").on(table.assessmentSessionId, table.metricKey)
+  ]
 );
 
 export const assessmentDeviceImports = pgTable(
@@ -1162,14 +1279,16 @@ export const assessmentDeviceImports = pgTable(
     status: varchar("status", { length: 40 }).notNull().default("processed"),
     parserVersion: varchar("parser_version", { length: 80 }).notNull().default("legacy"),
     contentType: varchar("content_type", { length: 100 }),
-    errorJson: jsonb("error_json").notNull().default(sql`'[]'::jsonb`),
-    importedByUserId: uuid("imported_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    errorJson: jsonb("error_json")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    importedByUserId: uuid("imported_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp("completed_at", { withTimezone: true })
   },
-  (table) => [
-    index("idx_device_imports_tenant_branch").on(table.tenantId, table.branchId)
-  ]
+  (table) => [index("idx_device_imports_tenant_branch").on(table.tenantId, table.branchId)]
 );
 
 // ─── FITOS Therapy & Recovery ───────────────────────────────────────────────
@@ -1184,15 +1303,15 @@ export const therapyModalities = pgTable(
     name: varchar("name", { length: 160 }).notNull(),
     category: varchar("category", { length: 80 }).notNull(),
     defaultDurationMinutes: integer("default_duration_minutes").notNull().default(30),
-    contraindicationsJson: jsonb("contraindications_json").notNull().default(sql`'[]'::jsonb`),
+    contraindicationsJson: jsonb("contraindications_json")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     description: text("description").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
-  (table) => [
-    uniqueIndex("uq_therapy_modality_code").on(table.tenantId, table.code)
-  ]
+  (table) => [uniqueIndex("uq_therapy_modality_code").on(table.tenantId, table.code)]
 );
 
 export const therapyProtocols = pgTable(
@@ -1207,16 +1326,18 @@ export const therapyProtocols = pgTable(
     name: varchar("name", { length: 160 }).notNull(),
     indication: varchar("indication", { length: 255 }).notNull(),
     targetArea: varchar("target_area", { length: 160 }).notNull(),
-    parametersJson: jsonb("parameters_json").notNull().default(sql`'{}'::jsonb`),
-    safetyChecklistJson: jsonb("safety_checklist_json").notNull().default(sql`'[]'::jsonb`),
+    parametersJson: jsonb("parameters_json")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    safetyChecklistJson: jsonb("safety_checklist_json")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     clinicalNotes: text("clinical_notes").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
-  (table) => [
-    index("idx_therapy_protocols_modality").on(table.tenantId, table.modalityCode)
-  ]
+  (table) => [index("idx_therapy_protocols_modality").on(table.tenantId, table.modalityCode)]
 );
 
 export const therapySessions = pgTable(
@@ -1244,7 +1365,9 @@ export const therapySessions = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }),
     prePainScore: integer("pre_pain_score"),
     postPainScore: integer("post_pain_score"),
-    actualDosageJson: jsonb("actual_dosage_json").notNull().default(sql`'{}'::jsonb`),
+    actualDosageJson: jsonb("actual_dosage_json")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     adverseReaction: boolean("adverse_reaction").notNull().default(false),
     sessionNotes: text("session_notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1256,9 +1379,29 @@ export const therapySessions = pgTable(
   ]
 );
 
-export const sitePages = pgTable("site_pages", {
-  id: uuid("id").defaultRandom().primaryKey(), tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }), slug: varchar("slug", { length: 120 }).notNull(), title: varchar("title", { length: 160 }).notNull(), status: varchar("status", { length: 20 }).notNull().default("draft"), sectionsJson: jsonb("sections_json").notNull().default(sql`'[]'::jsonb`), seoJson: jsonb("seo_json").notNull().default(sql`'{}'::jsonb`), version: integer("version").notNull().default(1), publishedAt: timestamp("published_at", { withTimezone: true }), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-}, (table) => [uniqueIndex("uq_site_pages_tenant_slug").on(table.tenantId, table.slug)]);
+export const sitePages = pgTable(
+  "site_pages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    slug: varchar("slug", { length: 120 }).notNull(),
+    title: varchar("title", { length: 160 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("draft"),
+    sectionsJson: jsonb("sections_json")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    seoJson: jsonb("seo_json")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    version: integer("version").notNull().default(1),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [uniqueIndex("uq_site_pages_tenant_slug").on(table.tenantId, table.slug)]
+);
 
 export const implementationInquiries = pgTable("implementation_inquiries", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -1273,15 +1416,23 @@ export const implementationInquiries = pgTable("implementation_inquiries", {
   /** SHA-256 hash of the raw resume token returned to the enquirer. */
   resumeTokenHash: varchar("resume_token_hash", { length: 64 }),
   resumeTokenExpiresAt: timestamp("resume_token_expires_at", { withTimezone: true }),
-  assignedToUserId: uuid("assigned_to_user_id").references(() => users.id, { onDelete: "set null" }),
-  convertedTenantId: uuid("converted_tenant_id").references(() => tenants.id, { onDelete: "set null" }),
+  assignedToUserId: uuid("assigned_to_user_id").references(() => users.id, {
+    onDelete: "set null"
+  }),
+  convertedTenantId: uuid("converted_tenant_id").references(() => tenants.id, {
+    onDelete: "set null"
+  }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 export const implementationInquiryPayloads = pgTable("implementation_inquiry_payloads", {
-  inquiryId: uuid("inquiry_id").primaryKey().references(() => implementationInquiries.id, { onDelete: "cascade" }),
+  inquiryId: uuid("inquiry_id")
+    .primaryKey()
+    .references(() => implementationInquiries.id, { onDelete: "cascade" }),
   schemaVersion: integer("schema_version").notNull().default(1),
-  payloadJson: jsonb("payload_json").notNull().default(sql`'{}'::jsonb`),
+  payloadJson: jsonb("payload_json")
+    .notNull()
+    .default(sql`'{}'::jsonb`),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
@@ -1290,14 +1441,22 @@ export const automationRules = pgTable(
   "automation_rules",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 200 }).notNull(),
     description: text("description"),
     triggerType: varchar("trigger_type", { length: 80 }).notNull(),
-    triggerConfig: jsonb("trigger_config").notNull().default(sql`'{}'::jsonb`),
-    conditions: jsonb("conditions").notNull().default(sql`'[]'::jsonb`),
+    triggerConfig: jsonb("trigger_config")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    conditions: jsonb("conditions")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     actionType: varchar("action_type", { length: 80 }).notNull(),
-    actionConfig: jsonb("action_config").notNull().default(sql`'{}'::jsonb`),
+    actionConfig: jsonb("action_config")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     isActive: boolean("is_active").notNull().default(true),
     totalExecutions: integer("total_executions").notNull().default(0),
     lastExecutedAt: timestamp("last_executed_at", { withTimezone: true }),
@@ -1311,13 +1470,21 @@ export const automationRuns = pgTable(
   "automation_runs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    ruleId: uuid("rule_id").notNull().references(() => automationRules.id, { onDelete: "cascade" }),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+    ruleId: uuid("rule_id")
+      .notNull()
+      .references(() => automationRules.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
     status: varchar("status", { length: 40 }).notNull().default("pending"),
     triggerEvent: varchar("trigger_event", { length: 80 }).notNull(),
     targetEntityId: uuid("target_entity_id"),
     targetEntityName: varchar("target_entity_name", { length: 160 }),
     message: text("message"),
+    actionId: uuid("action_id"),
+    actionType: varchar("action_type", { length: 80 }),
+    provider: varchar("provider", { length: 100 }),
+    externalId: varchar("external_id", { length: 255 }),
     idempotencyKey: varchar("idempotency_key", { length: 255 }),
     executedAt: timestamp("executed_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -1333,11 +1500,17 @@ export const inventoryLots = pgTable(
   "inventory_lots",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
     branchId: uuid("branch_id").references(() => branches.id, { onDelete: "restrict" }),
-    itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => inventoryItems.id, { onDelete: "cascade" }),
     lotCode: varchar("lot_code", { length: 80 }),
-    purchaseOrderId: uuid("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "set null" }),
+    purchaseOrderId: uuid("purchase_order_id").references(() => purchaseOrders.id, {
+      onDelete: "set null"
+    }),
     quantityReceived: numeric("quantity_received", { precision: 12, scale: 3 }).notNull(),
     quantityOnHand: numeric("quantity_on_hand", { precision: 12, scale: 3 }).notNull(),
     unitCostMinor: integer("unit_cost_minor").default(0),
@@ -1356,12 +1529,16 @@ export const stocktakes = pgTable(
   "stocktakes",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
     branchId: uuid("branch_id").references(() => branches.id, { onDelete: "restrict" }),
     status: varchar("status", { length: 30 }).notNull().default("draft"),
     notes: text("notes"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
-    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [index("idx_stocktakes_tenant").on(table.tenantId, table.status)]
@@ -1371,8 +1548,12 @@ export const stocktakeLines = pgTable(
   "stocktake_lines",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    stocktakeId: uuid("stocktake_id").notNull().references(() => stocktakes.id, { onDelete: "cascade" }),
-    itemId: uuid("item_id").notNull().references(() => inventoryItems.id, { onDelete: "restrict" }),
+    stocktakeId: uuid("stocktake_id")
+      .notNull()
+      .references(() => stocktakes.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => inventoryItems.id, { onDelete: "restrict" }),
     expectedQuantity: numeric("expected_quantity", { precision: 12, scale: 3 }),
     countedQuantity: numeric("counted_quantity", { precision: 12, scale: 3 }),
     variance: numeric("variance", { precision: 12, scale: 3 })

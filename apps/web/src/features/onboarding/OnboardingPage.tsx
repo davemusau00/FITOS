@@ -43,7 +43,8 @@ export function OnboardingPage() {
     {
       number: "04",
       title: "Services & Workout Catalog",
-      description: "Define class types, personal training services, schedules, and membership passes.",
+      description:
+        "Define class types, personal training services, schedules, and membership passes.",
       icon: "spark",
       to: "/app/services",
       isComplete: false
@@ -58,7 +59,10 @@ export function OnboardingPage() {
       {/* ── Topbar ── */}
       <header className="onboarding-topbar">
         <FitosLogo height={24} />
-        <Link className="fitos-button fitos-button--secondary fitos-button--small" to="/app/overview">
+        <Link
+          className="fitos-button fitos-button--secondary fitos-button--small"
+          to="/app/overview"
+        >
           <Icon name="dashboard" size={14} />
           Go to Dashboard
         </Link>
@@ -72,14 +76,22 @@ export function OnboardingPage() {
             <span className="page-header__eyebrow">Get Ready • Business Setup</span>
             <h1>Set up your FITOS Operating System</h1>
             <p>
-              Complete the essentials to start scheduling classes, managing coaches, and booking members seamlessly.
+              Complete the essentials to start scheduling classes, managing coaches, and booking
+              members seamlessly.
             </p>
           </div>
 
           <div className="onboarding-progress-badge">
             <div>
               <span>Setup Progress</span>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "0.25rem", marginTop: "0.15rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "0.25rem",
+                  marginTop: "0.15rem"
+                }}
+              >
                 <strong>{progressPercent}%</strong>
                 <span style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>
                   ({completedCount} of {steps.length} steps)
@@ -111,7 +123,10 @@ export function OnboardingPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     <h2>{step.title}</h2>
                     {step.isComplete ? (
-                      <span className="fitos-badge fitos-badge--success" style={{ fontSize: "0.65rem", padding: "0.15rem 0.45rem" }}>
+                      <span
+                        className="fitos-badge fitos-badge--success"
+                        style={{ fontSize: "0.65rem", padding: "0.15rem 0.45rem" }}
+                      >
                         Done
                       </span>
                     ) : null}
@@ -130,19 +145,33 @@ export function OnboardingPage() {
           {/* Right Column: Setup Guide Summary */}
           <aside className="onboarding-summary-card">
             <div>
-              <h3 style={{ color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <h3
+                style={{
+                  color: "var(--text-primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem"
+                }}
+              >
                 <Icon name="spark" size={16} style={{ color: "var(--fitos-energy)" }} />
                 Why complete setup?
               </h3>
               <p style={{ marginTop: "0.5rem" }}>
-                Configuring your business unlocks live class booking, member check-ins, automated reminders, and revenue reporting.
+                Configuring your business unlocks live class booking, member check-ins, automated
+                reminders, and revenue reporting.
               </p>
             </div>
 
             <hr className="divider" style={{ margin: 0 }} />
 
             <div>
-              <h4 style={{ color: "var(--text-primary)", fontSize: "0.8375rem", margin: "0 0 0.5rem" }}>
+              <h4
+                style={{
+                  color: "var(--text-primary)",
+                  fontSize: "0.8375rem",
+                  margin: "0 0 0.5rem"
+                }}
+              >
                 What happens next:
               </h4>
               <ul className="setup-list">
@@ -163,7 +192,10 @@ export function OnboardingPage() {
 
             <hr className="divider" style={{ margin: 0 }} />
 
-            <Link className="fitos-button fitos-button--primary fitos-button--full" to="/app/overview">
+            <Link
+              className="fitos-button fitos-button--primary fitos-button--full"
+              to="/app/overview"
+            >
               Finish & Open Dashboard
             </Link>
           </aside>

@@ -176,8 +176,7 @@ export function LeadsPage() {
 
   const confirmLostReason = () => {
     if (!lostReasonLead) return;
-    const reason =
-      selectedLostReason === "Other" ? customLostReason.trim() : selectedLostReason;
+    const reason = selectedLostReason === "Other" ? customLostReason.trim() : selectedLostReason;
     if (!reason) return;
     updateStage.mutate({ id: lostReasonLead.lead.id, nextStage: "lost", lostReason: reason });
     setLostReasonLead(null);
@@ -211,7 +210,11 @@ export function LeadsPage() {
         return (
           <span
             className="lead-stage-badge"
-            style={{ background: `${meta.color}22`, color: meta.color, borderColor: `${meta.color}44` }}
+            style={{
+              background: `${meta.color}22`,
+              color: meta.color,
+              borderColor: `${meta.color}44`
+            }}
           >
             {meta.label}
           </span>
@@ -320,10 +323,7 @@ export function LeadsPage() {
               <div className="leads-kanban__col" key={stageKey}>
                 <div className="leads-kanban__col-header">
                   <div className="leads-kanban__col-title">
-                    <span
-                      className="leads-kanban__col-dot"
-                      style={{ background: meta.color }}
-                    />
+                    <span className="leads-kanban__col-dot" style={{ background: meta.color }} />
                     <span>{meta.label}</span>
                   </div>
                   <span className="leads-kanban__col-count">{stageLeads.length}</span>
@@ -583,10 +583,7 @@ export function LeadsPage() {
             <ErrorNotice error={notes.error ?? tasks.error ?? addNote.error ?? addTask.error} />
 
             <div className="form-actions" style={{ justifyContent: "flex-end" }}>
-              <Button
-                onClick={() => requestStageChange(selectedLead, "lost")}
-                variant="ghost"
-              >
+              <Button onClick={() => requestStageChange(selectedLead, "lost")} variant="ghost">
                 Mark as Lost
               </Button>
             </div>

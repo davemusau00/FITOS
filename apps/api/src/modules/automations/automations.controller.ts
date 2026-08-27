@@ -12,8 +12,6 @@ import {
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type {
-  AutomationActionType,
-  AutomationTriggerType,
   CreateAutomationRuleRequest,
   RequestActor,
   UpdateAutomationRuleRequest

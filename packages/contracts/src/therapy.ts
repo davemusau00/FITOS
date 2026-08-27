@@ -7,10 +7,7 @@ export type ModalityCode =
   | "infrared_sauna";
 
 export type ModalityCategory =
-  | "neuromuscular"
-  | "unweighted_gait"
-  | "pneumatic_compression"
-  | "thermal_cryo";
+  "neuromuscular" | "unweighted_gait" | "pneumatic_compression" | "thermal_cryo";
 
 export type TherapySessionStatus = "in_progress" | "completed" | "interrupted";
 

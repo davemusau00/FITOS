@@ -8,11 +8,7 @@ export type AutomationTriggerType =
   | "payment_failed";
 
 export type AutomationActionType =
-  | "send_email"
-  | "send_sms"
-  | "send_whatsapp"
-  | "create_staff_task"
-  | "update_crm_stage";
+  "send_email" | "send_sms" | "send_whatsapp" | "create_staff_task" | "update_crm_stage";
 
 export interface AutomationRuleResponse {
   id: string;
@@ -94,4 +90,20 @@ export interface AutomationExecutionLogResponse {
   targetEntityName: string | null;
   message: string;
   executedAt: string;
+  actionId?: string | null;
+  actionType?: AutomationActionType | null;
+  provider?: string | null;
+  externalId?: string | null;
+}
+
+export type AutomationActionStatus = "delivered" | "simulated" | "skipped" | "failed";
+
+export interface AutomationActionResult {
+  actionId: string;
+  actionType: AutomationActionType;
+  status: AutomationActionStatus;
+  provider: string;
+  message: string;
+  externalId?: string;
+  completedAt: string;
 }

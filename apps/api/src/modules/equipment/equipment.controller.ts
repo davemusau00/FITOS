@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Inject, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Query
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type {
@@ -89,9 +99,7 @@ const toScope = (actor: RequestActor) => ({
 @ApiTags("equipment")
 @Controller("equipment")
 export class EquipmentController {
-  constructor(
-    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
-  ) {}
+  constructor(@Inject(FitosRepositoryToken) private readonly repository: FitosRepository) {}
 
   @Get("assets")
   @RequirePermission("schedule:read")
@@ -155,13 +163,38 @@ export class EquipmentController {
 
   @Get("allocations/:occurrenceId")
   @RequirePermission("schedule:read")
-  listAllocations(@Actor() actor: RequestActor, @Param("occurrenceId") occurrenceId: string) { return this.repository.listOccurrenceEquipmentAllocations(toScope(actor), z.string().uuid().parse(occurrenceId)); }
+  listAllocations(@Actor() actor: RequestActor, @Param("occurrenceId") occurrenceId: string) {
+    return this.repository.listOccurrenceEquipmentAllocations(
+      toScope(actor),
+      z.string().uuid().parse(occurrenceId)
+    );
+  }
 
   @Post("allocations/:occurrenceId/:assetId")
   @RequirePermission("schedule:manage")
-  reserveAllocation(@Actor() actor: RequestActor, @Param("occurrenceId") occurrenceId: string, @Param("assetId") assetId: string) { return this.repository.reserveOccurrenceEquipment(toScope(actor), z.string().uuid().parse(occurrenceId), z.string().uuid().parse(assetId)); }
+  reserveAllocation(
+    @Actor() actor: RequestActor,
+    @Param("occurrenceId") occurrenceId: string,
+    @Param("assetId") assetId: string
+  ) {
+    return this.repository.reserveOccurrenceEquipment(
+      toScope(actor),
+      z.string().uuid().parse(occurrenceId),
+      z.string().uuid().parse(assetId)
+    );
+  }
 
   @Post("allocations/:allocationId/release")
   @RequirePermission("schedule:manage")
-  async releaseAllocation(@Actor() actor: RequestActor, @Param("allocationId") allocationId: string) { const result = await this.repository.releaseOccurrenceEquipment(toScope(actor), z.string().uuid().parse(allocationId)); if (!result) throw new NotFoundException("Equipment allocation not found."); return result; }
+  async releaseAllocation(
+    @Actor() actor: RequestActor,
+    @Param("allocationId") allocationId: string
+  ) {
+    const result = await this.repository.releaseOccurrenceEquipment(
+      toScope(actor),
+      z.string().uuid().parse(allocationId)
+    );
+    if (!result) throw new NotFoundException("Equipment allocation not found.");
+    return result;
+  }
 }

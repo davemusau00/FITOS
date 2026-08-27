@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createCsrfToken, createOpaqueSessionToken, hashSessionToken } from "@fitos/auth";
 import { and, desc, eq, gt, gte, ilike, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import {
@@ -3681,7 +3681,9 @@ export class DrizzleFitosRepository implements FitosRepository {
       tenantUserId: memberId
     };
 
-    return this.cancelBooking(scope, bookingId, reason, memberId);
+    const result = await this.cancelBooking(scope, bookingId, reason);
+    if (!result) throw new Error("Booking not found or could not be cancelled.");
+    return result;
   }
 
   // ─── Insights Analytics ──────────────────────────────────────────────────────
@@ -3804,57 +3806,277 @@ export class DrizzleFitosRepository implements FitosRepository {
     `);
 
     const weeklyVisitsArray = (weeklyVisitsRows.rows || []).map((r) => ({
-      week: r.week_start,
-      visits: r.visit_count
+      day: new Date(r.week_start).toLocaleDateString("en-US", {
+        weekday: "short",
+        timeZone: "Africa/Nairobi"
+      }) as import("@fitos/contracts").WeeklyAttendancePoint["day"],
+      count: r.visit_count
     }));
 
     const avgWeekly = weeklyVisitsArray.length
       ? Math.round(
-          weeklyVisitsArray.reduce((sum, w) => sum + w.visits, 0) / weeklyVisitsArray.length
+          weeklyVisitsArray.reduce((sum, w) => sum + w.count, 0) / weeklyVisitsArray.length
         )
       : 0;
 
     return {
       summary: {
         avgWeeklyVisits: avgWeekly,
-        avgWeeklyVisitsChangePct: 8.5,
-        classOccupancyRate: 74.2,
-        classOccupancyChangePct: 5.1,
-        memberRetention90d: 86.0,
-        memberRetentionChangePct: 2.3,
-        leadConversionRate: 42.0,
-        leadConversionChangePct: 3.4,
+        avgWeeklyVisitsChangePct: 0,
+        classOccupancyRate: 0,
+        classOccupancyChangePct: 0,
+        memberRetention90d: 0,
+        memberRetentionChangePct: 0,
+        leadConversionRate: 0,
+        leadConversionChangePct: 0,
         totalActiveMembers: activeMembersCount?.count ?? 0,
         totalLeadsInPipeline: leadsCount?.count ?? 0
       },
       weeklyAttendance: weeklyVisitsArray,
       occupancyHeatmap: (heatmapRows.rows || []).map((r) => ({
         dayOfWeek: r.dow,
-        hour: r.hour,
-        occupancyRate: r.avg_occupancy
+        hourOfDay: r.hour,
+        occupancyPercent: Math.round(r.avg_occupancy * 100),
+        sessionCount: 0
       })),
       retentionCohorts: (retentionRows.rows || []).map((r) => ({
-        cohort: r.cohort_month,
+        cohortMonth: r.cohort_month,
         initialSize: r.total_joined,
-        month1Pct: r.total_joined ? Math.round((r.retained_30d / r.total_joined) * 100) : 100,
-        month2Pct: r.total_joined ? Math.round((r.retained_60d / r.total_joined) * 100) : 85,
-        month3Pct: r.total_joined ? Math.round((r.retained_90d / r.total_joined) * 100) : 75
+        month1Retention: r.total_joined ? Math.round((r.retained_30d / r.total_joined) * 100) : 0,
+        month2Retention: r.total_joined ? Math.round((r.retained_60d / r.total_joined) * 100) : 0,
+        month3Retention: r.total_joined ? Math.round((r.retained_90d / r.total_joined) * 100) : 0,
+        month4Retention: 0,
+        month5Retention: 0
       })),
       atRiskMembers: (atRiskRows.rows || []).map((r) => ({
-        memberId: r.id,
-        name: r.name.trim(),
-        email: r.email,
-        daysSinceLastVisit: r.days_inactive,
-        riskScore: Math.min(100, r.days_inactive * 3)
+        id: r.id,
+        firstName: r.name.trim().split(" ")[0] ?? r.name.trim(),
+        lastName: r.name.trim().split(" ").slice(1).join(" ") || null,
+        phone: null,
+        email: r.email || null,
+        daysInactive: r.days_inactive,
+        planName: null,
+        creditsRemaining: 0,
+        lastVisitAt: null
       })),
       leadFunnel: (leadFunnelRows.rows || []).map((r) => ({
         stage: r.stage,
-        count: r.count
+        label: r.stage,
+        count: r.count,
+        percentage: 0
       }))
     };
   }
 
   // ─── Automations ─────────────────────────────────────────────────────────────
+  async listInventoryLots(
+    scope: TenantScope,
+    itemId?: string
+  ): Promise<import("@fitos/contracts").InventoryLotResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(inventoryLots)
+      .where(
+        and(
+          eq(inventoryLots.tenantId, scope.tenantId),
+          ...(itemId ? [eq(inventoryLots.itemId, itemId)] : [])
+        )
+      );
+    return rows.map((row) => this.inventoryLotResponse(row));
+  }
+
+  async createInventoryLot(
+    scope: TenantScope,
+    input: import("@fitos/contracts").CreateInventoryLotRequest
+  ): Promise<import("@fitos/contracts").InventoryLotResponse> {
+    const [row] = await this.db
+      .insert(inventoryLots)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId ?? null,
+        itemId: input.itemId,
+        lotCode: input.lotCode ?? null,
+        purchaseOrderId: input.purchaseOrderId ?? null,
+        quantityReceived: String(input.quantityReceived),
+        quantityOnHand: String(input.quantityReceived),
+        unitCostMinor: input.unitCostMinor ?? 0,
+        expiresOn: input.expiresOn ?? null,
+        notes: input.notes ?? null
+      })
+      .returning();
+    if (!row) throw new Error("Failed to create inventory lot.");
+    return this.inventoryLotResponse(row);
+  }
+
+  async listExpiringInventoryLots(
+    scope: TenantScope,
+    daysAhead: number
+  ): Promise<import("@fitos/contracts").InventoryLotResponse[]> {
+    const until = new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10);
+    const rows = await this.db
+      .select()
+      .from(inventoryLots)
+      .where(
+        and(
+          eq(inventoryLots.tenantId, scope.tenantId),
+          lte(inventoryLots.expiresOn, until),
+          gt(inventoryLots.quantityOnHand, "0")
+        )
+      );
+    return rows.map((row) => this.inventoryLotResponse(row));
+  }
+
+  async listStocktakes(
+    scope: TenantScope,
+    branchId?: string
+  ): Promise<import("@fitos/contracts").StocktakeResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(stocktakes)
+      .where(
+        and(
+          eq(stocktakes.tenantId, scope.tenantId),
+          ...(branchId ? [eq(stocktakes.branchId, branchId)] : [])
+        )
+      );
+    return Promise.all(rows.map((row) => this.stocktakeResponse(row)));
+  }
+
+  async createStocktake(
+    scope: TenantScope,
+    input: import("@fitos/contracts").CreateStocktakeRequest,
+    createdByUserId: string
+  ): Promise<import("@fitos/contracts").StocktakeResponse> {
+    const [row] = await this.db
+      .insert(stocktakes)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId ?? null,
+        notes: input.notes ?? null,
+        createdByUserId
+      })
+      .returning();
+    if (!row) throw new Error("Failed to create stocktake.");
+    const items = await this.db
+      .select()
+      .from(inventoryItems)
+      .where(
+        and(
+          eq(inventoryItems.tenantId, scope.tenantId),
+          ...(input.branchId ? [eq(inventoryItems.branchId, input.branchId)] : [])
+        )
+      );
+    if (items.length)
+      await this.db.insert(stocktakeLines).values(
+        items.map((item) => ({
+          stocktakeId: row.id,
+          itemId: item.id,
+          expectedQuantity: String(item.currentStock)
+        }))
+      );
+    return this.stocktakeResponse(row);
+  }
+
+  async getStocktake(
+    scope: TenantScope,
+    stocktakeId: string
+  ): Promise<import("@fitos/contracts").StocktakeResponse | null> {
+    const [row] = await this.db
+      .select()
+      .from(stocktakes)
+      .where(and(eq(stocktakes.id, stocktakeId), eq(stocktakes.tenantId, scope.tenantId)))
+      .limit(1);
+    return row ? this.stocktakeResponse(row) : null;
+  }
+
+  async recordStocktakeCount(
+    scope: TenantScope,
+    stocktakeId: string,
+    input: import("@fitos/contracts").RecordStocktakeCountRequest
+  ): Promise<import("@fitos/contracts").StocktakeResponse> {
+    const stocktake = await this.getStocktake(scope, stocktakeId);
+    if (!stocktake) throw new Error("Stocktake not found.");
+    const [line] = await this.db
+      .select()
+      .from(stocktakeLines)
+      .where(
+        and(eq(stocktakeLines.stocktakeId, stocktakeId), eq(stocktakeLines.itemId, input.itemId))
+      )
+      .limit(1);
+    if (!line) throw new Error("Stocktake line item not found.");
+    await this.db
+      .update(stocktakeLines)
+      .set({
+        countedQuantity: String(input.countedQuantity),
+        variance: sql`${input.countedQuantity} - ${line.expectedQuantity}`
+      })
+      .where(eq(stocktakeLines.id, line.id));
+    return (await this.getStocktake(scope, stocktakeId))!;
+  }
+
+  async completeStocktake(
+    scope: TenantScope,
+    stocktakeId: string,
+    _actorUserId: string
+  ): Promise<import("@fitos/contracts").StocktakeResponse> {
+    const [row] = await this.db
+      .update(stocktakes)
+      .set({ status: "completed", completedAt: new Date() })
+      .where(and(eq(stocktakes.id, stocktakeId), eq(stocktakes.tenantId, scope.tenantId)))
+      .returning();
+    if (!row) throw new Error("Stocktake not found.");
+    return this.stocktakeResponse(row);
+  }
+
+  private inventoryLotResponse(
+    row: typeof inventoryLots.$inferSelect
+  ): import("@fitos/contracts").InventoryLotResponse {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      branchId: row.branchId,
+      itemId: row.itemId,
+      lotCode: row.lotCode,
+      purchaseOrderId: row.purchaseOrderId,
+      quantityReceived: Number(row.quantityReceived),
+      quantityOnHand: Number(row.quantityOnHand),
+      unitCostMinor: row.unitCostMinor ?? 0,
+      expiresOn: row.expiresOn,
+      receivedAt: row.receivedAt.toISOString(),
+      notes: row.notes,
+      createdAt: row.createdAt.toISOString()
+    };
+  }
+
+  private async stocktakeResponse(
+    row: typeof stocktakes.$inferSelect
+  ): Promise<import("@fitos/contracts").StocktakeResponse> {
+    const lines = await this.db
+      .select({ line: stocktakeLines, itemName: inventoryItems.name })
+      .from(stocktakeLines)
+      .leftJoin(inventoryItems, eq(inventoryItems.id, stocktakeLines.itemId))
+      .where(eq(stocktakeLines.stocktakeId, row.id));
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      branchId: row.branchId,
+      status: row.status as "draft" | "completed",
+      notes: row.notes,
+      createdByUserId: row.createdByUserId,
+      createdAt: row.createdAt.toISOString(),
+      completedAt: row.completedAt?.toISOString() ?? null,
+      lines: lines.map(({ line, itemName }) => ({
+        id: line.id,
+        stocktakeId: line.stocktakeId,
+        itemId: line.itemId,
+        itemName: itemName ?? undefined,
+        expectedQuantity: Number(line.expectedQuantity ?? 0),
+        countedQuantity: line.countedQuantity === null ? null : Number(line.countedQuantity),
+        variance: line.variance === null ? null : Number(line.variance)
+      }))
+    };
+  }
+
   async listAutomations(
     scope: TenantScope
   ): Promise<import("@fitos/contracts").AutomationRuleResponse[]> {
@@ -3991,7 +4213,11 @@ export class DrizzleFitosRepository implements FitosRepository {
       targetEntityId: log.targetEntityId,
       targetEntityName: log.targetEntityName,
       message: log.message ?? "Executed successfully",
-      executedAt: log.executedAt.toISOString()
+      executedAt: log.executedAt.toISOString(),
+      actionId: log.actionId,
+      actionType: log.actionType as import("@fitos/contracts").AutomationActionType | null,
+      provider: log.provider,
+      externalId: log.externalId
     }));
   }
 
@@ -4022,9 +4248,12 @@ export class DrizzleFitosRepository implements FitosRepository {
       .values({
         ruleId: rule.id,
         tenantId: scope.tenantId,
-        status: "success",
+        status: "skipped",
         triggerEvent: "manual",
-        message: `SIMULATION: evaluated rule ${rule.name}; no customer communication was sent.`,
+        actionId: randomUUID(),
+        actionType: rule.actionType,
+        provider: "simulation",
+        message: `SIMULATION: evaluated action ${rule.actionType}; no customer communication was sent.`,
         executedAt: now
       })
       .returning();
@@ -4034,11 +4263,11 @@ export class DrizzleFitosRepository implements FitosRepository {
       ruleId: rule.id,
       ruleName: rule.name,
       tenantId: scope.tenantId,
-      status: "success",
+      status: "skipped",
       triggerEvent: "manual",
       targetEntityId: null,
       targetEntityName: null,
-      message: `SIMULATION: evaluated rule ${rule.name}; no customer communication was sent.`,
+      message: `SIMULATION: evaluated action ${rule.actionType}; no customer communication was sent.`,
       executedAt: now.toISOString()
     };
   }
@@ -4159,7 +4388,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       await tx.insert(sessions).values({
         userId: user.id,
         tenantUserId: tenantUser!.id,
-        tokenHash: hashSessionToken(sessionToken),
+        sessionTokenHash: hashSessionToken(sessionToken),
         expiresAt: sessionExpiresAt
       });
       return { tenant, branch, user, trialEnds, sessionToken, csrfToken };

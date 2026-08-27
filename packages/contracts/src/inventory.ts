@@ -1,10 +1,5 @@
 export type InventoryMovementType =
-  | "purchase_in"
-  | "sale_out"
-  | "session_usage"
-  | "adjustment"
-  | "transfer"
-  | "waste";
+  "purchase_in" | "sale_out" | "session_usage" | "adjustment" | "transfer" | "waste";
 
 export type PurchaseOrderStatus = "draft" | "ordered" | "received" | "cancelled";
 
@@ -82,8 +77,21 @@ export interface CreateInventoryMovementRequest {
   costMinor?: number;
   notes?: string;
 }
-export interface ServiceInventoryRequirement { itemId: string; quantityPerSession: number; }
-export interface InventoryConsumptionResponse { id: string; tenantId: string; branchId: string; itemId: string; serviceId: string | null; referenceType: string; referenceId: string | null; quantity: number; createdAt: string; }
+export interface ServiceInventoryRequirement {
+  itemId: string;
+  quantityPerSession: number;
+}
+export interface InventoryConsumptionResponse {
+  id: string;
+  tenantId: string;
+  branchId: string;
+  itemId: string;
+  serviceId: string | null;
+  referenceType: string;
+  referenceId: string | null;
+  quantity: number;
+  createdAt: string;
+}
 export interface InventoryLotResponse {
   id: string;
   tenantId: string;
@@ -141,7 +149,6 @@ export interface RecordStocktakeCountRequest {
   itemId: string;
   countedQuantity: number;
 }
-
 
 export interface PurchaseOrderItem {
   itemId: string;

@@ -40,7 +40,8 @@ export class MemberAuthController {
     const member = await this.repository.findMemberByIdentifier(identifier);
     if (!member) throw new UnauthorizedException("Invalid credentials.");
 
-    if (!(await this.repository.verifyMemberPassword(member.id, password))) throw new UnauthorizedException("Invalid credentials.");
+    if (!(await this.repository.verifyMemberPassword(member.id, password)))
+      throw new UnauthorizedException("Invalid credentials.");
 
     const rawToken = crypto.randomUUID();
     const tokenHash = hashSessionToken(rawToken);
@@ -59,11 +60,26 @@ export class MemberAuthController {
 
   @Post("set-password")
   async setPassword(@Body() body: unknown, @Req() req: FitosRequest) {
-    const { currentPassword, password } = z.object({ currentPassword: z.string().min(10).max(255), password: z.string().min(10).max(255) }).strict().parse(body);
+    const { currentPassword, password } = z
+      .object({
+        currentPassword: z.string().min(10).max(255),
+        password: z.string().min(10).max(255)
+      })
+      .strict()
+      .parse(body);
     const token = (req.cookies as Record<string, string>)?.[SESSION_COOKIE];
-    const profile = token ? await this.repository.resolveMemberSession(hashSessionToken(token), new Date().toISOString()) : null;
-    if (!profile || !(await this.repository.verifyMemberPassword(profile.id, currentPassword))) throw new UnauthorizedException("Invalid credentials.");
-    await this.repository.setMemberPassword(profile.id, await new ScryptPasswordHasher().hash(password));
+    const profile = token
+      ? await this.repository.resolveMemberSession(
+          hashSessionToken(token),
+          new Date().toISOString()
+        )
+      : null;
+    if (!profile || !(await this.repository.verifyMemberPassword(profile.id, currentPassword)))
+      throw new UnauthorizedException("Invalid credentials.");
+    await this.repository.setMemberPassword(
+      profile.id,
+      await new ScryptPasswordHasher().hash(password)
+    );
     await this.repository.revokeMemberSession(hashSessionToken(token!), new Date().toISOString());
     return { ok: true };
   }
@@ -75,7 +91,11 @@ export class MemberAuthController {
       const hash = hashSessionToken(token);
       await this.repository.revokeMemberSession(hash, new Date().toISOString());
     }
-    res.clearCookie(SESSION_COOKIE, { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production" });
+    res.clearCookie(SESSION_COOKIE, {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production"
+    });
     return { ok: true };
   }
 
@@ -120,9 +140,11 @@ export class MemberAuthController {
     const profile = await this.repository.resolveMemberSession(hash, new Date().toISOString());
     if (!profile) throw new UnauthorizedException("Session expired.");
     const { bookingId, reason } = z
-      .object({ bookingId: z.string().uuid(), reason: z.string().trim().min(1).max(255).default("Member self-cancelled") })
+      .object({
+        bookingId: z.string().uuid(),
+        reason: z.string().trim().min(1).max(255).default("Member self-cancelled")
+      })
       .parse(body);
     return this.repository.memberSelfCancel(profile.id, bookingId, reason);
   }
 }
-

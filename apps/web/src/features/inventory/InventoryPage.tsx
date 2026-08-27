@@ -10,7 +10,10 @@ import type {
   InventoryMovementType
 } from "@fitos/contracts";
 
-const MOVEMENT_LABELS: Record<InventoryMovementType, { label: string; color: string; sign: string }> = {
+const MOVEMENT_LABELS: Record<
+  InventoryMovementType,
+  { label: string; color: string; sign: string }
+> = {
   purchase_in: { label: "Purchase In", color: "#22c55e", sign: "+" },
   sale_out: { label: "Retail Sale", color: "#6366f1", sign: "-" },
   session_usage: { label: "Session Consumed", color: "#f59e0b", sign: "-" },
@@ -28,7 +31,9 @@ export default function InventoryPage() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderResponse[]>([]);
   const [lots, setLots] = useState<import("@fitos/contracts").InventoryLotResponse[]>([]);
   const [stocktakes, setStocktakes] = useState<import("@fitos/contracts").StocktakeResponse[]>([]);
-  const [selectedStocktake, setSelectedStocktake] = useState<import("@fitos/contracts").StocktakeResponse | null>(null);
+  const [selectedStocktake, setSelectedStocktake] = useState<
+    import("@fitos/contracts").StocktakeResponse | null
+  >(null);
   const [showNewLot, setShowNewLot] = useState(false);
   const [showNewStocktake, setShowNewStocktake] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -40,7 +45,9 @@ export default function InventoryPage() {
   const [movementItemId, setMovementItemId] = useState<string>("");
 
   const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "retail" | "consumable" | "low_stock">("all");
+  const [filterType, setFilterType] = useState<"all" | "retail" | "consumable" | "low_stock">(
+    "all"
+  );
   const [filterCategory, setFilterCategory] = useState("all");
 
   const reload = useCallback(async () => {
@@ -63,7 +70,9 @@ export default function InventoryPage() {
     }
   }, []);
 
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
   const categories = Array.from(new Set(items.map((i) => i.category)));
   const lowStockCount = items.filter((i) => i.stockOnHand <= i.reorderPoint).length;
@@ -74,7 +83,12 @@ export default function InventoryPage() {
     if (filterType === "consumable" && !item.isConsumable) return false;
     if (filterType === "low_stock" && item.stockOnHand > item.reorderPoint) return false;
     if (filterCategory !== "all" && item.category !== filterCategory) return false;
-    if (search && !item.name.toLowerCase().includes(search.toLowerCase()) && !item.sku.toLowerCase().includes(search.toLowerCase())) return false;
+    if (
+      search &&
+      !item.name.toLowerCase().includes(search.toLowerCase()) &&
+      !item.sku.toLowerCase().includes(search.toLowerCase())
+    )
+      return false;
     return true;
   });
 
@@ -83,7 +97,9 @@ export default function InventoryPage() {
       <div className="inv-header">
         <div>
           <h1 className="inv-title">Inventory & Stock</h1>
-          <p className="inv-subtitle">Manage retail merchandise, therapy consumables, and purchase orders.</p>
+          <p className="inv-subtitle">
+            Manage retail merchandise, therapy consumables, and purchase orders.
+          </p>
         </div>
         <div className="inv-header-actions">
           <button className="btn-secondary" onClick={() => setShowNewPO(true)}>
@@ -103,19 +119,31 @@ export default function InventoryPage() {
         <div className="inv-stat-card">
           <div className="stat-label">Total Stock Value</div>
           <div className="stat-value">
-            {(totalStockValueMinor / 100).toLocaleString("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 })}
+            {(totalStockValueMinor / 100).toLocaleString("en-KE", {
+              style: "currency",
+              currency: "KES",
+              maximumFractionDigits: 0
+            })}
           </div>
           <div className="stat-sub">{items.length} unique SKUs</div>
         </div>
-        <div className="inv-stat-card" onClick={() => setFilterType("low_stock")} style={{ cursor: "pointer" }}>
+        <div
+          className="inv-stat-card"
+          onClick={() => setFilterType("low_stock")}
+          style={{ cursor: "pointer" }}
+        >
           <div className="stat-label">Low Stock Alerts</div>
           <div className={`stat-value ${lowStockCount > 0 ? "warn" : ""}`}>{lowStockCount}</div>
-          <div className="stat-sub">{lowStockCount > 0 ? "Requires reordering" : "All stock healthy"}</div>
+          <div className="stat-sub">
+            {lowStockCount > 0 ? "Requires reordering" : "All stock healthy"}
+          </div>
         </div>
         <div className="inv-stat-card">
           <div className="stat-label">Purchase Orders</div>
           <div className="stat-value">{purchaseOrders.length}</div>
-          <div className="stat-sub">{purchaseOrders.filter((p) => p.status === "ordered").length} pending delivery</div>
+          <div className="stat-sub">
+            {purchaseOrders.filter((p) => p.status === "ordered").length} pending delivery
+          </div>
         </div>
         <div className="inv-stat-card">
           <div className="stat-label">Movements (30d)</div>
@@ -126,16 +154,28 @@ export default function InventoryPage() {
 
       {/* Tabs */}
       <div className="inv-tabs">
-        <button className={`inv-tab ${tab === "items" ? "active" : ""}`} onClick={() => setTab("items")}>
+        <button
+          className={`inv-tab ${tab === "items" ? "active" : ""}`}
+          onClick={() => setTab("items")}
+        >
           Stock Registry ({items.length})
         </button>
-        <button className={`inv-tab ${tab === "lots" ? "active" : ""}`} onClick={() => setTab("lots")}>
+        <button
+          className={`inv-tab ${tab === "lots" ? "active" : ""}`}
+          onClick={() => setTab("lots")}
+        >
           Inventory Lots ({lots.length})
         </button>
-        <button className={`inv-tab ${tab === "stocktake" ? "active" : ""}`} onClick={() => setTab("stocktake")}>
+        <button
+          className={`inv-tab ${tab === "stocktake" ? "active" : ""}`}
+          onClick={() => setTab("stocktake")}
+        >
           Stocktakes ({stocktakes.length})
         </button>
-        <button className={`inv-tab ${tab === "movements" ? "active" : ""}`} onClick={() => setTab("movements")}>
+        <button
+          className={`inv-tab ${tab === "movements" ? "active" : ""}`}
+          onClick={() => setTab("movements")}
+        >
           Movements Ledger ({movements.length})
         </button>
         <button className={`inv-tab ${tab === "po" ? "active" : ""}`} onClick={() => setTab("po")}>
@@ -153,15 +193,27 @@ export default function InventoryPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <select className="filter-select" value={filterType} onChange={(e) => setFilterType(e.target.value as typeof filterType)}>
+            <select
+              className="filter-select"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as typeof filterType)}
+            >
               <option value="all">All Types</option>
               <option value="retail">Retail Items</option>
               <option value="consumable">Consumables & Supplies</option>
               <option value="low_stock">Low Stock Only</option>
             </select>
-            <select className="filter-select" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+            <select
+              className="filter-select"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+            >
               <option value="all">All Categories</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -171,9 +223,12 @@ export default function InventoryPage() {
             <div className="item-grid">
               {filtered.map((item) => {
                 const isLow = item.stockOnHand <= item.reorderPoint;
-                const margin = item.retailPriceMinor > 0
-                  ? Math.round(((item.retailPriceMinor - item.unitCostMinor) / item.retailPriceMinor) * 100)
-                  : null;
+                const margin =
+                  item.retailPriceMinor > 0
+                    ? Math.round(
+                        ((item.retailPriceMinor - item.unitCostMinor) / item.retailPriceMinor) * 100
+                      )
+                    : null;
                 return (
                   <div
                     key={item.id}
@@ -192,25 +247,29 @@ export default function InventoryPage() {
 
                     <div className="stock-level-row">
                       <div className="stock-count-box">
-                        <span className={`stock-count ${isLow ? "low" : ""}`}>{item.stockOnHand}</span>
+                        <span className={`stock-count ${isLow ? "low" : ""}`}>
+                          {item.stockOnHand}
+                        </span>
                         <span className="stock-unit">{item.unit}s in stock</span>
                       </div>
                       {isLow && (
-                        <span className="reorder-badge">
-                          Reorder Point: {item.reorderPoint}
-                        </span>
+                        <span className="reorder-badge">Reorder Point: {item.reorderPoint}</span>
                       )}
                     </div>
 
                     <div className="item-prices">
                       <div>
                         <span className="price-label">Cost</span>
-                        <span className="price-val">KES {(item.unitCostMinor / 100).toLocaleString()}</span>
+                        <span className="price-val">
+                          KES {(item.unitCostMinor / 100).toLocaleString()}
+                        </span>
                       </div>
                       {item.isRetail && item.retailPriceMinor > 0 && (
                         <div>
                           <span className="price-label">Retail ({margin}% margin)</span>
-                          <span className="price-val retail">KES {(item.retailPriceMinor / 100).toLocaleString()}</span>
+                          <span className="price-val retail">
+                            KES {(item.retailPriceMinor / 100).toLocaleString()}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -228,10 +287,21 @@ export default function InventoryPage() {
       {tab === "movements" && (
         <div className="mvt-list">
           {movements.map((m) => {
-            const meta = MOVEMENT_LABELS[m.movementType] ?? { label: m.movementType, color: "#6366f1", sign: "" };
+            const meta = MOVEMENT_LABELS[m.movementType] ?? {
+              label: m.movementType,
+              color: "#6366f1",
+              sign: ""
+            };
             return (
               <div key={m.id} className="mvt-row">
-                <div className="mvt-badge" style={{ background: `${meta.color}15`, color: meta.color, borderColor: `${meta.color}35` }}>
+                <div
+                  className="mvt-badge"
+                  style={{
+                    background: `${meta.color}15`,
+                    color: meta.color,
+                    borderColor: `${meta.color}35`
+                  }}
+                >
                   {meta.label}
                 </div>
                 <div className="mvt-info">
@@ -243,7 +313,9 @@ export default function InventoryPage() {
                   <div className={`mvt-qty ${m.quantity > 0 ? "pos" : "neg"}`}>
                     {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
                   </div>
-                  <div className="mvt-date">{new Date(m.recordedAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}</div>
+                  <div className="mvt-date">
+                    {new Date(m.recordedAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}
+                  </div>
                 </div>
               </div>
             );
@@ -257,12 +329,35 @@ export default function InventoryPage() {
       {tab === "lots" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Showing batch lots with expiry dates and on-hand tracking.</span>
-            <button className="btn-primary" onClick={() => setShowNewLot(true)}>+ Receive Lot</button>
+            <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+              Showing batch lots with expiry dates and on-hand tracking.
+            </span>
+            <button className="btn-primary" onClick={() => setShowNewLot(true)}>
+              + Receive Lot
+            </button>
           </div>
-          <div style={{ background: "rgba(15, 23, 42, 0.6)", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
-              <thead style={{ background: "rgba(30, 41, 59, 0.6)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <div
+            style={{
+              background: "rgba(15, 23, 42, 0.6)",
+              borderRadius: "0.75rem",
+              border: "1px solid rgba(255,255,255,0.08)",
+              overflow: "hidden"
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                textAlign: "left",
+                fontSize: "0.9rem"
+              }}
+            >
+              <thead
+                style={{
+                  background: "rgba(30, 41, 59, 0.6)",
+                  borderBottom: "1px solid rgba(255,255,255,0.08)"
+                }}
+              >
                 <tr>
                   <th style={{ padding: "0.75rem 1rem" }}>Lot Code</th>
                   <th style={{ padding: "0.75rem 1rem" }}>Item SKU / Name</th>
@@ -275,22 +370,45 @@ export default function InventoryPage() {
               <tbody>
                 {lots.map((l) => {
                   const item = items.find((i) => i.id === l.itemId);
-                  const isExpiringSoon = l.expiresOn && new Date(l.expiresOn).getTime() - Date.now() < 30 * 86400000;
+                  const isExpiringSoon =
+                    l.expiresOn && new Date(l.expiresOn).getTime() - Date.now() < 30 * 86400000;
                   return (
                     <tr key={l.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#60a5fa" }}>{l.lotCode || "—"}</td>
-                      <td style={{ padding: "0.75rem 1rem" }}>{item ? `${item.sku} · ${item.name}` : l.itemId}</td>
-                      <td style={{ padding: "0.75rem 1rem" }}>{l.quantityReceived}</td>
-                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>{l.quantityOnHand}</td>
-                      <td style={{ padding: "0.75rem 1rem", color: isExpiringSoon ? "#f87171" : "#94a3b8" }}>
-                        {l.expiresOn ? `${l.expiresOn} ${isExpiringSoon ? "⚠️ Expiring" : ""}` : "No Expiry"}
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: "#60a5fa" }}>
+                        {l.lotCode || "—"}
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#64748b" }}>{new Date(l.receivedAt).toLocaleDateString()}</td>
+                      <td style={{ padding: "0.75rem 1rem" }}>
+                        {item ? `${item.sku} · ${item.name}` : l.itemId}
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem" }}>{l.quantityReceived}</td>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>
+                        {l.quantityOnHand}
+                      </td>
+                      <td
+                        style={{
+                          padding: "0.75rem 1rem",
+                          color: isExpiringSoon ? "#f87171" : "#94a3b8"
+                        }}
+                      >
+                        {l.expiresOn
+                          ? `${l.expiresOn} ${isExpiringSoon ? "⚠️ Expiring" : ""}`
+                          : "No Expiry"}
+                      </td>
+                      <td style={{ padding: "0.75rem 1rem", color: "#64748b" }}>
+                        {new Date(l.receivedAt).toLocaleDateString()}
+                      </td>
                     </tr>
                   );
                 })}
                 {lots.length === 0 && (
-                  <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>No inventory lots received yet.</td></tr>
+                  <tr>
+                    <td
+                      colSpan={6}
+                      style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}
+                    >
+                      No inventory lots received yet.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -302,49 +420,143 @@ export default function InventoryPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           {!selectedStocktake ? (
             <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Reconcile physical inventory counts against system records.</span>
-                <button className="btn-primary" onClick={async () => {
-                  const created = await api.createStocktake({});
-                  setStocktakes((prev) => [created, ...prev]);
-                  setSelectedStocktake(created);
-                }}>+ Start New Stocktake</button>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                  Reconcile physical inventory counts against system records.
+                </span>
+                <button
+                  className="btn-primary"
+                  onClick={async () => {
+                    const created = await api.createStocktake({});
+                    setStocktakes((prev) => [created, ...prev]);
+                    setSelectedStocktake(created);
+                  }}
+                >
+                  + Start New Stocktake
+                </button>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1rem" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: "1rem"
+                }}
+              >
                 {stocktakes.map((st) => (
-                  <div key={st.id} onClick={() => setSelectedStocktake(st)} style={{ background: "rgba(30, 41, 59, 0.6)", padding: "1.25rem", borderRadius: "0.75rem", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                  <div
+                    key={st.id}
+                    onClick={() => setSelectedStocktake(st)}
+                    style={{
+                      background: "rgba(30, 41, 59, 0.6)",
+                      padding: "1.25rem",
+                      borderRadius: "0.75rem",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "0.5rem"
+                      }}
+                    >
                       <strong style={{ fontSize: "1rem" }}>Stocktake #{st.id.slice(0, 8)}</strong>
-                      <span style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem", borderRadius: "0.25rem", background: st.status === "completed" ? "rgba(16, 185, 129, 0.2)" : "rgba(245, 158, 11, 0.2)", color: st.status === "completed" ? "#34d399" : "#fbbf24" }}>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          padding: "0.2rem 0.5rem",
+                          borderRadius: "0.25rem",
+                          background:
+                            st.status === "completed"
+                              ? "rgba(16, 185, 129, 0.2)"
+                              : "rgba(245, 158, 11, 0.2)",
+                          color: st.status === "completed" ? "#34d399" : "#fbbf24"
+                        }}
+                      >
                         {st.status.toUpperCase()}
                       </span>
                     </div>
-                    <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>{st.lines.length} items counted</div>
-                    <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.5rem" }}>Created {new Date(st.createdAt).toLocaleDateString()}</div>
+                    <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>
+                      {st.lines.length} items counted
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.5rem" }}>
+                      Created {new Date(st.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
                 ))}
                 {stocktakes.length === 0 && (
-                  <div style={{ padding: "2rem", color: "#64748b", textAlign: "center", gridColumn: "1 / -1" }}>No stocktakes performed yet.</div>
+                  <div
+                    style={{
+                      padding: "2rem",
+                      color: "#64748b",
+                      textAlign: "center",
+                      gridColumn: "1 / -1"
+                    }}
+                  >
+                    No stocktakes performed yet.
+                  </div>
                 )}
               </div>
             </>
           ) : (
-            <div style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "0.75rem", padding: "1.5rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+            <div
+              style={{
+                background: "rgba(15, 23, 42, 0.8)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "0.75rem",
+                padding: "1.5rem"
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "1.5rem"
+                }}
+              >
                 <div>
-                  <button onClick={() => setSelectedStocktake(null)} style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", fontSize: "0.85rem", marginBottom: "0.25rem" }}>← Back to Stocktakes</button>
+                  <button
+                    onClick={() => setSelectedStocktake(null)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#60a5fa",
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                      marginBottom: "0.25rem"
+                    }}
+                  >
+                    ← Back to Stocktakes
+                  </button>
                   <h3 style={{ margin: 0 }}>Stocktake #{selectedStocktake.id.slice(0, 8)}</h3>
                 </div>
                 {selectedStocktake.status !== "completed" && (
-                  <button className="btn-primary" onClick={async () => {
-                    const completed = await api.completeStocktake(selectedStocktake.id);
-                    setSelectedStocktake(completed);
-                    void reload();
-                  }}>Complete & Post Adjustments</button>
+                  <button
+                    className="btn-primary"
+                    onClick={async () => {
+                      const completed = await api.completeStocktake(selectedStocktake.id);
+                      setSelectedStocktake(completed);
+                      void reload();
+                    }}
+                  >
+                    Complete & Post Adjustments
+                  </button>
                 )}
               </div>
 
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.9rem" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  textAlign: "left",
+                  fontSize: "0.9rem"
+                }}
+              >
                 <thead style={{ background: "rgba(30, 41, 59, 0.6)" }}>
                   <tr>
                     <th style={{ padding: "0.75rem 1rem" }}>Item</th>
@@ -356,11 +568,13 @@ export default function InventoryPage() {
                 <tbody>
                   {selectedStocktake.lines.map((line) => (
                     <tr key={line.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                      <td style={{ padding: "0.75rem 1rem", fontWeight: 500 }}>{line.itemName || line.itemId}</td>
+                      <td style={{ padding: "0.75rem 1rem", fontWeight: 500 }}>
+                        {line.itemName || line.itemId}
+                      </td>
                       <td style={{ padding: "0.75rem 1rem" }}>{line.expectedQuantity}</td>
                       <td style={{ padding: "0.75rem 1rem" }}>
                         {selectedStocktake.status === "completed" ? (
-                          line.countedQuantity ?? "—"
+                          (line.countedQuantity ?? "—")
                         ) : (
                           <input
                             type="number"
@@ -368,7 +582,10 @@ export default function InventoryPage() {
                             onBlur={async (e) => {
                               const val = parseFloat(e.target.value);
                               if (!isNaN(val)) {
-                                const updated = await api.recordStocktakeCount(selectedStocktake.id, { itemId: line.itemId, countedQuantity: val });
+                                const updated = await api.recordStocktakeCount(
+                                  selectedStocktake.id,
+                                  { itemId: line.itemId, countedQuantity: val }
+                                );
                                 setSelectedStocktake(updated);
                               }
                             }}
@@ -376,8 +593,21 @@ export default function InventoryPage() {
                           />
                         )}
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", fontWeight: 600, color: (line.variance ?? 0) < 0 ? "#f87171" : (line.variance ?? 0) > 0 ? "#34d399" : "#94a3b8" }}>
-                        {line.variance !== null ? `${line.variance > 0 ? "+" : ""}${line.variance}` : "—"}
+                      <td
+                        style={{
+                          padding: "0.75rem 1rem",
+                          fontWeight: 600,
+                          color:
+                            (line.variance ?? 0) < 0
+                              ? "#f87171"
+                              : (line.variance ?? 0) > 0
+                                ? "#34d399"
+                                : "#94a3b8"
+                        }}
+                      >
+                        {line.variance !== null
+                          ? `${line.variance > 0 ? "+" : ""}${line.variance}`
+                          : "—"}
                       </td>
                     </tr>
                   ))}
@@ -402,7 +632,9 @@ export default function InventoryPage() {
               <div className="po-items-list">
                 {po.items.map((i, idx) => (
                   <div key={idx} className="po-item-line">
-                    <span>{i.quantity}x {i.itemName}</span>
+                    <span>
+                      {i.quantity}x {i.itemName}
+                    </span>
                     <span>KES {(i.totalMinor / 100).toLocaleString()}</span>
                   </div>
                 ))}
@@ -413,8 +645,10 @@ export default function InventoryPage() {
                   <strong>KES {(po.totalMinor / 100).toLocaleString()}</strong>
                 </div>
                 <div className="po-date">
-                  {po.orderedAt && `Ordered ${new Date(po.orderedAt).toLocaleDateString("en-KE", { dateStyle: "short" })}`}
-                  {po.receivedAt && ` • Received ${new Date(po.receivedAt).toLocaleDateString("en-KE", { dateStyle: "short" })}`}
+                  {po.orderedAt &&
+                    `Ordered ${new Date(po.orderedAt).toLocaleDateString("en-KE", { dateStyle: "short" })}`}
+                  {po.receivedAt &&
+                    ` • Received ${new Date(po.receivedAt).toLocaleDateString("en-KE", { dateStyle: "short" })}`}
                 </div>
               </div>
             </div>
@@ -425,7 +659,6 @@ export default function InventoryPage() {
         </div>
       )}
 
-
       {/* Item Detail Drawer */}
       {selectedItem && (
         <div className="drawer-overlay" onClick={() => setSelectedItem(null)}>
@@ -435,22 +668,47 @@ export default function InventoryPage() {
                 <span className="drawer-sku">{selectedItem.sku}</span>
                 <h2 className="drawer-title">{selectedItem.name}</h2>
               </div>
-              <button className="drawer-close" onClick={() => setSelectedItem(null)}>✕</button>
+              <button className="drawer-close" onClick={() => setSelectedItem(null)}>
+                ✕
+              </button>
             </div>
             <div className="drawer-body">
               <div className="drawer-field-grid">
-                <div className="drawer-field"><span>Category</span><strong>{selectedItem.category}</strong></div>
-                <div className="drawer-field"><span>Unit</span><strong>{selectedItem.unit}</strong></div>
-                <div className="drawer-field"><span>Stock on Hand</span><strong>{selectedItem.stockOnHand} {selectedItem.unit}s</strong></div>
-                <div className="drawer-field"><span>Reorder Point</span><strong>{selectedItem.reorderPoint}</strong></div>
-                <div className="drawer-field"><span>Unit Cost</span><strong>KES {(selectedItem.unitCostMinor / 100).toLocaleString()}</strong></div>
-                <div className="drawer-field"><span>Retail Price</span><strong>KES {(selectedItem.retailPriceMinor / 100).toLocaleString()}</strong></div>
+                <div className="drawer-field">
+                  <span>Category</span>
+                  <strong>{selectedItem.category}</strong>
+                </div>
+                <div className="drawer-field">
+                  <span>Unit</span>
+                  <strong>{selectedItem.unit}</strong>
+                </div>
+                <div className="drawer-field">
+                  <span>Stock on Hand</span>
+                  <strong>
+                    {selectedItem.stockOnHand} {selectedItem.unit}s
+                  </strong>
+                </div>
+                <div className="drawer-field">
+                  <span>Reorder Point</span>
+                  <strong>{selectedItem.reorderPoint}</strong>
+                </div>
+                <div className="drawer-field">
+                  <span>Unit Cost</span>
+                  <strong>KES {(selectedItem.unitCostMinor / 100).toLocaleString()}</strong>
+                </div>
+                <div className="drawer-field">
+                  <span>Retail Price</span>
+                  <strong>KES {(selectedItem.retailPriceMinor / 100).toLocaleString()}</strong>
+                </div>
               </div>
 
               <div className="drawer-actions-row">
                 <button
                   className="btn-primary"
-                  onClick={() => { setMovementItemId(selectedItem.id); setShowNewMovement(true); }}
+                  onClick={() => {
+                    setMovementItemId(selectedItem.id);
+                    setShowNewMovement(true);
+                  }}
                 >
                   + Adjust Stock Level
                 </button>
@@ -458,15 +716,19 @@ export default function InventoryPage() {
 
               <div className="drawer-history">
                 <h4>Recent Movements</h4>
-                {movements.filter((m) => m.itemId === selectedItem.id).map((m) => (
-                  <div key={m.id} className="mini-mvt-row">
-                    <span className="mini-mvt-type">{m.movementType.replace(/_/g, " ")}</span>
-                    <span className={`mini-mvt-qty ${m.quantity > 0 ? "pos" : "neg"}`}>
-                      {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
-                    </span>
-                    <span className="mini-mvt-date">{new Date(m.recordedAt).toLocaleDateString("en-KE", { dateStyle: "short" })}</span>
-                  </div>
-                ))}
+                {movements
+                  .filter((m) => m.itemId === selectedItem.id)
+                  .map((m) => (
+                    <div key={m.id} className="mini-mvt-row">
+                      <span className="mini-mvt-type">{m.movementType.replace(/_/g, " ")}</span>
+                      <span className={`mini-mvt-qty ${m.quantity > 0 ? "pos" : "neg"}`}>
+                        {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
+                      </span>
+                      <span className="mini-mvt-date">
+                        {new Date(m.recordedAt).toLocaleDateString("en-KE", { dateStyle: "short" })}
+                      </span>
+                    </div>
+                  ))}
                 {movements.filter((m) => m.itemId === selectedItem.id).length === 0 && (
                   <p className="mini-empty">No movements for this item.</p>
                 )}
@@ -480,7 +742,10 @@ export default function InventoryPage() {
       {showNewItem && (
         <NewItemModal
           onClose={() => setShowNewItem(false)}
-          onCreated={() => { setShowNewItem(false); void reload(); }}
+          onCreated={() => {
+            setShowNewItem(false);
+            void reload();
+          }}
         />
       )}
 
@@ -489,8 +754,15 @@ export default function InventoryPage() {
         <NewMovementModal
           items={items}
           defaultItemId={movementItemId}
-          onClose={() => { setShowNewMovement(false); setMovementItemId(""); }}
-          onCreated={() => { setShowNewMovement(false); setMovementItemId(""); void reload(); }}
+          onClose={() => {
+            setShowNewMovement(false);
+            setMovementItemId("");
+          }}
+          onCreated={() => {
+            setShowNewMovement(false);
+            setMovementItemId("");
+            void reload();
+          }}
         />
       )}
 
@@ -499,7 +771,10 @@ export default function InventoryPage() {
         <NewPOModal
           items={items}
           onClose={() => setShowNewPO(false)}
-          onCreated={() => { setShowNewPO(false); void reload(); }}
+          onCreated={() => {
+            setShowNewPO(false);
+            void reload();
+          }}
         />
       )}
 
@@ -631,9 +906,17 @@ export default function InventoryPage() {
 // ── Modals ───────────────────────────────────────────────────────────────────
 function NewItemModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [form, setForm] = useState({
-    name: "", sku: "", category: "Retail", unit: "unit",
-    unitCostMinor: 0, retailPriceMinor: 0, initialStock: 0,
-    reorderPoint: 10, isRetail: true, isConsumable: false, branchId: ""
+    name: "",
+    sku: "",
+    category: "Retail",
+    unit: "unit",
+    unitCostMinor: 0,
+    retailPriceMinor: 0,
+    initialStock: 0,
+    reorderPoint: 10,
+    isRetail: true,
+    isConsumable: false,
+    branchId: ""
   } as Partial<CreateInventoryItemRequest>);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -663,40 +946,134 @@ function NewItemModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Add Inventory Item</h2>
-          <button className="drawer-close" onClick={onClose}>✕</button>
+          <button className="drawer-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <div className="modal-body">
-          <div className="form-group"><label>Item Name</label><input type="text" placeholder="Grip Socks Unisex" value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} /></div>
+          <div className="form-group">
+            <label>Item Name</label>
+            <input
+              type="text"
+              placeholder="Grip Socks Unisex"
+              value={form.name ?? ""}
+              onChange={(e) => set("name", e.target.value)}
+            />
+          </div>
           <div className="form-row">
-            <div className="form-group"><label>SKU</label><input type="text" placeholder="RET-SOCK-01" value={form.sku ?? ""} onChange={(e) => set("sku", e.target.value)} /></div>
-            <div className="form-group"><label>Category</label><input type="text" placeholder="Apparel" value={form.category ?? ""} onChange={(e) => set("category", e.target.value)} /></div>
+            <div className="form-group">
+              <label>SKU</label>
+              <input
+                type="text"
+                placeholder="RET-SOCK-01"
+                value={form.sku ?? ""}
+                onChange={(e) => set("sku", e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Category</label>
+              <input
+                type="text"
+                placeholder="Apparel"
+                value={form.category ?? ""}
+                onChange={(e) => set("category", e.target.value)}
+              />
+            </div>
           </div>
           <div className="form-row">
             <div className="form-group">
               <label>Branch</label>
               <select value={form.branchId ?? ""} onChange={(e) => set("branchId", e.target.value)}>
                 <option value="">Select branch…</option>
-                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
               </select>
             </div>
-            <div className="form-group"><label>Unit</label><input type="text" placeholder="pair / bottle / pack" value={form.unit ?? ""} onChange={(e) => set("unit", e.target.value)} /></div>
+            <div className="form-group">
+              <label>Unit</label>
+              <input
+                type="text"
+                placeholder="pair / bottle / pack"
+                value={form.unit ?? ""}
+                onChange={(e) => set("unit", e.target.value)}
+              />
+            </div>
           </div>
           <div className="form-row">
-            <div className="form-group"><label>Unit Cost (KES)</label><input type="number" placeholder="600" value={form.unitCostMinor ? form.unitCostMinor / 100 : ""} onChange={(e) => set("unitCostMinor", Math.round(parseFloat(e.target.value) * 100) || 0)} /></div>
-            <div className="form-group"><label>Retail Price (KES)</label><input type="number" placeholder="1500" value={form.retailPriceMinor ? form.retailPriceMinor / 100 : ""} onChange={(e) => set("retailPriceMinor", Math.round(parseFloat(e.target.value) * 100) || 0)} /></div>
+            <div className="form-group">
+              <label>Unit Cost (KES)</label>
+              <input
+                type="number"
+                placeholder="600"
+                value={form.unitCostMinor ? form.unitCostMinor / 100 : ""}
+                onChange={(e) =>
+                  set("unitCostMinor", Math.round(parseFloat(e.target.value) * 100) || 0)
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label>Retail Price (KES)</label>
+              <input
+                type="number"
+                placeholder="1500"
+                value={form.retailPriceMinor ? form.retailPriceMinor / 100 : ""}
+                onChange={(e) =>
+                  set("retailPriceMinor", Math.round(parseFloat(e.target.value) * 100) || 0)
+                }
+              />
+            </div>
           </div>
           <div className="form-row">
-            <div className="form-group"><label>Initial Stock</label><input type="number" placeholder="0" value={form.initialStock ?? 0} onChange={(e) => set("initialStock", parseInt(e.target.value, 10) || 0)} /></div>
-            <div className="form-group"><label>Reorder Point</label><input type="number" placeholder="10" value={form.reorderPoint ?? 10} onChange={(e) => set("reorderPoint", parseInt(e.target.value, 10) || 0)} /></div>
+            <div className="form-group">
+              <label>Initial Stock</label>
+              <input
+                type="number"
+                placeholder="0"
+                value={form.initialStock ?? 0}
+                onChange={(e) => set("initialStock", parseInt(e.target.value, 10) || 0)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Reorder Point</label>
+              <input
+                type="number"
+                placeholder="10"
+                value={form.reorderPoint ?? 10}
+                onChange={(e) => set("reorderPoint", parseInt(e.target.value, 10) || 0)}
+              />
+            </div>
           </div>
           <div className="form-checkbox-row">
-            <label><input type="checkbox" checked={form.isRetail ?? true} onChange={(e) => set("isRetail", e.target.checked)} /> Retail item (sold to members)</label>
-            <label><input type="checkbox" checked={form.isConsumable ?? false} onChange={(e) => set("isConsumable", e.target.checked)} /> Consumable / Session supply</label>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.isRetail ?? true}
+                onChange={(e) => set("isRetail", e.target.checked)}
+              />{" "}
+              Retail item (sold to members)
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.isConsumable ?? false}
+                onChange={(e) => set("isConsumable", e.target.checked)}
+              />{" "}
+              Consumable / Session supply
+            </label>
           </div>
           {error && <p className="form-error">{error}</p>}
           <div className="modal-actions">
-            <button className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button className="btn-primary" onClick={submit} disabled={loading || !form.name || !form.sku || !form.branchId}>
+            <button className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn-primary"
+              onClick={submit}
+              disabled={loading || !form.name || !form.sku || !form.branchId}
+            >
               {loading ? "Saving…" : "Create Item"}
             </button>
           </div>
@@ -753,36 +1130,64 @@ function NewMovementModal({
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Record Stock Movement</h2>
-          <button className="drawer-close" onClick={onClose}>✕</button>
+          <button className="drawer-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <div className="modal-body">
           <div className="form-group">
             <label>Item</label>
             <select value={form.itemId ?? ""} onChange={(e) => set("itemId", e.target.value)}>
               <option value="">Select item…</option>
-              {items.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.stockOnHand} on hand)</option>)}
+              {items.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name} ({i.stockOnHand} on hand)
+                </option>
+              ))}
             </select>
           </div>
           <div className="form-row">
             <div className="form-group">
               <label>Movement Type</label>
-              <select value={form.movementType ?? "adjustment"} onChange={(e) => set("movementType", e.target.value)}>
-                {Object.entries(MOVEMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              <select
+                value={form.movementType ?? "adjustment"}
+                onChange={(e) => set("movementType", e.target.value)}
+              >
+                {Object.entries(MOVEMENT_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-group">
               <label>Quantity delta (+ or -)</label>
-              <input type="number" value={form.quantity ?? 1} onChange={(e) => set("quantity", parseInt(e.target.value, 10) || 0)} />
+              <input
+                type="number"
+                value={form.quantity ?? 1}
+                onChange={(e) => set("quantity", parseInt(e.target.value, 10) || 0)}
+              />
             </div>
           </div>
           <div className="form-group">
             <label>Notes / Reason</label>
-            <input type="text" placeholder="Stock recount, received shipment, spoiled item…" value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
+            <input
+              type="text"
+              placeholder="Stock recount, received shipment, spoiled item…"
+              value={form.notes ?? ""}
+              onChange={(e) => set("notes", e.target.value)}
+            />
           </div>
           {error && <p className="form-error">{error}</p>}
           <div className="modal-actions">
-            <button className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button className="btn-primary" onClick={submit} disabled={loading || !form.itemId || !form.quantity}>
+            <button className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn-primary"
+              onClick={submit}
+              disabled={loading || !form.itemId || !form.quantity}
+            >
               {loading ? "Saving…" : "Save Movement"}
             </button>
           </div>
@@ -805,9 +1210,9 @@ function NewPOModal({
   const [supplierName, setSupplierName] = useState("");
   const [branchId, setBranchId] = useState("");
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
-  const [orderLines, setOrderLines] = useState<Array<{ itemId: string; quantity: number; unitCostMinor: number }>>([
-    { itemId: items[0]?.id ?? "", quantity: 10, unitCostMinor: items[0]?.unitCostMinor ?? 0 }
-  ]);
+  const [orderLines, setOrderLines] = useState<
+    Array<{ itemId: string; quantity: number; unitCostMinor: number }>
+  >([{ itemId: items[0]?.id ?? "", quantity: 10, unitCostMinor: items[0]?.unitCostMinor ?? 0 }]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -820,10 +1225,16 @@ function NewPOModal({
 
   const addLine = () => {
     const first = items[0];
-    setOrderLines((l) => [...l, { itemId: first?.id ?? "", quantity: 10, unitCostMinor: first?.unitCostMinor ?? 0 }]);
+    setOrderLines((l) => [
+      ...l,
+      { itemId: first?.id ?? "", quantity: 10, unitCostMinor: first?.unitCostMinor ?? 0 }
+    ]);
   };
 
-  const setLine = (idx: number, patch: Partial<{ itemId: string; quantity: number; unitCostMinor: number }>) => {
+  const setLine = (
+    idx: number,
+    patch: Partial<{ itemId: string; quantity: number; unitCostMinor: number }>
+  ) => {
     setOrderLines((lines) =>
       lines.map((l, i) => {
         if (i !== idx) return l;
@@ -861,18 +1272,29 @@ function NewPOModal({
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "560px" }}>
         <div className="modal-header">
           <h2>Create Purchase Order</h2>
-          <button className="drawer-close" onClick={onClose}>✕</button>
+          <button className="drawer-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <div className="modal-body">
           <div className="form-row">
             <div className="form-group">
               <label>Supplier Name</label>
-              <input type="text" placeholder="e.g. East Africa Fitness Supplies" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
+              <input
+                type="text"
+                placeholder="e.g. East Africa Fitness Supplies"
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
+              />
             </div>
             <div className="form-group">
               <label>Branch</label>
               <select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -880,15 +1302,33 @@ function NewPOModal({
           <div className="po-lines-section">
             <div className="po-lines-header">
               <span>Order Lines</span>
-              <button type="button" className="btn-add-line" onClick={addLine}>+ Add Line</button>
+              <button type="button" className="btn-add-line" onClick={addLine}>
+                + Add Line
+              </button>
             </div>
             {orderLines.map((line, idx) => (
               <div key={idx} className="po-line-row">
-                <select value={line.itemId} onChange={(e) => setLine(idx, { itemId: e.target.value })}>
-                  {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                <select
+                  value={line.itemId}
+                  onChange={(e) => setLine(idx, { itemId: e.target.value })}
+                >
+                  {items.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.name}
+                    </option>
+                  ))}
                 </select>
-                <input type="number" placeholder="Qty" min={1} value={line.quantity} onChange={(e) => setLine(idx, { quantity: parseInt(e.target.value, 10) || 1 })} style={{ width: "70px" }} />
-                <span className="line-total">KES {((line.quantity * line.unitCostMinor) / 100).toLocaleString()}</span>
+                <input
+                  type="number"
+                  placeholder="Qty"
+                  min={1}
+                  value={line.quantity}
+                  onChange={(e) => setLine(idx, { quantity: parseInt(e.target.value, 10) || 1 })}
+                  style={{ width: "70px" }}
+                />
+                <span className="line-total">
+                  KES {((line.quantity * line.unitCostMinor) / 100).toLocaleString()}
+                </span>
               </div>
             ))}
           </div>
@@ -900,8 +1340,14 @@ function NewPOModal({
 
           {error && <p className="form-error">{error}</p>}
           <div className="modal-actions">
-            <button className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button className="btn-primary" onClick={submit} disabled={loading || !supplierName || !branchId || orderLines.length === 0}>
+            <button className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn-primary"
+              onClick={submit}
+              disabled={loading || !supplierName || !branchId || orderLines.length === 0}
+            >
               {loading ? "Ordering…" : "Create Purchase Order"}
             </button>
           </div>

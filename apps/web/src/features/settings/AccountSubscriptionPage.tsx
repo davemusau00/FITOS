@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api/client";
-import type { TenantSubscriptionResponse, UsageQuotaMetricsResponse, FeatureFlagResponse } from "@fitos/contracts";
+import type {
+  TenantSubscriptionResponse,
+  UsageQuotaMetricsResponse,
+  FeatureFlagResponse
+} from "@fitos/contracts";
 
 function UsageBar({ used, max, label }: { used: number; max: number; label: string }) {
   const pct = max > 0 ? Math.min(100, (used / max) * 100) : 0;
@@ -51,15 +55,13 @@ export default function AccountSubscriptionPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      api.tenantSubscription(),
-      api.tenantUsageQuotas(),
-      api.featureFlags()
-    ]).then(([s, u, f]) => {
-      setSub(s);
-      setUsage(u);
-      setFlags(f);
-    }).finally(() => setLoading(false));
+    Promise.all([api.tenantSubscription(), api.tenantUsageQuotas(), api.featureFlags()])
+      .then(([s, u, f]) => {
+        setSub(s);
+        setUsage(u);
+        setFlags(f);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -86,19 +88,32 @@ export default function AccountSubscriptionPage() {
     <div className="sub-page">
       <div className="sub-header">
         <h1 className="sub-title">Subscription & Usage</h1>
-        <p className="sub-subtitle">Your current plan, quota consumption, and unlocked capabilities.</p>
+        <p className="sub-subtitle">
+          Your current plan, quota consumption, and unlocked capabilities.
+        </p>
       </div>
 
       <div className="sub-grid">
         {/* Plan card */}
         <div className="sub-plan-card">
-          <div className="plan-badge" style={{ background: `${planColor}22`, borderColor: `${planColor}55`, color: planColor }}>
+          <div
+            className="plan-badge"
+            style={{
+              background: `${planColor}22`,
+              borderColor: `${planColor}55`,
+              color: planColor
+            }}
+          >
             {PLAN_LABELS[sub?.plan ?? "pro"] ?? sub?.planName}
           </div>
           <div className="plan-status-row">
             <span className={`plan-status-dot ${sub?.status}`} />
             <span className="plan-status-label">
-              {sub?.status === "trial" ? "Free Trial" : sub?.status === "active" ? "Active" : sub?.status}
+              {sub?.status === "trial"
+                ? "Free Trial"
+                : sub?.status === "active"
+                  ? "Active"
+                  : sub?.status}
             </span>
           </div>
           {sub?.status === "trial" && daysLeft !== null && (
@@ -109,7 +124,8 @@ export default function AccountSubscriptionPage() {
           )}
           {sub?.trialEndsAt && (
             <p className="plan-date">
-              Trial ends {new Date(sub.trialEndsAt).toLocaleDateString("en-KE", { dateStyle: "long" })}
+              Trial ends{" "}
+              {new Date(sub.trialEndsAt).toLocaleDateString("en-KE", { dateStyle: "long" })}
             </p>
           )}
           <button className="btn-upgrade">Upgrade Plan</button>
@@ -123,7 +139,11 @@ export default function AccountSubscriptionPage() {
               <UsageBar used={usage.activeMembers} max={usage.maxMembers} label="Active Members" />
               <UsageBar used={usage.activeStaff} max={usage.maxStaff} label="Staff Accounts" />
               <UsageBar used={usage.branches} max={usage.maxBranches} label="Branches" />
-              <UsageBar used={usage.automationRunsThisMonth} max={usage.maxAutomationRuns} label="Automation Runs (this month)" />
+              <UsageBar
+                used={usage.automationRunsThisMonth}
+                max={usage.maxAutomationRuns}
+                label="Automation Runs (this month)"
+              />
               <UsageBar used={usage.storageUsedMb} max={usage.maxStorageMb} label="Storage (MB)" />
             </div>
           </div>
@@ -138,11 +158,16 @@ export default function AccountSubscriptionPage() {
             <div key={cat} className="feature-category">
               <div className="feature-cat-header">
                 <span className="feature-cat-icon">{CATEGORY_ICONS[cat] ?? "📦"}</span>
-                <span className="feature-cat-label">{cat.charAt(0).toUpperCase() + cat.slice(1)} Features</span>
+                <span className="feature-cat-label">
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)} Features
+                </span>
               </div>
               <div className="feature-list">
                 {items.map((flag) => (
-                  <div key={flag.key} className={`feature-item ${flag.enabled ? "enabled" : "disabled"}`}>
+                  <div
+                    key={flag.key}
+                    className={`feature-item ${flag.enabled ? "enabled" : "disabled"}`}
+                  >
                     <div className="feature-item-left">
                       <div className={`feature-dot ${flag.enabled ? "on" : "off"}`} />
                       <div>

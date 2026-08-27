@@ -265,9 +265,13 @@ export function SchedulePage() {
                 isCancelled?: boolean;
               };
               return (
-                <div className={`fitos-cal-event ${isCancelled ? "fitos-cal-event--cancelled" : ""}`}>
+                <div
+                  className={`fitos-cal-event ${isCancelled ? "fitos-cal-event--cancelled" : ""}`}
+                >
                   <div className="fitos-cal-event__time">{eventInfo.timeText}</div>
-                  <div className="fitos-cal-event__title">{service?.name ?? eventInfo.event.title}</div>
+                  <div className="fitos-cal-event__title">
+                    {service?.name ?? eventInfo.event.title}
+                  </div>
                   <div className="fitos-cal-event__meta">
                     {trainer ? <span>{trainer.user.displayName}</span> : null}
                     {room ? <span>{room.name}</span> : null}
@@ -715,12 +719,17 @@ function OccurrenceDetailModal({
         const member = membersQuery.data?.data.find((m) => m.id === b.memberId);
         return (
           <div className="table-member-cell">
-            <div className="table-member-avatar" style={{ width: "1.875rem", height: "1.875rem", fontSize: "0.75rem" }}>
+            <div
+              className="table-member-avatar"
+              style={{ width: "1.875rem", height: "1.875rem", fontSize: "0.75rem" }}
+            >
               {member ? `${member.firstName[0]}${member.lastName?.[0] ?? ""}` : "M"}
             </div>
             <div>
               <strong className="fitos-data-table__primary">
-                {member ? `${member.firstName} ${member.lastName ?? ""}`.trim() : b.memberId.slice(0, 8)}
+                {member
+                  ? `${member.firstName} ${member.lastName ?? ""}`.trim()
+                  : b.memberId.slice(0, 8)}
               </strong>
               <span className="fitos-data-table__muted">{member?.phone ?? "No phone"}</span>
             </div>

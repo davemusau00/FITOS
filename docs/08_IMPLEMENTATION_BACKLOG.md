@@ -1,6 +1,7 @@
 # 08 — Implementation Backlog
 
 ## Epic A — Finish current SaaS prototypes
+
 A001 Persistent BranchContext
 A002 Branch-aware query helpers
 A003 Public tenant read API
@@ -18,6 +19,7 @@ A014 Reception entitlement warnings
 A015 Real occupancy counts
 
 ## Epic B — Self-service SaaS
+
 B001 Public signup
 B002 Tenant bootstrap transaction
 B003 Trial lifecycle
@@ -30,6 +32,7 @@ B009 Feature flags
 B010 Platform tenant admin
 
 ## Epic C — SaaS productivity
+
 C001 Global tasks
 C002 Today action queue
 C003 Notifications center
@@ -42,6 +45,7 @@ C009 Lead import
 C010 Membership/staff import
 
 ## Epic D — Equipment
+
 D001 Contracts
 D002 Migrations
 D003 Repository
@@ -57,6 +61,7 @@ D012 Calibration
 D013 Alerts
 
 ## Epic E — Inventory
+
 E001 Contracts/schema
 E002 Stock movements
 E003 Dashboard
@@ -69,6 +74,7 @@ E009 Service BOM
 E010 Session consumption
 
 ## Epic F — Assess
+
 F001 Contracts/schema
 F002 Definitions/categories
 F003 Protocol versioning
@@ -83,6 +89,7 @@ F011 Batteries
 F012 Retest scheduling
 
 ## Epic G — Therapy
+
 G001 Modalities
 G002 Protocols/versioning
 G003 Sessions
@@ -95,6 +102,7 @@ G009 Therapy workspace
 G010 Member Therapy tab
 
 ## Epic H — Integrations
+
 H001 Connection schema
 H002 Adapter contract
 H003 Sync worker/checkpoints
@@ -110,6 +118,7 @@ H012 PNOE import
 H013 Generic therapy-device import
 
 ## Epic I — FITOS Sites
+
 I001 Site config/theme
 I002 Pages/sections/navigation
 I003 Media/SEO
@@ -121,6 +130,7 @@ I008 Publish/versioning
 I009 Custom domains
 
 ## Epic J — Specialty experience
+
 J001 Public assessment booking
 J002 Public therapy booking
 J003 Resource-aware public availability
@@ -130,6 +140,7 @@ J006 Member reschedule
 J007 PWA shell
 
 ## Epic K — Analytics
+
 K001 Occupancy
 K002 No-show/cancellation
 K003 Lead conversion
@@ -140,6 +151,7 @@ K007 Inventory consumption/wastage/expiry
 K008 Report presets/export
 
 ## Epic L — Platform ops
+
 L001 Platform capabilities
 L002 Tenant search/detail
 L003 Tenant lifecycle
@@ -151,9 +163,11 @@ L008 Platform audit
 L009 Account recovery
 
 ## Epic M — Payments
+
 Final phase only. See dedicated document.
 
 ## Do not do yet
+
 - Do not build vendor-specific core tables.
 - Do not scrape proprietary device dashboards/reports.
 - Do not remotely control medical/therapy equipment without explicit vendor support.

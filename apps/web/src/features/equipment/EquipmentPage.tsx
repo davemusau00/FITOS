@@ -77,13 +77,20 @@ export default function EquipmentPage() {
     }
   }, []);
 
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
   const categories = Array.from(new Set(assets.map((a) => a.category)));
   const filtered = assets.filter((a) => {
     if (filterStatus !== "all" && a.status !== filterStatus) return false;
     if (filterCategory !== "all" && a.category !== filterCategory) return false;
-    if (search && !a.name.toLowerCase().includes(search.toLowerCase()) && !a.assetCode.toLowerCase().includes(search.toLowerCase())) return false;
+    if (
+      search &&
+      !a.name.toLowerCase().includes(search.toLowerCase()) &&
+      !a.assetCode.toLowerCase().includes(search.toLowerCase())
+    )
+      return false;
     return true;
   });
 
@@ -110,7 +117,12 @@ export default function EquipmentPage() {
           const count = assets.filter((a) => a.status === s).length;
           const meta = STATUS_META[s] ?? { label: s, color: "#6366f1" };
           return (
-            <div key={s} className="equip-stat-card" onClick={() => setFilterStatus(s === filterStatus ? "all" : s)} style={{ cursor: "pointer" }}>
+            <div
+              key={s}
+              className="equip-stat-card"
+              onClick={() => setFilterStatus(s === filterStatus ? "all" : s)}
+              style={{ cursor: "pointer" }}
+            >
               <div className="stat-dot" style={{ background: meta.color }} />
               <div>
                 <div className="stat-count">{count}</div>
@@ -128,7 +140,11 @@ export default function EquipmentPage() {
             className={`equip-tab ${tab === t ? "active" : ""}`}
             onClick={() => setTab(t)}
           >
-            {t === "assets" ? `Assets (${assets.length})` : t === "pools" ? `Pools (${pools.length})` : `Maintenance (${maintenance.length})`}
+            {t === "assets"
+              ? `Assets (${assets.length})`
+              : t === "pools"
+                ? `Pools (${pools.length})`
+                : `Maintenance (${maintenance.length})`}
           </button>
         ))}
       </div>
@@ -143,15 +159,29 @@ export default function EquipmentPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+            <select
+              className="filter-select"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
               <option value="all">All Statuses</option>
               {Object.entries(STATUS_META).map(([k, v]) => (
-                <option key={k} value={k}>{v.label}</option>
+                <option key={k} value={k}>
+                  {v.label}
+                </option>
               ))}
             </select>
-            <select className="filter-select" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+            <select
+              className="filter-select"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+            >
               <option value="all">All Categories</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -163,7 +193,8 @@ export default function EquipmentPage() {
                 const meta = STATUS_META[asset.status] ?? { label: asset.status, color: "#6366f1" };
                 const nextService = daysUntil(asset.nextServiceDueAt);
                 const nextCal = daysUntil(asset.nextCalibrationDueAt);
-                const urgent = (nextService !== null && nextService <= 7) || (nextCal !== null && nextCal <= 7);
+                const urgent =
+                  (nextService !== null && nextService <= 7) || (nextCal !== null && nextCal <= 7);
                 return (
                   <div
                     key={asset.id}
@@ -172,7 +203,14 @@ export default function EquipmentPage() {
                   >
                     <div className="asset-card-header">
                       <div className="asset-code">{asset.assetCode}</div>
-                      <span className="asset-status-badge" style={{ background: `${meta.color}20`, color: meta.color, borderColor: `${meta.color}40` }}>
+                      <span
+                        className="asset-status-badge"
+                        style={{
+                          background: `${meta.color}20`,
+                          color: meta.color,
+                          borderColor: `${meta.color}40`
+                        }}
+                      >
                         {meta.label}
                       </span>
                     </div>
@@ -232,9 +270,7 @@ export default function EquipmentPage() {
               <div className="pool-branch">{pool.branchName}</div>
             </div>
           ))}
-          {pools.length === 0 && (
-            <div className="equip-empty">No equipment pools configured.</div>
-          )}
+          {pools.length === 0 && <div className="equip-empty">No equipment pools configured.</div>}
         </div>
       )}
 
@@ -244,7 +280,14 @@ export default function EquipmentPage() {
             const meta = MAINT_TYPE_META[record.type] ?? { label: record.type, color: "#6366f1" };
             return (
               <div key={record.id} className="maint-row">
-                <div className="maint-type-badge" style={{ background: `${meta.color}15`, color: meta.color, borderColor: `${meta.color}30` }}>
+                <div
+                  className="maint-type-badge"
+                  style={{
+                    background: `${meta.color}15`,
+                    color: meta.color,
+                    borderColor: `${meta.color}30`
+                  }}
+                >
                   {meta.label}
                 </div>
                 <div className="maint-info">
@@ -254,16 +297,25 @@ export default function EquipmentPage() {
                 </div>
                 <div className="maint-right">
                   <div className="maint-date">
-                    {new Date(record.performedAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}
+                    {new Date(record.performedAt).toLocaleDateString("en-KE", {
+                      dateStyle: "medium"
+                    })}
                   </div>
                   {record.nextDueAt && (
                     <div className="maint-next">
-                      Next: {new Date(record.nextDueAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}
+                      Next:{" "}
+                      {new Date(record.nextDueAt).toLocaleDateString("en-KE", {
+                        dateStyle: "medium"
+                      })}
                     </div>
                   )}
                   {record.costMinor != null && (
                     <div className="maint-cost">
-                      {(record.costMinor / 100).toLocaleString("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 })}
+                      {(record.costMinor / 100).toLocaleString("en-KE", {
+                        style: "currency",
+                        currency: "KES",
+                        maximumFractionDigits: 0
+                      })}
                     </div>
                   )}
                 </div>
@@ -285,41 +337,103 @@ export default function EquipmentPage() {
                 <div className="drawer-code">{selectedAsset.assetCode}</div>
                 <h2 className="drawer-title">{selectedAsset.name}</h2>
               </div>
-              <button className="drawer-close" onClick={() => setSelectedAsset(null)}>✕</button>
+              <button className="drawer-close" onClick={() => setSelectedAsset(null)}>
+                ✕
+              </button>
             </div>
             <div className="drawer-body">
               <div className="drawer-field-grid">
-                <div className="drawer-field"><span>Model</span><strong>{selectedAsset.modelName}</strong></div>
-                <div className="drawer-field"><span>Category</span><strong>{selectedAsset.category}</strong></div>
-                <div className="drawer-field"><span>Status</span>
-                  <strong style={{ color: STATUS_META[selectedAsset.status]?.color }}>{STATUS_META[selectedAsset.status]?.label}</strong>
+                <div className="drawer-field">
+                  <span>Model</span>
+                  <strong>{selectedAsset.modelName}</strong>
+                </div>
+                <div className="drawer-field">
+                  <span>Category</span>
+                  <strong>{selectedAsset.category}</strong>
+                </div>
+                <div className="drawer-field">
+                  <span>Status</span>
+                  <strong style={{ color: STATUS_META[selectedAsset.status]?.color }}>
+                    {STATUS_META[selectedAsset.status]?.label}
+                  </strong>
                 </div>
                 {selectedAsset.serialNumber && (
-                  <div className="drawer-field"><span>Serial</span><strong>{selectedAsset.serialNumber}</strong></div>
+                  <div className="drawer-field">
+                    <span>Serial</span>
+                    <strong>{selectedAsset.serialNumber}</strong>
+                  </div>
                 )}
                 {selectedAsset.branchName && (
-                  <div className="drawer-field"><span>Branch</span><strong>{selectedAsset.branchName}</strong></div>
+                  <div className="drawer-field">
+                    <span>Branch</span>
+                    <strong>{selectedAsset.branchName}</strong>
+                  </div>
                 )}
                 {selectedAsset.roomName && (
-                  <div className="drawer-field"><span>Room</span><strong>{selectedAsset.roomName}</strong></div>
+                  <div className="drawer-field">
+                    <span>Room</span>
+                    <strong>{selectedAsset.roomName}</strong>
+                  </div>
                 )}
                 {selectedAsset.purchaseDate && (
-                  <div className="drawer-field"><span>Purchased</span><strong>{new Date(selectedAsset.purchaseDate).toLocaleDateString("en-KE", { dateStyle: "medium" })}</strong></div>
+                  <div className="drawer-field">
+                    <span>Purchased</span>
+                    <strong>
+                      {new Date(selectedAsset.purchaseDate).toLocaleDateString("en-KE", {
+                        dateStyle: "medium"
+                      })}
+                    </strong>
+                  </div>
                 )}
                 {selectedAsset.warrantyEndsAt && (
-                  <div className="drawer-field"><span>Warranty Ends</span><strong>{new Date(selectedAsset.warrantyEndsAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}</strong></div>
+                  <div className="drawer-field">
+                    <span>Warranty Ends</span>
+                    <strong>
+                      {new Date(selectedAsset.warrantyEndsAt).toLocaleDateString("en-KE", {
+                        dateStyle: "medium"
+                      })}
+                    </strong>
+                  </div>
                 )}
                 {selectedAsset.lastServicedAt && (
-                  <div className="drawer-field"><span>Last Serviced</span><strong>{new Date(selectedAsset.lastServicedAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}</strong></div>
+                  <div className="drawer-field">
+                    <span>Last Serviced</span>
+                    <strong>
+                      {new Date(selectedAsset.lastServicedAt).toLocaleDateString("en-KE", {
+                        dateStyle: "medium"
+                      })}
+                    </strong>
+                  </div>
                 )}
                 {selectedAsset.nextServiceDueAt && (
-                  <div className="drawer-field"><span>Next Service</span><strong>{new Date(selectedAsset.nextServiceDueAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}</strong></div>
+                  <div className="drawer-field">
+                    <span>Next Service</span>
+                    <strong>
+                      {new Date(selectedAsset.nextServiceDueAt).toLocaleDateString("en-KE", {
+                        dateStyle: "medium"
+                      })}
+                    </strong>
+                  </div>
                 )}
                 {selectedAsset.lastCalibratedAt && (
-                  <div className="drawer-field"><span>Last Calibrated</span><strong>{new Date(selectedAsset.lastCalibratedAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}</strong></div>
+                  <div className="drawer-field">
+                    <span>Last Calibrated</span>
+                    <strong>
+                      {new Date(selectedAsset.lastCalibratedAt).toLocaleDateString("en-KE", {
+                        dateStyle: "medium"
+                      })}
+                    </strong>
+                  </div>
                 )}
                 {selectedAsset.nextCalibrationDueAt && (
-                  <div className="drawer-field"><span>Next Calibration</span><strong>{new Date(selectedAsset.nextCalibrationDueAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}</strong></div>
+                  <div className="drawer-field">
+                    <span>Next Calibration</span>
+                    <strong>
+                      {new Date(selectedAsset.nextCalibrationDueAt).toLocaleDateString("en-KE", {
+                        dateStyle: "medium"
+                      })}
+                    </strong>
+                  </div>
                 )}
               </div>
               {selectedAsset.notes && (
@@ -330,20 +444,37 @@ export default function EquipmentPage() {
               )}
               <div className="drawer-related-maint">
                 <h4>Maintenance History</h4>
-                {maintenance.filter((m) => m.assetId === selectedAsset.id).map((r) => (
-                  <div key={r.id} className="mini-maint-row">
-                    <span className="mini-maint-type" style={{ color: MAINT_TYPE_META[r.type]?.color }}>{r.type}</span>
-                    <span>{r.notes.slice(0, 60)}{r.notes.length > 60 ? "…" : ""}</span>
-                    <span className="mini-maint-date">{new Date(r.performedAt).toLocaleDateString("en-KE", { dateStyle: "short" })}</span>
-                  </div>
-                ))}
+                {maintenance
+                  .filter((m) => m.assetId === selectedAsset.id)
+                  .map((r) => (
+                    <div key={r.id} className="mini-maint-row">
+                      <span
+                        className="mini-maint-type"
+                        style={{ color: MAINT_TYPE_META[r.type]?.color }}
+                      >
+                        {r.type}
+                      </span>
+                      <span>
+                        {r.notes.slice(0, 60)}
+                        {r.notes.length > 60 ? "…" : ""}
+                      </span>
+                      <span className="mini-maint-date">
+                        {new Date(r.performedAt).toLocaleDateString("en-KE", {
+                          dateStyle: "short"
+                        })}
+                      </span>
+                    </div>
+                  ))}
                 {maintenance.filter((m) => m.assetId === selectedAsset.id).length === 0 && (
                   <p className="mini-maint-empty">No records for this asset.</p>
                 )}
               </div>
               <button
                 className="btn-log-maint"
-                onClick={() => { setMaintAssetId(selectedAsset.id); setShowNewMaint(true); }}
+                onClick={() => {
+                  setMaintAssetId(selectedAsset.id);
+                  setShowNewMaint(true);
+                }}
               >
                 + Log Maintenance Record
               </button>
@@ -356,7 +487,10 @@ export default function EquipmentPage() {
       {showNewAsset && (
         <NewAssetModal
           onClose={() => setShowNewAsset(false)}
-          onCreated={() => { setShowNewAsset(false); void reload(); }}
+          onCreated={() => {
+            setShowNewAsset(false);
+            void reload();
+          }}
         />
       )}
 
@@ -365,8 +499,15 @@ export default function EquipmentPage() {
         <NewMaintenanceModal
           assets={assets}
           defaultAssetId={maintAssetId}
-          onClose={() => { setShowNewMaint(false); setMaintAssetId(""); }}
-          onCreated={() => { setShowNewMaint(false); setMaintAssetId(""); void reload(); }}
+          onClose={() => {
+            setShowNewMaint(false);
+            setMaintAssetId("");
+          }}
+          onCreated={() => {
+            setShowNewMaint(false);
+            setMaintAssetId("");
+            void reload();
+          }}
         />
       )}
 
@@ -490,8 +631,13 @@ export default function EquipmentPage() {
 // ── New Asset Modal ──────────────────────────────────────────────────────────
 function NewAssetModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [form, setForm] = useState({
-    name: "", assetCode: "", modelName: "", category: "Fitness Equipment",
-    branchId: "", status: "available", notes: ""
+    name: "",
+    assetCode: "",
+    modelName: "",
+    category: "Fitness Equipment",
+    branchId: "",
+    status: "available",
+    notes: ""
   } as Partial<CreateEquipmentAssetRequest>);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -521,29 +667,81 @@ function NewAssetModal({ onClose, onCreated }: { onClose: () => void; onCreated:
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Add Equipment Asset</h2>
-          <button className="drawer-close" onClick={onClose}>✕</button>
+          <button className="drawer-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <div className="modal-body">
-          <div className="form-group"><label>Asset Name</label><input type="text" placeholder="Balanced Body Reformer" value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} /></div>
-          <div className="form-row">
-            <div className="form-group"><label>Asset Code</label><input type="text" placeholder="REF-001" value={form.assetCode ?? ""} onChange={(e) => set("assetCode", e.target.value)} /></div>
-            <div className="form-group"><label>Model</label><input type="text" placeholder="Allegro 2" value={form.modelName ?? ""} onChange={(e) => set("modelName", e.target.value)} /></div>
+          <div className="form-group">
+            <label>Asset Name</label>
+            <input
+              type="text"
+              placeholder="Balanced Body Reformer"
+              value={form.name ?? ""}
+              onChange={(e) => set("name", e.target.value)}
+            />
           </div>
           <div className="form-row">
-            <div className="form-group"><label>Category</label><input type="text" placeholder="Pilates & Core" value={form.category ?? ""} onChange={(e) => set("category", e.target.value)} /></div>
+            <div className="form-group">
+              <label>Asset Code</label>
+              <input
+                type="text"
+                placeholder="REF-001"
+                value={form.assetCode ?? ""}
+                onChange={(e) => set("assetCode", e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Model</label>
+              <input
+                type="text"
+                placeholder="Allegro 2"
+                value={form.modelName ?? ""}
+                onChange={(e) => set("modelName", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Category</label>
+              <input
+                type="text"
+                placeholder="Pilates & Core"
+                value={form.category ?? ""}
+                onChange={(e) => set("category", e.target.value)}
+              />
+            </div>
             <div className="form-group">
               <label>Branch</label>
               <select value={form.branchId ?? ""} onChange={(e) => set("branchId", e.target.value)}>
                 <option value="">Select branch…</option>
-                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
-          <div className="form-group"><label>Notes (optional)</label><textarea rows={2} placeholder="Additional notes…" value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} /></div>
+          <div className="form-group">
+            <label>Notes (optional)</label>
+            <textarea
+              rows={2}
+              placeholder="Additional notes…"
+              value={form.notes ?? ""}
+              onChange={(e) => set("notes", e.target.value)}
+            />
+          </div>
           {error && <p className="form-error">{error}</p>}
           <div className="modal-actions">
-            <button className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button className="btn-primary" onClick={submit} disabled={loading || !form.name || !form.branchId}>
+            <button className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn-primary"
+              onClick={submit}
+              disabled={loading || !form.name || !form.branchId}
+            >
               {loading ? "Saving…" : "Add Asset"}
             </button>
           </div>
@@ -610,46 +808,87 @@ function NewMaintenanceModal({
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Log Maintenance Record</h2>
-          <button className="drawer-close" onClick={onClose}>✕</button>
+          <button className="drawer-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <div className="modal-body">
           <div className="form-group">
             <label>Asset</label>
             <select value={form.assetId ?? ""} onChange={(e) => set("assetId", e.target.value)}>
               <option value="">Select asset…</option>
-              {assets.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              {assets.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
             </select>
           </div>
           <div className="form-row">
             <div className="form-group">
               <label>Type</label>
-              <select value={form.type ?? "maintenance"} onChange={(e) => set("type", e.target.value)}>
-                {Object.entries(MAINT_TYPE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              <select
+                value={form.type ?? "maintenance"}
+                onChange={(e) => set("type", e.target.value)}
+              >
+                {Object.entries(MAINT_TYPE_META).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-group">
               <label>Performed By</label>
-              <input type="text" placeholder="Technician name" value={form.performedBy ?? ""} onChange={(e) => set("performedBy", e.target.value)} />
+              <input
+                type="text"
+                placeholder="Technician name"
+                value={form.performedBy ?? ""}
+                onChange={(e) => set("performedBy", e.target.value)}
+              />
             </div>
           </div>
           <div className="form-group">
             <label>Notes</label>
-            <textarea rows={3} placeholder="What was done?" value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
+            <textarea
+              rows={3}
+              placeholder="What was done?"
+              value={form.notes ?? ""}
+              onChange={(e) => set("notes", e.target.value)}
+            />
           </div>
           <div className="form-row">
             <div className="form-group">
               <label>Cost (KES, optional)</label>
-              <input type="number" placeholder="0" min={0} value={form.costMinor != null ? form.costMinor / 100 : ""} onChange={(e) => set("costMinor", Math.round(parseFloat(e.target.value) * 100) || 0)} />
+              <input
+                type="number"
+                placeholder="0"
+                min={0}
+                value={form.costMinor != null ? form.costMinor / 100 : ""}
+                onChange={(e) =>
+                  set("costMinor", Math.round(parseFloat(e.target.value) * 100) || 0)
+                }
+              />
             </div>
             <div className="form-group">
               <label>Next Due Date (optional)</label>
-              <input type="date" value={form.nextDueAt ? form.nextDueAt.slice(0, 10) : ""} onChange={(e) => set("nextDueAt", new Date(e.target.value).toISOString())} />
+              <input
+                type="date"
+                value={form.nextDueAt ? form.nextDueAt.slice(0, 10) : ""}
+                onChange={(e) => set("nextDueAt", new Date(e.target.value).toISOString())}
+              />
             </div>
           </div>
           {error && <p className="form-error">{error}</p>}
           <div className="modal-actions">
-            <button className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button className="btn-primary" onClick={submit} disabled={loading || !form.assetId || !form.performedBy || !form.notes}>
+            <button className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn-primary"
+              onClick={submit}
+              disabled={loading || !form.assetId || !form.performedBy || !form.notes}
+            >
               {loading ? "Saving…" : "Log Record"}
             </button>
           </div>

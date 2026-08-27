@@ -3,6 +3,7 @@
 ## Phase 1 — SaaS Integration Hardening
 
 ### Sprint 1.1 — Global context and product feedback
+
 - Persistent BranchContext with All Locations mode.
 - Branch-aware query-key helpers and invalidation.
 - Permission-filtered Quick Create.
@@ -11,6 +12,7 @@
 - Recent items and command palette data-search foundation.
 
 ### Sprint 1.2 — Public and member architecture
+
 - `/api/v1/public/:tenantSlug/site`.
 - Public services, coaches, branches and schedule DTOs.
 - Public lead capture and reservation mutation.
@@ -20,6 +22,7 @@
 - `/api/v1/member/me` and member-scoped booking/membership/attendance APIs.
 
 ### Sprint 1.3 — Replace prototypes with real data
+
 - Real Insights aggregate APIs.
 - Branch/date filtering.
 - Lead funnel, occupancy and retention from data.
@@ -34,6 +37,7 @@
 ## Phase 2 — Self-Service SaaS Platform
 
 ### Sprint 2.1 — Tenant signup
+
 - Public FITOS signup.
 - Owner account bootstrap.
 - Tenant creation and slug.
@@ -41,13 +45,17 @@
 - First branch wizard.
 
 ### Sprint 2.2 — Trial/account lifecycle
+
 States: trial, active, grace, suspended, cancelled, archived.
+
 - Trial expiry and grace.
 - Account preferences.
 - Account export/cancel/delete request flow.
 
 ### Sprint 2.3 — FITOS plans and usage
+
 Separate SaaS plans from gym memberships.
+
 - Plan definitions.
 - Capabilities.
 - Quotas.
@@ -87,6 +95,7 @@ Separate SaaS plans from gym memberships.
 ## Phase 5 — Equipment & Resource Core
 
 ### Sprint 5.1 — Asset registry
+
 - Equipment models/assets.
 - Asset code/serial.
 - Branch/room.
@@ -94,6 +103,7 @@ Separate SaaS plans from gym memberships.
 - Warranty/documents.
 
 ### Sprint 5.2 — Resource scheduling
+
 - Equipment pools.
 - Service resource requirements.
 - Fixed/per-attendee quantities.
@@ -102,6 +112,7 @@ Separate SaaS plans from gym memberships.
 - Resource-aware effective capacity.
 
 ### Sprint 5.3 — Maintenance/calibration
+
 - Maintenance.
 - Calibration.
 - Inspections.
@@ -130,6 +141,7 @@ Separate SaaS plans from gym memberships.
 ## Phase 7 — FITOS Assess
 
 ### Generic assessment domain
+
 - Assessment definitions/categories.
 - Protocol versioning.
 - Assessment sessions.
@@ -139,12 +151,14 @@ Separate SaaS plans from gym memberships.
 - Data provenance.
 
 ### Assessment UX
+
 - Performance Lab dashboard.
 - New assessment.
 - Result entry/review.
 - Member Assessments tab.
 
 ### Assessment families
+
 - Body composition.
 - RMR/metabolic.
 - VO2/CPET.
@@ -186,6 +200,7 @@ Separate SaaS plans from gym memberships.
 - Outcome notes/follow-up.
 
 Preset support through generic configuration:
+
 - neuromuscular electrical stimulation/NEUBIE-style sessions;
 - AlterG/body-weight-support sessions;
 - pneumatic compression/Normatec-style sessions;
@@ -211,6 +226,7 @@ FITOS records practitioner-selected settings. It must not autonomously diagnose,
 ## Phase 11 — Device Integration Framework
 
 ### Integration core
+
 - Provider registry.
 - Tenant integration connection.
 - Encrypted credential references.
@@ -222,6 +238,7 @@ FITOS records practitioner-selected settings. It must not autonomously diagnose,
 - Raw payload hash and mapping version.
 
 ### Integration levels
+
 - L0 manual entry.
 - L1 CSV/report import.
 - L2 cloud API.
@@ -229,6 +246,7 @@ FITOS records practitioner-selected settings. It must not autonomously diagnose,
 - L4 SDK/device connectivity only when vendor-approved.
 
 ### Generic import first
+
 - CSV mapping.
 - Preview.
 - Subject matching.
@@ -241,21 +259,27 @@ FITOS records practitioner-selected settings. It must not autonomously diagnose,
 ## Phase 12 — Vendor Connectors
 
 ### InBody
+
 LookinBody-authorized sync after generic assessment import is stable.
 
 ### VALD
+
 VALD Hub/API connector where commercially authorized, mapping ForceDecks, DynaMo, NordBord, ForceFrame, SmartSpeed and supported result families into generic metrics.
 
 ### COSMED
+
 Manual/file import first; approved API/HL7/DICOM interoperability only where licensed and available.
 
 ### PNOE
+
 Manual/report import first; cloud API only with vendor access.
 
 ### NEUBIE / NeuFit
+
 Asset/protocol/session tracking first. Do not assume public device API or implement remote control.
 
 ### AlterG/recovery systems
+
 Structured session parameter recording and imports only where vendor contract/API allows.
 
 ---
@@ -263,6 +287,7 @@ Structured session parameter recording and imports only where vendor contract/AP
 ## Phase 13 — FITOS Sites Website Builder
 
 ### Site configuration
+
 - Tenant branding.
 - Theme.
 - Navigation.
@@ -271,11 +296,13 @@ Structured session parameter recording and imports only where vendor contract/AP
 - Social/contact data.
 
 ### Controlled block builder
+
 Hero, Service Grid, Class Schedule, Trainers, Memberships, Assessments, Therapy, Equipment/Technology, Testimonials, Gallery, Locations, FAQ, CTA, Contact, Trial, Rich Text.
 
 Do not build unrestricted free-form Webflow-style editing.
 
 ### Publishing
+
 - Draft/preview/publish.
 - Version history.
 - Custom domains.
@@ -324,6 +351,7 @@ No revenue/payment metrics until final payment phase.
 ## Phase 17 — Platform Administration & Support
 
 `/platform` separate internal surface:
+
 - tenant search/detail/lifecycle;
 - plans/capabilities;
 - usage;
@@ -352,6 +380,7 @@ No revenue/payment metrics until final payment phase.
 ## Phase 19 — Release Readiness Track
 
 Separate from feature architecture:
+
 - staging;
 - real off-server backup/restore drill;
 - branch protection and required CI;

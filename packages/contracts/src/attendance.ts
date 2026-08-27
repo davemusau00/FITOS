@@ -15,7 +15,7 @@ export interface AttendanceRecordResponse {
   memberId: string;
   status: AttendanceStatus;
   checkedInAt: string | null;
-  actorUserId: string;
+  actorUserId: string | null;
   overrideReason: string | null;
   createdAt: string;
   updatedAt: string;

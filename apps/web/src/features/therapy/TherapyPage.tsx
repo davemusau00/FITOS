@@ -11,16 +11,28 @@ import type {
 
 // ── Metadata ──────────────────────────────────────────────────────────────────
 const MODALITY_META: Record<ModalityCode, { icon: string; color: string; tagline: string }> = {
-  neubie_direct_current: { icon: "⚡", color: "#8b5cf6", tagline: "Pulsed Direct Current Neuromuscular Stimulation" },
-  alterg_anti_gravity:  { icon: "🛸", color: "#6366f1", tagline: "NASA-Patented Anti-Gravity Treadmill" },
-  normatec_compression: { icon: "🦵", color: "#0ea5e9", tagline: "Dynamic Air Compression Recovery" },
-  hyperbaric_oxygen:    { icon: "🫁", color: "#22c55e", tagline: "Hyperbaric Oxygen Therapy" },
-  cryotherapy:          { icon: "❄️", color: "#38bdf8", tagline: "Whole-Body Cryotherapy" },
-  infrared_sauna:       { icon: "🔆", color: "#f59e0b", tagline: "Far-Infrared Sauna Detox" }
+  neubie_direct_current: {
+    icon: "⚡",
+    color: "#8b5cf6",
+    tagline: "Pulsed Direct Current Neuromuscular Stimulation"
+  },
+  alterg_anti_gravity: {
+    icon: "🛸",
+    color: "#6366f1",
+    tagline: "NASA-Patented Anti-Gravity Treadmill"
+  },
+  normatec_compression: {
+    icon: "🦵",
+    color: "#0ea5e9",
+    tagline: "Dynamic Air Compression Recovery"
+  },
+  hyperbaric_oxygen: { icon: "🫁", color: "#22c55e", tagline: "Hyperbaric Oxygen Therapy" },
+  cryotherapy: { icon: "❄️", color: "#38bdf8", tagline: "Whole-Body Cryotherapy" },
+  infrared_sauna: { icon: "🔆", color: "#f59e0b", tagline: "Far-Infrared Sauna Detox" }
 };
 
 const STATUS_META: Record<TherapySessionStatus, { label: string; color: string }> = {
-  completed:   { label: "Completed",   color: "#22c55e" },
+  completed: { label: "Completed", color: "#22c55e" },
   in_progress: { label: "In Progress", color: "#f59e0b" },
   interrupted: { label: "Interrupted", color: "#ef4444" }
 };
@@ -31,16 +43,16 @@ export default function TherapyPage() {
   const [tab, setTab] = useState<Tab>("sessions");
 
   const [modalities, setModalities] = useState<TherapyModalityResponse[]>([]);
-  const [protocols, setProtocols]   = useState<TherapyProtocolResponse[]>([]);
-  const [sessions, setSessions]     = useState<TherapySessionResponse[]>([]);
-  const [loading, setLoading]       = useState(true);
+  const [protocols, setProtocols] = useState<TherapyProtocolResponse[]>([]);
+  const [sessions, setSessions] = useState<TherapySessionResponse[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [selectedSession, setSelectedSession] = useState<TherapySessionResponse | null>(null);
   const [selectedProtocol, setSelectedProtocol] = useState<TherapyProtocolResponse | null>(null);
-  const [showNewSession, setShowNewSession]     = useState(false);
+  const [showNewSession, setShowNewSession] = useState(false);
   const [defaultProtocolId, setDefaultProtocolId] = useState<string>("");
 
-  const [search, setSearch]           = useState("");
+  const [search, setSearch] = useState("");
   const [modalityFilter, setModalityFilter] = useState<string>("all");
 
   const reload = useCallback(async () => {
@@ -59,18 +71,28 @@ export default function TherapyPage() {
     }
   }, []);
 
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
   const filteredSessions = sessions.filter((s) => {
     if (modalityFilter !== "all" && s.modalityCode !== modalityFilter) return false;
-    if (search && !s.memberName.toLowerCase().includes(search.toLowerCase()) && !s.protocolName.toLowerCase().includes(search.toLowerCase())) return false;
+    if (
+      search &&
+      !s.memberName.toLowerCase().includes(search.toLowerCase()) &&
+      !s.protocolName.toLowerCase().includes(search.toLowerCase())
+    )
+      return false;
     return true;
   });
 
   const avgPainReduction = (() => {
     const valid = sessions.filter((s) => s.prePainScore !== null && s.postPainScore !== null);
     if (!valid.length) return 0;
-    const total = valid.reduce((acc, s) => acc + ((s.prePainScore ?? 0) - (s.postPainScore ?? 0)), 0);
+    const total = valid.reduce(
+      (acc, s) => acc + ((s.prePainScore ?? 0) - (s.postPainScore ?? 0)),
+      0
+    );
     return (total / valid.length).toFixed(1);
   })();
 
@@ -81,7 +103,10 @@ export default function TherapyPage() {
       <div className="therapy-header">
         <div>
           <h1 className="therapy-title">FITOS Therapy • Recovery Suite</h1>
-          <p className="therapy-subtitle">NEUBIE neuromuscular stimulation, AlterG anti-gravity, Normatec compression & clinical recovery protocols.</p>
+          <p className="therapy-subtitle">
+            NEUBIE neuromuscular stimulation, AlterG anti-gravity, Normatec compression & clinical
+            recovery protocols.
+          </p>
         </div>
         <button className="btn-primary" onClick={() => setShowNewSession(true)}>
           + Record Session
@@ -102,21 +127,36 @@ export default function TherapyPage() {
         </div>
         <div className="therapy-stat-card">
           <span className="stat-label">Avg Pain Reduction</span>
-          <span className="stat-value">{avgPainReduction}<span className="stat-unit"> pts</span></span>
+          <span className="stat-value">
+            {avgPainReduction}
+            <span className="stat-unit"> pts</span>
+          </span>
           <span className="stat-sub">Pre → Post pain score delta</span>
         </div>
         <div className="therapy-stat-card">
           <span className="stat-label">Adverse Reactions</span>
-          <span className="stat-value" style={{ color: adverseCount > 0 ? "#ef4444" : "#22c55e" }}>{adverseCount}</span>
-          <span className="stat-sub">{adverseCount === 0 ? "Zero adverse events ✓" : "Requires clinical review"}</span>
+          <span className="stat-value" style={{ color: adverseCount > 0 ? "#ef4444" : "#22c55e" }}>
+            {adverseCount}
+          </span>
+          <span className="stat-sub">
+            {adverseCount === 0 ? "Zero adverse events ✓" : "Requires clinical review"}
+          </span>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="therapy-tabs">
         {(["sessions", "protocols", "modalities"] as Tab[]).map((t) => (
-          <button key={t} className={`therapy-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
-            {t === "sessions" ? `Sessions (${sessions.length})` : t === "protocols" ? `Protocols (${protocols.length})` : `Modalities (${modalities.length})`}
+          <button
+            key={t}
+            className={`therapy-tab ${tab === t ? "active" : ""}`}
+            onClick={() => setTab(t)}
+          >
+            {t === "sessions"
+              ? `Sessions (${sessions.length})`
+              : t === "protocols"
+                ? `Protocols (${protocols.length})`
+                : `Modalities (${modalities.length})`}
           </button>
         ))}
       </div>
@@ -132,10 +172,16 @@ export default function TherapyPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <select className="filter-select" value={modalityFilter} onChange={(e) => setModalityFilter(e.target.value)}>
+            <select
+              className="filter-select"
+              value={modalityFilter}
+              onChange={(e) => setModalityFilter(e.target.value)}
+            >
               <option value="all">All Modalities</option>
               {modalities.map((m) => (
-                <option key={m.code} value={m.code}>{MODALITY_META[m.code]?.icon ?? "🔬"} {m.name}</option>
+                <option key={m.code} value={m.code}>
+                  {MODALITY_META[m.code]?.icon ?? "🔬"} {m.name}
+                </option>
               ))}
             </select>
           </div>
@@ -143,7 +189,9 @@ export default function TherapyPage() {
           {loading ? (
             <div className="therapy-loading">Loading therapy sessions…</div>
           ) : filteredSessions.length === 0 ? (
-            <div className="therapy-empty">No sessions match your filters. Record the first session.</div>
+            <div className="therapy-empty">
+              No sessions match your filters. Record the first session.
+            </div>
           ) : (
             <div className="session-table-wrap">
               <table className="session-table">
@@ -163,8 +211,10 @@ export default function TherapyPage() {
                   {filteredSessions.map((s) => {
                     const meta = MODALITY_META[s.modalityCode];
                     const status = STATUS_META[s.status];
-                    const delta = s.prePainScore !== null && s.postPainScore !== null
-                      ? s.prePainScore - s.postPainScore : null;
+                    const delta =
+                      s.prePainScore !== null && s.postPainScore !== null
+                        ? s.prePainScore - s.postPainScore
+                        : null;
                     return (
                       <tr key={s.id} className="session-row" onClick={() => setSelectedSession(s)}>
                         <td className="cell-member">{s.memberName}</td>
@@ -172,7 +222,14 @@ export default function TherapyPage() {
                           <span className="protocol-truncate">{s.protocolName}</span>
                         </td>
                         <td>
-                          <span className="modality-tag" style={{ color: meta?.color ?? "#6366f1", background: `${meta?.color ?? "#6366f1"}15`, borderColor: `${meta?.color ?? "#6366f1"}30` }}>
+                          <span
+                            className="modality-tag"
+                            style={{
+                              color: meta?.color ?? "#6366f1",
+                              background: `${meta?.color ?? "#6366f1"}15`,
+                              borderColor: `${meta?.color ?? "#6366f1"}30`
+                            }}
+                          >
                             {meta?.icon ?? "🔬"} {s.modalityCode.replace(/_/g, " ")}
                           </span>
                         </td>
@@ -180,17 +237,31 @@ export default function TherapyPage() {
                         <td className="cell-num">
                           {s.postPainScore ?? "—"}
                           {delta !== null && (
-                            <span className="pain-delta" style={{ color: delta >= 0 ? "#22c55e" : "#ef4444" }}>
+                            <span
+                              className="pain-delta"
+                              style={{ color: delta >= 0 ? "#22c55e" : "#ef4444" }}
+                            >
                               {delta >= 0 ? ` ↓${delta}` : ` ↑${Math.abs(delta)}`}
                             </span>
                           )}
                         </td>
                         <td>
-                          <span className="status-pill" style={{ color: status.color, background: `${status.color}12`, borderColor: `${status.color}25` }}>
+                          <span
+                            className="status-pill"
+                            style={{
+                              color: status.color,
+                              background: `${status.color}12`,
+                              borderColor: `${status.color}25`
+                            }}
+                          >
                             {status.label}
                           </span>
                         </td>
-                        <td className="cell-date">{new Date(s.startedAt).toLocaleDateString("en-KE", { dateStyle: "medium" })}</td>
+                        <td className="cell-date">
+                          {new Date(s.startedAt).toLocaleDateString("en-KE", {
+                            dateStyle: "medium"
+                          })}
+                        </td>
                         <td className="cell-staff">{s.staffName}</td>
                       </tr>
                     );
@@ -210,7 +281,14 @@ export default function TherapyPage() {
             return (
               <div key={p.id} className="protocol-card" onClick={() => setSelectedProtocol(p)}>
                 <div className="protocol-card-top">
-                  <span className="modality-tag" style={{ color: meta?.color ?? "#6366f1", background: `${meta?.color ?? "#6366f1"}15`, borderColor: `${meta?.color ?? "#6366f1"}30` }}>
+                  <span
+                    className="modality-tag"
+                    style={{
+                      color: meta?.color ?? "#6366f1",
+                      background: `${meta?.color ?? "#6366f1"}15`,
+                      borderColor: `${meta?.color ?? "#6366f1"}30`
+                    }}
+                  >
                     {meta?.icon ?? "🔬"} {p.modalityCode.replace(/_/g, " ")}
                   </span>
                 </div>
@@ -219,18 +297,28 @@ export default function TherapyPage() {
                 <div className="protocol-target">Target: {p.targetArea}</div>
 
                 <div className="protocol-checklist">
-                  <span className="checklist-label">Safety Checklist ({p.safetyChecklist.length})</span>
+                  <span className="checklist-label">
+                    Safety Checklist ({p.safetyChecklist.length})
+                  </span>
                   {p.safetyChecklist.slice(0, 2).map((c, i) => (
-                    <div key={i} className="checklist-item">✓ {c}</div>
+                    <div key={i} className="checklist-item">
+                      ✓ {c}
+                    </div>
                   ))}
                   {p.safetyChecklist.length > 2 && (
-                    <div className="checklist-more">+{p.safetyChecklist.length - 2} more items…</div>
+                    <div className="checklist-more">
+                      +{p.safetyChecklist.length - 2} more items…
+                    </div>
                   )}
                 </div>
 
                 <button
                   className="btn-launch"
-                  onClick={(e) => { e.stopPropagation(); setDefaultProtocolId(p.id); setShowNewSession(true); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDefaultProtocolId(p.id);
+                    setShowNewSession(true);
+                  }}
                 >
                   + Start Session
                 </button>
@@ -238,7 +326,9 @@ export default function TherapyPage() {
             );
           })}
           {protocols.length === 0 && !loading && (
-            <div className="therapy-empty">No clinical protocols defined yet. Add your first protocol.</div>
+            <div className="therapy-empty">
+              No clinical protocols defined yet. Add your first protocol.
+            </div>
           )}
         </div>
       )}
@@ -250,20 +340,34 @@ export default function TherapyPage() {
             const meta = MODALITY_META[m.code];
             const modSessions = sessions.filter((s) => s.modalityCode === m.code);
             return (
-              <div key={m.id} className="modality-card" style={{ borderTopColor: meta?.color ?? "#6366f1" }}>
-                <div className="modality-card-icon" style={{ color: meta?.color ?? "#6366f1", background: `${meta?.color ?? "#6366f1"}12` }}>
+              <div
+                key={m.id}
+                className="modality-card"
+                style={{ borderTopColor: meta?.color ?? "#6366f1" }}
+              >
+                <div
+                  className="modality-card-icon"
+                  style={{
+                    color: meta?.color ?? "#6366f1",
+                    background: `${meta?.color ?? "#6366f1"}12`
+                  }}
+                >
                   {meta?.icon ?? "🔬"}
                 </div>
                 <h3 className="modality-name">{m.name}</h3>
                 <p className="modality-desc">{m.description}</p>
                 <div className="modality-meta-row">
-                  <span className="modality-duration">⏱ {m.defaultDurationMinutes} min default</span>
+                  <span className="modality-duration">
+                    ⏱ {m.defaultDurationMinutes} min default
+                  </span>
                   <span className="modality-sessions">{modSessions.length} sessions</span>
                 </div>
                 <div className="modality-contraindications">
                   <span className="contra-label">Contraindications</span>
                   {m.contraindications.map((c, i) => (
-                    <span key={i} className="contra-chip">⚠ {c}</span>
+                    <span key={i} className="contra-chip">
+                      ⚠ {c}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -282,33 +386,44 @@ export default function TherapyPage() {
             <div className="drawer-header">
               <div>
                 <span className="drawer-sub">
-                  {new Date(selectedSession.startedAt).toLocaleDateString("en-KE", { dateStyle: "long" })}
+                  {new Date(selectedSession.startedAt).toLocaleDateString("en-KE", {
+                    dateStyle: "long"
+                  })}
                 </span>
                 <h2 className="drawer-title">{selectedSession.memberName}</h2>
                 <div className="drawer-protocol-tag">{selectedSession.protocolName}</div>
               </div>
-              <button className="drawer-close" onClick={() => setSelectedSession(null)}>✕</button>
+              <button className="drawer-close" onClick={() => setSelectedSession(null)}>
+                ✕
+              </button>
             </div>
             <div className="drawer-body">
               {/* Pain Scores */}
               <div className="pain-score-row">
                 <div className="pain-score-box">
                   <span className="ps-label">Pre-Session Pain</span>
-                  <span className="ps-val" style={{ color: "#ef4444" }}>{selectedSession.prePainScore ?? "—"}<span className="ps-unit">/10</span></span>
+                  <span className="ps-val" style={{ color: "#ef4444" }}>
+                    {selectedSession.prePainScore ?? "—"}
+                    <span className="ps-unit">/10</span>
+                  </span>
                 </div>
                 <div className="pain-arrow">→</div>
                 <div className="pain-score-box">
                   <span className="ps-label">Post-Session Pain</span>
-                  <span className="ps-val" style={{ color: "#22c55e" }}>{selectedSession.postPainScore ?? "—"}<span className="ps-unit">/10</span></span>
+                  <span className="ps-val" style={{ color: "#22c55e" }}>
+                    {selectedSession.postPainScore ?? "—"}
+                    <span className="ps-unit">/10</span>
+                  </span>
                 </div>
-                {selectedSession.prePainScore !== null && selectedSession.postPainScore !== null && (
-                  <div className="pain-delta-box">
-                    <span className="ps-label">Reduction</span>
-                    <span className="ps-val" style={{ color: "#22c55e" }}>
-                      ↓{selectedSession.prePainScore - selectedSession.postPainScore}
-                    </span>
-                  </div>
-                )}
+                {selectedSession.prePainScore !== null &&
+                  selectedSession.postPainScore !== null && (
+                    <div className="pain-delta-box">
+                      <span className="ps-label">Reduction</span>
+                      <span className="ps-val" style={{ color: "#22c55e" }}>
+                        ↓{selectedSession.prePainScore - selectedSession.postPainScore}
+                      </span>
+                    </div>
+                  )}
               </div>
 
               {/* Actual Dosage */}
@@ -327,11 +442,14 @@ export default function TherapyPage() {
               {/* Status & Safety */}
               <div className="drawer-row">
                 <div className="drawer-badge-group">
-                  <span className="status-pill" style={{
-                    color: STATUS_META[selectedSession.status].color,
-                    background: `${STATUS_META[selectedSession.status].color}12`,
-                    borderColor: `${STATUS_META[selectedSession.status].color}25`
-                  }}>
+                  <span
+                    className="status-pill"
+                    style={{
+                      color: STATUS_META[selectedSession.status].color,
+                      background: `${STATUS_META[selectedSession.status].color}12`,
+                      borderColor: `${STATUS_META[selectedSession.status].color}25`
+                    }}
+                  >
                     {STATUS_META[selectedSession.status].label}
                   </span>
                   {selectedSession.adverseReaction && (
@@ -348,9 +466,19 @@ export default function TherapyPage() {
               )}
 
               <div className="drawer-assessor-info">
-                <span>Administered by: <strong>{selectedSession.staffName}</strong></span>
-                {selectedSession.branchName && <span>Branch: <strong>{selectedSession.branchName}</strong></span>}
-                {selectedSession.assetName && <span>Device: <strong>{selectedSession.assetName}</strong></span>}
+                <span>
+                  Administered by: <strong>{selectedSession.staffName}</strong>
+                </span>
+                {selectedSession.branchName && (
+                  <span>
+                    Branch: <strong>{selectedSession.branchName}</strong>
+                  </span>
+                )}
+                {selectedSession.assetName && (
+                  <span>
+                    Device: <strong>{selectedSession.assetName}</strong>
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -367,7 +495,9 @@ export default function TherapyPage() {
                 <h2 className="drawer-title">{selectedProtocol.name}</h2>
                 <div className="drawer-protocol-tag">{selectedProtocol.targetArea}</div>
               </div>
-              <button className="drawer-close" onClick={() => setSelectedProtocol(null)}>✕</button>
+              <button className="drawer-close" onClick={() => setSelectedProtocol(null)}>
+                ✕
+              </button>
             </div>
             <div className="drawer-body">
               <div className="drawer-section">
@@ -400,7 +530,11 @@ export default function TherapyPage() {
               <button
                 className="btn-primary"
                 style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => { setSelectedProtocol(null); setDefaultProtocolId(selectedProtocol.id); setShowNewSession(true); }}
+                onClick={() => {
+                  setSelectedProtocol(null);
+                  setDefaultProtocolId(selectedProtocol.id);
+                  setShowNewSession(true);
+                }}
               >
                 + Start Session from this Protocol
               </button>
@@ -414,8 +548,15 @@ export default function TherapyPage() {
         <NewSessionModal
           protocols={protocols}
           defaultProtocolId={defaultProtocolId}
-          onClose={() => { setShowNewSession(false); setDefaultProtocolId(""); }}
-          onCreated={() => { setShowNewSession(false); setDefaultProtocolId(""); void reload(); }}
+          onClose={() => {
+            setShowNewSession(false);
+            setDefaultProtocolId("");
+          }}
+          onCreated={() => {
+            setShowNewSession(false);
+            setDefaultProtocolId("");
+            void reload();
+          }}
         />
       )}
 
@@ -545,19 +686,19 @@ function NewSessionModal({
   onCreated: () => void;
 }) {
   const [protocolId, setProtocolId] = useState(defaultProtocolId || protocols[0]?.id || "");
-  const [memberId, setMemberId]     = useState("");
-  const [branchId, setBranchId]     = useState("");
-  const [prePain, setPrePain]       = useState<string>("");
-  const [postPain, setPostPain]     = useState<string>("");
-  const [dosage, setDosage]         = useState<Record<string, string | number>>({});
-  const [adverse, setAdverse]       = useState(false);
-  const [notes, setNotes]           = useState("");
-  const [status, setStatus]         = useState<TherapySessionStatus>("completed");
+  const [memberId, setMemberId] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [prePain, setPrePain] = useState<string>("");
+  const [postPain, setPostPain] = useState<string>("");
+  const [dosage, setDosage] = useState<Record<string, string | number>>({});
+  const [adverse, setAdverse] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState<TherapySessionStatus>("completed");
 
-  const [members, setMembers]   = useState<{ id: string; name: string }[]>([]);
+  const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api.members(new URLSearchParams({ limit: "100" })).then((res) => {
@@ -606,20 +747,36 @@ function NewSessionModal({
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Record Therapy Session</h2>
-          <button className="drawer-close" onClick={onClose}>✕</button>
+          <button className="drawer-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
         <div className="modal-body">
           <div className="form-row">
             <div className="form-group">
               <label>Protocol</label>
-              <select value={protocolId} onChange={(e) => { setProtocolId(e.target.value); setDosage({}); }}>
-                {protocols.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              <select
+                value={protocolId}
+                onChange={(e) => {
+                  setProtocolId(e.target.value);
+                  setDosage({});
+                }}
+              >
+                {protocols.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-group">
               <label>Member</label>
               <select value={memberId} onChange={(e) => setMemberId(e.target.value)}>
-                {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -628,12 +785,19 @@ function NewSessionModal({
             <div className="form-group">
               <label>Branch</label>
               <select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-group">
               <label>Session Status</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value as TherapySessionStatus)}>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as TherapySessionStatus)}
+              >
                 <option value="completed">Completed</option>
                 <option value="in_progress">In Progress</option>
                 <option value="interrupted">Interrupted</option>
@@ -644,11 +808,27 @@ function NewSessionModal({
           <div className="form-row">
             <div className="form-group">
               <label>Pre-Session Pain Score (0-10)</label>
-              <input type="number" min="0" max="10" step="1" placeholder="e.g. 6" value={prePain} onChange={(e) => setPrePain(e.target.value)} />
+              <input
+                type="number"
+                min="0"
+                max="10"
+                step="1"
+                placeholder="e.g. 6"
+                value={prePain}
+                onChange={(e) => setPrePain(e.target.value)}
+              />
             </div>
             <div className="form-group">
               <label>Post-Session Pain Score (0-10)</label>
-              <input type="number" min="0" max="10" step="1" placeholder="e.g. 1" value={postPain} onChange={(e) => setPostPain(e.target.value)} />
+              <input
+                type="number"
+                min="0"
+                max="10"
+                step="1"
+                placeholder="e.g. 1"
+                value={postPain}
+                onChange={(e) => setPostPain(e.target.value)}
+              />
             </div>
           </div>
 
@@ -664,7 +844,9 @@ function NewSessionModal({
                       type="text"
                       placeholder={String(selectedProto.parameters[k])}
                       value={dosage[k] !== undefined ? String(dosage[k]) : ""}
-                      onChange={(e) => setDosageVal(k, e.target.value || String(selectedProto.parameters[k]))}
+                      onChange={(e) =>
+                        setDosageVal(k, e.target.value || String(selectedProto.parameters[k]))
+                      }
                     />
                   </div>
                 ))}
@@ -674,19 +856,34 @@ function NewSessionModal({
 
           <div className="form-group">
             <label>Clinical Notes (optional)</label>
-            <textarea rows={2} placeholder="Observations, member feedback, next steps…" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <textarea
+              rows={2}
+              placeholder="Observations, member feedback, next steps…"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
           </div>
 
           <label className="checkbox-row">
-            <input type="checkbox" checked={adverse} onChange={(e) => setAdverse(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={adverse}
+              onChange={(e) => setAdverse(e.target.checked)}
+            />
             <span>Adverse reaction reported</span>
           </label>
 
           {error && <p className="form-error">{error}</p>}
 
           <div className="modal-actions">
-            <button className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button className="btn-primary" onClick={submit} disabled={loading || !protocolId || !memberId || !branchId}>
+            <button className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn-primary"
+              onClick={submit}
+              disabled={loading || !protocolId || !memberId || !branchId}
+            >
               {loading ? "Saving…" : "Save Session"}
             </button>
           </div>

@@ -34,7 +34,13 @@ export const automationJobSchema = tenantEventBase.extend({
     ruleId: z.string().uuid(),
     triggerEvent: z.string(),
     targetEntityId: z.string().uuid().optional(),
-    idempotencyKey: z.string()
+    idempotencyKey: z.string(),
+    actionId: z.string().uuid().optional(),
+    actionType: z
+      .enum(["send_email", "send_sms", "send_whatsapp", "create_staff_task", "update_crm_stage"])
+      .optional(),
+    actionConfig: z.record(z.string(), z.unknown()).optional(),
+    simulation: z.boolean().default(false)
   })
 });
 

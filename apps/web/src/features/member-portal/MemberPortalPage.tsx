@@ -73,11 +73,26 @@ export function MemberPortalPage() {
   // ── UNLOGGED MEMBER SIGN-IN VIEW ──
   if (!memberProfile.data) {
     return (
-      <div className="member-portal-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div
+        className="member-portal-shell"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh"
+        }}
+      >
         <div style={{ maxWidth: "26rem", width: "100%", padding: "1.5rem" }}>
           <div style={{ textAlign: "center", marginBottom: "2rem" }}>
             <FitosLogo height={32} />
-            <h1 style={{ fontSize: "1.5rem", fontWeight: 800, marginTop: "1rem", marginBottom: "0.25rem" }}>
+            <h1
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: 800,
+                marginTop: "1rem",
+                marginBottom: "0.25rem"
+              }}
+            >
               Member Portal Sign In
             </h1>
             <p className="muted" style={{ fontSize: "0.85rem" }}>
@@ -158,8 +173,12 @@ export function MemberPortalPage() {
           </div>
           <div className="member-portal-topbar__user">
             <div className="member-portal-user-info">
-              <strong>{profile.firstName} {profile.lastName ?? ""}</strong>
-              <span>#{profile.memberNumber ?? "—"} · {profile.activePlan?.name ?? "Pay As You Go"}</span>
+              <strong>
+                {profile.firstName} {profile.lastName ?? ""}
+              </strong>
+              <span>
+                #{profile.memberNumber ?? "—"} · {profile.activePlan?.name ?? "Pay As You Go"}
+              </span>
             </div>
             <button
               className="fitos-button fitos-button--ghost fitos-button--small"
@@ -211,7 +230,9 @@ export function MemberPortalPage() {
               </Card>
               <Card className="kpi">
                 <span>Active Plan</span>
-                <strong style={{ fontSize: "1.1rem" }}>{profile.activePlan?.name ?? "Drop-in"}</strong>
+                <strong style={{ fontSize: "1.1rem" }}>
+                  {profile.activePlan?.name ?? "Drop-in"}
+                </strong>
               </Card>
             </div>
 
@@ -269,7 +290,8 @@ export function MemberPortalPage() {
             <Card>
               <h2>Available Classes &amp; Timetable</h2>
               <p className="muted" style={{ fontSize: "0.85rem", marginBottom: "1rem" }}>
-                Select any upcoming session below to reserve your spot instantly using your available credits ({profile.creditBalance} remaining).
+                Select any upcoming session below to reserve your spot instantly using your
+                available credits ({profile.creditBalance} remaining).
               </p>
 
               {portalOverview.isLoading ? (
@@ -282,8 +304,19 @@ export function MemberPortalPage() {
                     return (
                       <div className="member-portal-class-item" key={occ.id}>
                         <div className="member-portal-class-item__time">
-                          <strong>{start.toLocaleDateString("en-KE", { weekday: "short", month: "short", day: "numeric" })}</strong>
-                          <span>{start.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })}</span>
+                          <strong>
+                            {start.toLocaleDateString("en-KE", {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric"
+                            })}
+                          </strong>
+                          <span>
+                            {start.toLocaleTimeString("en-KE", {
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </span>
                         </div>
                         <div className="member-portal-class-item__info">
                           <h4>Class Session</h4>
@@ -332,7 +365,9 @@ export function MemberPortalPage() {
                       <Icon name="spark" size={24} />
                       <div>
                         <strong style={{ fontSize: "1.1rem" }}>{profile.activePlan.name}</strong>
-                        <span>Member #{profile.memberNumber ?? "—"} · Status: {profile.status}</span>
+                        <span>
+                          Member #{profile.memberNumber ?? "—"} · Status: {profile.status}
+                        </span>
                       </div>
                     </div>
                     <StatusBadge status={profile.status} />

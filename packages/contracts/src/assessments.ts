@@ -1,16 +1,8 @@
 export type AssessmentCategory =
-  | "body_composition"
-  | "cardiovascular_vo2"
-  | "neuromuscular_force"
-  | "mobility_rom"
-  | "metabolic";
+  "body_composition" | "cardiovascular_vo2" | "neuromuscular_force" | "mobility_rom" | "metabolic";
 
 export type DeviceVendor =
-  | "lookinbody_inbody"
-  | "vald_forcedecks"
-  | "cosmed_k5"
-  | "pnoe"
-  | "manual";
+  "lookinbody_inbody" | "vald_forcedecks" | "cosmed_k5" | "pnoe" | "manual";
 
 export interface MetricDefinition {
   key: string;

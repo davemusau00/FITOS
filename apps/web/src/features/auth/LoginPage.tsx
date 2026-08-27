@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Button, FormField, Icon } from "@fitos/ui";
-import { useAuth } from "../../app/auth";
+import { useAuth, workspacePath } from "../../app/auth";
 import { FitosLogo, Brandmark } from "../../app/logo";
 import { ErrorNotice } from "../shared";
 
@@ -22,7 +22,7 @@ export function LoginPage() {
 
   const [error, setError] = useState<unknown>(null);
 
-  if (auth) return <Navigate replace to="/app/overview" />;
+  if (auth) return <Navigate replace to={workspacePath(auth)} />;
 
   const fillDemo = (email: string) => {
     setValue("email", email);
@@ -42,7 +42,8 @@ export function LoginPage() {
             <span className="login-eyebrow">FITNESS OPERATING SYSTEM</span>
             <h1>Run your fitness business with clarity.</h1>
             <p className="login-copy">
-              Sign in to manage classes, members, schedules, and daily operations in one focused workspace.
+              Sign in to manage classes, members, schedules, and daily operations in one focused
+              workspace.
             </p>
           </div>
 
@@ -51,8 +52,8 @@ export function LoginPage() {
             onSubmit={handleSubmit(async (input) => {
               setError(null);
               try {
-                await signIn(input);
-                navigate("/app/overview", { replace: true });
+                const session = await signIn(input);
+                navigate(workspacePath(session), { replace: true });
               } catch (cause) {
                 setError(cause);
               }
@@ -140,7 +141,8 @@ export function LoginPage() {
           </h2>
 
           <p>
-            The all-in-one platform engineered specifically for modern gyms, boutique studios, and high-performance training centers.
+            The all-in-one platform engineered specifically for modern gyms, boutique studios, and
+            high-performance training centers.
           </p>
 
           <div className="login-art__features">

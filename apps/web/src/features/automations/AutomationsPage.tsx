@@ -12,7 +12,11 @@ import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 type AutomationTab = "active" | "templates" | "builder" | "logs";
 
-const TRIGGER_OPTIONS: { id: AutomationTriggerType; label: string; icon: "calendar" | "spark" | "users" | "check" | "plus" | "warning" }[] = [
+const TRIGGER_OPTIONS: {
+  id: AutomationTriggerType;
+  label: string;
+  icon: "calendar" | "spark" | "users" | "check" | "plus" | "warning";
+}[] = [
   { id: "member_joined", label: "New Member Joined", icon: "plus" },
   { id: "trial_completed", label: "Trial Completed / New Inquiry", icon: "spark" },
   { id: "booking_created", label: "Class Booked", icon: "calendar" },
@@ -22,7 +26,11 @@ const TRIGGER_OPTIONS: { id: AutomationTriggerType; label: string; icon: "calend
   { id: "payment_failed", label: "Payment Failed", icon: "warning" }
 ];
 
-const ACTION_OPTIONS: { id: AutomationActionType; label: string; icon: "edit" | "users" | "check" | "spark" }[] = [
+const ACTION_OPTIONS: {
+  id: AutomationActionType;
+  label: string;
+  icon: "edit" | "users" | "check" | "spark";
+}[] = [
   { id: "send_email", label: "Send Automated Email", icon: "edit" },
   { id: "send_whatsapp", label: "Send WhatsApp Notification", icon: "users" },
   { id: "send_sms", label: "Send SMS Notification", icon: "spark" },
@@ -41,7 +49,8 @@ const TEMPLATE_AUTOMATIONS: Array<{
 }> = [
   {
     name: "Welcome Onboarding Email",
-    description: "Sends gym welcome pack, schedule link, and coach introduction immediately upon member registration.",
+    description:
+      "Sends gym welcome pack, schedule link, and coach introduction immediately upon member registration.",
     triggerType: "member_joined",
     triggerLabel: "New Member Joined",
     actionType: "send_email",
@@ -50,7 +59,8 @@ const TEMPLATE_AUTOMATIONS: Array<{
   },
   {
     name: "Lead 15-Minute WhatsApp Fast Response",
-    description: "Triggers instant greeting via WhatsApp when a new inquiry submits the website contact or trial form.",
+    description:
+      "Triggers instant greeting via WhatsApp when a new inquiry submits the website contact or trial form.",
     triggerType: "trial_completed",
     triggerLabel: "New Lead / Trial",
     actionType: "send_whatsapp",
@@ -59,7 +69,8 @@ const TEMPLATE_AUTOMATIONS: Array<{
   },
   {
     name: "Class Booking Confirmation & Calendar Invite",
-    description: "Sends instant booking confirmation with class start time, instructor info, and arrival guidelines.",
+    description:
+      "Sends instant booking confirmation with class start time, instructor info, and arrival guidelines.",
     triggerType: "booking_created",
     triggerLabel: "Class Booked",
     actionType: "send_email",
@@ -68,7 +79,8 @@ const TEMPLATE_AUTOMATIONS: Array<{
   },
   {
     name: "3-Day Membership Renewal Nudge",
-    description: "Notifies member 72 hours before their pass expires with a 1-click renewal link to prevent lapse.",
+    description:
+      "Notifies member 72 hours before their pass expires with a 1-click renewal link to prevent lapse.",
     triggerType: "membership_expiring_soon",
     triggerLabel: "Membership Expiring Soon",
     actionType: "send_whatsapp",
@@ -77,7 +89,8 @@ const TEMPLATE_AUTOMATIONS: Array<{
   },
   {
     name: "21-Day Inactive Member Winback Task",
-    description: "Creates an urgent high-priority task for front desk staff to call inactive members at risk of churning.",
+    description:
+      "Creates an urgent high-priority task for front desk staff to call inactive members at risk of churning.",
     triggerType: "member_inactive",
     triggerLabel: "No Visit in 21 Days",
     actionType: "create_staff_task",
@@ -161,7 +174,7 @@ export function AutomationsPage() {
     });
   };
 
-  const handleApplyTemplate = (tmpl: typeof TEMPLATE_AUTOMATIONS[number]) => {
+  const handleApplyTemplate = (tmpl: (typeof TEMPLATE_AUTOMATIONS)[number]) => {
     createMutation.mutate({
       name: tmpl.name,
       description: tmpl.description,
@@ -175,7 +188,11 @@ export function AutomationsPage() {
   };
 
   const tabs: { id: AutomationTab; label: string; icon: string }[] = [
-    { id: "active", label: `Active Workflows (${automationsQuery.data?.length ?? 0})`, icon: "spark" },
+    {
+      id: "active",
+      label: `Active Workflows (${automationsQuery.data?.length ?? 0})`,
+      icon: "spark"
+    },
     { id: "templates", label: "Template Library", icon: "dashboard" },
     { id: "builder", label: "Workflow Builder", icon: "plus" },
     { id: "logs", label: "Execution History", icon: "check" }
@@ -243,7 +260,9 @@ export function AutomationsPage() {
                     <div
                       className="automation-card__icon"
                       style={{
-                        background: rule.isActive ? "rgba(198,255,0,0.12)" : "rgba(255,255,255,0.05)"
+                        background: rule.isActive
+                          ? "rgba(198,255,0,0.12)"
+                          : "rgba(255,255,255,0.05)"
                       }}
                     >
                       <Icon name="spark" size={20} />
@@ -268,9 +287,13 @@ export function AutomationsPage() {
                     </div>
 
                     <div className="automation-card__stats">
-                      <div className="automation-card__runs">{rule.totalExecutions.toLocaleString()} runs</div>
+                      <div className="automation-card__runs">
+                        {rule.totalExecutions.toLocaleString()} runs
+                      </div>
                       <div className="automation-card__last-run">
-                        {rule.lastExecutedAt ? `Last: ${formatDateTime(rule.lastExecutedAt)}` : "Not triggered yet"}
+                        {rule.lastExecutedAt
+                          ? `Last: ${formatDateTime(rule.lastExecutedAt)}`
+                          : "Not triggered yet"}
                       </div>
                     </div>
 
@@ -288,7 +311,9 @@ export function AutomationsPage() {
                         aria-checked={rule.isActive}
                         aria-label={`Toggle ${rule.name}`}
                         className={`automation-toggle${rule.isActive ? " is-on" : ""}`}
-                        onClick={() => toggleMutation.mutate({ id: rule.id, isActive: !rule.isActive })}
+                        onClick={() =>
+                          toggleMutation.mutate({ id: rule.id, isActive: !rule.isActive })
+                        }
                         role="switch"
                         type="button"
                       >
@@ -335,7 +360,8 @@ export function AutomationsPage() {
         {activeTab === "templates" && (
           <div className="form-stack">
             <p className="muted">
-              Pre-built gym automation workflows designed for high conversion, attendance reminders, and winback retention.
+              Pre-built gym automation workflows designed for high conversion, attendance reminders,
+              and winback retention.
             </p>
             <div className="templates-grid">
               {TEMPLATE_AUTOMATIONS.map((tmpl) => (
@@ -379,7 +405,9 @@ export function AutomationsPage() {
               <h2>1. Workflow Details</h2>
               <div className="form-row">
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="fitos-label" htmlFor="rule-name">Workflow Name *</label>
+                  <label className="fitos-label" htmlFor="rule-name">
+                    Workflow Name *
+                  </label>
                   <input
                     className="fitos-control"
                     id="rule-name"
@@ -392,7 +420,9 @@ export function AutomationsPage() {
               </div>
               <div className="form-row" style={{ marginTop: "1rem" }}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="fitos-label" htmlFor="rule-desc">Description (optional)</label>
+                  <label className="fitos-label" htmlFor="rule-desc">
+                    Description (optional)
+                  </label>
                   <input
                     className="fitos-control"
                     id="rule-desc"
@@ -485,7 +515,10 @@ export function AutomationsPage() {
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <span className="fitos-badge fitos-badge--success">{log.status}</span>
-                        <span className="muted" style={{ display: "block", fontSize: "0.75rem", marginTop: "0.2rem" }}>
+                        <span
+                          className="muted"
+                          style={{ display: "block", fontSize: "0.75rem", marginTop: "0.2rem" }}
+                        >
                           {formatDateTime(log.executedAt)}
                         </span>
                       </div>
@@ -493,7 +526,9 @@ export function AutomationsPage() {
                   ))}
                 </div>
               ) : (
-                <p className="muted">No execution logs recorded yet. Use &quot;Test Run&quot; on any active workflow.</p>
+                <p className="muted">
+                  No execution logs recorded yet. Use &quot;Test Run&quot; on any active workflow.
+                </p>
               )}
             </Card>
           </div>

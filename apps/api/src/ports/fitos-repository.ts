@@ -171,9 +171,7 @@ export interface FitosRepository {
   ping(): Promise<boolean>;
 
   findLoginIdentity(email: string): Promise<LoginIdentity | null>;
-  findUserById(
-    userId: string
-  ): Promise<{
+  findUserById(userId: string): Promise<{
     id: string;
     displayName: string;
     email: string | null;
@@ -463,7 +461,10 @@ export interface FitosRepository {
 
   // Insights Analytics
   getInsightsOverview(scope: TenantScope, branchId?: string): Promise<InsightsOverviewResponse>;
-  getTodayOverview(scope: TenantScope, branchId: string): Promise<import("@fitos/contracts").TodayOverviewResponse>;
+  getTodayOverview(
+    scope: TenantScope,
+    branchId: string
+  ): Promise<import("@fitos/contracts").TodayOverviewResponse>;
 
   // Automations
   listAutomations(scope: TenantScope): Promise<AutomationRuleResponse[]>;

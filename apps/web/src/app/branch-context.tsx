@@ -44,7 +44,11 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
         const first = branches[0];
         if (first) {
           setActiveBranchIdState(first.id);
-          try { localStorage.setItem(STORAGE_KEY, first.id); } catch { /* noop */ }
+          try {
+            localStorage.setItem(STORAGE_KEY, first.id);
+          } catch {
+            /* noop */
+          }
         }
       }
     }
@@ -52,7 +56,11 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
 
   const setActiveBranch = useCallback((id: string) => {
     setActiveBranchIdState(id);
-    try { localStorage.setItem(STORAGE_KEY, id); } catch { /* noop */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, id);
+    } catch {
+      /* noop */
+    }
   }, []);
 
   const activeBranch = branches.find((b) => b.id === activeBranchId);

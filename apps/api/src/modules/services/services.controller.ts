@@ -73,7 +73,15 @@ const updateRoomSchema = z
     isActive: z.boolean().optional()
   })
   .strict();
-const equipmentRequirementsSchema = z.object({ requirements: z.array(z.object({ poolId: z.string().uuid(), quantityRequired: z.number().int().min(1).max(1000) })).max(30) }).strict();
+const equipmentRequirementsSchema = z
+  .object({
+    requirements: z
+      .array(
+        z.object({ poolId: z.string().uuid(), quantityRequired: z.number().int().min(1).max(1000) })
+      )
+      .max(30)
+  })
+  .strict();
 
 @ApiTags("services")
 @Controller()
@@ -118,14 +126,35 @@ export class ServicesController {
   @Get("services/:serviceId/equipment-requirements")
   @RequirePermission("service:read")
   listEquipmentRequirements(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string) {
-    return this.repository.listServiceEquipmentRequirements({ tenantId: actor.tenantId, tenantUserId: actor.tenantUserId, userId: actor.userId, branchIds: actor.branchIds }, z.string().uuid().parse(serviceId));
+    return this.repository.listServiceEquipmentRequirements(
+      {
+        tenantId: actor.tenantId,
+        tenantUserId: actor.tenantUserId,
+        userId: actor.userId,
+        branchIds: actor.branchIds
+      },
+      z.string().uuid().parse(serviceId)
+    );
   }
 
   @Post("services/:serviceId/equipment-requirements")
   @RequirePermission("service:manage")
-  replaceEquipmentRequirements(@Actor() actor: RequestActor, @Param("serviceId") serviceId: string, @Body() body: unknown) {
+  replaceEquipmentRequirements(
+    @Actor() actor: RequestActor,
+    @Param("serviceId") serviceId: string,
+    @Body() body: unknown
+  ) {
     const input = equipmentRequirementsSchema.parse(body);
-    return this.repository.replaceServiceEquipmentRequirements({ tenantId: actor.tenantId, tenantUserId: actor.tenantUserId, userId: actor.userId, branchIds: actor.branchIds }, z.string().uuid().parse(serviceId), input.requirements);
+    return this.repository.replaceServiceEquipmentRequirements(
+      {
+        tenantId: actor.tenantId,
+        tenantUserId: actor.tenantUserId,
+        userId: actor.userId,
+        branchIds: actor.branchIds
+      },
+      z.string().uuid().parse(serviceId),
+      input.requirements
+    );
   }
 
   @Patch("services/:serviceId")

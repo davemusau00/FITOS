@@ -15,14 +15,13 @@ import {
 import { ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { z } from "zod";
-import type { RequestActor, SaaSTenantSignupRequest } from "@fitos/contracts";
+import type {
+  ImplementationInquiryStatus,
+  RequestActor,
+  SaaSTenantSignupRequest
+} from "@fitos/contracts";
 import { createHash } from "node:crypto";
-import {
-  ScryptPasswordHasher,
-  createCsrfToken,
-  createOpaqueSessionToken,
-  hashSessionToken
-} from "@fitos/auth";
+import { ScryptPasswordHasher, createOpaqueSessionToken } from "@fitos/auth";
 import { Public } from "../../common/auth/public.decorator.js";
 import { AuthMode } from "../../common/auth/auth-mode.decorator.js";
 import { Actor } from "../../common/request-context/actor.decorator.js";
@@ -117,7 +116,7 @@ export class PlatformController {
     if (!verified) throw new UnauthorizedException("Invalid credentials.");
 
     const platformUser = await this.repository.findUserById(identity.user.id);
-    if (!platformUser || !(platformUser as any).isPlatformAdmin) {
+    if (!platformUser || !platformUser.isPlatformAdmin) {
       throw new UnauthorizedException("Access denied: Not a platform administrator.");
     }
 
@@ -218,7 +217,9 @@ export class PlatformController {
   @AuthMode("platform")
   @RequirePlatformAdmin()
   listInquiries(@Query("status") status?: string) {
-    return this.repository.listImplementationInquiries(status as any);
+    return this.repository.listImplementationInquiries(
+      status as ImplementationInquiryStatus | undefined
+    );
   }
 
   @Get("implementation-inquiries/:id")

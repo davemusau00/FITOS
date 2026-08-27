@@ -39,33 +39,61 @@ const navGroups: NavGroup[] = [
     group: "People",
     items: [
       { to: "/app/members", label: "Members", icon: "users", permission: "member:read" },
-      { to: "/app/assessments", label: "FITOS Assess", icon: "spark", permission: "assessment:read" },
+      {
+        to: "/app/assessments",
+        label: "FITOS Assess",
+        icon: "spark",
+        permission: "assessment:read"
+      },
       { to: "/app/therapy", label: "FITOS Therapy", icon: "spark", permission: "service:read" },
-      { to: "/app/memberships", label: "Memberships", icon: "shield", permission: "membership:read" }
+      {
+        to: "/app/memberships",
+        label: "Memberships",
+        icon: "shield",
+        permission: "membership:read"
+      }
     ]
   },
   {
     group: "Growth",
     items: [
       { to: "/app/leads", label: "Leads & CRM", icon: "user", permission: "lead:read" },
-      { to: "/app/insights", label: "Insights & Analytics", icon: "dashboard", permission: "tenant:read" },
+      {
+        to: "/app/insights",
+        label: "Insights & Analytics",
+        icon: "dashboard",
+        permission: "tenant:read"
+      },
       { to: "/app/automations", label: "Automations", icon: "spark", permission: "tenant:read" }
     ]
   },
   {
     group: "Business",
     items: [
-      { to: "/app/services", label: "Services & Classes", icon: "spark", permission: "service:read" },
-      { to: "/app/equipment", label: "Equipment & Assets", icon: "check", permission: "schedule:read" },
-      { to: "/app/inventory", label: "Inventory & Stock", icon: "check", permission: "tenant:read" },
+      {
+        to: "/app/services",
+        label: "Services & Classes",
+        icon: "spark",
+        permission: "service:read"
+      },
+      {
+        to: "/app/equipment",
+        label: "Equipment & Assets",
+        icon: "check",
+        permission: "schedule:read"
+      },
+      {
+        to: "/app/inventory",
+        label: "Inventory & Stock",
+        icon: "check",
+        permission: "tenant:read"
+      },
       { to: "/app/staff", label: "Team & Staff", icon: "team", permission: "staff:read" }
     ]
   },
   {
     group: "Settings",
-    items: [
-      { to: "/app/settings", label: "Settings", icon: "settings", permission: "tenant:read" }
-    ]
+    items: [{ to: "/app/settings", label: "Settings", icon: "settings", permission: "tenant:read" }]
   }
 ];
 
@@ -76,7 +104,12 @@ function AppShellInner() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
 
-  const { activeBranchId, activeBranch: ctxBranch, setActiveBranch, branches: ctxBranches } = useBranch();
+  const {
+    activeBranchId,
+    activeBranch: ctxBranch,
+    setActiveBranch,
+    branches: ctxBranches
+  } = useBranch();
 
   const { auth, signOut } = useAuth();
   const navigate = useNavigate();
@@ -145,11 +178,7 @@ function AppShellInner() {
       >
         {/* Brandmark / Logo Header */}
         <div className="app-sidebar__header">
-          <NavLink
-            className="fitos-logo"
-            onClick={() => setMenuOpen(false)}
-            to="/app/overview"
-          >
+          <NavLink className="fitos-logo" onClick={() => setMenuOpen(false)} to="/app/overview">
             <FitosLogo height={24} />
           </NavLink>
         </div>
@@ -237,9 +266,7 @@ function AppShellInner() {
           {/* Grouped Navigation */}
           <nav className="app-nav">
             {navGroups.map((group) => {
-              const accessibleItems = group.items.filter((item) =>
-                can(auth, item.permission)
-              );
+              const accessibleItems = group.items.filter((item) => can(auth, item.permission));
               if (accessibleItems.length === 0) return null;
               return (
                 <div className="nav-group" key={group.group}>
@@ -303,7 +330,11 @@ function AppShellInner() {
                 {can(auth, "tenant:settings") ? "Administrator" : "Staff"}
               </span>
             </div>
-            <Icon name="more" size={16} style={{ color: "var(--text-muted)", marginLeft: "auto" }} />
+            <Icon
+              name="more"
+              size={16}
+              style={{ color: "var(--text-muted)", marginLeft: "auto" }}
+            />
           </button>
         </div>
       </aside>

@@ -65,7 +65,13 @@ export function BranchesSettingsPage() {
                       <Icon name="building" size={16} />
                     </div>
                     <div>
-                      <strong style={{ color: "var(--text-primary)", fontSize: "0.9rem", display: "block" }}>
+                      <strong
+                        style={{
+                          color: "var(--text-primary)",
+                          fontSize: "0.9rem",
+                          display: "block"
+                        }}
+                      >
                         {branch.name}
                       </strong>
                       <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
@@ -105,7 +111,11 @@ export function BranchesSettingsPage() {
             <h2>Add New Branch</h2>
           </div>
 
-          <FormField hint="Location or facility title (e.g. Downtown Studio, Westlands Hub)." htmlFor="branchName" label="Branch Name">
+          <FormField
+            hint="Location or facility title (e.g. Downtown Studio, Westlands Hub)."
+            htmlFor="branchName"
+            label="Branch Name"
+          >
             <input
               className="fitos-control"
               id="branchName"
@@ -114,8 +124,18 @@ export function BranchesSettingsPage() {
             />
           </FormField>
 
-          <FormField hint="City or locality where this facility is based." htmlFor="branchCity" label="City" optional>
-            <input className="fitos-control" id="branchCity" placeholder="e.g. Nairobi" {...register("city")} />
+          <FormField
+            hint="City or locality where this facility is based."
+            htmlFor="branchCity"
+            label="City"
+            optional
+          >
+            <input
+              className="fitos-control"
+              id="branchCity"
+              placeholder="e.g. Nairobi"
+              {...register("city")}
+            />
           </FormField>
 
           <FormField hint="Local operational timezone." htmlFor="branchTimezone" label="Timezone">

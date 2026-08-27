@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Icon, StatusBadge, Card, EmptyState, Button } from "@fitos/ui";
+import { Icon, StatusBadge, EmptyState } from "@fitos/ui";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
 import { useBranch } from "../../app/branch-context";
@@ -11,9 +11,7 @@ const queryKeys = {
   branches: ["branches"] as const,
   staff: ["staff"] as const,
   bookings: ["bookings"] as const,
-  services: ["services"] as const,
-  leads: ["leads"] as const,
-  attendance: ["attendance"] as const
+  services: ["services"] as const
 };
 
 export function OverviewPage() {
@@ -49,19 +47,6 @@ export function OverviewPage() {
     queryKey: ["services", activeBranchId, "overview"],
     queryFn: () => api.servicesByBranch(activeBranchId),
     enabled: can(auth, "service:read")
-  });
-
-  const leads = useQuery({
-    queryKey: ["leads", activeBranchId, "overview"],
-    queryFn: () => api.leads(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
-    enabled: can(auth, "lead:read")
-  });
-
-  const attendance = useQuery({
-    queryKey: ["attendance", activeBranchId, "overview"],
-    queryFn: () =>
-      api.attendanceRecords(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
-    enabled: can(auth, "attendance:read")
   });
 
   if (members.isLoading || branches.isLoading) return <PageLoading />;

@@ -1,6 +1,7 @@
 export type SaaSPlan = "starter" | "pro" | "business";
 
-export type TenantAccountStatus = "trial" | "active" | "grace" | "suspended" | "cancelled" | "archived";
+export type TenantAccountStatus =
+  "trial" | "active" | "grace" | "suspended" | "cancelled" | "archived";
 
 export type SaaSCapabilityKey =
   | "feature.crm"
@@ -74,7 +75,14 @@ export interface FeatureFlagResponse {
   category: "core" | "advanced" | "beta";
 }
 
-export type ImplementationInquiryStatus = "draft" | "submitted" | "qualified" | "needs_clarification" | "approved" | "converted" | "archived";
+export type ImplementationInquiryStatus =
+  | "draft"
+  | "submitted"
+  | "qualified"
+  | "needs_clarification"
+  | "approved"
+  | "converted"
+  | "archived";
 export interface ImplementationInquiryDraft {
   id?: string;
   contactName?: string;

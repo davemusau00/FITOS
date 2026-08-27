@@ -1,10 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { createHash } from "node:crypto";
-import type {
-  AssessmentCategory,
-  AssessmentSessionResponse,
-  DeviceVendor
-} from "@fitos/contracts";
+import type { AssessmentCategory, AssessmentSessionResponse, DeviceVendor } from "@fitos/contracts";
 import { FitosRepositoryToken } from "../../ports/tokens.js";
 import type { FitosRepository, TenantScope } from "../../ports/fitos-repository.js";
 
@@ -27,9 +23,7 @@ export interface DeviceImportResult {
 
 @Injectable()
 export class DeviceImportService {
-  constructor(
-    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
-  ) {}
+  constructor(@Inject(FitosRepositoryToken) private readonly repository: FitosRepository) {}
 
   async importDeviceData(
     scope: TenantScope,

@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth";
 import { AppShell } from "./shell";
+import { SurfaceShell } from "./surface-shell";
 import {
   AttendancePage,
   AutomationsPage,
@@ -34,12 +35,12 @@ import {
   InventoryPage,
   AssessmentsPage,
   TherapyPage,
-  AccountSubscriptionPage
-  ,FitosLandingPage
-  ,ConfigureFitosPage
-  ,ImplementationInquiriesPage
-  ,ImplementationInquiryDetailPage
-  ,SitesPage
+  AccountSubscriptionPage,
+  FitosLandingPage,
+  ConfigureFitosPage,
+  ImplementationInquiriesPage,
+  ImplementationInquiryDetailPage,
+  SitesPage
 } from "../features";
 
 function ProtectedRoute() {
@@ -59,6 +60,23 @@ export function AppRouter() {
       <Route element={<TenantSignupPage />} path="/signup" />
       <Route element={<MemberPortalPage />} path="/member/*" />
       <Route element={<ProtectedRoute />}>
+        <Route element={<SurfaceShell surface="ops" />} path="/ops">
+          <Route element={<OverviewPage />} index />
+          <Route element={<SchedulePage />} path="schedule" />
+          <Route element={<BookingsPage />} path="bookings" />
+          <Route element={<AttendancePage />} path="attendance" />
+        </Route>
+        <Route element={<SurfaceShell surface="front desk" />} path="/reception">
+          <Route element={<ReceptionPage />} index />
+        </Route>
+        <Route element={<SurfaceShell surface="coach" />} path="/coach">
+          <Route element={<SchedulePage />} index />
+          <Route element={<ClassRosterPage />} path="roster/:occurrenceId" />
+        </Route>
+        <Route element={<SurfaceShell surface="practice" />} path="/practice">
+          <Route element={<TherapyPage />} index />
+          <Route element={<AssessmentsPage />} path="assessments" />
+        </Route>
         <Route element={<AppShell />} path="/app">
           <Route element={<Navigate replace to="overview" />} index />
           <Route element={<OverviewPage />} path="overview" />
@@ -102,7 +120,10 @@ export function AppRouter() {
           <Route element={<SecuritySettingsPage />} path="settings/security" />
           <Route element={<AccountSubscriptionPage />} path="settings/subscription" />
           <Route element={<ImplementationInquiriesPage />} path="platform/inquiries" />
-          <Route element={<ImplementationInquiryDetailPage />} path="platform/inquiries/:inquiryId" />
+          <Route
+            element={<ImplementationInquiryDetailPage />}
+            path="platform/inquiries/:inquiryId"
+          />
           <Route element={<SitesPage />} path="sites" />
         </Route>
         <Route element={<OnboardingPage />} path="/onboarding" />

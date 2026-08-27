@@ -156,8 +156,16 @@ export function MembershipsPage() {
       {/* Tab Navigation */}
       <div className="member-tab-bar" style={{ marginBottom: "1.25rem" }}>
         {[
-          { id: "plans", label: `Plans Catalog (${plans.data?.length ?? 0})`, icon: "shield" as const },
-          { id: "retention", label: `Retention Queue (${inactiveMembers.length})`, icon: "users" as const },
+          {
+            id: "plans",
+            label: `Plans Catalog (${plans.data?.length ?? 0})`,
+            icon: "shield" as const
+          },
+          {
+            id: "retention",
+            label: `Retention Queue (${inactiveMembers.length})`,
+            icon: "users" as const
+          },
           { id: "assign", label: "Assign Entitlements", icon: "plus" as const }
         ].map((tab) => (
           <button
@@ -231,13 +239,19 @@ export function MembershipsPage() {
                         {member.firstName} {member.lastName ?? ""}
                       </strong>
                       <span>
-                        {member.phone ?? member.email ?? "No contact recorded"} · Joined {formatDate(member.joinedAt)}
+                        {member.phone ?? member.email ?? "No contact recorded"} · Joined{" "}
+                        {formatDate(member.joinedAt)}
                       </span>
                     </div>
                     <StatusBadge status={member.status} />
                     <div className="form-actions">
                       <Button
-                        onClick={() => setAssigningMember({ id: member.id, name: `${member.firstName} ${member.lastName ?? ""}`.trim() })}
+                        onClick={() =>
+                          setAssigningMember({
+                            id: member.id,
+                            name: `${member.firstName} ${member.lastName ?? ""}`.trim()
+                          })
+                        }
                         size="small"
                         variant="secondary"
                       >
@@ -309,7 +323,12 @@ export function MembershipsPage() {
                   <div className="form-actions">
                     <StatusBadge status={m.status} />
                     <Button
-                      onClick={() => setAssigningMember({ id: m.id, name: `${m.firstName} ${m.lastName ?? ""}`.trim() })}
+                      onClick={() =>
+                        setAssigningMember({
+                          id: m.id,
+                          name: `${m.firstName} ${m.lastName ?? ""}`.trim()
+                        })
+                      }
                       size="small"
                       variant="primary"
                     >
@@ -426,7 +445,13 @@ function CreatePlanModal({
                 required: "Plan name is required",
                 onChange: (e) => {
                   const val = e.target.value as string;
-                  setValue("slug", val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+                  setValue(
+                    "slug",
+                    val
+                      .toLowerCase()
+                      .replace(/[^a-z0-9]+/g, "-")
+                      .replace(/^-|-$/g, "")
+                  );
                 }
               })}
             />
@@ -441,7 +466,11 @@ function CreatePlanModal({
             />
           </FormField>
 
-          <FormField error={errors.includedCredits?.message} htmlFor="planCredits" label="Included class credits">
+          <FormField
+            error={errors.includedCredits?.message}
+            htmlFor="planCredits"
+            label="Included class credits"
+          >
             <input
               className="fitos-control"
               id="planCredits"
@@ -566,17 +595,27 @@ function AssignPlanModal({
       <form className="form-stack" onSubmit={handleSubmit(onSubmit)}>
         <div className="form-grid">
           <FormField htmlFor="assignPlanId" label="Select plan">
-            <select className="fitos-control" id="assignPlanId" {...register("planId", { required: true })}>
+            <select
+              className="fitos-control"
+              id="assignPlanId"
+              {...register("planId", { required: true })}
+            >
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.includedCredits} credits · {p.durationDays ? `${p.durationDays}d` : "ongoing"})
+                  {p.name} ({p.includedCredits} credits ·{" "}
+                  {p.durationDays ? `${p.durationDays}d` : "ongoing"})
                 </option>
               ))}
             </select>
           </FormField>
 
           <FormField htmlFor="assignStartsAt" label="Start date">
-            <input className="fitos-control" id="assignStartsAt" type="date" {...register("startsAt", { required: true })} />
+            <input
+              className="fitos-control"
+              id="assignStartsAt"
+              type="date"
+              {...register("startsAt", { required: true })}
+            />
           </FormField>
         </div>
 

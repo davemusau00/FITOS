@@ -35,12 +35,16 @@ const createProtocolSchema = z
   })
   .strict();
 
-const createModalitySchema = z.object({
-  code: z.enum(modalityCodes), name: z.string().trim().min(1).max(150),
-  category: z.enum(["neuromuscular", "unweighted_gait", "pneumatic_compression", "thermal_cryo"]),
-  defaultDurationMinutes: z.number().int().min(1).max(240), contraindications: z.array(z.string().trim().min(1)),
-  description: z.string().trim().min(1).max(2000)
-}).strict();
+const createModalitySchema = z
+  .object({
+    code: z.enum(modalityCodes),
+    name: z.string().trim().min(1).max(150),
+    category: z.enum(["neuromuscular", "unweighted_gait", "pneumatic_compression", "thermal_cryo"]),
+    defaultDurationMinutes: z.number().int().min(1).max(240),
+    contraindications: z.array(z.string().trim().min(1)),
+    description: z.string().trim().min(1).max(2000)
+  })
+  .strict();
 
 const createSessionSchema = z
   .object({
@@ -67,9 +71,7 @@ const toScope = (actor: RequestActor) => ({
 @ApiTags("therapy")
 @Controller("therapy")
 export class TherapyController {
-  constructor(
-    @Inject(FitosRepositoryToken) private readonly repository: FitosRepository
-  ) {}
+  constructor(@Inject(FitosRepositoryToken) private readonly repository: FitosRepository) {}
 
   @Get("modalities")
   @RequirePermission("service:read")
@@ -80,7 +82,10 @@ export class TherapyController {
   @Post("modalities")
   @RequirePermission("service:manage")
   createModality(@Actor() actor: RequestActor, @Body() body: unknown) {
-    return this.repository.createTherapyModality(toScope(actor), createModalitySchema.parse(body) as CreateTherapyModalityRequest);
+    return this.repository.createTherapyModality(
+      toScope(actor),
+      createModalitySchema.parse(body) as CreateTherapyModalityRequest
+    );
   }
 
   @Get("protocols")

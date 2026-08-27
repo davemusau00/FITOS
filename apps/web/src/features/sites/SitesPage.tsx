@@ -39,8 +39,16 @@ const DEFAULT_BLOCKS: SiteBlock[] = [
     type: "feature_grid",
     heading: "World-Class Facilities",
     items: [
-      { title: "Olympic Lifting", desc: "Eleiko barbells, calibrated plates & power cages.", icon: "🏋️" },
-      { title: "Reformer Pilates", desc: "12 Allegro 2 Reformers with certified instructors.", icon: "🧘" },
+      {
+        title: "Olympic Lifting",
+        desc: "Eleiko barbells, calibrated plates & power cages.",
+        icon: "🏋️"
+      },
+      {
+        title: "Reformer Pilates",
+        desc: "12 Allegro 2 Reformers with certified instructors.",
+        icon: "🧘"
+      },
       { title: "Diagnostic Lab", desc: "InBody 970 segmental BIA and VALD ForceDecks.", icon: "🔬" }
     ]
   },
@@ -69,7 +77,9 @@ export function SitesPage() {
   const [slug, setSlug] = useState("home");
   const [blocks, setBlocks] = useState<SiteBlock[]>(DEFAULT_BLOCKS);
   const [metaTitle, setMetaTitle] = useState("FITOS Gym | Everything Fitness");
-  const [metaDesc, setMetaDesc] = useState("Book group classes, physical therapy and diagnostic scans.");
+  const [metaDesc, setMetaDesc] = useState(
+    "Book group classes, physical therapy and diagnostic scans."
+  );
   const [activeTab, setActiveTab] = useState<"blocks" | "theme" | "seo">("blocks");
   const [themeColor, setThemeColor] = useState("#3b82f6");
 
@@ -93,15 +103,29 @@ export function SitesPage() {
     const newBlock: SiteBlock = {
       id: `block-${Date.now()}`,
       type,
-      heading: type === "hero" ? "New Hero Headline" : type === "services_list" ? "Our Signature Services" : type === "testimonials" ? "What Our Athletes Say" : type === "trainer_profiles" ? "Meet the Coaching Staff" : type === "contact_form" ? "Get in Touch" : "New Section",
+      heading:
+        type === "hero"
+          ? "New Hero Headline"
+          : type === "services_list"
+            ? "Our Signature Services"
+            : type === "testimonials"
+              ? "What Our Athletes Say"
+              : type === "trainer_profiles"
+                ? "Meet the Coaching Staff"
+                : type === "contact_form"
+                  ? "Get in Touch"
+                  : "New Section",
       subheading: "Customizable subtext describing this facility feature.",
       ctaText: "Get Started",
       ctaLink: "#",
-      items: type === "feature_grid" ? [
-        { title: "Feature 1", desc: "Description of benefit", icon: "✨" },
-        { title: "Feature 2", desc: "Description of benefit", icon: "⚡" },
-        { title: "Feature 3", desc: "Description of benefit", icon: "🎯" }
-      ] : []
+      items:
+        type === "feature_grid"
+          ? [
+              { title: "Feature 1", desc: "Description of benefit", icon: "✨" },
+              { title: "Feature 2", desc: "Description of benefit", icon: "⚡" },
+              { title: "Feature 3", desc: "Description of benefit", icon: "🎯" }
+            ]
+          : []
     };
     setBlocks((prev) => [...prev, newBlock]);
   };
@@ -115,15 +139,15 @@ export function SitesPage() {
     const target = direction === "up" ? index - 1 : index + 1;
     if (target < 0 || target >= next.length) return;
     const temp = next[index];
-    next[index] = next[target];
+    const replacement = next[target];
+    if (!temp || !replacement) return;
+    next[index] = replacement;
     next[target] = temp;
     setBlocks(next);
   };
 
   const updateBlockField = (id: string, field: keyof SiteBlock, value: any) => {
-    setBlocks((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, [field]: value } : b))
-    );
+    setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
   };
 
   if (pages.isLoading) return <PageLoading />;
@@ -140,7 +164,16 @@ export function SitesPage() {
         {/* Editor Main */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--color-border, rgba(255,255,255,0.08))", paddingBottom: "1rem", marginBottom: "1.25rem" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1px solid var(--color-border, rgba(255,255,255,0.08))",
+                paddingBottom: "1rem",
+                marginBottom: "1.25rem"
+              }}
+            >
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button
                   onClick={() => setActiveTab("blocks")}
@@ -186,14 +219,39 @@ export function SitesPage() {
 
                 {/* Blocks list */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center"
+                    }}
+                  >
                     <h3 style={{ fontSize: "1rem", margin: 0 }}>Sections on this Page</h3>
                     <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                      {(["hero", "feature_grid", "services_list", "schedule_embed", "trainer_profiles", "testimonials", "cta_banner", "contact_form"] as const).map((type) => (
+                      {(
+                        [
+                          "hero",
+                          "feature_grid",
+                          "services_list",
+                          "schedule_embed",
+                          "trainer_profiles",
+                          "testimonials",
+                          "cta_banner",
+                          "contact_form"
+                        ] as const
+                      ).map((type) => (
                         <button
                           key={type}
                           onClick={() => addBlock(type)}
-                          style={{ padding: "0.3rem 0.6rem", fontSize: "0.75rem", borderRadius: "0.3rem", background: "rgba(59, 130, 246, 0.15)", border: "1px solid rgba(59, 130, 246, 0.3)", color: "#60a5fa", cursor: "pointer" }}
+                          style={{
+                            padding: "0.3rem 0.6rem",
+                            fontSize: "0.75rem",
+                            borderRadius: "0.3rem",
+                            background: "rgba(59, 130, 246, 0.15)",
+                            border: "1px solid rgba(59, 130, 246, 0.3)",
+                            color: "#60a5fa",
+                            cursor: "pointer"
+                          }}
                         >
                           + {type.replace("_", " ")}
                         </button>
@@ -202,15 +260,81 @@ export function SitesPage() {
                   </div>
 
                   {blocks.map((block, idx) => (
-                    <div key={block.id} style={{ background: "rgba(30, 41, 59, 0.5)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "0.75rem", padding: "1.25rem" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                        <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", color: "#60a5fa", background: "rgba(59, 130, 246, 0.15)", padding: "0.2rem 0.5rem", borderRadius: "0.25rem" }}>
+                    <div
+                      key={block.id}
+                      style={{
+                        background: "rgba(30, 41, 59, 0.5)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: "0.75rem",
+                        padding: "1.25rem"
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "0.75rem"
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            color: "#60a5fa",
+                            background: "rgba(59, 130, 246, 0.15)",
+                            padding: "0.2rem 0.5rem",
+                            borderRadius: "0.25rem"
+                          }}
+                        >
                           {idx + 1}. {block.type.replace("_", " ")}
                         </span>
                         <div style={{ display: "flex", gap: "0.3rem" }}>
-                          <button type="button" onClick={() => moveBlock(idx, "up")} disabled={idx === 0} style={{ padding: "0.2rem 0.5rem", background: "none", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer", borderRadius: "0.2rem" }}>↑</button>
-                          <button type="button" onClick={() => moveBlock(idx, "down")} disabled={idx === blocks.length - 1} style={{ padding: "0.2rem 0.5rem", background: "none", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer", borderRadius: "0.2rem" }}>↓</button>
-                          <button type="button" onClick={() => removeBlock(block.id)} style={{ padding: "0.2rem 0.5rem", background: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#f87171", cursor: "pointer", borderRadius: "0.2rem" }}>✕</button>
+                          <button
+                            type="button"
+                            onClick={() => moveBlock(idx, "up")}
+                            disabled={idx === 0}
+                            style={{
+                              padding: "0.2rem 0.5rem",
+                              background: "none",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              color: "#fff",
+                              cursor: "pointer",
+                              borderRadius: "0.2rem"
+                            }}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveBlock(idx, "down")}
+                            disabled={idx === blocks.length - 1}
+                            style={{
+                              padding: "0.2rem 0.5rem",
+                              background: "none",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              color: "#fff",
+                              cursor: "pointer",
+                              borderRadius: "0.2rem"
+                            }}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeBlock(block.id)}
+                            style={{
+                              padding: "0.2rem 0.5rem",
+                              background: "rgba(239, 68, 68, 0.2)",
+                              border: "1px solid rgba(239, 68, 68, 0.4)",
+                              color: "#f87171",
+                              cursor: "pointer",
+                              borderRadius: "0.2rem"
+                            }}
+                          >
+                            ✕
+                          </button>
                         </div>
                       </div>
 
@@ -226,23 +350,35 @@ export function SitesPage() {
                           Subtext / Description
                           <input
                             value={block.subheading ?? ""}
-                            onChange={(e) => updateBlockField(block.id, "subheading", e.target.value)}
+                            onChange={(e) =>
+                              updateBlockField(block.id, "subheading", e.target.value)
+                            }
                           />
                         </label>
                         {(block.type === "hero" || block.type === "cta_banner") && (
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "1fr 1fr",
+                              gap: "0.75rem"
+                            }}
+                          >
                             <label style={{ fontSize: "0.85rem" }}>
                               Button Label
                               <input
                                 value={block.ctaText ?? ""}
-                                onChange={(e) => updateBlockField(block.id, "ctaText", e.target.value)}
+                                onChange={(e) =>
+                                  updateBlockField(block.id, "ctaText", e.target.value)
+                                }
                               />
                             </label>
                             <label style={{ fontSize: "0.85rem" }}>
                               Button Target Link
                               <input
                                 value={block.ctaLink ?? ""}
-                                onChange={(e) => updateBlockField(block.id, "ctaLink", e.target.value)}
+                                onChange={(e) =>
+                                  updateBlockField(block.id, "ctaLink", e.target.value)
+                                }
                               />
                             </label>
                           </div>
@@ -258,11 +394,23 @@ export function SitesPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                 <label>
                   Brand Accent Color
-                  <input type="color" value={themeColor} onChange={(e) => setThemeColor(e.target.value)} style={{ height: "42px", padding: "2px", width: "100%" }} />
+                  <input
+                    type="color"
+                    value={themeColor}
+                    onChange={(e) => setThemeColor(e.target.value)}
+                    style={{ height: "42px", padding: "2px", width: "100%" }}
+                  />
                 </label>
-                <div style={{ background: "rgba(30, 41, 59, 0.6)", padding: "1rem", borderRadius: "0.5rem" }}>
+                <div
+                  style={{
+                    background: "rgba(30, 41, 59, 0.6)",
+                    padding: "1rem",
+                    borderRadius: "0.5rem"
+                  }}
+                >
                   <p style={{ margin: 0, fontSize: "0.9rem", color: "#cbd5e1" }}>
-                    Theme styles apply automatically to both the public site renderer and member portal headers.
+                    Theme styles apply automatically to both the public site renderer and member
+                    portal headers.
                   </p>
                 </div>
               </div>
@@ -276,7 +424,11 @@ export function SitesPage() {
                 </label>
                 <label>
                   Meta Description
-                  <textarea rows={3} value={metaDesc} onChange={(e) => setMetaDesc(e.target.value)} />
+                  <textarea
+                    rows={3}
+                    value={metaDesc}
+                    onChange={(e) => setMetaDesc(e.target.value)}
+                  />
                 </label>
               </div>
             )}
@@ -294,25 +446,56 @@ export function SitesPage() {
                   style={{
                     padding: "0.75rem",
                     borderRadius: "0.5rem",
-                    background: selectedPageId === page.id ? "rgba(59, 130, 246, 0.2)" : "rgba(30, 41, 59, 0.4)",
-                    border: selectedPageId === page.id ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.06)"
+                    background:
+                      selectedPageId === page.id
+                        ? "rgba(59, 130, 246, 0.2)"
+                        : "rgba(30, 41, 59, 0.4)",
+                    border:
+                      selectedPageId === page.id
+                        ? "1px solid #3b82f6"
+                        : "1px solid rgba(255,255,255,0.06)"
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "0.25rem"
+                    }}
+                  >
                     <strong>{page.title}</strong>
                     <StatusBadge status={page.status} />
                   </div>
-                  <div style={{ fontSize: "0.8rem", color: "#94a3b8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span>/{page.slug} · v{page.version}</span>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#94a3b8",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center"
+                    }}
+                  >
+                    <span>
+                      /{page.slug} · v{page.version}
+                    </span>
                     {page.status !== "published" && (
-                      <Button size="small" onClick={() => publish.mutate(page.id)} loading={publish.isPending}>
+                      <Button
+                        size="small"
+                        onClick={() => publish.mutate(page.id)}
+                        loading={publish.isPending}
+                      >
                         Publish
                       </Button>
                     )}
                   </div>
                 </div>
               ))}
-              {!pages.data?.length && <p className="muted" style={{ fontSize: "0.9rem" }}>No pages published yet.</p>}
+              {!pages.data?.length && (
+                <p className="muted" style={{ fontSize: "0.9rem" }}>
+                  No pages published yet.
+                </p>
+              )}
             </div>
           </Card>
         </div>

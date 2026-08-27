@@ -1,11 +1,13 @@
 import type { WorkerJob } from "../jobs.js";
+import { dispatchAutomationAction } from "../automation/dispatcher.js";
+import type { AutomationActionResult } from "@fitos/contracts";
 
 /**
  * The processor intentionally delegates to integration ports in later slices.
  * It validates typed job payloads before side effects and makes eventId the
  * natural idempotency key for those adapters.
  */
-export async function processOperationsJob(job: WorkerJob): Promise<void> {
+export async function processOperationsJob(job: WorkerJob): Promise<AutomationActionResult | void> {
   switch (job.type) {
     case "notifications.send":
       await dispatchNotification(job);
@@ -31,19 +33,18 @@ export async function processOperationsJob(job: WorkerJob): Promise<void> {
       );
       return;
     case "automations.execute":
-      process.stdout.write(
-        JSON.stringify({
-          event: "automation.simulated",
-          eventId: job.eventId,
-          tenantId: job.tenantId,
-          ruleId: job.payload.ruleId,
-          triggerEvent: job.payload.triggerEvent,
-          idempotencyKey: job.payload.idempotencyKey,
-          actionStatus: "simulated",
-          message: "Automation execution was simulated; no customer communication was sent."
-        }) + "\n"
-      );
-      return;
+      if (!job.payload.actionType)
+        throw new Error("Automation actionType is required for execution.");
+      return dispatchAutomationAction(job.payload.actionType, {
+        actionId: job.payload.actionId ?? job.eventId,
+        tenantId: job.tenantId,
+        recipient:
+          typeof job.payload.actionConfig?.recipient === "string"
+            ? job.payload.actionConfig.recipient
+            : undefined,
+        config: job.payload.actionConfig ?? {},
+        simulation: job.payload.simulation
+      });
   }
 }
 

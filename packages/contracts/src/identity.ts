@@ -56,7 +56,21 @@ export interface AuthMeResponse {
   branches: BranchResponse[];
   permissions: PermissionKey[];
   selectedBranchId: string | null;
+  role: RoleResponse;
+  defaultWorkspace: WorkspaceKey;
+  availableWorkspaces: WorkspaceKey[];
 }
+
+export const WORKSPACE_KEYS = [
+  "command",
+  "ops",
+  "front_desk",
+  "coach",
+  "practice",
+  "member",
+  "platform"
+] as const;
+export type WorkspaceKey = (typeof WORKSPACE_KEYS)[number];
 
 export interface LoginRequest {
   email: string;
