@@ -53,6 +53,7 @@ complete.
 - [x] HTTP security coverage asserts the server-derived onboarding payload and workspace contract on authenticated staff context.
 - [x] In-memory member portal eligibility now matches Drizzle branch access and ignores cancelled bookings when detecting duplicates.
 - [x] CRM lead stage, conversion and follow-up mutations now emit consistent success/error toast feedback in addition to inline errors.
+- [x] Drizzle Today aggregates now derive expected arrivals, no-shows, next scheduled session and due follow-ups from tenant/branch-scoped records instead of hardcoded zero/null fallbacks.
 - [x] Member booking and cancellation mutations now emit consistent success/error toast feedback while retaining server-driven outcomes.
 
 ### Verified checks
