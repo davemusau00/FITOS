@@ -589,6 +589,22 @@ export const api = {
     request<import("@fitos/contracts").AccountExportRequestResponse[]>(
       "/platform/account-export-requests"
     ),
+  planChangeRequests: () =>
+    request<import("@fitos/contracts").PlanChangeRequestResponse[]>(
+      "/users/me/plan-change-requests"
+    ),
+  requestPlanChange: (requestedPlan: import("@fitos/contracts").SaaSPlan) =>
+    request<import("@fitos/contracts").PlanChangeRequestResponse>(
+      "/users/me/plan-change-requests",
+      {
+        method: "POST",
+        body: json({ requestedPlan })
+      }
+    ),
+  platformPlanChangeRequests: () =>
+    request<import("@fitos/contracts").PlanChangeRequestResponse[]>(
+      "/platform/plan-change-requests"
+    ),
   transitionPlatformTenantStatus: (
     tenantId: string,
     status: import("@fitos/contracts").TenantAccountStatus,

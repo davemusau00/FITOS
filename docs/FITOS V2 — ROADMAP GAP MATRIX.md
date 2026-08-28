@@ -256,11 +256,11 @@ Same persistence/visibility requirements as above, with destructive-action safeg
 
 ### Acceptance
 
-**Current state:** No durable non-financial plan-change request resource or Platform approval/rejection workflow exists.
+**Current state:** Durable tenant plan-change requests and metadata-only Platform visibility now exist; Platform approval/rejection and applying an approved plan remain open.
 
-**Implementation evidence (2026-08-28):** Account Plan now labels the assisted contact CTA as “Request a plan change” and retains explicit no-checkout/payment-collection copy. Durable request persistence and Platform approval/rejection remain open.
+**Implementation evidence (2026-08-28):** Added the `plan_change_requests` forward migration/schema, shared request contract, tenant-scoped PostgreSQL/in-memory persistence, idempotent tenant create/list endpoints, audit emission, and metadata-only Platform listing. Account Plan retains an assisted “Request a plan change” contact CTA with no checkout/payment collection. Platform decision actions and approved-plan application remain open.
 
-**Implementation evidence (2026-08-28):** No tenant request endpoint, persisted request status, Platform decision endpoint, or audit reason contract was found in the current API or shared contracts. The Account Plan CTA is currently an assisted contact handoff only.
+**Implementation evidence (2026-08-28):** Tenant request creation/listing and persisted `requested` status are implemented; Platform decision endpoint, actor/reason capture, and effective plan application are not yet implemented.
 
 When implemented, tenant can:
 
