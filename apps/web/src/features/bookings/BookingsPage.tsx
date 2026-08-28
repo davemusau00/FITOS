@@ -35,17 +35,17 @@ export function BookingsPage() {
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const services = useQuery({
-    queryKey: ["services", activeBranchId],
+    queryKey: branchQueryKeys.list("services", activeBranchId),
     queryFn: () => api.servicesByBranch(activeBranchId),
     enabled: Boolean(activeBranchId)
   });
   const members = useQuery({
-    queryKey: ["members", activeBranchId, "lookup"],
+    queryKey: branchQueryKeys.list("members", activeBranchId, "lookup"),
     queryFn: () => api.members(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
     enabled: Boolean(activeBranchId)
   });
   const occurrences = useQuery({
-    queryKey: ["schedule", activeBranchId, "lookup"],
+    queryKey: branchQueryKeys.list("schedule", activeBranchId, "lookup"),
     queryFn: () => api.scheduleOccurrences(new URLSearchParams({ branchId: activeBranchId })),
     enabled: Boolean(activeBranchId)
   });

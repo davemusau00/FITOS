@@ -14,7 +14,7 @@ export function OpsDashboardPage() {
     enabled: Boolean(activeBranchId)
   });
   const services = useQuery({
-    queryKey: ["services", activeBranchId, "ops"],
+    queryKey: branchQueryKeys.list("services", activeBranchId, "ops"),
     queryFn: () => api.servicesByBranch(activeBranchId),
     enabled: Boolean(activeBranchId)
   });
