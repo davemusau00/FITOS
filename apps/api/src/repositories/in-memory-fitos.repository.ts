@@ -3916,6 +3916,8 @@ export class InMemoryFitosRepository implements FitosRepository {
       .filter((r) => !filters.occurrenceId || r.occurrenceId === filters.occurrenceId)
       .filter((r) => !filters.memberId || r.memberId === filters.memberId)
       .filter((r) => !filters.status || r.status === filters.status)
+      .filter((r) => !filters.from || r.createdAt >= filters.from)
+      .filter((r) => !filters.to || r.createdAt <= filters.to)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
     const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
     const selected = rows.slice(0, limit + 1);

@@ -34,6 +34,8 @@ const attendanceListQuerySchema = z
     occurrenceId: z.string().uuid().optional(),
     memberId: z.string().uuid().optional(),
     status: z.enum(["booked", "checked_in", "attended", "no_show", "late_cancel"]).optional(),
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional(),
     cursor: z.string().min(1).max(512).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional()
   })

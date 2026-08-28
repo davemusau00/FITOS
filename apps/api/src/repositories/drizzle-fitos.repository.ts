@@ -2928,6 +2928,8 @@ export class DrizzleFitosRepository implements FitosRepository {
       conditions.push(eq(attendanceRecords.occurrenceId, filters.occurrenceId));
     if (filters.memberId) conditions.push(eq(attendanceRecords.memberId, filters.memberId));
     if (filters.status) conditions.push(eq(attendanceRecords.status, filters.status));
+    if (filters.from) conditions.push(gte(attendanceRecords.createdAt, new Date(filters.from)));
+    if (filters.to) conditions.push(lte(attendanceRecords.createdAt, new Date(filters.to)));
 
     const rows = await this.db
       .select()

@@ -37,6 +37,8 @@ export interface AttendanceListFilters {
   occurrenceId?: string;
   memberId?: string;
   status?: AttendanceStatus;
+  from?: string;
+  to?: string;
   cursor?: string;
   limit?: number;
 }
