@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon, type IconName } from "@fitos/ui";
+import { routeManifest } from "./navigation";
 
 type CommandItem = {
   id: string;
@@ -11,8 +12,17 @@ type CommandItem = {
   keywords?: string;
 };
 
-const commands: CommandItem[] = [
-  // Navigation
+const navigationCommands: CommandItem[] = routeManifest.map((route) => ({
+  id: `nav:${route.path}`,
+  label: route.label,
+  type: "Navigation" as const,
+  icon: route.icon,
+  to: route.path,
+  keywords: `${route.group} ${route.title ?? ""} ${route.description ?? ""}`
+}));
+
+const actionCommands: CommandItem[] = [
+  // Quick Actions
   {
     id: "nav-today",
     label: "Today / Overview",
@@ -167,7 +177,10 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = commands.filter((cmd) => {
+  const availableCommands = [...navigationCommands, ...actionCommands].filter(
+    (item, index, items) => items.findIndex((candidate) => candidate.to === item.to) === index
+  );
+  const filtered = availableCommands.filter((cmd) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();
     return (
