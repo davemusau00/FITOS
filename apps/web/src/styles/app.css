@@ -5506,3 +5506,9 @@ body {
 .settings-panel select[multiple] {
   min-height: 8rem;
 }
+.sites-dirty-indicator {
+  align-self: center;
+  color: var(--fitos-warning, #f59e0b);
+  font-size: 0.78rem;
+  font-weight: 700;
+}

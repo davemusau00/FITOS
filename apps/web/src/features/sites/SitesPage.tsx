@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, PageHeader, StatusBadge } from "@fitos/ui";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading } from "../shared";
-import type { SiteSection } from "@fitos/contracts";
+import type { SitePageResponse, SiteSection } from "@fitos/contracts";
 
 export type SiteBlockType = SiteSection["type"];
 
@@ -76,8 +76,9 @@ export function SitesPage() {
   );
   const [activeTab, setActiveTab] = useState<"blocks" | "theme" | "seo">("blocks");
   const [themeColor, setThemeColor] = useState("#3b82f6");
+  const [isDirty, setIsDirty] = useState(false);
 
-  const selectPage = (page: NonNullable<typeof pages.data>[number]) => {
+  const selectPage = useCallback((page: SitePageResponse) => {
     setSelectedPageId(page.id);
     setTitle(page.title);
     setSlug(page.slug);
@@ -90,11 +91,21 @@ export function SitesPage() {
     setMetaTitle(typeof page.seo.title === "string" ? page.seo.title : page.title);
     setMetaDesc(typeof page.seo.description === "string" ? page.seo.description : "");
     setThemeColor(typeof page.seo.themeColor === "string" ? page.seo.themeColor : "#3b82f6");
-  };
+  }, []);
 
   useEffect(() => {
     if (!selectedPageId && pages.data?.[0]) selectPage(pages.data[0]);
-  }, [pages.data, selectedPageId]);
+  }, [pages.data, selectedPageId, selectPage]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isDirty]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -104,7 +115,10 @@ export function SitesPage() {
         sections: blocks,
         seo: { title: metaTitle, description: metaDesc, themeColor }
       }),
-    onSuccess: () => void cache.invalidateQueries({ queryKey: ["site-pages"] })
+    onSuccess: () => {
+      setIsDirty(false);
+      void cache.invalidateQueries({ queryKey: ["site-pages"] });
+    }
   });
 
   const publish = useMutation({
@@ -134,10 +148,12 @@ export function SitesPage() {
             ]
           : []
     };
+    setIsDirty(true);
     setBlocks((prev) => [...prev, newBlock]);
   };
 
   const removeBlock = (id: string) => {
+    setIsDirty(true);
     setBlocks((prev) => prev.filter((b) => b.id !== id));
   };
 
@@ -150,10 +166,12 @@ export function SitesPage() {
     if (!temp || !replacement) return;
     next[index] = replacement;
     next[target] = temp;
+    setIsDirty(true);
     setBlocks(next);
   };
 
   const updateBlockField = (id: string, field: keyof SiteBlock, value: unknown) => {
+    setIsDirty(true);
     setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
   };
 
@@ -205,6 +223,7 @@ export function SitesPage() {
                 </button>
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
+                {isDirty ? <span className="sites-dirty-indicator">Unsaved changes</span> : null}
                 <Button onClick={() => save.mutate()} loading={save.isPending}>
                   Save Draft
                 </Button>
@@ -216,11 +235,23 @@ export function SitesPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                   <label>
                     Page Title
-                    <input value={title} onChange={(e) => setTitle(e.target.value)} />
+                    <input
+                      value={title}
+                      onChange={(e) => {
+                        setIsDirty(true);
+                        setTitle(e.target.value);
+                      }}
+                    />
                   </label>
                   <label>
                     URL Slug
-                    <input value={slug} onChange={(e) => setSlug(e.target.value)} />
+                    <input
+                      value={slug}
+                      onChange={(e) => {
+                        setIsDirty(true);
+                        setSlug(e.target.value);
+                      }}
+                    />
                   </label>
                 </div>
 
@@ -395,7 +426,10 @@ export function SitesPage() {
                   <input
                     type="color"
                     value={themeColor}
-                    onChange={(e) => setThemeColor(e.target.value)}
+                    onChange={(e) => {
+                      setIsDirty(true);
+                      setThemeColor(e.target.value);
+                    }}
                     style={{ height: "42px", padding: "2px", width: "100%" }}
                   />
                 </label>
@@ -418,14 +452,23 @@ export function SitesPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                 <label>
                   Meta Title Tag
-                  <input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} />
+                  <input
+                    value={metaTitle}
+                    onChange={(e) => {
+                      setIsDirty(true);
+                      setMetaTitle(e.target.value);
+                    }}
+                  />
                 </label>
                 <label>
                   Meta Description
                   <textarea
                     rows={3}
                     value={metaDesc}
-                    onChange={(e) => setMetaDesc(e.target.value)}
+                    onChange={(e) => {
+                      setIsDirty(true);
+                      setMetaDesc(e.target.value);
+                    }}
                   />
                 </label>
               </div>
