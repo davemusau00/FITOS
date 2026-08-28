@@ -454,10 +454,7 @@ export class DrizzleFitosRepository implements FitosRepository {
   }
 
   async listPlatformPlanDefinitions() {
-    const rows = await this.db
-      .select()
-      .from(platformPlanDefinitions)
-      .where(eq(platformPlanDefinitions.isActive, true));
+    const rows = await this.db.select().from(platformPlanDefinitions);
     return rows.map((row) => ({
       key: row.key as import("@fitos/contracts").SaaSPlan,
       name: row.name,
