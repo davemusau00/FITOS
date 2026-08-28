@@ -130,7 +130,7 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 
 **Current state:** A canonical branch query-key helper exists and core Ops, Insights, Attendance, Reception, Bookings, New Booking, Members, Memberships, Overview, Coach, and Schedule queries now use it; broader screen migration remains in progress.
 
-**Implementation evidence (2026-08-28):** `apps/web/src/lib/query-keys.ts` emits stable `{ branchId }` scope segments (including explicit `all`), and `OpsDashboardPage`, `InsightsPage`, `AttendancePage`, `ReceptionPage`, `BookingsPage`, `NewBookingPage`, `MembersPage`, `MembershipsPage`, `OverviewPage`, `CoachDashboardPage`, and `SchedulePage` consume the factory for their branch-sensitive reads. Booking, attendance, roster, membership, member-detail, and schedule mutations now invalidate the factory's resource-root keys, preventing stale branch-scoped caches after writes. Remaining branch-sensitive screens require migration and review.
+**Implementation evidence (2026-08-28):** `apps/web/src/lib/query-keys.ts` emits stable `{ branchId }` scope segments (including explicit `all`), and `OpsDashboardPage`, `InsightsPage`, `AttendancePage`, `ReceptionPage`, `BookingsPage`, `NewBookingPage`, `MembersPage`, `MembershipsPage`, `OverviewPage`, `CoachDashboardPage`, `SchedulePage`, and `ServicesPage` consume the factory for their branch-sensitive reads. Booking, attendance, roster, membership, member-detail, schedule, and services/rooms mutations now invalidate the factory's resource-root keys, preventing stale branch-scoped caches after writes. Remaining branch-sensitive screens require migration and review.
 
 ### Acceptance
 
