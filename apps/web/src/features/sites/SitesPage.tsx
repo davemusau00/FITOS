@@ -78,20 +78,30 @@ export function SitesPage() {
   const [themeColor, setThemeColor] = useState("#3b82f6");
   const [isDirty, setIsDirty] = useState(false);
 
-  const selectPage = useCallback((page: SitePageResponse) => {
-    setSelectedPageId(page.id);
-    setTitle(page.title);
-    setSlug(page.slug);
-    setBlocks(
-      page.sections.map((section, index) => ({
-        ...(section as SiteBlock),
-        id: typeof section.id === "string" ? section.id : `${page.id}-${index}`
-      }))
-    );
-    setMetaTitle(typeof page.seo.title === "string" ? page.seo.title : page.title);
-    setMetaDesc(typeof page.seo.description === "string" ? page.seo.description : "");
-    setThemeColor(typeof page.seo.themeColor === "string" ? page.seo.themeColor : "#3b82f6");
-  }, []);
+  const selectPage = useCallback(
+    (page: SitePageResponse) => {
+      if (
+        isDirty &&
+        page.id !== selectedPageId &&
+        !window.confirm("Discard unsaved site changes?")
+      ) {
+        return;
+      }
+      setSelectedPageId(page.id);
+      setTitle(page.title);
+      setSlug(page.slug);
+      setBlocks(
+        page.sections.map((section, index) => ({
+          ...(section as SiteBlock),
+          id: typeof section.id === "string" ? section.id : `${page.id}-${index}`
+        }))
+      );
+      setMetaTitle(typeof page.seo.title === "string" ? page.seo.title : page.title);
+      setMetaDesc(typeof page.seo.description === "string" ? page.seo.description : "");
+      setThemeColor(typeof page.seo.themeColor === "string" ? page.seo.themeColor : "#3b82f6");
+    },
+    [isDirty, selectedPageId]
+  );
 
   useEffect(() => {
     if (!selectedPageId && pages.data?.[0]) selectPage(pages.data[0]);
