@@ -234,11 +234,15 @@ Actions filtered by:
 
 ## P1-008 — Account Cancellation Request
 
+**Current state:** No persistent cancellation request resource, lifecycle, Platform visibility, or audit workflow exists; payment collection remains deferred.
+
 Same persistence/visibility requirements as above.
 
 ---
 
 ## P1-009 — Account Deletion Request
+
+**Current state:** No persistent deletion request resource or destructive-action safeguards exist.
 
 Same persistence/visibility requirements as above, with destructive-action safeguards.
 
