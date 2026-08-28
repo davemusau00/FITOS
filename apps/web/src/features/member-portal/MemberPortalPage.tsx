@@ -92,10 +92,7 @@ export function MemberPortalPage() {
   // ── UNLOGGED MEMBER SIGN-IN VIEW ──
   if (!memberProfile.data) {
     return (
-      <div
-        className="member-portal-shell"
-        className="member-portal-shell member-portal-shell--login"
-      >
+      <div className="member-portal-shell member-portal-shell--login">
         <div className="member-portal-login-card">
           <div className="member-portal-login-heading">
             <FitosLogo height={32} />
