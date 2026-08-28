@@ -281,6 +281,8 @@ When implemented, Platform can:
 
 **Additional evidence (2026-08-28):** Platform Overview now surfaces recent plan-change requests with retryable loading errors.
 
+**Additional evidence (2026-08-28):** Account Plan now submits plan-change requests directly and renders persisted statuses; the earlier assisted-contact wording above is superseded by the direct request UI.
+
 ## P1-011 — Persist Platform Plan Definitions
 
 Persist:
