@@ -32,6 +32,7 @@ import { can, useAuth } from "../../app/auth";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
+import { todayDate } from "../../lib/date-context";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 type OccurrenceFormValues = {
@@ -427,7 +428,7 @@ function CreateOccurrenceModal({
 }) {
   const [error, setError] = useState<unknown>(null);
   const now = new Date();
-  const defaultDate = now.toISOString().split("T")[0] ?? "";
+  const defaultDate = todayDate();
   const defaultTime = `${String(now.getHours() + 1).padStart(2, "0")}:00`;
   const defaultThroughDate = addLocalDays(defaultDate, 83);
 
