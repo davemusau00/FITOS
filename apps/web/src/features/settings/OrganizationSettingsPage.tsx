@@ -34,7 +34,7 @@ export function OrganizationSettingsPage() {
 
   return (
     <>
-      <div style={{ marginBottom: "1rem" }}>
+      <div className="settings-back-link">
         <Link className="text-link" to="/app/settings">
           <Icon name="arrow-left" size={14} /> Back to Settings
         </Link>

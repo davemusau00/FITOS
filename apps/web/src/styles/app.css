@@ -4199,6 +4199,10 @@ body {
   margin: 1rem 0;
 }
 
+.settings-back-link {
+  margin-bottom: 1rem;
+}
+
 @media (max-width: 640px) {
   .leads-summary-grid {
     grid-template-columns: 1fr;
