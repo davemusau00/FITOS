@@ -928,6 +928,8 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 Hosted CI, Playwright browser execution, production image/smoke stages, and the remaining roadmap workflows are not implied by these local results. Worker queue schemas exist for generic exports, but no account-export fulfillment processor or future-dated plan executor is wired yet.
 
+The Platform overview now provides reason-captured controls to start/complete export requests and approve/reject plan-change requests, with mutation pending/error feedback and query refresh. This is a control-plane UI slice; export fulfillment and persisted editable plan catalogs remain open.
+
 ## Sprint Group A
 
 P0-001 through P0-005.

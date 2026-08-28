@@ -155,6 +155,7 @@ export function PlatformOverviewPage() {
               error={exportRequests.error}
               onRetry={() => void exportRequests.refetch()}
             />
+            <ErrorNotice error={exportMutation.error} onRetry={() => exportMutation.reset()} />
             {exportRequests.data?.length ? (
               exportRequests.data.slice(0, 5).map((request) => (
                 <div className="fitos-mobile-data-card" key={request.id}>
@@ -209,6 +210,7 @@ export function PlatformOverviewPage() {
               </div>
             </div>
             <ErrorNotice error={planRequests.error} onRetry={() => void planRequests.refetch()} />
+            <ErrorNotice error={planMutation.error} onRetry={() => planMutation.reset()} />
             {planRequests.data?.length ? (
               planRequests.data.slice(0, 5).map((request) => (
                 <div className="fitos-mobile-data-card" key={request.id}>
