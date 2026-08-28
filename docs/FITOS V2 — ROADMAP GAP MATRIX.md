@@ -112,6 +112,10 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 
 ## P1-001 — True All Locations Branch Context
 
+**Current state:** Branch context persists a concrete branch and the shell falls back to an “All Locations” label when no branch is selected, but there is no explicit all-location menu option or multi-branch read contract. Operational queries therefore correctly require a concrete branch.
+
+**Implementation evidence (2026-08-28):** `branch-context.tsx` validates persisted branch IDs against server-provided branches and defaults to the first authorized branch; `shell.tsx` only renders “All Locations” as a fallback label. P1-001 remains open until explicit multi-branch reads and safe all-location query semantics exist.
+
 ### Acceptance
 
 - Branch context supports concrete branch or `all`.
