@@ -3750,7 +3750,8 @@ export class InMemoryFitosRepository implements FitosRepository {
           quotas: SaaS_PLAN_QUOTAS[key],
           capabilities: PLATFORM_FEATURE_REGISTRY.filter((feature) => feature.defaultEnabled).map(
             (feature) => feature.key
-          )
+          ),
+          isActive: true
         });
     return [...this.platformPlanDefinitions.values()];
   }
@@ -3765,7 +3766,8 @@ export class InMemoryFitosRepository implements FitosRepository {
       name: input.name,
       description: input.description,
       quotas: input.quotas,
-      capabilities: input.capabilities
+      capabilities: input.capabilities,
+      isActive: input.isActive ?? true
     };
     this.platformPlanDefinitions.set(key, updated);
     return updated;

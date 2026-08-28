@@ -295,10 +295,13 @@ export class PlatformController {
     const planKey = z
       .enum(["starter", "pro", "business"])
       .parse(key) as import("@fitos/contracts").SaaSPlan;
-    const updated = await this.repository.updatePlatformPlanDefinition(planKey, input);
+    const updated = await this.repository.updatePlatformPlanDefinition(planKey, {
+      ...input,
+      capabilities: input.capabilities as import("@fitos/contracts").SaaSCapabilityKey[]
+    });
     if (!updated) throw new NotFoundException("Plan definition not found or inactive.");
     await this.repository.recordAudit({
-      tenantId: null,
+      tenantId: "",
       actorUserId: request.platformActor?.userId ?? null,
       action: "platform.plan_definition_updated",
       resourceType: "platform_plan_definition",

@@ -16,6 +16,7 @@ export interface SaaSPlanDefinition {
   description: string;
   quotas: SaaSPlanQuotas;
   capabilities: SaaSCapabilityKey[];
+  isActive?: boolean;
 }
 
 /** Product limits used by both adapters; usage itself is always measured from records. */

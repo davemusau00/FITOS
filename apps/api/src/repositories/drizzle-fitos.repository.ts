@@ -463,7 +463,8 @@ export class DrizzleFitosRepository implements FitosRepository {
       name: row.name,
       description: row.description,
       quotas: row.quotas as import("@fitos/contracts").SaaSPlanQuotas,
-      capabilities: row.capabilities as import("@fitos/contracts").SaaSCapabilityKey[]
+      capabilities: row.capabilities as import("@fitos/contracts").SaaSCapabilityKey[],
+      isActive: row.isActive
     }));
   }
 
@@ -489,7 +490,8 @@ export class DrizzleFitosRepository implements FitosRepository {
           name: row.name,
           description: row.description,
           quotas: row.quotas as import("@fitos/contracts").SaaSPlanQuotas,
-          capabilities: row.capabilities as import("@fitos/contracts").SaaSCapabilityKey[]
+          capabilities: row.capabilities as import("@fitos/contracts").SaaSCapabilityKey[],
+          isActive: row.isActive
         }
       : null;
   }
