@@ -218,6 +218,10 @@ Actions filtered by:
 
 ## P1-007 — Account Export Request
 
+**Current state:** No owner-account export request endpoint, persistence model, lifecycle, or Platform visibility exists.
+
+**Implementation evidence (2026-08-28):** Account settings, API client, controllers, and shared contracts currently expose notification preferences only; no export request resource or mutation is implemented.
+
 ### Acceptance
 
 - Persistent request.
