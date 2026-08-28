@@ -1,10 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { AttentionCentre, Card, PageHeader, StatCard, StatusBadge, WorkspacePage } from "@fitos/ui";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading } from "../shared";
 
 export function PlatformOverviewPage() {
+  const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["platform", "overview"], queryFn: api.platformOverview });
   const exportRequests = useQuery({
     queryKey: ["platform", "account-export-requests"],
@@ -22,6 +23,33 @@ export function PlatformOverviewPage() {
     queryKey: ["platform", "deletion-requests"],
     queryFn: api.platformDeletionRequests
   });
+  const exportMutation = useMutation({
+    mutationFn: ({
+      id,
+      status,
+      reason
+    }: {
+      id: string;
+      status: import("@fitos/contracts").AccountExportStatus;
+      reason: string;
+    }) => api.updatePlatformAccountExportRequest(id, status, reason),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform"] })
+  });
+  const planMutation = useMutation({
+    mutationFn: ({
+      id,
+      status,
+      reason
+    }: {
+      id: string;
+      status: "approved" | "rejected";
+      reason: string;
+    }) => api.decidePlatformPlanChangeRequest(id, status, reason),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform"] })
+  });
+  const askReason = (action: string) =>
+    window.prompt(`Reason for ${action} (at least 3 characters)`, "Reviewed by Platform")?.trim() ??
+    "";
   if (query.isLoading) return <PageLoading />;
   const data = query.data;
   return (
@@ -135,6 +163,38 @@ export function PlatformOverviewPage() {
                     Tenant {request.tenantId.slice(0, 8)} ·{" "}
                     {new Date(request.createdAt).toLocaleString()}
                   </span>
+                  {request.status === "requested" || request.status === "processing" ? (
+                    <div className="fitos-inline-actions">
+                      {request.status === "requested" ? (
+                        <button
+                          className="fitos-button fitos-button--secondary"
+                          disabled={exportMutation.isPending}
+                          onClick={() => {
+                            const reason = askReason("starting this export");
+                            if (reason.length >= 3)
+                              exportMutation.mutate({
+                                id: request.id,
+                                status: "processing",
+                                reason
+                              });
+                          }}
+                        >
+                          Start processing
+                        </button>
+                      ) : null}
+                      <button
+                        className="fitos-button fitos-button--primary"
+                        disabled={exportMutation.isPending}
+                        onClick={() => {
+                          const reason = askReason("completing this export");
+                          if (reason.length >= 3)
+                            exportMutation.mutate({ id: request.id, status: "completed", reason });
+                        }}
+                      >
+                        Mark complete
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ))
             ) : (
@@ -159,6 +219,32 @@ export function PlatformOverviewPage() {
                     Tenant {request.tenantId.slice(0, 8)} ·{" "}
                     {new Date(request.createdAt).toLocaleString()}
                   </span>
+                  {request.status === "requested" ? (
+                    <div className="fitos-inline-actions">
+                      <button
+                        className="fitos-button fitos-button--primary"
+                        disabled={planMutation.isPending}
+                        onClick={() => {
+                          const reason = askReason("approving this plan change");
+                          if (reason.length >= 3)
+                            planMutation.mutate({ id: request.id, status: "approved", reason });
+                        }}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="fitos-button fitos-button--secondary"
+                        disabled={planMutation.isPending}
+                        onClick={() => {
+                          const reason = askReason("rejecting this plan change");
+                          if (reason.length >= 3)
+                            planMutation.mutate({ id: request.id, status: "rejected", reason });
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ))
             ) : (
