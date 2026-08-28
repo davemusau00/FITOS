@@ -140,7 +140,7 @@ export function BookingsPage() {
         <div>
           <StatusBadge status={b.status} />
           {b.cancellationReason ? (
-            <span className="fitos-data-table__muted" style={{ display: "block" }}>
+            <span className="fitos-data-table__muted fitos-data-table__muted--block">
               {b.cancellationReason}
             </span>
           ) : null}

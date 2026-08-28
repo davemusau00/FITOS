@@ -872,7 +872,7 @@ Migrate advanced modules toward `@fitos/ui`.
 
 Progressively remove page-owned theme systems.
 
-**Implementation evidence (2026-08-28):** The shared staff shell no longer uses inline positioning, icon color/margin, or mobile menu reset styles, and Insights static KPI/note styles now use semantic classes. These are expressed in `apps/web/src/styles/app.css`. Web typecheck and the 4-file/10-test web suite pass. Dynamic chart dimensions and other feature-level inline styles remain; this ticket stays open for the broader migration.
+**Implementation evidence (2026-08-28):** The shared staff shell no longer uses inline positioning, icon color/margin, or mobile menu reset styles; Insights static KPI/note/chart styles and the Bookings cancellation-note display rule now use semantic classes. These are expressed in `apps/web/src/styles/app.css`. Web typecheck and the 4-file/10-test web suite pass. Dynamic chart dimensions and other feature-level inline styles remain; this ticket stays open for the broader migration.
 
 ---
 

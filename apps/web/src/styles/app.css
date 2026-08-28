@@ -3361,6 +3361,9 @@ body {
   font-size: 0.8rem;
   margin-bottom: 1rem;
 }
+.fitos-data-table__muted--block {
+  display: block;
+}
 .insights-section-note--wide {
   margin-bottom: 1.5rem;
 }
