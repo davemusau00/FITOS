@@ -82,6 +82,19 @@ export function PlatformTenantDetailPage() {
     return <ErrorNotice error={tenant.error ?? new Error("Tenant control record not found.")} />;
   const { tenant: record, subscription, usage } = tenant.data;
   const events = (audit.data ?? []).filter((event) => event.resourceId === tenantId);
+  const summarizeEvent = (event: (typeof events)[number]) => {
+    const before = event.beforeSummary ?? {};
+    const after = event.afterSummary ?? {};
+    if (event.action.includes("capabilities_changed")) {
+      const beforeCount = Array.isArray(before.capabilities) ? before.capabilities.length : 0;
+      const afterCount = Array.isArray(after.capabilities) ? after.capabilities.length : 0;
+      return `${beforeCount} enabled → ${afterCount} enabled${typeof after.reason === "string" ? ` · Reason: ${after.reason}` : ""}`;
+    }
+    if (typeof after.status === "string") {
+      return `${String(before.status ?? "unknown")} → ${after.status}${typeof after.reason === "string" ? ` · Reason: ${after.reason}` : ""}`;
+    }
+    return "Control-plane change recorded";
+  };
   return (
     <WorkspacePage density="record">
       <PageHeader
@@ -292,7 +305,7 @@ export function PlatformTenantDetailPage() {
               id: event.id,
               title: event.action.replaceAll("_", " "),
               meta: formatDateTime(event.createdAt),
-              body: `${event.resourceType} · ${event.resourceId ?? "No resource"}`,
+              body: `${event.resourceType} · ${summarizeEvent(event)}`,
               tone:
                 event.action.includes("suspend") || event.action.includes("cancel")
                   ? "warning"
