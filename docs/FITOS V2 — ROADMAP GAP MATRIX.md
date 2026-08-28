@@ -23,7 +23,7 @@ Required for roadmap completeness but can follow core operating workflows.
 **Area:** Engineering / Release  
 **Current state:** The CI workflow declares the full required verification chain, including Playwright, build, production configuration/image/smoke, dependency audit, and secret scan. A current green hosted run remains unverified in this checkout.
 
-**Implementation evidence (2026-08-28):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 53 tests; web tests, lint, and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
+**Implementation evidence (2026-08-28):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 54 tests; web tests, lint, and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
 
 ### Acceptance
 
@@ -79,7 +79,7 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 **Area:** Inventory  
 **Current state:** The Receive Lot action opens a validated, persisted workflow and the Drizzle repository now transactionally creates the lot, stock movement, and item stock recalculation.
 
-**Implementation evidence (2026-08-28):** `InventoryPage` renders a Receive Inventory Lot modal with required item and quantity validation, optional branch, lot/batch code, expiry, notes, pending/error feedback, and canonical reload after `POST /inventory/lots`. The Drizzle repository locks and validates the item, updates stock, inserts the lot and `purchase_in` movement in one transaction, and returns the canonical lot. API and web typechecks pass. Forward migrations `0031_guard_advanced_integrity_trigger.sql` and `0032_align_inventory_lots_schema.sql` repair the PostgreSQL trigger/schema drift found during verification. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the focused tenancy suite passes 12/12 and the complete API suite passes 53/53.
+**Implementation evidence (2026-08-28):** `InventoryPage` renders a Receive Inventory Lot modal with required item and quantity validation, optional branch, lot/batch code, expiry, notes, pending/error feedback, and canonical reload after `POST /inventory/lots`. The Drizzle repository locks and validates the item, updates stock, inserts the lot and `purchase_in` movement in one transaction, and returns the canonical lot. API and web typechecks pass. Forward migrations `0031_guard_advanced_integrity_trigger.sql` and `0032_align_inventory_lots_schema.sql` repair the PostgreSQL trigger/schema drift found during verification. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the focused tenancy suite passes 12/12 and the complete API suite passes 54/54.
 
 ### Acceptance
 
