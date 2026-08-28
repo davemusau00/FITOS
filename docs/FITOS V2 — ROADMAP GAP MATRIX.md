@@ -888,6 +888,18 @@ Test critical widths and roles.
 
 # DELIVERY SEQUENCE
 
+# VERIFIED LOCAL GATES
+
+As of 2026-08-28, the following gates are verified in this checkout:
+
+- Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
+- Full repository lint and Prettier checks pass.
+- PostgreSQL-backed API suite passes 13 files and 52 tests with `RUN_DATABASE_TESTS=true`.
+- Web tests pass 4 files and 10 tests; the production Vite build passes.
+- Sites persistence, inventory lot receipt, branch-scoped queries, and local date filtering have direct regression coverage.
+
+Hosted CI, Playwright browser execution, production image/smoke stages, and the remaining roadmap workflows are not implied by these local results.
+
 ## Sprint Group A
 
 P0-001 through P0-005.
