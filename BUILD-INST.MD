@@ -134,6 +134,7 @@ complete.
 - [x] Settings surfaces audited for page-local inline styling; shared back-link, security-tile, and branch-list classes now provide the presentation layer.
 - [x] Platform audit entries expose readable lifecycle/capability before-after summaries and operator reasons.
 - [x] Member navigation is metadata-driven, URL-addressable, mobile-friendly, and reports recoverable overview/session errors.
+- [x] Command, Platform, role-workspace, and Member navigation now share a route metadata contract covering workspace, permissions/capabilities, branch behavior, mobile mode, breadcrumb, and primary-action fields.
 
 ### Still in progress / not yet verified complete
 
