@@ -186,7 +186,7 @@ export function InsightsPage() {
             {/* Lead Funnel */}
             <Card>
               <h2>Lead Conversion Funnel</h2>
-              <p className="muted" style={{ fontSize: "0.8rem", marginBottom: "1rem" }}>
+              <p className="muted insights-section-note">
                 Active CRM pipeline · {summary?.totalLeadsInPipeline ?? 0} leads in funnel
               </p>
               <div className="insights-funnel">
@@ -215,7 +215,7 @@ export function InsightsPage() {
             {/* Occupancy Heatmap */}
             <Card>
               <h2>Occupancy Heatmap</h2>
-              <p className="muted" style={{ fontSize: "0.8rem", marginBottom: "1rem" }}>
+              <p className="muted insights-section-note">
                 Average occupancy % by day and time slot
               </p>
               <div className="heatmap-wrapper">
@@ -347,7 +347,7 @@ export function InsightsPage() {
             {/* Retention Cohort Chart */}
             <Card>
               <h2>Retention Cohort Analysis</h2>
-              <p className="muted" style={{ fontSize: "0.8rem", marginBottom: "1.5rem" }}>
+              <p className="muted insights-section-note insights-section-note--wide">
                 % of members still active each month after joining
               </p>
               <div className="retention-cohort-chart">
@@ -376,7 +376,7 @@ export function InsightsPage() {
             {/* At-Risk Members */}
             <Card>
               <h2>At-Risk Members (Winback Target)</h2>
-              <p className="muted" style={{ fontSize: "0.8rem", marginBottom: "1rem" }}>
+              <p className="muted insights-section-note">
                 Members with no check-in in the last 21+ days
               </p>
               <div className="form-stack">

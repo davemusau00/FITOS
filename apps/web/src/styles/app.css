@@ -3361,6 +3361,9 @@ body {
   font-size: 0.8rem;
   margin-bottom: 1rem;
 }
+.insights-section-note--wide {
+  margin-bottom: 1.5rem;
+}
 .insights-bar-chart__col {
   align-items: center;
   display: flex;
