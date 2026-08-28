@@ -2019,6 +2019,10 @@ body {
   gap: 1rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+.landing-pricing-subtitle {
+  color: var(--text-muted);
+  margin-top: 1rem;
+}
 .marketing-plan-card {
   display: flex;
   flex-direction: column;

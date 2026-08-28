@@ -890,6 +890,8 @@ Progressively remove page-owned theme systems.
 
 ---
 
+**Additional evidence (2026-08-28):** The landing-page pricing subtitle now uses the shared semantic `landing-pricing-subtitle` CSS class instead of a static inline style.
+
 ## P2-023 — Accessibility Sweep
 
 All major surfaces at keyboard/touch/zoom.

@@ -649,7 +649,7 @@ export function FitosLandingPage({ showChrome = true }: { showChrome?: boolean }
           <h2 style={{ fontSize: "2.5rem", fontWeight: 700 }}>
             Built for Operators, Scaled for Growth
           </h2>
-          <p style={{ color: "#94a3b8", marginTop: "1rem" }}>
+          <p className="landing-pricing-subtitle">
             Compare operational scope and usage limits. Payment collection is not part of this
             release.
           </p>
