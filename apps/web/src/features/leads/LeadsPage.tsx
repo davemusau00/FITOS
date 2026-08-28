@@ -286,7 +286,7 @@ export function LeadsPage() {
       <PageHeader
         eyebrow="Growth"
         title="Leads Pipeline"
-        description="Track every prospect from first contact through to a paid membership."
+        description="Track every prospect from first contact through to a membership decision."
         actions={
           <>
             <div className="view-toggle">

@@ -269,7 +269,7 @@ export function OnboardingPage() {
               </h3>
               <p style={{ marginTop: "0.5rem" }}>
                 Configuring your business unlocks live class booking, member check-ins, automated
-                reminders, and revenue reporting.
+                reminders, and operational insights.
               </p>
             </div>
 
