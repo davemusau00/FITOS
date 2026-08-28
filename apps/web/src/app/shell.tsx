@@ -365,17 +365,6 @@ function AppShellInner() {
               <span className="topbar-sep">•</span>
               <strong className="topbar-branch__name">{currentBranch?.name ?? "HQ"}</strong>
             </div>
-
-            {/* Notification Bell */}
-            <button
-              aria-label="Notifications"
-              className="notif-btn"
-              onClick={() => setCmdOpen(true)}
-              type="button"
-            >
-              <Icon name="spark" size={18} />
-              <span className="notif-dot" />
-            </button>
           </div>
         </header>
 
