@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, Icon, PageHeader } from "@fitos/ui";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { useBranch } from "../../app/branch-context";
 import { ErrorNotice, PageLoading } from "../shared";
 import type { InsightsOverviewResponse } from "@fitos/contracts";
@@ -48,7 +49,7 @@ export function InsightsPage() {
   const { activeBranchId } = useBranch();
 
   const insights = useQuery({
-    queryKey: ["insights", activeBranchId],
+    queryKey: branchQueryKeys.list("insights", activeBranchId),
     queryFn: () => api.insightsOverview(activeBranchId || undefined)
   });
 
