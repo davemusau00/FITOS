@@ -918,7 +918,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 56 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 57 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 
