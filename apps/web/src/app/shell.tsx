@@ -361,6 +361,14 @@ function AppShellInner() {
           </div>
 
           <div className="topbar-actions">
+            <NavLink
+              className="app-topbar__notification-link"
+              aria-label="Notification inbox"
+              to="/account/notifications"
+            >
+              <Icon name="warning" size={18} />
+              <span>Notifications</span>
+            </NavLink>
             {/* Branch Context Tag */}
             <div className="topbar-branch">
               <span className="topbar-branch__org">{auth.tenant.timezone}</span>

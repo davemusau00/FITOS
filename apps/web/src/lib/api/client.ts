@@ -191,6 +191,13 @@ export const api = {
   updateNotificationPreferences: (
     payload: import("@fitos/contracts").UpdateNotificationPreferencesRequest
   ) => request("/users/me/notifications", { method: "PATCH", body: json(payload) }),
+  notificationInbox: () =>
+    request<import("@fitos/contracts").NotificationResponse[]>("/users/me/notification-inbox"),
+  markNotificationRead: (notificationId: string) =>
+    request<import("@fitos/contracts").NotificationResponse>(
+      `/users/me/notification-inbox/${notificationId}/read`,
+      { method: "PATCH" }
+    ),
   accountExportRequests: () =>
     request<import("@fitos/contracts").AccountExportRequestResponse[]>("/users/me/export-requests"),
   requestAccountExport: () =>

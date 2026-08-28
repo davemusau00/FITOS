@@ -42,6 +42,7 @@ import {
   AssessmentsPage,
   TherapyPage,
   AccountSubscriptionPage,
+  NotificationInboxPage,
   FitosLandingPage,
   ConfigureFitosPage,
   ImplementationInquiriesPage,
@@ -179,6 +180,7 @@ export function AppRouter() {
           <Route element={<AccountSettingsPage />} path="profile" />
           <Route element={<OrganizationSettingsPage />} path="organization" />
           <Route element={<AccountSubscriptionPage />} path="plan" />
+          <Route element={<NotificationInboxPage />} path="notifications" />
         </Route>
         <Route element={<OnboardingPage />} path="/onboarding" />
       </Route>
