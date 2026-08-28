@@ -266,9 +266,9 @@ export class PlatformController {
       name: `FITOS ${key[0]!.toUpperCase()}${key.slice(1)}`,
       description: `${key[0]!.toUpperCase()}${key.slice(1)} workspace plan`,
       quotas: SaaS_PLAN_QUOTAS[key],
-      capabilities: PLATFORM_FEATURE_REGISTRY.filter(
-        (feature) => feature.defaultEnabled || key !== "starter"
-      ).map((feature) => feature.key)
+      capabilities: PLATFORM_FEATURE_REGISTRY.filter((feature) => feature.defaultEnabled).map(
+        (feature) => feature.key
+      )
     }));
   }
 
