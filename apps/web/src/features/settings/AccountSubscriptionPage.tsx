@@ -81,6 +81,7 @@ export default function AccountSubscriptionPage() {
       body: "This workspace is no longer operational. Contact FITOS about an approved recovery path."
     }
   };
+  const lifecycle = sub ? lifecycleMessage[sub.status] : undefined;
   return (
     <WorkspacePage density="record">
       <PageHeader
@@ -120,12 +121,9 @@ export default function AccountSubscriptionPage() {
                 There is no checkout or payment collection in this release. Submit an implementation
                 or plan request and the Platform team will review it.
               </Alert>
-              {lifecycleMessage[sub.status] ? (
-                <Alert
-                  tone={lifecycleMessage[sub.status].tone}
-                  title={lifecycleMessage[sub.status].title}
-                >
-                  {lifecycleMessage[sub.status].body}
+              {lifecycle ? (
+                <Alert tone={lifecycle.tone} title={lifecycle.title}>
+                  {lifecycle.body}
                 </Alert>
               ) : null}
               <div className="account-plan-card__actions">

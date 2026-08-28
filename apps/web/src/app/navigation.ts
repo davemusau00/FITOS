@@ -350,7 +350,7 @@ export const roleNavigation: Record<"ops" | "front desk" | "coach" | "practice",
       icon: "dashboard",
       workspace: "practice",
       branchMode: "required",
-      mobileMode: "record"
+      mobileMode: "cards"
     },
     {
       path: "/practice/assessments",
@@ -359,7 +359,7 @@ export const roleNavigation: Record<"ops" | "front desk" | "coach" | "practice",
       icon: "spark",
       workspace: "practice",
       branchMode: "required",
-      mobileMode: "record"
+      mobileMode: "cards"
     }
   ]
 };
