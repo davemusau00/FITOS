@@ -88,6 +88,36 @@ describe("platform audit projection", () => {
   });
 });
 
+describe("plan change decisions", () => {
+  it("persists decisions and applies immediate approvals while retaining future dates", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    const scope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const request = await repository.createPlanChangeRequest(scope, owner.user.id, "business");
+    const future = new Date(Date.now() + 86_400_000);
+    const decided = await repository.decidePlanChangeRequest(
+      request.id,
+      "approved",
+      "Scheduled upgrade",
+      owner.user.id,
+      future
+    );
+    expect(decided).toMatchObject({
+      status: "approved",
+      requestedPlan: "business",
+      effectiveAt: future.toISOString()
+    });
+    expect((await repository.getTenantSubscription(owner.tenant.id)).plan).not.toBe("business");
+  });
+});
+
 describe("staff password and session lifecycle", () => {
   it("changes the password, preserves the current session, and revokes other sessions", async () => {
     const repository = new InMemoryFitosRepository();
