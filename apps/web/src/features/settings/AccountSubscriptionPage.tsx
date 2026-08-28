@@ -59,6 +59,15 @@ export default function AccountSubscriptionPage() {
       }, {}),
     [flags]
   );
+  const submitPlanChange = useCallback(() => {
+    setRequestingPlan(true);
+    setRequestError(null);
+    void api
+      .requestPlanChange(requestedPlan)
+      .then((request) => setPlanRequests((current) => [request, ...current]))
+      .catch(setRequestError)
+      .finally(() => setRequestingPlan(false));
+  }, [requestedPlan]);
   if (loading) return <PageLoading />;
   const daysLeft = sub?.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(sub.trialEndsAt).getTime() - Date.now()) / 86400000))
@@ -112,7 +121,7 @@ export default function AccountSubscriptionPage() {
         }
       />
       <ErrorNotice error={error} onRetry={loadAccountPlan} />
-      <ErrorNotice error={requestError} />
+      <ErrorNotice error={requestError} onRetry={submitPlanChange} />
       {sub ? (
         <>
           <div className="account-plan-grid">
@@ -159,15 +168,7 @@ export default function AccountSubscriptionPage() {
                 <button
                   className="fitos-button fitos-button--primary"
                   disabled={requestingPlan || requestedPlan === sub.plan}
-                  onClick={() => {
-                    setRequestingPlan(true);
-                    setRequestError(null);
-                    void api
-                      .requestPlanChange(requestedPlan)
-                      .then((request) => setPlanRequests((current) => [request, ...current]))
-                      .catch(setRequestError)
-                      .finally(() => setRequestingPlan(false));
-                  }}
+                  onClick={submitPlanChange}
                 >
                   {requestingPlan ? "Submitting…" : "Request a plan change"}
                 </button>
