@@ -23,7 +23,7 @@ Required for roadmap completeness but can follow core operating workflows.
 **Area:** Engineering / Release  
 **Current state:** The CI workflow declares the full required verification chain, including Playwright, build, production configuration/image/smoke, dependency audit, and secret scan. A current green hosted run remains unverified in this checkout.
 
-**Implementation evidence (2026-08-28):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. Hosted CI status is still required to close P0-001.
+**Implementation evidence (2026-08-28):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. Local API/web tests, lint, and the production web build pass; hosted CI status and production-image stages are still required to close P0-001.
 
 ### Acceptance
 
