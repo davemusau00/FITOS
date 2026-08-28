@@ -4,6 +4,7 @@ import { Button, Card, Icon, StatusBadge } from "@fitos/ui";
 import type { MemberListItem } from "@fitos/contracts";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
+import { todayDate } from "../../lib/date-context";
 import { ErrorNotice } from "../shared";
 
 export function ReceptionPage() {
@@ -43,7 +44,7 @@ export function ReceptionPage() {
   const occurrences = useQuery({
     queryKey: ["schedule", activeBranchId, "today"],
     queryFn: () => {
-      const today = new Date().toISOString().split("T")[0]!;
+      const today = todayDate();
       return api.scheduleOccurrences(
         new URLSearchParams({ from: today, to: today, branchId: activeBranchId, limit: "50" })
       );
