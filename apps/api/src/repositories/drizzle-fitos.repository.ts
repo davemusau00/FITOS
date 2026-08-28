@@ -452,6 +452,23 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
+  async createNotification(
+    input: Omit<import("@fitos/contracts").NotificationResponse, "id" | "readAt" | "createdAt">
+  ) {
+    const [row] = await this.db.insert(notifications).values(input).returning();
+    if (!row) throw new Error("Unable to create notification.");
+    return {
+      id: row.id,
+      userId: row.userId,
+      category: row.category as import("@fitos/contracts").NotificationCategory,
+      title: row.title,
+      body: row.body,
+      href: row.href,
+      readAt: null,
+      createdAt: row.createdAt.toISOString()
+    };
+  }
+
   async markNotificationRead(userId: string, notificationId: string) {
     const [row] = await this.db
       .update(notifications)

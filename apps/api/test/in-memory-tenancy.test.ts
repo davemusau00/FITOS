@@ -9,6 +9,24 @@ const memberInput = (branchId: string): CreateMemberRequest => ({
 });
 
 describe("tenant isolation", () => {
+  it("scopes inbox items to their user and persists read state", async () => {
+    const repository = new InMemoryFitosRepository();
+    const item = await repository.createNotification({
+      userId: "user-1",
+      category: "operations",
+      title: "Follow-up due",
+      body: "Review the overdue task.",
+      href: "/app/leads"
+    });
+    await expect(repository.listNotifications("user-2")).resolves.toEqual([]);
+    await expect(repository.markNotificationRead("user-2", item.id)).resolves.toBeNull();
+    const read = await repository.markNotificationRead("user-1", item.id);
+    expect(read?.readAt).toBeTruthy();
+    await expect(repository.listNotifications("user-1")).resolves.toMatchObject([
+      { id: item.id, readAt: read?.readAt }
+    ]);
+  });
+
   it("persists staff notification preferences with safe defaults", async () => {
     const repository = new InMemoryFitosRepository();
     const defaults = await repository.getNotificationPreferences("user-1");

@@ -3736,6 +3736,14 @@ export class InMemoryFitosRepository implements FitosRepository {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
+  async createNotification(
+    input: Omit<import("@fitos/contracts").NotificationResponse, "id" | "readAt" | "createdAt">
+  ) {
+    const item = { ...input, id: randomUUID(), readAt: null, createdAt: now() };
+    this.notifications.set(item.id, item);
+    return item;
+  }
+
   async markNotificationRead(userId: string, notificationId: string) {
     const item = this.notifications.get(notificationId);
     if (!item || item.userId !== userId) return null;

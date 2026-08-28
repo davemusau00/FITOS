@@ -447,6 +447,9 @@ export interface FitosRepository {
     input: import("@fitos/contracts").UpdateNotificationPreferencesRequest
   ): Promise<import("@fitos/contracts").NotificationPreferences | null>;
   listNotifications(userId: string): Promise<import("@fitos/contracts").NotificationResponse[]>;
+  createNotification(
+    input: Omit<import("@fitos/contracts").NotificationResponse, "id" | "readAt" | "createdAt">
+  ): Promise<import("@fitos/contracts").NotificationResponse>;
   markNotificationRead(
     userId: string,
     notificationId: string
