@@ -3655,6 +3655,19 @@ export class InMemoryFitosRepository implements FitosRepository {
       .map((request) => ({ ...request }));
   }
 
+  async decideAccountCancellationRequest(
+    requestId: string,
+    status: "reviewing" | "approved" | "rejected",
+    reason: string,
+    _decidedByUserId: string
+  ) {
+    const request = this.accountCancellationRequests.get(requestId);
+    if (!request || !["requested", "reviewing"].includes(request.status)) return null;
+    const updated = { ...request, status, reason, updatedAt: now() };
+    this.accountCancellationRequests.set(requestId, updated);
+    return { ...updated };
+  }
+
   async getNotificationPreferences(userId: string) {
     return (
       this.notificationPreferences.get(userId) ?? {

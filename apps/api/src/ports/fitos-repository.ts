@@ -420,6 +420,12 @@ export interface FitosRepository {
   listPlatformAccountCancellationRequests(): Promise<
     import("@fitos/contracts").AccountCancellationRequestResponse[]
   >;
+  decideAccountCancellationRequest(
+    requestId: string,
+    status: "reviewing" | "approved" | "rejected",
+    reason: string,
+    decidedByUserId: string
+  ): Promise<import("@fitos/contracts").AccountCancellationRequestResponse | null>;
   getNotificationPreferences(
     userId: string
   ): Promise<import("@fitos/contracts").NotificationPreferences>;

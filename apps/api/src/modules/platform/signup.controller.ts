@@ -366,6 +366,42 @@ export class PlatformController {
     return this.repository.listPlatformAccountCancellationRequests();
   }
 
+  @Patch("cancellation-requests/:requestId")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async decideCancellationRequest(
+    @Param("requestId") requestId: string,
+    @Body() body: unknown,
+    @RequestId() requestIdHeader: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        status: z.enum(["reviewing", "approved", "rejected"]),
+        reason: z.string().trim().min(3).max(500)
+      })
+      .strict()
+      .parse(body);
+    const updated = await this.repository.decideAccountCancellationRequest(
+      requestId,
+      input.status,
+      input.reason,
+      request.platformActor?.userId ?? ""
+    );
+    if (!updated) throw new NotFoundException("Cancellation request not found or already decided.");
+    await this.repository.recordAudit({
+      tenantId: updated.tenantId,
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "account.cancellation_decided",
+      resourceType: "account_cancellation_request",
+      resourceId: requestId,
+      beforeSummary: { status: "requested" },
+      afterSummary: { status: updated.status, reason: input.reason },
+      requestId: requestIdHeader
+    });
+    return updated;
+  }
+
   @Patch("plan-change-requests/:requestId")
   @AuthMode("platform")
   @RequirePlatformAdmin()

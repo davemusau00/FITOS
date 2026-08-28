@@ -2623,6 +2623,20 @@ export class DrizzleFitosRepository implements FitosRepository {
     return rows.map((row) => this.cancellationResponse(row));
   }
 
+  async decideAccountCancellationRequest(
+    requestId: string,
+    status: "reviewing" | "approved" | "rejected",
+    reason: string,
+    _decidedByUserId: string
+  ) {
+    const [row] = await this.db
+      .update(accountCancellationRequests)
+      .set({ status, reason, updatedAt: new Date() })
+      .where(eq(accountCancellationRequests.id, requestId))
+      .returning();
+    return row ? this.cancellationResponse(row) : null;
+  }
+
   async publishEvent(_event: DomainEvent): Promise<void> {
     // The worker queue becomes the concrete adapter when notification/payment modules ship.
   }
