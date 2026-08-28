@@ -23,11 +23,7 @@ import type {
   SaaSTenantSignupRequest,
   PlatformOverview
 } from "@fitos/contracts";
-import {
-  PLATFORM_FEATURE_REGISTRY,
-  SaaS_PLAN_QUOTAS,
-  canTransitionTenantStatus
-} from "@fitos/contracts";
+import { PLATFORM_FEATURE_REGISTRY, canTransitionTenantStatus } from "@fitos/contracts";
 import { createHash } from "node:crypto";
 import { ScryptPasswordHasher, createOpaqueSessionToken } from "@fitos/auth";
 import { Public } from "../../common/auth/public.decorator.js";

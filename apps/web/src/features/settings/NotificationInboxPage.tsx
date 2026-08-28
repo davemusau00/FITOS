@@ -20,9 +20,9 @@ export function NotificationInboxPage() {
   const filtered = useMemo(
     () =>
       category === "all"
-        ? notifications
-        : notifications.filter((item) => item.category === category),
-    [category, notifications]
+        ? (query.data ?? [])
+        : (query.data ?? []).filter((item) => item.category === category),
+    [category, query.data]
   );
   if (query.isLoading) return <PageLoading />;
   return (
