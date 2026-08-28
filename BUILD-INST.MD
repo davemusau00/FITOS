@@ -132,6 +132,7 @@ complete.
 ### Still in progress / not yet verified complete
 
 - [ ] Full golden-path and adversarial E2E journeys covering all role handoffs, member self-service, public reservation outcomes and branch switching.
+- [x] Local development seed provisions rich FITOS Demo Gym/Pilates fixtures, role-specific staff accounts, a member-portal identity and a separate platform administrator; credentials and local URLs are documented in `docs/LOCAL_DEMO_ACCOUNTS.md`.
 - [ ] Full mobile acceptance matrix across every priority page, including modal focus behavior; the current 11-route overflow matrix, mobile table-card coverage and isolated 11/11 browser suite are verified below.
 - [ ] Complete CRM follow-up/conversion workflow and role-specific settings coverage; role-specific onboarding checklists are now implemented.
 - [x] Staff Account/Profile settings now persist notification preferences server-side alongside profile editing, password rotation and active-session management.
@@ -2883,3 +2884,7 @@ The single instruction I would pin above the developers' desks is:
 > **Stop measuring FITOS by how many modules exist. Measure it by how few moments make a real user wonder “what am I supposed to do now?” Every screen must tell the truth, every important action must finish its job, and every workspace must feel designed for the human sitting in it.**
 
 That is the work that will move FITOS from roughly **high-80s product maturity into the 90%+ zone**, without touching the intentionally deferred payment or CI layers.
+
+## Local deployment verification (2026-08-28)
+
+Docker PostgreSQL and Redis are healthy; migrations and the development seed completed. API liveness returned 200, and staff `/auth/login` plus `/auth/me`, member login, platform login and platform `/auth/me` all authenticated successfully. The web app is available at `http://localhost:5173`, the API at `http://localhost:3000`, and the worker queue process reported ready; its metrics port was already occupied by an existing local worker.

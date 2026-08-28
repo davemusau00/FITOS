@@ -9,6 +9,7 @@ import {
   creditLedger,
   leads,
   memberMemberships,
+  memberIdentities,
   members,
   membershipPlans,
   permissions,
@@ -511,6 +512,14 @@ async function ensureDemoTenant(input: {
         .returning();
       if (!member || !m.plan) continue;
 
+      if (m.memberNumber === "GYM-0001") {
+        await tx.insert(memberIdentities).values({
+          tenantId: tenant.id,
+          memberId: member.id,
+          passwordHash: input.passwordHash
+        });
+      }
+
       const [membership] = await tx
         .insert(memberMemberships)
         .values({
@@ -676,6 +685,25 @@ try {
   const passwordHash = await new ScryptPasswordHasher().hash(
     process.env.FITOS_SEED_PASSWORD ?? "ChangeMe123!"
   );
+  const existingPlatformAdmin = await database.db.query.users.findFirst({
+    where: eq(users.email, "platform.admin@fitos.test")
+  });
+  if (!existingPlatformAdmin) {
+    await database.db.insert(users).values({
+      email: "platform.admin@fitos.test",
+      displayName: "FITOS Platform Admin",
+      passwordHash,
+      isPlatformAdmin: true
+    });
+  } else if (!existingPlatformAdmin.isPlatformAdmin || existingPlatformAdmin.status !== "active") {
+    await database.db
+      .update(users)
+      .set({ isPlatformAdmin: true, status: "active", passwordHash, updatedAt: new Date() })
+      .where(eq(users.id, existingPlatformAdmin.id));
+  }
+  const platformAdmin = await database.db.query.users.findFirst({
+    where: eq(users.email, "platform.admin@fitos.test")
+  });
   await ensureDemoTenant({
     name: "FITOS Demo Gym",
     slug: "fitos-demo-gym",
@@ -712,6 +740,53 @@ try {
     displayName: "Pilates Owner",
     passwordHash
   });
+
+  // Backfill identities and the platform operator on databases seeded before
+  // these demo-login fixtures were introduced. All inserts are guarded so
+  // rerunning the development seed remains safe.
+  const demoTenant = await database.db.query.tenants.findFirst({
+    where: eq(tenants.slug, "fitos-demo-gym")
+  });
+  const demoBranch = demoTenant
+    ? await database.db.query.branches.findFirst({ where: eq(branches.tenantId, demoTenant.id) })
+    : null;
+  const demoMember = demoTenant
+    ? await database.db.query.members.findFirst({
+        where: (member, operators) =>
+          operators.and(
+            operators.eq(member.tenantId, demoTenant.id),
+            operators.eq(member.memberNumber, "GYM-0001")
+          )
+      })
+    : null;
+  if (demoTenant && demoMember) {
+    await database.db
+      .insert(memberIdentities)
+      .values({ tenantId: demoTenant.id, memberId: demoMember.id, passwordHash })
+      .onConflictDoNothing();
+  }
+  if (demoTenant && demoBranch && platformAdmin) {
+    const ownerRole = await database.db.query.roles.findFirst({
+      where: (role, operators) =>
+        operators.and(
+          operators.eq(role.tenantId, demoTenant.id),
+          operators.eq(role.systemKey, "owner")
+        )
+    });
+    if (ownerRole) {
+      const [platformMembership] = await database.db
+        .insert(tenantUsers)
+        .values({ tenantId: demoTenant.id, userId: platformAdmin.id, roleId: ownerRole.id })
+        .onConflictDoNothing()
+        .returning();
+      if (platformMembership) {
+        await database.db
+          .insert(userBranchAccess)
+          .values({ tenantUserId: platformMembership.id, branchId: demoBranch.id })
+          .onConflictDoNothing();
+      }
+    }
+  }
   process.stdout.write("FITOS development seed complete.\n");
 } finally {
   await database.pool.end();
