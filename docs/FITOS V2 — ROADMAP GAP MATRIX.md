@@ -3,12 +3,15 @@
 ## Priority Definitions
 
 ### P0 — Release blocker
+
 Must be resolved before release candidate.
 
 ### P1 — Core product gap
+
 Does not always prevent build/release, but significantly compromises core product integrity or roadmap completion.
 
 ### P2 — Important completion/polish
+
 Required for roadmap completeness but can follow core operating workflows.
 
 ---
@@ -139,9 +142,11 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 ## P1-004 — Global Search Truthfulness
 
 ### Option A
+
 Rename current static command palette to Commands/Navigation.
 
 ### Option B
+
 Implement actual permitted domain search.
 
 ### Acceptance

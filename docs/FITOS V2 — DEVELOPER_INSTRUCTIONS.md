@@ -579,15 +579,19 @@ Migrations must work:
 Every important change should include the correct test level.
 
 ### Unit
+
 Pure domain logic.
 
 ### Integration
+
 Persistence, tenancy, constraints, lifecycle.
 
 ### Component
+
 Forms, dialogs, responsive controls, errors.
 
 ### E2E
+
 Business-critical workflows.
 
 ---
@@ -696,5 +700,7 @@ If the system cannot keep the promise:
 - or remove it.
 
 ## Build what the UI promises.
+
 ## Persist what users change.
+
 ## Test what businesses depend on.
