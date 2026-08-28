@@ -129,6 +129,12 @@ complete.
 - Full required golden/adversarial Playwright matrix: still pending; the configured 11-test suite is green but does not yet cover every journey listed below.
 - Isolated Playwright rerun after worker callback and membership-policy changes passed 11/11; a reused-server failure was traced to the configured localhost versus 127.0.0.1 origin mismatch.
 
+### Verified UX hardening additions
+
+- [x] Settings surfaces audited for page-local inline styling; shared back-link, security-tile, and branch-list classes now provide the presentation layer.
+- [x] Platform audit entries expose readable lifecycle/capability before-after summaries and operator reasons.
+- [x] Member navigation is metadata-driven, URL-addressable, mobile-friendly, and reports recoverable overview/session errors.
+
 ### Still in progress / not yet verified complete
 
 - [ ] Full golden-path and adversarial E2E journeys covering all role handoffs, member self-service, public reservation outcomes and branch switching.
