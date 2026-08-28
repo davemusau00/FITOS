@@ -313,6 +313,8 @@ Capability plan defaults no longer depend on static frontend assumptions.
 
 The update endpoint and dedicated Platform Plans screen now provide the editable assignment boundary; historical before/after assignment history and scoped feature-flag overrides remain open.
 
+Capability update requests are runtime-validated against `PLATFORM_FEATURE_REGISTRY`; undeclared keys are rejected with `400 Bad Request`, covered by the Platform controller test path.
+
 ---
 
 ## P1-013 — Scoped Feature Flags
