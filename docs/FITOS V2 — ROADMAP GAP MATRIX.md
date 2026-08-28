@@ -886,7 +886,7 @@ Progressively remove page-owned theme systems.
 
 All major surfaces at keyboard/touch/zoom.
 
-**Implementation evidence (2026-08-28):** Shared `ErrorNotice` now supports an accessible, keyboard-operable Retry action, wired into account profile/plan, organization, branches, audit, and staff reads, Member Portal reads, and Ops, Insights, Bookings, Members, Attendance, Memberships, Schedule, Services, Platform Overview, and Platform Tenants query failures. This is a targeted recovery/accessibility improvement; the full responsive and keyboard sweep remains open.
+**Implementation evidence (2026-08-28):** Shared `ErrorNotice` now supports an accessible, keyboard-operable Retry action, wired into account profile/plan, organization, branches, audit, and staff reads, Member Portal reads, Ops, Insights, Bookings, Members, Attendance, Memberships, Schedule, Services, Equipment, Platform Overview, and Platform Tenants query failures. Equipment now clears stale errors on retry and surfaces initial-load failures instead of silently leaving an empty workspace. This is a targeted recovery/accessibility improvement; the full responsive and keyboard sweep remains open.
 
 ---
 

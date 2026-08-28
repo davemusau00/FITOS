@@ -7,6 +7,7 @@ import type {
   CreateEquipmentAssetRequest,
   CreateMaintenanceRecordRequest
 } from "@fitos/contracts";
+import { ErrorNotice } from "../shared";
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   available: { label: "Available", color: "#22c55e" },
@@ -53,6 +54,7 @@ export default function EquipmentPage() {
   const [pools, setPools] = useState<EquipmentPoolResponse[]>([]);
   const [maintenance, setMaintenance] = useState<EquipmentMaintenanceRecordResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [selectedAsset, setSelectedAsset] = useState<EquipmentAssetResponse | null>(null);
   const [showNewAsset, setShowNewAsset] = useState(false);
   const [showNewMaint, setShowNewMaint] = useState(false);
@@ -63,6 +65,7 @@ export default function EquipmentPage() {
 
   const reload = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [a, p, m] = await Promise.all([
         api.equipmentAssets(),
@@ -72,6 +75,8 @@ export default function EquipmentPage() {
       setAssets(a);
       setPools(p);
       setMaintenance(m);
+    } catch (error) {
+      setLoadError(error);
     } finally {
       setLoading(false);
     }
@@ -148,6 +153,8 @@ export default function EquipmentPage() {
           </button>
         ))}
       </div>
+
+      <ErrorNotice error={loadError} onRetry={() => void reload()} />
 
       {tab === "assets" && (
         <>
