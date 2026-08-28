@@ -280,3 +280,86 @@ export const memberNavigation: RouteMeta[] = [
     mobileMode: "consumer"
   }
 ];
+
+export const roleNavigation: Record<"ops" | "front desk" | "coach" | "practice", RouteMeta[]> = {
+  ops: [
+    {
+      path: "/ops",
+      label: "Today",
+      group: "Today",
+      icon: "dashboard",
+      workspace: "ops",
+      branchMode: "required",
+      mobileMode: "touch"
+    },
+    {
+      path: "/ops/schedule",
+      label: "Schedule",
+      group: "Operations",
+      icon: "calendar",
+      workspace: "ops",
+      branchMode: "required",
+      mobileMode: "agenda"
+    },
+    {
+      path: "/ops/bookings",
+      label: "Bookings",
+      group: "Operations",
+      icon: "calendar",
+      workspace: "ops",
+      branchMode: "required",
+      mobileMode: "cards"
+    },
+    {
+      path: "/ops/attendance",
+      label: "Attendance",
+      group: "Operations",
+      icon: "check",
+      workspace: "ops",
+      branchMode: "required",
+      mobileMode: "touch"
+    }
+  ],
+  "front desk": [
+    {
+      path: "/reception",
+      label: "Front Desk",
+      group: "Today",
+      icon: "check",
+      workspace: "front_desk",
+      branchMode: "required",
+      mobileMode: "touch"
+    }
+  ],
+  coach: [
+    {
+      path: "/coach",
+      label: "My Day",
+      group: "Today",
+      icon: "dashboard",
+      workspace: "coach",
+      branchMode: "required",
+      mobileMode: "touch"
+    }
+  ],
+  practice: [
+    {
+      path: "/practice",
+      label: "Practice today",
+      group: "Today",
+      icon: "dashboard",
+      workspace: "practice",
+      branchMode: "required",
+      mobileMode: "record"
+    },
+    {
+      path: "/practice/assessments",
+      label: "Assessments",
+      group: "Records",
+      icon: "spark",
+      workspace: "practice",
+      branchMode: "required",
+      mobileMode: "record"
+    }
+  ]
+};

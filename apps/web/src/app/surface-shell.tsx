@@ -4,22 +4,9 @@ import { BranchProvider, useBranch } from "./branch-context";
 import { useAuth } from "./auth";
 import type { WorkspaceKey } from "@fitos/contracts";
 import { api } from "../lib/api/client";
+import { roleNavigation } from "./navigation";
 
 type Surface = "ops" | "front desk" | "coach" | "practice";
-const surfaceNavigation: Record<Surface, Array<{ label: string; path: string }>> = {
-  ops: [
-    { label: "Today", path: "/ops" },
-    { label: "Schedule", path: "/ops/schedule" },
-    { label: "Bookings", path: "/ops/bookings" },
-    { label: "Attendance", path: "/ops/attendance" }
-  ],
-  "front desk": [{ label: "Front Desk", path: "/reception" }],
-  coach: [{ label: "My Day", path: "/coach" }],
-  practice: [
-    { label: "Practice today", path: "/practice" },
-    { label: "Assessments", path: "/practice/assessments" }
-  ]
-};
 const surfaceCopy: Record<Surface, { name: string; question: string }> = {
   ops: { name: "FITOS Ops", question: "What needs attention today?" },
   "front desk": {
@@ -102,7 +89,7 @@ function SurfaceShellInner({ surface, workspace }: { surface: Surface; workspace
             </nav>
           </div>
           <nav aria-label={`${copy.name} navigation`} className="surface-shell-nav">
-            {surfaceNavigation[surface].map((item) => (
+            {roleNavigation[surface].map((item) => (
               <NavLink end={item.path === `/${workspace}`} key={item.path} to={item.path}>
                 {item.label}
               </NavLink>
