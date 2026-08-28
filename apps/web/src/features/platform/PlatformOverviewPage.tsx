@@ -10,6 +10,10 @@ export function PlatformOverviewPage() {
     queryKey: ["platform", "account-export-requests"],
     queryFn: api.platformAccountExportRequests
   });
+  const planRequests = useQuery({
+    queryKey: ["platform", "plan-change-requests"],
+    queryFn: api.platformPlanChangeRequests
+  });
   if (query.isLoading) return <PageLoading />;
   const data = query.data;
   return (
@@ -127,6 +131,30 @@ export function PlatformOverviewPage() {
               ))
             ) : (
               <p className="muted">No pending export requests.</p>
+            )}
+          </Card>
+          <Card>
+            <div className="section-header-row">
+              <div>
+                <p className="fitos-page-header__eyebrow">Account operations</p>
+                <h2>Plan-change requests</h2>
+              </div>
+            </div>
+            <ErrorNotice error={planRequests.error} onRetry={() => void planRequests.refetch()} />
+            {planRequests.data?.length ? (
+              planRequests.data.slice(0, 5).map((request) => (
+                <div className="fitos-mobile-data-card" key={request.id}>
+                  <strong>
+                    {request.requestedPlan} · {request.status}
+                  </strong>
+                  <span className="fitos-mobile-data-card__meta">
+                    Tenant {request.tenantId.slice(0, 8)} ·{" "}
+                    {new Date(request.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="muted">No plan-change requests.</p>
             )}
           </Card>
         </>

@@ -277,6 +277,8 @@ When implemented, Platform can:
 
 ---
 
+**Additional evidence (2026-08-28):** Platform Overview now surfaces recent plan-change requests with retryable loading errors.
+
 ## P1-011 — Persist Platform Plan Definitions
 
 Persist:
