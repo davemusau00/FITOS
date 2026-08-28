@@ -4192,6 +4192,19 @@ body {
   min-height: 100vh;
 }
 
+.leads-summary-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1rem 0;
+}
+
+@media (max-width: 640px) {
+  .leads-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .member-portal-shell--login {
   align-items: center;
   display: flex;

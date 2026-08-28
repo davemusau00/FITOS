@@ -10,7 +10,8 @@ import {
   Icon,
   Modal,
   PageHeader,
-  SearchBar
+  SearchBar,
+  StatCard
 } from "@fitos/ui";
 import type { LeadResponse } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
@@ -217,6 +218,13 @@ export function LeadsPage() {
 
   const activeStages = leadStages.filter((s) => s !== "lost");
   const allLeads = leads.data?.data ?? [];
+  const overdueFollowUps = allLeads.filter(
+    (lead) =>
+      lead.nextFollowUpAt &&
+      new Date(lead.nextFollowUpAt).getTime() <= Date.now() &&
+      lead.stage !== "joined" &&
+      lead.stage !== "lost"
+  ).length;
 
   const columns: DataTableColumn<LeadResponse>[] = [
     {
@@ -308,6 +316,26 @@ export function LeadsPage() {
       />
 
       <ErrorNotice error={leads.error ?? updateStage.error ?? convert.error} />
+
+      <div className="leads-summary-grid">
+        <StatCard
+          icon="users"
+          label="Pipeline leads"
+          value={allLeads.length}
+          detail="Current filtered result"
+        />
+        <StatCard
+          icon="warning"
+          label="Follow-ups overdue"
+          value={overdueFollowUps}
+          detail={
+            overdueFollowUps
+              ? "Open each lead to complete the next action"
+              : "No overdue follow-ups in this view"
+          }
+          tone={overdueFollowUps ? "warning" : "success"}
+        />
+      </div>
 
       {/* Filters */}
       <section className="filter-row">
