@@ -156,6 +156,27 @@ describe("account lifecycle requests", () => {
   });
 });
 
+describe("account export lifecycle", () => {
+  it("moves an export request through Platform processing to completion", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    const scope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const created = await repository.createAccountExportRequest(scope, owner.user.id);
+    expect(
+      (await repository.updateAccountExportRequestStatus(created.id, "processing"))?.status
+    ).toBe("processing");
+    const completed = await repository.updateAccountExportRequestStatus(created.id, "completed");
+    expect(completed?.completedAt).toBeTruthy();
+  });
+});
+
 describe("staff password and session lifecycle", () => {
   it("changes the password, preserves the current session, and revokes other sessions", async () => {
     const repository = new InMemoryFitosRepository();
