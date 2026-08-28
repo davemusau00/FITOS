@@ -160,6 +160,21 @@ export interface FeatureFlagResponse {
   category: "core" | "advanced" | "beta";
 }
 
+export type FeatureFlagScope = "global" | "plan" | "tenant" | "pilot";
+export interface FeatureFlagOverrideResponse {
+  id: string;
+  key: SaaSCapabilityKey;
+  scope: FeatureFlagScope;
+  scopeValue: string | null;
+  enabled: boolean;
+  reason: string;
+  actorUserId: string | null;
+  previousEnabled: boolean | null;
+  effectiveFrom: string | null;
+  effectiveUntil: string | null;
+  createdAt: string;
+}
+
 export type FeatureMaturity = "stable" | "beta" | "internal";
 export interface FeatureDefinition {
   key: SaaSCapabilityKey;

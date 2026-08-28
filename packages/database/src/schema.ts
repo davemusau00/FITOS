@@ -133,6 +133,24 @@ export const platformPlanDefinitions = pgTable("platform_plan_definitions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
+export const platformFeatureFlagOverrides = pgTable(
+  "platform_feature_flag_overrides",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    key: varchar("key", { length: 80 }).notNull(),
+    scope: varchar("scope", { length: 20 }).notNull(),
+    scopeValue: varchar("scope_value", { length: 160 }),
+    enabled: boolean("enabled").notNull(),
+    reason: text("reason").notNull(),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    previousEnabled: boolean("previous_enabled"),
+    effectiveFrom: timestamp("effective_from", { withTimezone: true }),
+    effectiveUntil: timestamp("effective_until", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("idx_platform_flag_overrides_key_scope").on(table.key, table.scope, table.scopeValue)]
+);
+
 export const platformAdminTokens = pgTable(
   "platform_admin_tokens",
   {
