@@ -261,6 +261,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     string,
     import("@fitos/contracts").NotificationResponse
   >();
+  private readonly platformPlanDefinitions = new Map<
+    string,
+    import("@fitos/contracts").SaaSPlanDefinition
+  >();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly memberPasswords = new Map<string, string>();
@@ -3737,15 +3741,34 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   async listPlatformPlanDefinitions() {
-    return (Object.keys(SaaS_PLAN_QUOTAS) as import("@fitos/contracts").SaaSPlan[]).map((key) => ({
+    if (!this.platformPlanDefinitions.size)
+      for (const key of Object.keys(SaaS_PLAN_QUOTAS) as import("@fitos/contracts").SaaSPlan[])
+        this.platformPlanDefinitions.set(key, {
+          key,
+          name: `FITOS ${key[0]!.toUpperCase()}${key.slice(1)}`,
+          description: `${key[0]!.toUpperCase()}${key.slice(1)} workspace plan`,
+          quotas: SaaS_PLAN_QUOTAS[key],
+          capabilities: PLATFORM_FEATURE_REGISTRY.filter((feature) => feature.defaultEnabled).map(
+            (feature) => feature.key
+          )
+        });
+    return [...this.platformPlanDefinitions.values()];
+  }
+
+  async updatePlatformPlanDefinition(
+    key: import("@fitos/contracts").SaaSPlan,
+    input: Omit<import("@fitos/contracts").SaaSPlanDefinition, "key"> & { isActive?: boolean }
+  ) {
+    if (input.isActive === false) return null;
+    const updated = {
       key,
-      name: `FITOS ${key[0]!.toUpperCase()}${key.slice(1)}`,
-      description: `${key[0]!.toUpperCase()}${key.slice(1)} workspace plan`,
-      quotas: SaaS_PLAN_QUOTAS[key],
-      capabilities: PLATFORM_FEATURE_REGISTRY.filter((feature) => feature.defaultEnabled).map(
-        (feature) => feature.key
-      )
-    }));
+      name: input.name,
+      description: input.description,
+      quotas: input.quotas,
+      capabilities: input.capabilities
+    };
+    this.platformPlanDefinitions.set(key, updated);
+    return updated;
   }
 
   async createNotification(

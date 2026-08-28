@@ -616,6 +616,10 @@ export interface FitosRepository {
   ): Promise<void>;
   listPlatformTenantControls(): Promise<PlatformTenantControlRecord[]>;
   listPlatformPlanDefinitions(): Promise<import("@fitos/contracts").SaaSPlanDefinition[]>;
+  updatePlatformPlanDefinition(
+    key: import("@fitos/contracts").SaaSPlan,
+    input: Omit<import("@fitos/contracts").SaaSPlanDefinition, "key"> & { isActive?: boolean }
+  ): Promise<import("@fitos/contracts").SaaSPlanDefinition | null>;
   getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
   transitionTenantSubscriptionStatus(
     tenantId: string,

@@ -264,6 +264,52 @@ export class PlatformController {
     return this.repository.listPlatformPlanDefinitions();
   }
 
+  @Patch("plans/:key")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async updatePlatformPlan(
+    @Param("key") key: string,
+    @Body() body: unknown,
+    @RequestId() requestId: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        name: z.string().trim().min(1).max(120),
+        description: z.string().trim().min(1).max(500),
+        quotas: z
+          .object({
+            maxMembers: z.number().int().nonnegative(),
+            maxStaff: z.number().int().nonnegative(),
+            maxBranches: z.number().int().nonnegative(),
+            maxAutomationRuns: z.number().int().nonnegative(),
+            maxStorageMb: z.number().int().nonnegative()
+          })
+          .strict(),
+        capabilities: z.array(z.string()).max(50),
+        isActive: z.boolean().optional(),
+        reason: z.string().trim().min(3).max(500)
+      })
+      .strict()
+      .parse(body);
+    const planKey = z
+      .enum(["starter", "pro", "business"])
+      .parse(key) as import("@fitos/contracts").SaaSPlan;
+    const updated = await this.repository.updatePlatformPlanDefinition(planKey, input);
+    if (!updated) throw new NotFoundException("Plan definition not found or inactive.");
+    await this.repository.recordAudit({
+      tenantId: null,
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "platform.plan_definition_updated",
+      resourceType: "platform_plan_definition",
+      resourceId: planKey,
+      beforeSummary: null,
+      afterSummary: { ...updated, reason: input.reason },
+      requestId
+    });
+    return updated;
+  }
+
   @Patch("tenants/:tenantId/status")
   @AuthMode("platform")
   @RequirePlatformAdmin()

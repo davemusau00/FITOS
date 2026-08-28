@@ -467,6 +467,33 @@ export class DrizzleFitosRepository implements FitosRepository {
     }));
   }
 
+  async updatePlatformPlanDefinition(
+    key: import("@fitos/contracts").SaaSPlan,
+    input: Omit<import("@fitos/contracts").SaaSPlanDefinition, "key"> & { isActive?: boolean }
+  ) {
+    const [row] = await this.db
+      .update(platformPlanDefinitions)
+      .set({
+        name: input.name,
+        description: input.description,
+        quotas: input.quotas,
+        capabilities: input.capabilities,
+        isActive: input.isActive ?? true,
+        updatedAt: new Date()
+      })
+      .where(eq(platformPlanDefinitions.key, key))
+      .returning();
+    return row
+      ? {
+          key: row.key as import("@fitos/contracts").SaaSPlan,
+          name: row.name,
+          description: row.description,
+          quotas: row.quotas as import("@fitos/contracts").SaaSPlanQuotas,
+          capabilities: row.capabilities as import("@fitos/contracts").SaaSCapabilityKey[]
+        }
+      : null;
+  }
+
   async createNotification(
     input: Omit<import("@fitos/contracts").NotificationResponse, "id" | "readAt" | "createdAt">
   ) {

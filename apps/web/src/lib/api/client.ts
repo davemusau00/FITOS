@@ -592,6 +592,14 @@ export const api = {
   platformFeatures: () =>
     request<import("@fitos/contracts").FeatureDefinition[]>("/platform/features"),
   platformPlans: () => request<import("@fitos/contracts").SaaSPlanDefinition[]>("/platform/plans"),
+  updatePlatformPlan: (
+    key: import("@fitos/contracts").SaaSPlan,
+    payload: Omit<import("@fitos/contracts").SaaSPlanDefinition, "key"> & { reason: string }
+  ) =>
+    request<import("@fitos/contracts").SaaSPlanDefinition>(`/platform/plans/${key}`, {
+      method: "PATCH",
+      body: json(payload)
+    }),
   platformAudit: () => request<import("@fitos/contracts").AuditEventResponse[]>("/platform/audit"),
   platformAccountExportRequests: () =>
     request<import("@fitos/contracts").AccountExportRequestResponse[]>(
