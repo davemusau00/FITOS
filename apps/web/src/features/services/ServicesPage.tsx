@@ -24,6 +24,7 @@ import type {
 } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { ErrorNotice, PageLoading, formatCurrency } from "../shared";
 
 const serviceTypes: { label: string; value: ServiceType }[] = [
@@ -59,9 +60,12 @@ export function ServicesPage() {
   const [isManagingRooms, setIsManagingRooms] = useState(false);
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
-  const services = useQuery({ queryKey: ["services"], queryFn: api.services });
+  const services = useQuery({
+    queryKey: branchQueryKeys.list("services", selectedBranch || "all"),
+    queryFn: api.services
+  });
   const rooms = useQuery({
-    queryKey: ["rooms", selectedBranch],
+    queryKey: branchQueryKeys.list("rooms", selectedBranch || "all"),
     queryFn: () => api.rooms(selectedBranch || undefined)
   });
 
@@ -250,7 +254,7 @@ export function ServicesPage() {
             setEditingService(null);
           }}
           onSuccess={() => {
-            void queryClient.invalidateQueries({ queryKey: ["services"] });
+            void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("services") });
             setIsCreating(false);
             setEditingService(null);
           }}
@@ -547,7 +551,7 @@ function RoomsManagerModal({
         name: values.name.trim(),
         capacity: values.capacity ? Number(values.capacity) : null
       });
-      await queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      await queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("rooms") });
       reset();
     } catch (cause) {
       setError(cause);
