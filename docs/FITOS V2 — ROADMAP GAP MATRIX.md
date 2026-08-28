@@ -173,9 +173,9 @@ UI copy exactly reflects behavior. Current implementation is explicitly Commands
 
 ## P1-005 — Real Notification Centre
 
-**Current state:** Notification preferences exist, but there is no persisted notification inbox or notification route. The shell bell currently opens the command palette, which violates the required interaction and remains a release-blocking UX gap for this ticket.
+**Current state:** Notification preferences exist, but there is no persisted notification inbox or notification route. The misleading shell bell has been removed until a real inbox exists; this ticket remains open.
 
-**Implementation evidence (2026-08-28):** `shell.tsx` wires the Notifications button to `setCmdOpen(true)`; the API currently exposes only `/users/me/notifications` preference reads/updates. No inbox list, read-state mutation, deep-link surface, or notification route was found.
+**Implementation evidence (2026-08-28):** The API currently exposes only `/users/me/notifications` preference reads/updates. No inbox list, read-state mutation, deep-link surface, or notification route was found. `shell.tsx` no longer renders a misleading notification control while the capability is absent.
 
 ### Acceptance
 
