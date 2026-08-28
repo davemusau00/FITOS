@@ -18,6 +18,10 @@ export function PlatformOverviewPage() {
     queryKey: ["platform", "cancellation-requests"],
     queryFn: api.platformCancellationRequests
   });
+  const deletionRequests = useQuery({
+    queryKey: ["platform", "deletion-requests"],
+    queryFn: api.platformDeletionRequests
+  });
   if (query.isLoading) return <PageLoading />;
   const data = query.data;
   return (
@@ -185,6 +189,34 @@ export function PlatformOverviewPage() {
             ) : (
               <p className="muted">No cancellation requests.</p>
             )}
+          </Card>
+          <Card>
+            <div className="section-header-row">
+              <div>
+                <p className="fitos-page-header__eyebrow">Account operations</p>
+                <h2>Deletion requests</h2>
+              </div>
+            </div>
+            <ErrorNotice
+              error={deletionRequests.error}
+              onRetry={() => void deletionRequests.refetch()}
+            />
+            {deletionRequests.data?.length ? (
+              deletionRequests.data.slice(0, 5).map((request) => (
+                <div className="fitos-mobile-data-card" key={request.id}>
+                  <strong>{request.status}</strong>
+                  <span className="fitos-mobile-data-card__meta">
+                    Tenant {request.tenantId.slice(0, 8)} ·{" "}
+                    {new Date(request.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="muted">No deletion requests.</p>
+            )}
+            <p className="muted">
+              Requests are reviewed separately; no destructive action is performed here.
+            </p>
           </Card>
         </>
       ) : null}
