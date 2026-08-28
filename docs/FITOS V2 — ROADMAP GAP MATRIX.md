@@ -70,7 +70,9 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 ## P0-004 — Inventory Receive Lot Must Work
 
 **Area:** Inventory  
-**Current state:** Receive Lot button changes unused state.
+**Current state:** The Receive Lot action now opens a validated, persisted workflow. The remaining persistence gap is that the Drizzle implementation does not yet transactionally create the corresponding stock movement/recalculate item stock.
+
+**Implementation evidence (2026-08-28):** `InventoryPage` now renders a Receive Inventory Lot modal with required item and quantity validation, optional branch, lot/batch code, expiry, notes, pending/error feedback, and canonical reload after `POST /inventory/lots`. The existing API contract and controller are used without fabricated success. Web typecheck passes. Atomic lot + movement and PostgreSQL persistence tests remain open.
 
 ### Acceptance
 
