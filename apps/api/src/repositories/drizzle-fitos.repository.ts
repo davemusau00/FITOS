@@ -2104,6 +2104,42 @@ export class DrizzleFitosRepository implements FitosRepository {
     return row ? this.memberMembershipResponse(row) : null;
   }
 
+  async holdMembership(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<MemberMembershipResponse | null> {
+    const [row] = await this.db
+      .update(memberMemberships)
+      .set({ status: "paused", updatedAt: new Date() })
+      .where(
+        and(
+          eq(memberMemberships.id, membershipId),
+          eq(memberMemberships.tenantId, scope.tenantId),
+          eq(memberMemberships.status, "active")
+        )
+      )
+      .returning();
+    return row ? this.memberMembershipResponse(row) : null;
+  }
+
+  async resumeMembership(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<MemberMembershipResponse | null> {
+    const [row] = await this.db
+      .update(memberMemberships)
+      .set({ status: "active", updatedAt: new Date() })
+      .where(
+        and(
+          eq(memberMemberships.id, membershipId),
+          eq(memberMemberships.tenantId, scope.tenantId),
+          eq(memberMemberships.status, "paused")
+        )
+      )
+      .returning();
+    return row ? this.memberMembershipResponse(row) : null;
+  }
+
   async listCreditLedger(
     scope: TenantScope,
     memberId: string

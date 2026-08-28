@@ -61,6 +61,13 @@ describe("Memberships and Booking Credits Integration", () => {
       new Date(new Date(activation.membership.startsAt).getTime() + 30 * 86400000).toISOString()
     );
 
+    const held = await repository.holdMembership(gymScope, activation.membership.id);
+    expect(held?.status).toBe("paused");
+    expect(await repository.holdMembership(gymScope, activation.membership.id)).toBeNull();
+    const resumed = await repository.resumeMembership(gymScope, activation.membership.id);
+    expect(resumed?.status).toBe("active");
+    expect(await repository.resumeMembership(gymScope, activation.membership.id)).toBeNull();
+
     await repository.updateMembershipPlan(gymScope, plan.id, {
       name: "Updated 20-Class Strength Pack",
       includedCredits: 20,

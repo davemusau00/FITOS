@@ -175,6 +175,26 @@ export class MembershipsController {
     );
   }
 
+  @Post("members/:memberId/memberships/:membershipId/hold")
+  @RequirePermission("membership:manage")
+  holdMembership(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("membershipId") membershipId: string
+  ) {
+    return this.core.holdMembership(actor, requestId, z.string().uuid().parse(membershipId));
+  }
+
+  @Post("members/:memberId/memberships/:membershipId/resume")
+  @RequirePermission("membership:manage")
+  resumeMembership(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("membershipId") membershipId: string
+  ) {
+    return this.core.resumeMembership(actor, requestId, z.string().uuid().parse(membershipId));
+  }
+
   @Get("members/:memberId/credits")
   @RequirePermission("membership:read")
   listCredits(@Actor() actor: RequestActor, @Param("memberId") memberId: string) {

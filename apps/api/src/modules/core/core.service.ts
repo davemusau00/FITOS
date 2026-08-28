@@ -1087,6 +1087,46 @@ export class CoreService {
     return membership;
   }
 
+  async holdMembership(
+    actor: RequestActor,
+    requestId: string,
+    membershipId: string
+  ): Promise<MemberMembershipResponse> {
+    const membership = await this.repository.holdMembership(scopeOf(actor), membershipId);
+    if (!membership)
+      throw new DomainError("RESOURCE_NOT_FOUND", "Active membership not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "membership.paused",
+      "member_membership",
+      membership.id,
+      null,
+      { memberId: membership.memberId }
+    );
+    return membership;
+  }
+
+  async resumeMembership(
+    actor: RequestActor,
+    requestId: string,
+    membershipId: string
+  ): Promise<MemberMembershipResponse> {
+    const membership = await this.repository.resumeMembership(scopeOf(actor), membershipId);
+    if (!membership)
+      throw new DomainError("RESOURCE_NOT_FOUND", "Paused membership not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "membership.resumed",
+      "member_membership",
+      membership.id,
+      null,
+      { memberId: membership.memberId }
+    );
+    return membership;
+  }
+
   async listCreditLedger(
     actor: RequestActor,
     memberId: string

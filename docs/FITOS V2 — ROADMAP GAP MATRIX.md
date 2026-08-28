@@ -468,11 +468,15 @@ Lead trial should create/link a real booking.
 
 Persist real hold lifecycle.
 
+**Implementation evidence (2026-08-28):** Added permission-gated hold endpoint, repository-backed active-to-paused transitions for in-memory and PostgreSQL, audit emission, and Member Detail Hold Plan action with pending protection. Integration coverage verifies the transition and duplicate rejection.
+
 ---
 
 ## P1-031 — Membership Resume
 
 Server lifecycle operation.
+
+**Implementation evidence (2026-08-28):** Added permission-gated resume endpoint, repository-backed paused-to-active transitions for in-memory and PostgreSQL, audit emission, and Member Detail Resume Plan action. Integration coverage verifies resume and duplicate rejection.
 
 ---
 

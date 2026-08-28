@@ -371,6 +371,14 @@ export interface FitosRepository {
     membershipId: string,
     reason?: string
   ): Promise<MemberMembershipResponse | null>;
+  holdMembership(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<MemberMembershipResponse | null>;
+  resumeMembership(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<MemberMembershipResponse | null>;
   listCreditLedger(scope: TenantScope, memberId: string): Promise<CreditLedgerEntryResponse[]>;
   getCreditBalance(scope: TenantScope, memberId: string): Promise<number>;
   adjustCredit(

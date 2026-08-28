@@ -3361,6 +3361,30 @@ export class InMemoryFitosRepository implements FitosRepository {
     return { ...membership };
   }
 
+  async holdMembership(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<MemberMembershipResponse | null> {
+    const membership = this.memberMemberships.get(membershipId);
+    if (!membership || membership.tenantId !== scope.tenantId || membership.status !== "active")
+      return null;
+    membership.status = "paused";
+    membership.updatedAt = now();
+    return { ...membership };
+  }
+
+  async resumeMembership(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<MemberMembershipResponse | null> {
+    const membership = this.memberMemberships.get(membershipId);
+    if (!membership || membership.tenantId !== scope.tenantId || membership.status !== "paused")
+      return null;
+    membership.status = "active";
+    membership.updatedAt = now();
+    return { ...membership };
+  }
+
   async listCreditLedger(
     scope: TenantScope,
     memberId: string

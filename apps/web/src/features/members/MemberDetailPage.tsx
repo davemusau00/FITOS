@@ -130,12 +130,24 @@ export function MemberDetailPage() {
   });
 
   const activeMembership = memberships.data?.find((m) => m.status === "active");
+  const pausedMembership = memberships.data?.find((m) => m.status === "paused");
+  const currentMembership = activeMembership ?? pausedMembership;
   const totalVisits = attendance.data?.data.length ?? 0;
   const totalBookings = bookings.data?.data.length ?? 0;
 
   const cancelMembershipMutation = useMutation({
     mutationFn: (membershipId: string) =>
       api.cancelMembership(memberId!, membershipId, "Cancelled by staff"),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["member", memberId, "memberships"] });
+      void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits"] });
+    }
+  });
+  const membershipLifecycleMutation = useMutation({
+    mutationFn: ({ membershipId, action }: { membershipId: string; action: "hold" | "resume" }) =>
+      action === "hold"
+        ? api.holdMembership(memberId!, membershipId)
+        : api.resumeMembership(memberId!, membershipId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["member", memberId, "memberships"] });
       void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits"] });
@@ -414,32 +426,48 @@ export function MemberDetailPage() {
               <div className="section-header-row" style={{ marginTop: 0, marginBottom: "0.75rem" }}>
                 <h2>Active Membership</h2>
                 <div className="form-actions">
-                  {activeMembership && can(auth, "membership:manage") ? (
-                    <Button
-                      onClick={() => cancelMembershipMutation.mutate(activeMembership.id)}
-                      size="small"
-                      variant="ghost"
-                    >
-                      Cancel Plan
-                    </Button>
+                  {currentMembership && can(auth, "membership:manage") ? (
+                    <>
+                      <Button
+                        disabled={membershipLifecycleMutation.isPending}
+                        onClick={() =>
+                          membershipLifecycleMutation.mutate({
+                            membershipId: currentMembership.id,
+                            action: currentMembership.status === "paused" ? "resume" : "hold"
+                          })
+                        }
+                        size="small"
+                        variant="ghost"
+                      >
+                        {currentMembership.status === "paused" ? "Resume Plan" : "Hold Plan"}
+                      </Button>
+                      <Button
+                        disabled={cancelMembershipMutation.isPending}
+                        onClick={() => cancelMembershipMutation.mutate(currentMembership.id)}
+                        size="small"
+                        variant="ghost"
+                      >
+                        Cancel Plan
+                      </Button>
+                    </>
                   ) : null}
                 </div>
               </div>
 
-              {activeMembership ? (
+              {currentMembership ? (
                 <div className="form-stack">
                   <div className="selected-entity-badge">
                     <div className="selected-entity-badge__info">
                       <Icon name="spark" size={20} />
                       <div>
-                        <strong>{activeMembership.planSnapshot.name}</strong>
+                        <strong>{currentMembership.planSnapshot.name}</strong>
                         <span>
-                          Valid until: {formatDate(activeMembership.endsAt)} · Started:{" "}
-                          {formatDate(activeMembership.startsAt)}
+                          Valid until: {formatDate(currentMembership.endsAt)} · Started:{" "}
+                          {formatDate(currentMembership.startsAt)}
                         </span>
                       </div>
                     </div>
-                    <StatusBadge status={activeMembership.status} />
+                    <StatusBadge status={currentMembership.status} />
                   </div>
 
                   <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
@@ -449,7 +477,7 @@ export function MemberDetailPage() {
                     </Card>
                     <Card className="kpi">
                       <span>Total included</span>
-                      <strong>{activeMembership.planSnapshot.includedCredits}</strong>
+                      <strong>{currentMembership.planSnapshot.includedCredits}</strong>
                     </Card>
                   </div>
                 </div>

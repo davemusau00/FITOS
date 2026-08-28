@@ -403,6 +403,14 @@ export const api = {
       method: "POST",
       body: json({ reason })
     }),
+  holdMembership: (memberId: string, membershipId: string) =>
+    request<MemberMembershipResponse>(`/members/${memberId}/memberships/${membershipId}/hold`, {
+      method: "POST"
+    }),
+  resumeMembership: (memberId: string, membershipId: string) =>
+    request<MemberMembershipResponse>(`/members/${memberId}/memberships/${membershipId}/resume`, {
+      method: "POST"
+    }),
   creditLedger: (memberId: string) =>
     request<CreditLedgerEntryResponse[]>(`/members/${memberId}/credits`),
   creditBalance: (memberId: string) =>
