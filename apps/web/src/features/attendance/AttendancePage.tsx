@@ -16,6 +16,7 @@ import {
 import type { AttendanceRecordResponse, AttendanceStatus } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 export function AttendancePage() {
@@ -31,7 +32,7 @@ export function AttendancePage() {
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const attendance = useQuery({
-    queryKey: ["attendance", selectedBranch],
+    queryKey: branchQueryKeys.list("attendance", selectedBranch || "all"),
     queryFn: () => {
       const params = new URLSearchParams();
       if (selectedBranch) params.set("branchId", selectedBranch);
