@@ -118,6 +118,44 @@ describe("plan change decisions", () => {
   });
 });
 
+describe("account lifecycle requests", () => {
+  it("persists cancellation review and requires explicit deletion confirmation", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    const scope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const cancellation = await repository.createAccountCancellationRequest(
+      scope,
+      owner.user.id,
+      "Closing the gym"
+    );
+    expect(
+      await repository.decideAccountCancellationRequest(
+        cancellation.id,
+        "reviewing",
+        "Under review",
+        owner.user.id
+      )
+    ).toMatchObject({ status: "reviewing" });
+    const deletion = await repository.createAccountDeletionRequest(
+      scope,
+      owner.user.id,
+      "DELETE WORKSPACE",
+      "Remove workspace"
+    );
+    expect(deletion.confirmation).toBe("DELETE WORKSPACE");
+    expect((await repository.listAccountDeletionRequests(scope)).map((item) => item.id)).toContain(
+      deletion.id
+    );
+  });
+});
+
 describe("staff password and session lifecycle", () => {
   it("changes the password, preserves the current session, and revokes other sessions", async () => {
     const repository = new InMemoryFitosRepository();
