@@ -88,7 +88,7 @@ export function AppRouter() {
   const location = useLocation();
   useEffect(() => {
     const meta = routeMetaForPath(location.pathname);
-    if (meta?.title) document.title = `${meta.title} · FITOS`;
+    document.title = meta?.title ? `${meta.title} · FITOS` : "FITOS";
   }, [location.pathname]);
 
   return (
