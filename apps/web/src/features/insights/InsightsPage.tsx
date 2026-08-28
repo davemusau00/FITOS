@@ -113,7 +113,7 @@ export function InsightsPage() {
               <Card className="kpi kpi--energy">
                 <span>Avg Weekly Visits</span>
                 <strong>{summary?.avgWeeklyVisits ?? 0}</strong>
-                <div className="kpi__change" style={{ color: "var(--success)" }}>
+                <div className="kpi__change kpi__change--positive">
                   {summary?.avgWeeklyVisitsChangePct == null
                     ? "No comparison data"
                     : `${summary.avgWeeklyVisitsChangePct}% vs last month`}
@@ -123,7 +123,7 @@ export function InsightsPage() {
               <Card className="kpi">
                 <span>Class Occupancy Rate</span>
                 <strong>{summary?.classOccupancyRate ?? 0}%</strong>
-                <div className="kpi__change" style={{ color: "var(--success)" }}>
+                <div className="kpi__change kpi__change--positive">
                   {summary?.classOccupancyChangePct == null
                     ? "No comparison data"
                     : `${summary.classOccupancyChangePct}% vs last month`}
@@ -155,7 +155,7 @@ export function InsightsPage() {
                 <strong>
                   {summary?.leadConversionRate == null ? "—" : `${summary.leadConversionRate}%`}
                 </strong>
-                <div className="kpi__change" style={{ color: "var(--success)" }}>
+                <div className="kpi__change kpi__change--positive">
                   {summary?.leadConversionChangePct == null
                     ? "No comparison data"
                     : `${summary.leadConversionChangePct}% vs last month`}
@@ -166,7 +166,7 @@ export function InsightsPage() {
             {/* Attendance bar chart */}
             <Card>
               <h2>Weekly Attendance</h2>
-              <p className="muted" style={{ fontSize: "0.8rem", marginBottom: "1rem" }}>
+              <p className="muted insights-section-note">
                 Total check-ins per day this week (Live Aggregation)
               </p>
               <div className="insights-bar-chart">

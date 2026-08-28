@@ -3354,6 +3354,13 @@ body {
   height: 180px;
   padding: 0 0.5rem;
 }
+.kpi__change--positive {
+  color: var(--success);
+}
+.insights-section-note {
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
 .insights-bar-chart__col {
   align-items: center;
   display: flex;
