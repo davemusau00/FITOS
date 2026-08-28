@@ -9,6 +9,7 @@ import {
   EmptyState,
   FormField,
   Input,
+  Modal,
   PageHeader,
   ProgressBar,
   Select,
@@ -37,6 +38,7 @@ export function PlatformTenantDetailPage() {
   const [nextStatus, setNextStatus] = useState<TenantAccountStatus>("active");
   const [reason, setReason] = useState("");
   const [capabilityReason, setCapabilityReason] = useState("");
+  const [pendingCapabilities, setPendingCapabilities] = useState<SaaSCapabilityKey[] | null>(null);
   const tenant = useQuery({
     queryKey: ["platform", "tenant", tenantId],
     queryFn: () => api.platformTenant(tenantId),
@@ -265,12 +267,8 @@ export function PlatformTenantDetailPage() {
                             ? subscription.capabilities.filter((key) => key !== feature.key)
                             : [...subscription.capabilities, feature.key]
                         ) as SaaSCapabilityKey[];
-                        const nextReason = window
-                          .prompt("Reason for this capability override:", capabilityReason)
-                          ?.trim();
-                        if (!nextReason || nextReason.length < 3) return;
-                        setCapabilityReason(nextReason);
-                        capabilities.mutate({ values: next, reason: nextReason });
+                        setPendingCapabilities(next);
+                        setCapabilityReason("");
                       }}
                       type="checkbox"
                     />
@@ -310,6 +308,47 @@ export function PlatformTenantDetailPage() {
           />
         </Card>
       ) : null}
+      <Modal
+        description="Record why this tenant capability set is being changed. The reason is retained in the Platform audit history."
+        isOpen={Boolean(pendingCapabilities)}
+        onClose={() => setPendingCapabilities(null)}
+        title="Confirm capability override"
+      >
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!pendingCapabilities || capabilityReason.trim().length < 3) return;
+            capabilities.mutate(
+              { values: pendingCapabilities, reason: capabilityReason.trim() },
+              { onSuccess: () => setPendingCapabilities(null) }
+            );
+          }}
+        >
+          <FormField htmlFor="capability-override-reason" label="Audit reason">
+            <Input
+              id="capability-override-reason"
+              minLength={3}
+              maxLength={500}
+              required
+              value={capabilityReason}
+              onChange={(event) => setCapabilityReason(event.target.value)}
+            />
+          </FormField>
+          <div className="form-actions">
+            <Button type="button" variant="ghost" onClick={() => setPendingCapabilities(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={capabilityReason.trim().length < 3}
+              loading={capabilities.isPending}
+              type="submit"
+            >
+              Apply override
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </WorkspacePage>
   );
 }
