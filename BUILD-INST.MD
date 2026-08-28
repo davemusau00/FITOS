@@ -152,6 +152,7 @@ complete.
 - [x] Tenant Settings now exposes a role-permissioned Activity & Audit route backed by tenant-scoped audit events, with an explicit neutral no-data state.
 - [x] Playwright coverage now opens the owner Activity & Audit route and accepts both real audit history and the truthful empty state.
 - [x] Playwright mobile coverage now exercises Command, Ops, Front Desk, Coach, Practice, member, booking, attendance, CRM, membership and Account routes at all three pilot viewports.
+- [x] Isolated branch-context Playwright check passes 1/1, verifying accessible-branch selection and persisted active-branch state after refresh; a two-branch assigned fixture is still required to claim A/B isolation.
 - [ ] Final accessibility, terminology, activity timeline and archive/delete audit across all modules.
 
 ### Explicitly deferred for this sprint
