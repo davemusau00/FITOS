@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, PageHeader, StatusBadge } from "@fitos/ui";
 import { api } from "../../lib/api/client";
@@ -66,7 +66,7 @@ export function SitesPage() {
   const cache = useQueryClient();
   const pages = useQuery({ queryKey: ["site-pages"], queryFn: api.sitePages });
 
-  const [selectedPageId] = useState<string | null>(null);
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [title, setTitle] = useState("Home Page");
   const [slug, setSlug] = useState("home");
   const [blocks, setBlocks] = useState<SiteBlock[]>(DEFAULT_BLOCKS);
@@ -76,6 +76,25 @@ export function SitesPage() {
   );
   const [activeTab, setActiveTab] = useState<"blocks" | "theme" | "seo">("blocks");
   const [themeColor, setThemeColor] = useState("#3b82f6");
+
+  const selectPage = (page: NonNullable<typeof pages.data>[number]) => {
+    setSelectedPageId(page.id);
+    setTitle(page.title);
+    setSlug(page.slug);
+    setBlocks(
+      page.sections.map((section, index) => ({
+        ...(section as SiteBlock),
+        id: typeof section.id === "string" ? section.id : `${page.id}-${index}`
+      }))
+    );
+    setMetaTitle(typeof page.seo.title === "string" ? page.seo.title : page.title);
+    setMetaDesc(typeof page.seo.description === "string" ? page.seo.description : "");
+    setThemeColor(typeof page.seo.themeColor === "string" ? page.seo.themeColor : "#3b82f6");
+  };
+
+  useEffect(() => {
+    if (!selectedPageId && pages.data?.[0]) selectPage(pages.data[0]);
+  }, [pages.data, selectedPageId]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -422,6 +441,11 @@ export function SitesPage() {
               {(pages.data ?? []).map((page) => (
                 <div
                   key={page.id}
+                  onClick={() => selectPage(page)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") selectPage(page);
+                  }}
+                  role="button"
                   style={{
                     padding: "0.75rem",
                     borderRadius: "0.5rem",
@@ -434,6 +458,7 @@ export function SitesPage() {
                         ? "1px solid #3b82f6"
                         : "1px solid rgba(255,255,255,0.06)"
                   }}
+                  tabIndex={0}
                 >
                   <div
                     style={{
