@@ -24,6 +24,7 @@ import type {
 } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { ErrorNotice, PageLoading, formatCurrency, formatDate, formatDateTime } from "../shared";
 
 type Tab =
@@ -728,7 +729,7 @@ export function MemberDetailPage() {
           member={member.data}
           onSaved={(updated) => {
             queryClient.setQueryData(["member", memberId], updated);
-            void queryClient.invalidateQueries({ queryKey: ["members"] });
+            void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("members") });
             setEditing(false);
           }}
         />

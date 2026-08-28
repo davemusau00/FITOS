@@ -4,6 +4,7 @@ import { Button, Card, EmptyState, PageHeader, StatusBadge } from "@fitos/ui";
 import type { AttendanceStatus, BookingResponse } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { PageLoading, formatDateTime } from "../shared";
 
 export function ClassRosterPage() {
@@ -44,7 +45,7 @@ export function ClassRosterPage() {
     mutationFn: ({ recordId, status }: { recordId: string; status: AttendanceStatus }) =>
       api.updateAttendanceStatus(recordId, { status }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("attendance") });
     }
   });
 
@@ -57,7 +58,7 @@ export function ClassRosterPage() {
       });
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("attendance") });
     }
   });
 

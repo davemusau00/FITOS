@@ -379,7 +379,7 @@ export function MembershipsPage() {
           isOpen={true}
           onClose={() => setIsCreatingPlan(false)}
           onSuccess={() => {
-            void queryClient.invalidateQueries({ queryKey: ["membership-plans"] });
+            void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("membership-plans") });
             setIsCreatingPlan(false);
           }}
         />
@@ -393,7 +393,7 @@ export function MembershipsPage() {
           memberName={assigningMember.name}
           onClose={() => setAssigningMember(null)}
           onSuccess={() => {
-            void queryClient.invalidateQueries({ queryKey: ["members"] });
+            void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("members") });
             setAssigningMember(null);
           }}
           plans={plans.data?.filter((p) => p.isActive) ?? []}
