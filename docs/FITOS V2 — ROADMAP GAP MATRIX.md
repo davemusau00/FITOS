@@ -203,7 +203,7 @@ Notification bell opens notifications, not command palette.
 
 **Current state:** Quick Create actions are now filtered by the authenticated actor’s create/check-in permissions; capability and branch enforcement remain server-authoritative.
 
-**Implementation evidence (2026-08-28):** `shell.tsx` conditionally renders member, booking, lead, and attendance actions using `member:create`, `booking:create`, `lead:create`, and `attendance:checkin`. Route/API authorization remains the final enforcement layer.
+**Implementation evidence (2026-08-28):** `shell.tsx` conditionally renders member, booking, lead, and attendance actions using `member:create`, `booking:create`, `lead:create`, and `attendance:checkin`; the command palette also filters manifest navigation by route permission before display. Route/API authorization remains the final enforcement layer.
 
 ### Acceptance
 
