@@ -8,6 +8,7 @@ import type {
   ScheduleOccurrenceResponse
 } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { useBranch } from "../../app/branch-context";
 import { ErrorNotice, PageLoading, formatCurrency, formatDateTime } from "../shared";
 
@@ -26,7 +27,7 @@ export function NewBookingPage() {
   const [submissionError, setSubmissionError] = useState<unknown>(null);
 
   const membersQuery = useQuery({
-    queryKey: ["members", activeBranchId, memberSearch],
+    queryKey: branchQueryKeys.list("members", activeBranchId, memberSearch),
     queryFn: () => {
       const p = new URLSearchParams();
       if (memberSearch.trim()) p.set("query", memberSearch.trim());
@@ -38,7 +39,7 @@ export function NewBookingPage() {
   });
 
   const occurrencesQuery = useQuery({
-    queryKey: ["schedule", activeBranchId, "bookable"],
+    queryKey: branchQueryKeys.list("schedule", activeBranchId, "bookable"),
     queryFn: () => {
       const p = new URLSearchParams();
       p.set("status", "scheduled");
@@ -55,7 +56,7 @@ export function NewBookingPage() {
   const roomsQuery = useQuery({ queryKey: ["rooms"], queryFn: () => api.rooms() });
 
   const allBookingsQuery = useQuery({
-    queryKey: ["bookings", activeBranchId, "counts"],
+    queryKey: branchQueryKeys.list("bookings", activeBranchId, "counts"),
     queryFn: () => api.bookings(new URLSearchParams({ branchId: activeBranchId })),
     enabled: Boolean(activeBranchId)
   });
