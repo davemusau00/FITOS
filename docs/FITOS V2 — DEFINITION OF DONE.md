@@ -82,6 +82,10 @@ A task is **not done** until all applicable items are checked.
 
 ## Final Gate
 
+### Evidence boundary
+
+Local typechecks, tests, and builds are necessary evidence for a change, but do not substitute for hosted CI, Playwright browser execution, production-image validation, or a verified deployment. Record each verification at the scope in which it was actually run.
+
 Before merge, answer **YES** to all three:
 
 - [ ] Can a seeded permitted user perform the workflow without developer knowledge?
