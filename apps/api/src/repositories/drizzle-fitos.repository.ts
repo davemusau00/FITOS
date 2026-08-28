@@ -4223,22 +4223,32 @@ export class DrizzleFitosRepository implements FitosRepository {
     scope: TenantScope,
     input: import("@fitos/contracts").CreateInventoryLotRequest
   ): Promise<import("@fitos/contracts").InventoryLotResponse> {
-    const [row] = await this.db
-      .insert(inventoryLots)
-      .values({
-        tenantId: scope.tenantId,
-        branchId: input.branchId ?? null,
-        itemId: input.itemId,
-        lotCode: input.lotCode ?? null,
-        purchaseOrderId: input.purchaseOrderId ?? null,
-        quantityReceived: String(input.quantityReceived),
-        quantityOnHand: String(input.quantityReceived),
-        unitCostMinor: input.unitCostMinor ?? 0,
-        expiresOn: input.expiresOn ?? null,
-        notes: input.notes ?? null
-      })
-      .returning();
-    if (!row) throw new Error("Failed to create inventory lot.");
+    const row = await this.db.transaction(async (tx) => {
+      const [item] = await tx.select().from(inventoryItems).where(and(
+        eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, input.itemId)
+      ));
+      if (!item) throw new Error("Inventory item not found.");
+      const branchId = input.branchId ?? item.branchId;
+      if (!branchId) throw new Error("A branch is required to receive inventory.");
+      if (item.branchId !== branchId) throw new Error("Inventory item is not available in this branch.");
+      await tx.execute(sql`SELECT id FROM inventory_items WHERE id = ${item.id} FOR UPDATE`);
+      const newStock = item.currentStock + Math.round(input.quantityReceived);
+      await tx.update(inventoryItems).set({ currentStock: newStock, updatedAt: new Date() }).where(eq(inventoryItems.id, item.id));
+      const [created] = await tx.insert(inventoryLots).values({
+        tenantId: scope.tenantId, branchId, itemId: input.itemId, lotCode: input.lotCode ?? null,
+        purchaseOrderId: input.purchaseOrderId ?? null, quantityReceived: String(input.quantityReceived),
+        quantityOnHand: String(input.quantityReceived), unitCostMinor: input.unitCostMinor ?? item.costPriceMinor,
+        expiresOn: input.expiresOn ?? null, notes: input.notes ?? null
+      }).returning();
+      if (!created) throw new Error("Failed to create inventory lot.");
+      const [movement] = await tx.insert(inventoryMovements).values({
+        tenantId: scope.tenantId, branchId, itemId: item.id, type: "purchase_in",
+        quantity: Math.round(input.quantityReceived), balanceAfter: newStock,
+        reason: "Inventory lot received", referenceId: created.id, recordedByUserId: null
+      }).returning({ id: inventoryMovements.id });
+      if (!movement) throw new Error("Failed to record inventory receipt movement.");
+      return created;
+    });
     return this.inventoryLotResponse(row);
   }
 
