@@ -1644,6 +1644,24 @@ export class CoreService {
     return updated;
   }
 
+  async createAccountExportRequest(actor: RequestActor, requestId: string) {
+    const request = await this.repository.createAccountExportRequest(scopeOf(actor), actor.userId);
+    await this.audit(
+      actor,
+      requestId,
+      "account.export_requested",
+      "account_export_request",
+      request.id,
+      null,
+      { status: request.status, format: request.format }
+    );
+    return request;
+  }
+
+  async listAccountExportRequests(actor: RequestActor) {
+    return this.repository.listAccountExportRequests(scopeOf(actor));
+  }
+
   private async requireAssignableRole(actor: RequestActor, roleId: string): Promise<RoleResponse> {
     const role = await this.repository.findRoleById(scopeOf(actor), roleId);
     if (!role)

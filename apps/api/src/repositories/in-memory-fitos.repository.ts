@@ -216,6 +216,10 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly membershipPlans = new Map<string, StoredMembershipPlan>();
   private readonly memberMemberships = new Map<string, StoredMemberMembership>();
   private readonly creditLedger = new Map<string, StoredCreditLedgerEntry>();
+  private readonly accountExportRequests = new Map<
+    string,
+    import("@fitos/contracts").AccountExportRequestResponse
+  >();
   private readonly payments = new Map<string, StoredPaymentTransaction>();
   private readonly attendance = new Map<string, StoredAttendanceRecord>();
   private readonly automations = new Map<string, AutomationRuleResponse>();
@@ -3644,6 +3648,29 @@ export class InMemoryFitosRepository implements FitosRepository {
     const value = { ...input };
     this.notificationPreferences.set(userId, value);
     return value;
+  }
+
+  async createAccountExportRequest(scope: TenantScope, requestedByUserId: string) {
+    const timestamp = now();
+    const request = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      requestedByUserId,
+      status: "requested" as const,
+      format: "json" as const,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      completedAt: null
+    };
+    this.accountExportRequests.set(request.id, request);
+    return { ...request };
+  }
+
+  async listAccountExportRequests(scope: TenantScope) {
+    return [...this.accountExportRequests.values()]
+      .filter((request) => request.tenantId === scope.tenantId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((request) => ({ ...request }));
   }
 
   async publishEvent(event: DomainEvent): Promise<void> {

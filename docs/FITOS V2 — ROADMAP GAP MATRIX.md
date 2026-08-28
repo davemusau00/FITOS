@@ -218,9 +218,9 @@ Actions filtered by:
 
 ## P1-007 — Account Export Request
 
-**Current state:** No owner-account export request endpoint, persistence model, lifecycle, or Platform visibility exists.
+**Current state:** Owner-account export request creation, persistence, and status listing now exist; fulfillment processing and Platform visibility remain open.
 
-**Implementation evidence (2026-08-28):** Account settings, API client, controllers, and shared contracts currently expose notification preferences only; no export request resource or mutation is implemented.
+**Implementation evidence (2026-08-28):** Added `account_export_requests` forward migration/schema, shared request contract, tenant-scoped PostgreSQL/in-memory persistence, `GET/POST /users/me/export-requests`, audit event creation, and Account Profile request/status UI. Requests remain `requested` until a fulfillment worker and Platform lifecycle are delivered.
 
 ### Acceptance
 

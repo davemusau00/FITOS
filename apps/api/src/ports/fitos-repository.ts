@@ -420,6 +420,13 @@ export interface FitosRepository {
     userId: string,
     input: import("@fitos/contracts").UpdateNotificationPreferencesRequest
   ): Promise<import("@fitos/contracts").NotificationPreferences | null>;
+  createAccountExportRequest(
+    scope: TenantScope,
+    requestedByUserId: string
+  ): Promise<import("@fitos/contracts").AccountExportRequestResponse>;
+  listAccountExportRequests(
+    scope: TenantScope
+  ): Promise<import("@fitos/contracts").AccountExportRequestResponse[]>;
   publishEvent(event: DomainEvent): Promise<void>;
 
   // Payments

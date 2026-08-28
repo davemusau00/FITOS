@@ -754,6 +754,27 @@ export const auditEvents = pgTable(
   (table) => [index("idx_audit_events_tenant_created").on(table.tenantId, table.createdAt)]
 );
 
+export const accountExportRequests = pgTable(
+  "account_export_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    status: varchar("status", { length: 30 }).notNull().default("requested"),
+    format: varchar("format", { length: 20 }).notNull().default("json"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_account_export_requests_tenant_created").on(table.tenantId, table.createdAt)
+  ]
+);
+
 export const idempotencyKeys = pgTable(
   "idempotency_keys",
   {
@@ -1638,6 +1659,7 @@ export const schema = {
   paymentTransactions,
   attendanceRecords,
   auditEvents,
+  accountExportRequests,
   idempotencyKeys,
   // Equipment
   equipmentPools,

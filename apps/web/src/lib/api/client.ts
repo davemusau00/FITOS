@@ -191,6 +191,13 @@ export const api = {
   updateNotificationPreferences: (
     payload: import("@fitos/contracts").UpdateNotificationPreferencesRequest
   ) => request("/users/me/notifications", { method: "PATCH", body: json(payload) }),
+  accountExportRequests: () =>
+    request<import("@fitos/contracts").AccountExportRequestResponse[]>("/users/me/export-requests"),
+  requestAccountExport: () =>
+    request<import("@fitos/contracts").AccountExportRequestResponse>("/users/me/export-requests", {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotency() }
+    }),
   changePassword: (payload: { currentPassword: string; newPassword: string }) =>
     request<{ ok: boolean }>("/auth/password", { method: "PATCH", body: json(payload) }),
   sessions: () => request<import("@fitos/contracts").SessionSummary[]>("/auth/sessions"),

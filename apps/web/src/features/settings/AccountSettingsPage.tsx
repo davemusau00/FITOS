@@ -14,6 +14,19 @@ export function AccountSettingsPage() {
     queryKey: ["notification-preferences"],
     queryFn: api.notificationPreferences
   });
+  const exportRequests = useQuery({
+    queryKey: ["account-export-requests"],
+    queryFn: api.accountExportRequests
+  });
+  const exportMutation = useMutation({
+    mutationFn: api.requestAccountExport,
+    onSuccess: () => {
+      success("Export request submitted.");
+      void queryClient.invalidateQueries({ queryKey: ["account-export-requests"] });
+    },
+    onError: (error) =>
+      toastError(error instanceof Error ? error.message : "Unable to request export.")
+  });
   const preferencesMutation = useMutation({
     mutationFn: (value: import("@fitos/contracts").NotificationPreferences) =>
       api.updateNotificationPreferences(value),
@@ -153,6 +166,30 @@ export function AccountSettingsPage() {
         ) : (
           <p className="muted">No other active sessions.</p>
         )}
+      </Card>
+      <Card>
+        <h3>Data export</h3>
+        <p className="muted">
+          Request a copy of your organization data. FITOS will keep the request status here while it
+          is prepared.
+        </p>
+        <Button
+          disabled={exportMutation.isPending}
+          onClick={() => exportMutation.mutate()}
+          type="button"
+        >
+          {exportMutation.isPending ? "Submitting…" : "Request JSON export"}
+        </Button>
+        <ErrorNotice error={exportRequests.error} onRetry={() => void exportRequests.refetch()} />
+        {exportRequests.data?.length ? (
+          <div className="form-stack">
+            {exportRequests.data.slice(0, 3).map((request) => (
+              <span className="muted" key={request.id}>
+                {request.status} · {new Date(request.createdAt).toLocaleString()}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </Card>
       <Card>
         <h3>Password</h3>

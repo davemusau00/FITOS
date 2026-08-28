@@ -1,5 +1,6 @@
 export * from "./audit.js";
 export * from "./attendance.js";
+export * from "./account.js";
 export * from "./automations.js";
 export * from "./bookings.js";
 export * from "./common.js";

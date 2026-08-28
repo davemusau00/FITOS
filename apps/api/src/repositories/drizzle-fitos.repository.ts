@@ -3,6 +3,7 @@ import { createCsrfToken, createOpaqueSessionToken, hashSessionToken } from "@fi
 import { and, desc, eq, gt, gte, ilike, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import {
   auditEvents,
+  accountExportRequests,
   bookings,
   branches,
   contacts,
@@ -427,6 +428,42 @@ export class DrizzleFitosRepository implements FitosRepository {
       .where(eq(users.id, userId))
       .returning({ preferences: users.notificationPreferences });
     return user?.preferences as import("@fitos/contracts").NotificationPreferences | null;
+  }
+
+  async createAccountExportRequest(scope: TenantScope, requestedByUserId: string) {
+    const [row] = await this.db
+      .insert(accountExportRequests)
+      .values({ tenantId: scope.tenantId, requestedByUserId })
+      .returning();
+    if (!row) throw new Error("Unable to create account export request.");
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      requestedByUserId: row.requestedByUserId,
+      status: row.status as import("@fitos/contracts").AccountExportStatus,
+      format: row.format as "json",
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      completedAt: row.completedAt?.toISOString() ?? null
+    };
+  }
+
+  async listAccountExportRequests(scope: TenantScope) {
+    const rows = await this.db
+      .select()
+      .from(accountExportRequests)
+      .where(eq(accountExportRequests.tenantId, scope.tenantId))
+      .orderBy(desc(accountExportRequests.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      requestedByUserId: row.requestedByUserId,
+      status: row.status as import("@fitos/contracts").AccountExportStatus,
+      format: row.format as "json",
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      completedAt: row.completedAt?.toISOString() ?? null
+    }));
   }
 
   async findTenant(scope: TenantScope): Promise<TenantSummary | null> {

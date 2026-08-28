@@ -94,6 +94,18 @@ export class UsersController {
     );
   }
 
+  @Get("me/export-requests")
+  @RequirePermission("tenant:read")
+  listExportRequests(@Actor() actor: RequestActor) {
+    return this.core.listAccountExportRequests(actor);
+  }
+
+  @Post("me/export-requests")
+  @RequirePermission("tenant:settings")
+  requestExport(@Actor() actor: RequestActor, @RequestId() requestId: string) {
+    return this.core.createAccountExportRequest(actor, requestId);
+  }
+
   @Post("invitations")
   @RequirePermission("staff:manage")
   invite(
