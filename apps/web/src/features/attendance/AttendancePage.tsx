@@ -17,12 +17,14 @@ import type { AttendanceRecordResponse, AttendanceStatus } from "@fitos/contract
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
+import { todayDate } from "../../lib/date-context";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 export function AttendancePage() {
   const { auth } = useAuth();
   const queryClient = useQueryClient();
   const [selectedBranch, setSelectedBranch] = useState("");
+  const [selectedDate, setSelectedDate] = useState(todayDate);
   const [memberSearch, setMemberSearch] = useState("");
   const [checkingInMember, setCheckingInMember] = useState<{ id: string; name: string } | null>(
     null
@@ -32,10 +34,12 @@ export function AttendancePage() {
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const attendance = useQuery({
-    queryKey: branchQueryKeys.list("attendance", selectedBranch || "all"),
+    queryKey: branchQueryKeys.list("attendance", selectedBranch || "all", selectedDate),
     queryFn: () => {
       const params = new URLSearchParams();
       if (selectedBranch) params.set("branchId", selectedBranch);
+      params.set("from", `${selectedDate}T00:00:00.000Z`);
+      params.set("to", `${selectedDate}T23:59:59.999Z`);
       params.set("limit", "100");
       return api.attendanceRecords(params);
     }
@@ -142,6 +146,17 @@ export function AttendancePage() {
         title="Attendance & Check-in"
         description="Verify entitlements, scan or search members, and monitor live facility and class attendance."
       />
+      <div className="filter-bar">
+        <FormField htmlFor="attendance-date" label="Date">
+          <input
+            className="fitos-control"
+            id="attendance-date"
+            onChange={(event) => setSelectedDate(event.target.value)}
+            type="date"
+            value={selectedDate}
+          />
+        </FormField>
+      </div>
 
       <ErrorNotice error={attendance.error} />
 
