@@ -83,6 +83,8 @@ A task is **not done** until all applicable items are checked.
 
 ## Final Gate
 
+Membership hold, resume, and renewal are examples of the required bar: each is persisted, permission-gated, audited, covered by integration tests, and surfaced with recoverable UI feedback. Their evidence is recorded in the roadmap matrix; payment collection is intentionally excluded.
+
 ### Evidence boundary
 
 Local typechecks, tests, and builds are necessary evidence for a change, but do not substitute for hosted CI, Playwright browser execution, production-image validation, or a verified deployment. Record each verification at the scope in which it was actually run.

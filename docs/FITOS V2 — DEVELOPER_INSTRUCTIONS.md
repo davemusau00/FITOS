@@ -709,4 +709,6 @@ If the system cannot keep the promise:
 
 # 42. EVIDENCE LEDGER
 
+Current verified lifecycle slices include membership hold, resume, and renewal. Each has server-authoritative transitions, PostgreSQL/in-memory persistence, audit coverage, UI feedback, and roadmap evidence. Renewal remains non-financial: payment collection is deferred.
+
 For every gap-resolution change, update `docs/FITOS V2 — ROADMAP GAP MATRIX.md` with the verified scope and test evidence. Use `docs/FITOS V2 — DEFINITION OF DONE.md` as the completion gate. Local checks must be labeled as local; they do not substitute for hosted CI, Playwright, production-image, or deployment evidence.
