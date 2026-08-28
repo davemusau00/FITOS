@@ -345,6 +345,13 @@ export class PlatformController {
     return this.repository.listPlatformAuditEvents();
   }
 
+  @Get("account-export-requests")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async accountExportRequests() {
+    return this.repository.listPlatformAccountExportRequests();
+  }
+
   @Get("overview")
   @AuthMode("platform")
   @RequirePlatformAdmin()

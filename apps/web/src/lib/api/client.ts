@@ -585,6 +585,10 @@ export const api = {
   platformFeatures: () =>
     request<import("@fitos/contracts").FeatureDefinition[]>("/platform/features"),
   platformAudit: () => request<import("@fitos/contracts").AuditEventResponse[]>("/platform/audit"),
+  platformAccountExportRequests: () =>
+    request<import("@fitos/contracts").AccountExportRequestResponse[]>(
+      "/platform/account-export-requests"
+    ),
   transitionPlatformTenantStatus: (
     tenantId: string,
     status: import("@fitos/contracts").TenantAccountStatus,

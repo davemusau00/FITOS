@@ -3629,6 +3629,12 @@ export class InMemoryFitosRepository implements FitosRepository {
     return this.auditEvents.filter((event) => event.action.startsWith("tenant.")).slice(0, 200);
   }
 
+  async listPlatformAccountExportRequests() {
+    return [...this.accountExportRequests.values()]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((request) => ({ ...request }));
+  }
+
   async getNotificationPreferences(userId: string) {
     return (
       this.notificationPreferences.get(userId) ?? {

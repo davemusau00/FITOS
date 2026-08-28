@@ -2516,6 +2516,23 @@ export class DrizzleFitosRepository implements FitosRepository {
     return rows.map((event) => this.auditResponse(event));
   }
 
+  async listPlatformAccountExportRequests() {
+    const rows = await this.db
+      .select()
+      .from(accountExportRequests)
+      .orderBy(desc(accountExportRequests.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      requestedByUserId: row.requestedByUserId,
+      status: row.status as import("@fitos/contracts").AccountExportStatus,
+      format: row.format as "json",
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      completedAt: row.completedAt?.toISOString() ?? null
+    }));
+  }
+
   async publishEvent(_event: DomainEvent): Promise<void> {
     // The worker queue becomes the concrete adapter when notification/payment modules ship.
   }

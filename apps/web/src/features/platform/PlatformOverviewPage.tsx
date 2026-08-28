@@ -6,6 +6,10 @@ import { ErrorNotice, PageLoading } from "../shared";
 
 export function PlatformOverviewPage() {
   const query = useQuery({ queryKey: ["platform", "overview"], queryFn: api.platformOverview });
+  const exportRequests = useQuery({
+    queryKey: ["platform", "account-export-requests"],
+    queryFn: api.platformAccountExportRequests
+  });
   if (query.isLoading) return <PageLoading />;
   const data = query.data;
   return (
@@ -99,6 +103,31 @@ export function PlatformOverviewPage() {
               This view reports existing service summaries only; infrastructure observability
               expansion is outside this product slice.
             </p>
+          </Card>
+          <Card>
+            <div className="section-header-row">
+              <div>
+                <p className="fitos-page-header__eyebrow">Account operations</p>
+                <h2>Data export requests</h2>
+              </div>
+            </div>
+            <ErrorNotice
+              error={exportRequests.error}
+              onRetry={() => void exportRequests.refetch()}
+            />
+            {exportRequests.data?.length ? (
+              exportRequests.data.slice(0, 5).map((request) => (
+                <div className="fitos-mobile-data-card" key={request.id}>
+                  <strong>{request.status}</strong>
+                  <span className="fitos-mobile-data-card__meta">
+                    Tenant {request.tenantId.slice(0, 8)} ·{" "}
+                    {new Date(request.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="muted">No pending export requests.</p>
+            )}
           </Card>
         </>
       ) : null}

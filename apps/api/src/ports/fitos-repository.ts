@@ -413,6 +413,9 @@ export interface FitosRepository {
   recordAudit(input: AuditRecordInput): Promise<AuditEventResponse>;
   listAuditEvents(scope: TenantScope, resourceId?: string): Promise<AuditEventResponse[]>;
   listPlatformAuditEvents(): Promise<AuditEventResponse[]>;
+  listPlatformAccountExportRequests(): Promise<
+    import("@fitos/contracts").AccountExportRequestResponse[]
+  >;
   getNotificationPreferences(
     userId: string
   ): Promise<import("@fitos/contracts").NotificationPreferences>;
