@@ -121,6 +121,18 @@ export const notifications = pgTable(
   (table) => [index("idx_notifications_user_created").on(table.userId, table.createdAt)]
 );
 
+export const platformPlanDefinitions = pgTable("platform_plan_definitions", {
+  key: varchar("key", { length: 30 }).primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  description: text("description").notNull(),
+  quotas: jsonb("quotas").notNull(),
+  capabilities: jsonb("capabilities")
+    .notNull()
+    .default(sql`'[]'::jsonb`),
+  isActive: boolean("is_active").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+});
+
 export const platformAdminTokens = pgTable(
   "platform_admin_tokens",
   {

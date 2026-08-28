@@ -21,6 +21,7 @@ import {
   leads,
   memberMemberships,
   notifications,
+  platformPlanDefinitions,
   members,
   memberIdentities,
   memberSessions,
@@ -449,6 +450,20 @@ export class DrizzleFitosRepository implements FitosRepository {
       href: row.href,
       readAt: row.readAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString()
+    }));
+  }
+
+  async listPlatformPlanDefinitions() {
+    const rows = await this.db
+      .select()
+      .from(platformPlanDefinitions)
+      .where(eq(platformPlanDefinitions.isActive, true));
+    return rows.map((row) => ({
+      key: row.key as import("@fitos/contracts").SaaSPlan,
+      name: row.name,
+      description: row.description,
+      quotas: row.quotas as import("@fitos/contracts").SaaSPlanQuotas,
+      capabilities: row.capabilities as import("@fitos/contracts").SaaSCapabilityKey[]
     }));
   }
 

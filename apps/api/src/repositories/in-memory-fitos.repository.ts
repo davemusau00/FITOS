@@ -3736,6 +3736,18 @@ export class InMemoryFitosRepository implements FitosRepository {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
+  async listPlatformPlanDefinitions() {
+    return (Object.keys(SaaS_PLAN_QUOTAS) as import("@fitos/contracts").SaaSPlan[]).map((key) => ({
+      key,
+      name: `FITOS ${key[0]!.toUpperCase()}${key.slice(1)}`,
+      description: `${key[0]!.toUpperCase()}${key.slice(1)} workspace plan`,
+      quotas: SaaS_PLAN_QUOTAS[key],
+      capabilities: PLATFORM_FEATURE_REGISTRY.filter((feature) => feature.defaultEnabled).map(
+        (feature) => feature.key
+      )
+    }));
+  }
+
   async createNotification(
     input: Omit<import("@fitos/contracts").NotificationResponse, "id" | "readAt" | "createdAt">
   ) {

@@ -615,6 +615,7 @@ export interface FitosRepository {
     workspace: import("@fitos/contracts").WorkspaceKey
   ): Promise<void>;
   listPlatformTenantControls(): Promise<PlatformTenantControlRecord[]>;
+  listPlatformPlanDefinitions(): Promise<import("@fitos/contracts").SaaSPlanDefinition[]>;
   getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
   transitionTenantSubscriptionStatus(
     tenantId: string,

@@ -274,6 +274,13 @@
       "when": 1789670400000,
       "tag": "0038_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1789756800000,
+      "tag": "0039_platform_plan_definitions",
+      "breakpoints": true
     }
   ]
 }
