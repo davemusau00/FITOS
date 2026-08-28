@@ -232,3 +232,51 @@ export const marketingNavigation = [
   { path: "/pricing", label: "Plans" },
   { path: "/contact", label: "Talk to FITOS" }
 ] as const;
+
+export const memberNavigation: RouteMeta[] = [
+  {
+    path: "/member",
+    label: "Home",
+    group: "Member",
+    icon: "dashboard",
+    workspace: "member",
+    branchMode: "none",
+    mobileMode: "consumer"
+  },
+  {
+    path: "/member?tab=schedule",
+    label: "Book",
+    group: "Member",
+    icon: "calendar",
+    workspace: "member",
+    branchMode: "none",
+    mobileMode: "consumer"
+  },
+  {
+    path: "/member?tab=membership",
+    label: "Membership",
+    group: "Member",
+    icon: "shield",
+    workspace: "member",
+    branchMode: "none",
+    mobileMode: "consumer"
+  },
+  {
+    path: "/member?tab=attendance",
+    label: "Visits",
+    group: "Member",
+    icon: "check",
+    workspace: "member",
+    branchMode: "none",
+    mobileMode: "consumer"
+  },
+  {
+    path: "/member?tab=profile",
+    label: "Profile",
+    group: "Member",
+    icon: "users",
+    workspace: "member",
+    branchMode: "none",
+    mobileMode: "consumer"
+  }
+];

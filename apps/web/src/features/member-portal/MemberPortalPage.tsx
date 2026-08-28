@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Icon, Modal, StatusBadge } from "@fitos/ui";
 import { api } from "../../lib/api/client";
 import { FitosLogo } from "../../app/logo";
+import { memberNavigation } from "../../app/navigation";
 import { ErrorNotice, PageLoading, formatDateTime, useToast } from "../shared";
 
 type MemberTab = "home" | "schedule" | "membership" | "attendance" | "profile";
@@ -209,24 +210,21 @@ export function MemberPortalPage() {
       {/* ── Navigation Tabs ── */}
       <nav className="member-portal-nav">
         <div className="member-portal-nav__inner">
-          {[
-            { id: "home", label: "My Dashboard", icon: "dashboard" as const },
-            { id: "schedule", label: "Book a Class", icon: "calendar" as const },
-            { id: "membership", label: "My Membership", icon: "shield" as const },
-            { id: "attendance", label: "Visit History", icon: "check" as const },
-            { id: "profile", label: "Profile", icon: "users" as const }
-          ].map((tab) => (
-            <button
-              className={`member-portal-nav__tab${activeTab === tab.id ? " member-portal-nav__tab--active" : ""}`}
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as MemberTab)}
-              aria-current={activeTab === tab.id ? "page" : undefined}
-              type="button"
-            >
-              <Icon name={tab.icon} size={16} />
-              {tab.label}
-            </button>
-          ))}
+          {memberNavigation.map((route) => {
+            const id = route.path.includes("tab=") ? route.path.split("tab=")[1] : "home";
+            return (
+              <button
+                className={`member-portal-nav__tab${activeTab === id ? " member-portal-nav__tab--active" : ""}`}
+                key={route.path}
+                onClick={() => setActiveTab(id as MemberTab)}
+                aria-current={activeTab === id ? "page" : undefined}
+                type="button"
+              >
+                <Icon name={route.icon} size={16} />
+                {route.label}
+              </button>
+            );
+          })}
         </div>
       </nav>
 
