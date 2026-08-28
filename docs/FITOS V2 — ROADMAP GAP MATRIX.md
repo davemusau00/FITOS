@@ -173,9 +173,9 @@ UI copy exactly reflects behavior. Current implementation is explicitly Commands
 
 ## P1-005 — Real Notification Centre
 
-**Current state:** Notification preferences exist, but there is no persisted notification inbox or notification route. The misleading shell bell has been removed until a real inbox exists; this ticket remains open.
+**Current state:** Notification preferences and a persisted notification inbox now exist, with authenticated list/read routes, category filtering, unread state, and deep-link support. Lifecycle mutations emit durable user notifications. Producer coverage for all operational domains and a full notification preference center remain open.
 
-**Implementation evidence (2026-08-28):** The API currently exposes only `/users/me/notifications` preference reads/updates. No inbox list, read-state mutation, deep-link surface, or notification route was found. `shell.tsx` no longer renders a misleading notification control while the capability is absent.
+**Implementation evidence (2026-08-28):** `notifications` is persisted by migration `0038_notifications`; `/users/me/notification-inbox` and its read mutation enforce user ownership. The authenticated shell links to `/account/notifications`, which supports category filters, unread counts, retryable errors, and deep links. Export, plan-change, cancellation, and deletion requests create notifications after durable request persistence.
 
 ### Acceptance
 
