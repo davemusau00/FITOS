@@ -14,6 +14,10 @@ export function PlatformOverviewPage() {
     queryKey: ["platform", "plan-change-requests"],
     queryFn: api.platformPlanChangeRequests
   });
+  const cancellationRequests = useQuery({
+    queryKey: ["platform", "cancellation-requests"],
+    queryFn: api.platformCancellationRequests
+  });
   if (query.isLoading) return <PageLoading />;
   const data = query.data;
   return (
@@ -155,6 +159,31 @@ export function PlatformOverviewPage() {
               ))
             ) : (
               <p className="muted">No plan-change requests.</p>
+            )}
+          </Card>
+          <Card>
+            <div className="section-header-row">
+              <div>
+                <p className="fitos-page-header__eyebrow">Account operations</p>
+                <h2>Cancellation requests</h2>
+              </div>
+            </div>
+            <ErrorNotice
+              error={cancellationRequests.error}
+              onRetry={() => void cancellationRequests.refetch()}
+            />
+            {cancellationRequests.data?.length ? (
+              cancellationRequests.data.slice(0, 5).map((request) => (
+                <div className="fitos-mobile-data-card" key={request.id}>
+                  <strong>{request.status}</strong>
+                  <span className="fitos-mobile-data-card__meta">
+                    Tenant {request.tenantId.slice(0, 8)} ·{" "}
+                    {new Date(request.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="muted">No cancellation requests.</p>
             )}
           </Card>
         </>
