@@ -66,8 +66,8 @@ export function BookingsPage() {
   const cancelMutation = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => api.cancelBooking(id, reason),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      void queryClient.invalidateQueries({ queryKey: ["schedule"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("bookings") });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule") });
       setCancellingBooking(null);
       setCancelReason("");
     },

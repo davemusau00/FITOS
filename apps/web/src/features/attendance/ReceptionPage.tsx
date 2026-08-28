@@ -72,7 +72,7 @@ export function ReceptionPage() {
     onSuccess: (_data, memberId) => {
       setCheckedIn((prev) => new Set([...prev, memberId]));
       setSearchQuery("");
-      void queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("attendance") });
     }
   });
 

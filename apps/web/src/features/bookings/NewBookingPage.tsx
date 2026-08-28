@@ -83,8 +83,8 @@ export function NewBookingPage() {
   const bookMutation = useMutation({
     mutationFn: (payload: CreateBookingRequest) => api.createBooking(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      void queryClient.invalidateQueries({ queryKey: ["schedule"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("bookings") });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule") });
       navigate("/app/bookings");
     },
     onError: (err) => setSubmissionError(err)

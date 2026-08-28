@@ -149,8 +149,8 @@ export function SchedulePage() {
       return api.materializeScheduleTemplate(template.id, throughDate);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["schedule"] });
-      void queryClient.invalidateQueries({ queryKey: ["schedule-templates"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule") });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule-templates") });
     }
   });
 
@@ -379,8 +379,8 @@ export function SchedulePage() {
           isOpen={true}
           onClose={() => setIsCreating(false)}
           onSuccess={() => {
-            void queryClient.invalidateQueries({ queryKey: ["schedule"] });
-            void queryClient.invalidateQueries({ queryKey: ["schedule-templates"] });
+            void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule") });
+            void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule-templates") });
             setIsCreating(false);
           }}
           rooms={rooms.data ?? []}
@@ -761,7 +761,7 @@ function OccurrenceDetailModal({
   const cancelMutation = useMutation({
     mutationFn: (reason: string) => api.cancelScheduleOccurrence(occurrenceId, reason),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["schedule"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule") });
       onClose();
     },
     onError: (err) => setError(err)
@@ -922,7 +922,7 @@ function OccurrenceDetailModal({
               occurrence={occurrence}
               onCancel={() => setIsOverriding(false)}
               onSuccess={() => {
-                void queryClient.invalidateQueries({ queryKey: ["schedule"] });
+                void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule") });
                 onClose();
               }}
               rooms={rooms.filter((candidate) => candidate.branchId === occurrence.branchId)}

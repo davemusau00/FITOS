@@ -57,7 +57,7 @@ export function AttendancePage() {
     mutationFn: ({ id, status }: { id: string; status: AttendanceStatus }) =>
       api.updateAttendanceStatus(id, { status }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("attendance") });
     }
   });
 
@@ -72,7 +72,7 @@ export function AttendancePage() {
       });
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("attendance") });
       setCheckingInMember(null);
       setOverrideReason("");
       setMemberSearch("");
