@@ -93,7 +93,7 @@ export function SchedulePage() {
 
   const occurrencesQuery = useQuery({
     queryKey: [
-      ...branchQueryKeys.list("schedule", selectedBranch || "all"),
+      ...branchQueryKeys.list("schedule", selectedBranch || "all", todayDate()),
       selectedTrainer,
       selectedService
     ],

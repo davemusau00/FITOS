@@ -4,12 +4,13 @@ import { Link } from "react-router-dom";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
+import { todayDate } from "../../lib/date-context";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 export function OpsDashboardPage() {
   const { activeBranchId, activeBranch } = useBranch();
   const today = useQuery({
-    queryKey: branchQueryKeys.list("ops-aggregate", activeBranchId),
+    queryKey: branchQueryKeys.list("ops-aggregate", activeBranchId, todayDate()),
     queryFn: () => api.opsAggregate(activeBranchId),
     enabled: Boolean(activeBranchId)
   });
