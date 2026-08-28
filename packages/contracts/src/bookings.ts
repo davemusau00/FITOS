@@ -1,6 +1,6 @@
 import type { CursorPage } from "./common.js";
 
-export const BOOKING_STATUSES = ["confirmed", "cancelled"] as const;
+export const BOOKING_STATUSES = ["confirmed", "waitlisted", "cancelled"] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
 export const BOOKING_SOURCES = ["staff", "public", "member_portal"] as const;

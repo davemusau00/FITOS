@@ -133,6 +133,40 @@ export class AuthService {
     await this.repository.setWorkspacePreference(session.user.id, session.tenant.id, workspace);
   }
 
+  async changePassword(
+    session: ResolvedSession,
+    currentPassword: string,
+    nextPassword: string
+  ): Promise<void> {
+    const identity = await this.repository.findLoginIdentity(session.user.email ?? "");
+    if (!identity || !(await this.passwordHasher.verify(currentPassword, identity.passwordHash))) {
+      throw new DomainError("UNAUTHENTICATED", "Current password is incorrect.", 401);
+    }
+    await this.repository.setUserPassword(
+      session.user.id,
+      await this.passwordHasher.hash(nextPassword)
+    );
+    await this.repository.revokeOtherUserSessions(
+      session.user.id,
+      session.sessionId,
+      new Date().toISOString()
+    );
+  }
+  async sessions(session: ResolvedSession) {
+    const rows = await this.repository.listUserSessions(session.user.id, new Date().toISOString());
+    return rows.map((row) => ({ ...row, current: row.id === session.sessionId }));
+  }
+  async revokeSession(session: ResolvedSession, sessionId: string): Promise<void> {
+    if (sessionId === session.sessionId)
+      throw new DomainError("VALIDATION_FAILED", "Use sign out to end the current session.", 400);
+    const revoked = await this.repository.revokeUserSession(
+      session.user.id,
+      sessionId,
+      new Date().toISOString()
+    );
+    if (!revoked) throw new DomainError("RESOURCE_NOT_FOUND", "Session not found.", 404);
+  }
+
   static scope(actor: RequestActor): TenantScope {
     return {
       tenantId: actor.tenantId,

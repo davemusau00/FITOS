@@ -31,10 +31,21 @@ export interface BranchResponse {
 export interface UserSummary {
   id: string;
   email: string | null;
+  phone?: string | null;
   displayName: string;
   status: UserStatus;
   lastLoginAt: string | null;
 }
+
+export interface NotificationPreferences {
+  email: boolean;
+  sms: boolean;
+  bookingReminders: boolean;
+  operationalAlerts: boolean;
+  leadFollowUps: boolean;
+}
+
+export type UpdateNotificationPreferencesRequest = NotificationPreferences;
 
 export interface RoleResponse {
   id: string;
@@ -90,6 +101,19 @@ export interface UpdateOrganizationRequest {
   name?: string;
   timezone?: string;
   currency?: string;
+}
+
+export interface UpdateUserProfileRequest {
+  displayName?: string;
+  phone?: string | null;
+}
+export interface SessionSummary {
+  id: string;
+  createdAt: string;
+  lastSeenAt: string | null;
+  expiresAt: string;
+  userAgentSummary: string | null;
+  current: boolean;
 }
 
 export interface CreateBranchRequest {

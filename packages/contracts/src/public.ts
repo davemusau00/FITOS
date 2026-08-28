@@ -49,6 +49,7 @@ export interface PublicScheduleOccurrenceResponse {
   startsAt: string;
   endsAt: string;
   capacity: number;
+  effectiveCapacity?: number;
   bookedCount: number;
   availableSpots: number;
   price: Money | null;

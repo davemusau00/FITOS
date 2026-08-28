@@ -335,6 +335,13 @@ export class PlatformController {
     return updated;
   }
 
+  @Get("audit")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async platformAudit() {
+    return this.repository.listPlatformAuditEvents();
+  }
+
   @Get("overview")
   @AuthMode("platform")
   @RequirePlatformAdmin()

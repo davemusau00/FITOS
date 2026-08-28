@@ -61,9 +61,21 @@ export function SettingsPage() {
           description="Sessions and safe operation"
           to="/app/settings/security"
         />
+        <SettingsLink
+          icon="settings"
+          title="Activity & audit"
+          description="Review important organization changes"
+          to="/app/settings/audit"
+        />
       </section>
       <h2 className="settings-section-title">Account &amp; capabilities</h2>
       <section className="settings-grid">
+        <SettingsLink
+          icon="user"
+          title="Account profile"
+          description="Your staff identity"
+          to="/app/settings/account"
+        />
         <SettingsLink
           icon="building"
           title="Subscription & usage"

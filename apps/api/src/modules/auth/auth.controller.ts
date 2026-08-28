@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, Inject, Patch, Post, Req, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Req,
+  Res
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { z } from "zod";
@@ -16,6 +27,9 @@ const loginSchema = z.object({
 const workspaceSchema = z.object({
   workspace: z.enum(["command", "ops", "front_desk", "coach", "practice"])
 });
+const passwordSchema = z
+  .object({ currentPassword: z.string().min(1), newPassword: z.string().min(8).max(100) })
+  .strict();
 
 const cookieOptions = () => ({
   httpOnly: true,
@@ -87,5 +101,32 @@ export class AuthController {
     }
     await this.auth.setWorkspace(request.session, workspace);
     return this.auth.me(request.session);
+  }
+
+  @Patch("password")
+  async changePassword(
+    @Req() request: FitosRequest,
+    @Body() body: unknown
+  ): Promise<{ ok: boolean }> {
+    if (!request.session)
+      throw new DomainError("UNAUTHENTICATED", "Your session has expired.", 401);
+    const input = passwordSchema.parse(body);
+    await this.auth.changePassword(request.session, input.currentPassword, input.newPassword);
+    return { ok: true };
+  }
+
+  @Get("sessions")
+  async sessions(@Req() request: FitosRequest) {
+    if (!request.session)
+      throw new DomainError("UNAUTHENTICATED", "Your session has expired.", 401);
+    return this.auth.sessions(request.session);
+  }
+
+  @Post("sessions/:sessionId/revoke")
+  async revokeSession(@Req() request: FitosRequest, @Param("sessionId") sessionId: string) {
+    if (!request.session)
+      throw new DomainError("UNAUTHENTICATED", "Your session has expired.", 401);
+    await this.auth.revokeSession(request.session, sessionId);
+    return { ok: true };
   }
 }

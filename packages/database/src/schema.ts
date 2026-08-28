@@ -90,6 +90,15 @@ export const users = pgTable(
     status: varchar("status", { length: 30 }).notNull().default("active"),
     /** When true this user can authenticate as a FITOS platform admin using X-Platform-Token. */
     isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
+    notificationPreferences: jsonb("notification_preferences")
+      .notNull()
+      .default({
+        email: true,
+        sms: false,
+        bookingReminders: true,
+        operationalAlerts: true,
+        leadFollowUps: true
+      }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()

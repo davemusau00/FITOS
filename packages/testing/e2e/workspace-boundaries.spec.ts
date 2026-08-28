@@ -67,6 +67,44 @@ test("role surfaces remain usable at pilot viewports", async ({ page }) => {
   }
 });
 
+test("priority role routes remain readable without horizontal overflow on mobile", async ({
+  page
+}) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("owner@gym.fitos.test");
+  await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/app\/overview$/);
+
+  const routes = [
+    "/app/overview",
+    "/ops",
+    "/reception",
+    "/coach",
+    "/practice",
+    "/app/members",
+    "/app/bookings",
+    "/app/attendance",
+    "/app/leads",
+    "/app/memberships",
+    "/app/settings/account"
+  ];
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 }
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const route of routes) {
+      await page.goto(route);
+      await expect(page.locator("main")).toBeVisible();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+      ).toBe(true);
+    }
+  }
+});
+
 test("staff login selects the server-resolved cockpit by role", async ({ browser }) => {
   for (const [email, expectedPath] of [
     ["reception@gym.fitos.test", "/reception"],
@@ -96,4 +134,15 @@ test("staff access surface exposes role assignments without entering the Platfor
   await expect(page.getByText("Roles", { exact: true })).toBeVisible();
   await page.goto("/app/platform/inquiries");
   await expect(page).not.toHaveURL(/\/platform\/inquiries$/);
+});
+
+test("owner can open tenant-scoped activity and audit history", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("owner@gym.fitos.test");
+  await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
+  await page.getByRole("button", { name: /Sign in/ }).click();
+  await expect(page).toHaveURL(/\/app\/overview$/);
+  await page.goto("/app/settings/audit");
+  await expect(page.getByRole("heading", { name: "Activity & audit" })).toBeVisible();
+  await expect(page.locator("main")).toContainText(/booking\.created|No audited activity yet/i);
 });

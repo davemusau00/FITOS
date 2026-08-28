@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Headers, Inject, Param, Patch, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
-import type { InviteStaffRequest, RequestActor } from "@fitos/contracts";
+import type { InviteStaffRequest, RequestActor, UpdateUserProfileRequest } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
 import { IdempotencyService } from "../../common/idempotency/idempotency.service.js";
@@ -27,6 +27,12 @@ const accessSchema = z
     path: ["roleIds"]
   });
 const uuid = z.string().uuid();
+const profileSchema = z
+  .object({
+    displayName: z.string().trim().min(1).max(160),
+    phone: z.string().trim().max(40).nullable().optional()
+  })
+  .strict();
 
 @ApiTags("staff access")
 @Controller("users")
@@ -46,6 +52,46 @@ export class UsersController {
   @RequirePermission("staff:read")
   listRoles(@Actor() actor: RequestActor) {
     return this.core.listRoles(actor);
+  }
+
+  @Patch("me/profile")
+  updateProfile(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.updateUserProfile(
+      actor,
+      requestId,
+      profileSchema.parse(body) as UpdateUserProfileRequest
+    );
+  }
+
+  @Get("me/notifications")
+  getNotificationPreferences(@Actor() actor: RequestActor) {
+    return this.core.notificationPreferences(actor);
+  }
+
+  @Patch("me/notifications")
+  updateNotificationPreferences(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.updateNotificationPreferences(
+      actor,
+      requestId,
+      z
+        .object({
+          email: z.boolean(),
+          sms: z.boolean(),
+          bookingReminders: z.boolean(),
+          operationalAlerts: z.boolean(),
+          leadFollowUps: z.boolean()
+        })
+        .strict()
+        .parse(body)
+    );
   }
 
   @Post("invitations")

@@ -187,6 +187,17 @@ export interface FitosRepository {
   resolveSession(tokenHash: string, now: string): Promise<ResolvedSession | null>;
   revokeSession(tokenHash: string, now: string): Promise<void>;
   markUserLoggedIn(userId: string, at: string): Promise<void>;
+  setUserPassword(userId: string, passwordHash: string): Promise<void>;
+  revokeOtherUserSessions(userId: string, currentSessionId: string, at: string): Promise<void>;
+  listUserSessions(
+    userId: string,
+    now: string
+  ): Promise<import("@fitos/contracts").SessionSummary[]>;
+  revokeUserSession(userId: string, sessionId: string, at: string): Promise<boolean>;
+  updateUserProfile(
+    userId: string,
+    input: import("@fitos/contracts").UpdateUserProfileRequest
+  ): Promise<UserSummary | null>;
 
   findTenant(scope: TenantScope): Promise<TenantSummary | null>;
   updateTenant(scope: TenantScope, input: UpdateOrganizationRequest): Promise<TenantSummary>;
@@ -385,6 +396,12 @@ export interface FitosRepository {
 
   recordAudit(input: AuditRecordInput): Promise<AuditEventResponse>;
   listAuditEvents(scope: TenantScope, resourceId?: string): Promise<AuditEventResponse[]>;
+  listPlatformAuditEvents(): Promise<AuditEventResponse[]>;
+  getNotificationPreferences(userId: string): Promise<import("@fitos/contracts").NotificationPreferences>;
+  updateNotificationPreferences(
+    userId: string,
+    input: import("@fitos/contracts").UpdateNotificationPreferencesRequest
+  ): Promise<import("@fitos/contracts").NotificationPreferences | null>;
   publishEvent(event: DomainEvent): Promise<void>;
 
   // Payments

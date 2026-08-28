@@ -27,6 +27,8 @@ import {
   ReceptionPage,
   SchedulePage,
   SecuritySettingsPage,
+  AuditSettingsPage,
+  AccountSettingsPage,
   ServicesPage,
   SettingsPage,
   StaffPage,
@@ -45,6 +47,7 @@ import {
   PlatformTenantsPage,
   PlatformTenantDetailPage,
   PlatformOverviewPage,
+  PlatformAuditPage,
   OpsDashboardPage,
   CoachDashboardPage,
   SitesPage
@@ -72,6 +75,7 @@ function PlatformRoute() {
           <Link to="/platform">Overview</Link>
           <Link to="/platform/tenants">Tenants</Link>
           <Link to="/platform/inquiries">Implementation</Link>
+          <Link to="/platform/audit">Audit</Link>
         </nav>
         <button
           onClick={() => {
@@ -174,6 +178,8 @@ export function AppRouter() {
           <Route element={<BranchesSettingsPage />} path="settings/branches/new" />
           <Route element={<StaffPage />} path="settings/team" />
           <Route element={<SecuritySettingsPage />} path="settings/security" />
+          <Route element={<AuditSettingsPage />} path="settings/audit" />
+          <Route element={<AccountSettingsPage />} path="settings/account" />
           <Route element={<AccountSubscriptionPage />} path="settings/subscription" />
           <Route element={<SitesPage />} path="sites" />
         </Route>
@@ -184,6 +190,7 @@ export function AppRouter() {
         <Route element={<PlatformTenantsPage />} path="tenants" />
         <Route element={<PlatformTenantDetailPage />} path="tenants/:tenantId" />
         <Route element={<ImplementationInquiriesPage />} path="inquiries" />
+        <Route element={<PlatformAuditPage />} path="audit" />
         <Route element={<ImplementationInquiryDetailPage />} path="inquiries/:inquiryId" />
       </Route>
 

@@ -330,6 +330,104 @@ export class DrizzleFitosRepository implements FitosRepository {
       .set({ lastLoginAt: new Date(at), updatedAt: new Date(at) })
       .where(eq(users.id, userId));
   }
+  async setUserPassword(userId: string, passwordHash: string): Promise<void> {
+    await this.db
+      .update(users)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+  async revokeOtherUserSessions(
+    userId: string,
+    currentSessionId: string,
+    at: string
+  ): Promise<void> {
+    await this.db
+      .update(sessions)
+      .set({ revokedAt: new Date(at) })
+      .where(and(eq(sessions.userId, userId), sql`${sessions.id} <> ${currentSessionId}`));
+  }
+  async listUserSessions(userId: string, nowTime: string) {
+    const rows = await this.db
+      .select()
+      .from(sessions)
+      .where(
+        and(
+          eq(sessions.userId, userId),
+          isNull(sessions.revokedAt),
+          gt(sessions.expiresAt, new Date(nowTime))
+        )
+      );
+    return rows.map((session) => ({
+      id: session.id,
+      createdAt: session.createdAt.toISOString(),
+      lastSeenAt: session.lastSeenAt?.toISOString() ?? null,
+      expiresAt: session.expiresAt.toISOString(),
+      userAgentSummary: session.userAgentSummary,
+      current: false
+    }));
+  }
+  async revokeUserSession(userId: string, sessionId: string, at: string) {
+    const result = await this.db
+      .update(sessions)
+      .set({ revokedAt: new Date(at) })
+      .where(
+        and(eq(sessions.id, sessionId), eq(sessions.userId, userId), isNull(sessions.revokedAt))
+      )
+      .returning({ id: sessions.id });
+    return result.length > 0;
+  }
+
+  async updateUserProfile(
+    userId: string,
+    input: import("@fitos/contracts").UpdateUserProfileRequest
+  ): Promise<UserSummary | null> {
+    const [user] = await this.db
+      .update(users)
+      .set({
+        ...(input.displayName !== undefined ? { displayName: input.displayName.trim() } : {}),
+        ...(input.phone !== undefined ? { phoneE164: input.phone } : {}),
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user
+      ? {
+          id: user.id,
+          email: user.email,
+          phone: user.phoneE164,
+          displayName: user.displayName,
+          status: user.status as UserSummary["status"],
+          lastLoginAt: user.lastLoginAt?.toISOString() ?? null
+        }
+      : null;
+  }
+
+  async getNotificationPreferences(userId: string) {
+    const [user] = await this.db
+      .select({ preferences: users.notificationPreferences })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return (user?.preferences ?? {
+      email: true,
+      sms: false,
+      bookingReminders: true,
+      operationalAlerts: true,
+      leadFollowUps: true
+    }) as import("@fitos/contracts").NotificationPreferences;
+  }
+
+  async updateNotificationPreferences(
+    userId: string,
+    input: import("@fitos/contracts").UpdateNotificationPreferencesRequest
+  ) {
+    const [user] = await this.db
+      .update(users)
+      .set({ notificationPreferences: input, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning({ preferences: users.notificationPreferences });
+    return user?.preferences as import("@fitos/contracts").NotificationPreferences | null;
+  }
 
   async findTenant(scope: TenantScope): Promise<TenantSummary | null> {
     const [tenant] = await this.db
@@ -1485,7 +1583,7 @@ export class DrizzleFitosRepository implements FitosRepository {
             eq(bookings.tenantId, scope.tenantId),
             eq(bookings.occurrenceId, occurrence.id),
             eq(bookings.memberId, member.id),
-            eq(bookings.status, "confirmed")
+            inArray(bookings.status, ["confirmed", "waitlisted"])
           )
         )
         .limit(1);
@@ -1523,7 +1621,10 @@ export class DrizzleFitosRepository implements FitosRepository {
                 eq(equipmentAssets.tenantId, scope.tenantId),
                 eq(equipmentAssets.poolId, req.poolId),
                 eq(equipmentAssets.branchId, occurrence.branchId),
-                eq(equipmentAssets.status, "available")
+                or(
+                  eq(equipmentAssets.status, "available"),
+                  eq(equipmentAssets.status, "operational")
+                )
               )
             );
 
@@ -1536,7 +1637,8 @@ export class DrizzleFitosRepository implements FitosRepository {
       }
 
       const confirmedCount = capacity?.count ?? 0;
-      if (confirmedCount >= effectiveCapacity) {
+      const waitlisted = input.source === "member_portal" && confirmedCount >= effectiveCapacity;
+      if (confirmedCount >= effectiveCapacity && !waitlisted) {
         throw new Error(
           `Occurrence is full. Available equipment constrains capacity to ${effectiveCapacity}.`
         );
@@ -1592,9 +1694,10 @@ export class DrizzleFitosRepository implements FitosRepository {
           branchId: occurrence.branchId,
           occurrenceId: occurrence.id,
           memberId: member.id,
+          status: waitlisted ? "waitlisted" : "confirmed",
           source: input.source ?? "staff",
           creditMembershipId: creditMembership?.id ?? null,
-          creditsDebited: creditMembership ? service.creditsRequired : 0,
+          creditsDebited: waitlisted ? 0 : creditMembership ? service.creditsRequired : 0,
           entitlementOverrideReason:
             service.creditsRequired > 0 && !creditMembership
               ? (input.overrideReason?.trim() ?? null)
@@ -1603,7 +1706,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         })
         .returning();
       if (!created) throw new Error("Unable to create booking.");
-      if (creditMembership && service.creditsRequired > 0) {
+      if (!waitlisted && creditMembership && service.creditsRequired > 0) {
         await tx.insert(creditLedger).values({
           tenantId: scope.tenantId,
           membershipId: creditMembership.id,
@@ -2251,6 +2354,16 @@ export class DrizzleFitosRepository implements FitosRepository {
         )
       )
       .orderBy(desc(auditEvents.createdAt));
+    return rows.map((event) => this.auditResponse(event));
+  }
+
+  async listPlatformAuditEvents(): Promise<AuditEventResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(auditEvents)
+      .where(sql`${auditEvents.action} like 'tenant.%'`)
+      .orderBy(desc(auditEvents.createdAt))
+      .limit(200);
     return rows.map((event) => this.auditResponse(event));
   }
 
@@ -3379,6 +3492,13 @@ export class DrizzleFitosRepository implements FitosRepository {
       )
       .orderBy(scheduleOccurrences.startsAt)
       .limit(100);
+    const projections = await this.withResourceWarnings(rows.map((row) => row.occurrence));
+    const effectiveCapacityById = new Map(
+      projections.map((projection) => [
+        projection.id,
+        projection.effectiveCapacity ?? projection.capacity
+      ])
+    );
     return rows.map(({ occurrence, service, trainer, room, branch, bookedCount }) => ({
       id: occurrence.id,
       serviceId: occurrence.serviceId,
@@ -3390,8 +3510,12 @@ export class DrizzleFitosRepository implements FitosRepository {
       startsAt: occurrence.startsAt.toISOString(),
       endsAt: occurrence.endsAt.toISOString(),
       capacity: occurrence.capacity,
+      effectiveCapacity: effectiveCapacityById.get(occurrence.id) ?? occurrence.capacity,
       bookedCount,
-      availableSpots: Math.max(0, occurrence.capacity - bookedCount),
+      availableSpots: Math.max(
+        0,
+        (effectiveCapacityById.get(occurrence.id) ?? occurrence.capacity) - bookedCount
+      ),
       price: null
     }));
   }
@@ -5110,6 +5234,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       id: r.id,
       tenantId: r.tenantId,
       branchId: r.branchId,
+      poolId: r.poolId,
       roomId: null,
       name: r.name,
       assetCode: r.serialNumber ?? r.id.slice(0, 8),
@@ -5142,6 +5267,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       id: r.id,
       tenantId: r.tenantId,
       branchId: r.branchId,
+      poolId: r.poolId,
       roomId: null,
       name: r.name,
       assetCode: r.serialNumber ?? r.id.slice(0, 8),
@@ -5170,6 +5296,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       .values({
         tenantId: scope.tenantId,
         branchId: input.branchId,
+        poolId: input.poolId ?? null,
         name: input.name,
         serialNumber: input.serialNumber ?? null,
         modelNumber: input.modelName,
@@ -5186,6 +5313,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       id: created.id,
       tenantId: created.tenantId,
       branchId: created.branchId,
+      poolId: created.poolId,
       roomId: input.roomId ?? null,
       name: created.name,
       assetCode: input.assetCode ?? created.serialNumber ?? created.id.slice(0, 8),
@@ -5212,6 +5340,7 @@ export class DrizzleFitosRepository implements FitosRepository {
   ): Promise<EquipmentAssetResponse | null> {
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (input.name !== undefined) updateData.name = input.name;
+    if (input.poolId !== undefined) updateData.poolId = input.poolId;
     if (input.status !== undefined) updateData.status = input.status;
     if (input.notes !== undefined) updateData.notes = input.notes;
     if (input.nextServiceDueAt !== undefined)
@@ -5228,6 +5357,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       id: updated.id,
       tenantId: updated.tenantId,
       branchId: updated.branchId,
+      poolId: updated.poolId,
       roomId: null,
       name: updated.name,
       assetCode: updated.serialNumber ?? updated.id.slice(0, 8),
@@ -6090,7 +6220,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         !occurrence ||
         !asset ||
         occurrence.branchId !== asset.branchId ||
-        asset.status !== "available"
+        (asset.status !== "available" && asset.status !== ("operational" as never))
       )
         throw new Error("Equipment asset is unavailable for this occurrence.");
       const [conflict] = await tx
@@ -6207,7 +6337,7 @@ export class DrizzleFitosRepository implements FitosRepository {
           (asset) =>
             asset.poolId === requirement.poolId &&
             asset.branchId === occurrence.branchId &&
-            asset.status === "available"
+            (asset.status === "available" || asset.status === ("operational" as never))
         ).length;
         if (requirement.quantityRequired > 0) {
           effectiveCapacity = Math.min(
@@ -6223,7 +6353,7 @@ export class DrizzleFitosRepository implements FitosRepository {
             (asset) =>
               asset.poolId === requirement.poolId &&
               asset.branchId === occurrence.branchId &&
-              asset.status === "available"
+              (asset.status === "available" || asset.status === ("operational" as never))
           ).length;
           const overlappingDemand = tenantOccurrences
             .filter(
@@ -6329,7 +6459,10 @@ export class DrizzleFitosRepository implements FitosRepository {
                 eq(equipmentAssets.tenantId, tenant.id),
                 eq(equipmentAssets.poolId, requirement.poolId),
                 eq(equipmentAssets.branchId, occurrence.branchId),
-                eq(equipmentAssets.status, "available")
+                or(
+                  eq(equipmentAssets.status, "available"),
+                  eq(equipmentAssets.status, "operational")
+                )
               )
             );
           if (requirement.quantityRequired > 0) {

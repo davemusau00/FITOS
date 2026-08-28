@@ -135,6 +135,35 @@ describe("Memberships and Booking Credits Integration", () => {
     const balanceRestored = await repository.getCreditBalance(gymScope, member.id);
     expect(balanceRestored).toBe(10);
 
+    const waitlistMember = await repository.createMember(
+      gymScope,
+      {
+        contact: { firstName: "Otieno", lastName: "Omondi", phone: "0711000000" },
+        homeBranchId: gym.branchIds[0]!
+      },
+      "+254711000000"
+    );
+    await repository.activateMembership(gymScope, { memberId: waitlistMember.id, planId: plan.id });
+    const fullService = await repository.createService(gymScope, {
+      name: "Waitlist Class",
+      serviceType: "class",
+      durationMinutes: 60,
+      defaultCapacity: 1,
+      creditsRequired: 1,
+      branchId: gym.branchIds[0]
+    });
+    const fullOccurrence = await repository.createScheduleOccurrence(gymScope, {
+      branchId: gym.branchIds[0]!,
+      serviceId: fullService.id,
+      startsAt: new Date(Date.now() + 2 * 86400000).toISOString(),
+      endsAt: new Date(Date.now() + 2 * 86400000 + 3600000).toISOString(),
+      capacity: 1
+    });
+    await repository.memberSelfBook(member.id, fullOccurrence.id);
+    const waitlisted = await repository.memberSelfBook(waitlistMember.id, fullOccurrence.id);
+    expect(waitlisted.status).toBe("waitlisted");
+    expect(waitlisted.creditsDebited).toBe(0);
+
     const strictService = await repository.createService(gymScope, {
       name: "Strict Cancellation Class",
       serviceType: "class",
@@ -163,7 +192,7 @@ describe("Memberships and Booking Credits Integration", () => {
       "Too late to attend"
     );
     expect(lateCancellation.lateCancelled).toBe(true);
-    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(9);
+    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(8);
 
     const adjustment = await repository.adjustCredit(
       gymScope,
@@ -176,7 +205,7 @@ describe("Memberships and Booking Credits Integration", () => {
       gym.user.id
     );
     expect(adjustment.reason).toBe("manual_adjustment");
-    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(7);
+    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(6);
     await expect(
       repository.adjustCredit(
         gymScope,

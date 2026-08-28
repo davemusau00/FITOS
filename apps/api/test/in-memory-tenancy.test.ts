@@ -9,6 +9,29 @@ const memberInput = (branchId: string): CreateMemberRequest => ({
 });
 
 describe("tenant isolation", () => {
+  it("persists staff notification preferences with safe defaults", async () => {
+    const repository = new InMemoryFitosRepository();
+    const defaults = await repository.getNotificationPreferences("user-1");
+    expect(defaults).toMatchObject({ email: true, sms: false, bookingReminders: true });
+
+    const updated = await repository.updateNotificationPreferences("user-1", {
+      email: false,
+      sms: true,
+      bookingReminders: false,
+      operationalAlerts: true,
+      leadFollowUps: false
+    });
+    expect(updated).toEqual({
+      email: false,
+      sms: true,
+      bookingReminders: false,
+      operationalAlerts: true,
+      leadFollowUps: false
+    });
+    await expect(repository.getNotificationPreferences("user-1")).resolves.toEqual(updated);
+    await expect(repository.getNotificationPreferences("user-2")).resolves.toEqual(defaults);
+  });
+
   it("rejects a known member ID belonging to another tenant", async () => {
     const repository = new InMemoryFitosRepository();
     const passwordHash = await new ScryptPasswordHasher().hash("ChangeMe123!");

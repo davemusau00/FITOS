@@ -237,6 +237,10 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly therapySessions = new Map<string, TherapySessionResponse>();
   private readonly tenantSubscriptions = new Map<string, TenantSubscriptionResponse>();
   private readonly featureFlags = new Map<string, FeatureFlagResponse[]>();
+  private readonly notificationPreferences = new Map<
+    string,
+    import("@fitos/contracts").NotificationPreferences
+  >();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly memberPasswords = new Map<string, string>();
@@ -2086,6 +2090,60 @@ export class InMemoryFitosRepository implements FitosRepository {
     const user = this.users.get(userId);
     if (user) user.lastLoginAt = at;
   }
+  async setUserPassword(userId: string, passwordHash: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) user.passwordHash = passwordHash;
+  }
+  async revokeOtherUserSessions(
+    userId: string,
+    currentSessionId: string,
+    at: string
+  ): Promise<void> {
+    for (const session of this.sessions.values()) {
+      if (session.userId === userId && session.id !== currentSessionId) session.revokedAt = at;
+    }
+  }
+  async listUserSessions(userId: string, nowTime: string) {
+    return [...this.sessions.values()]
+      .filter(
+        (session) => session.userId === userId && !session.revokedAt && session.expiresAt > nowTime
+      )
+      .map((session) => ({
+        id: session.id,
+        createdAt: session.expiresAt,
+        lastSeenAt: null,
+        expiresAt: session.expiresAt,
+        userAgentSummary: session.userAgentSummary ?? null,
+        current: false
+      }));
+  }
+  async revokeUserSession(userId: string, sessionId: string, at: string) {
+    const session = [...this.sessions.values()].find(
+      (item) => item.id === sessionId && item.userId === userId
+    );
+    if (!session || session.revokedAt) return false;
+    session.revokedAt = at;
+    return true;
+  }
+
+  async updateUserProfile(
+    userId: string,
+    input: import("@fitos/contracts").UpdateUserProfileRequest
+  ): Promise<UserSummary | null> {
+    const user = this.users.get(userId);
+    if (!user) return null;
+    if (input.displayName !== undefined) user.displayName = input.displayName.trim();
+    if (input.phone !== undefined)
+      (user as StoredUser & { phone?: string | null }).phone = input.phone;
+    return {
+      id: user.id,
+      email: user.email,
+      phone: (user as StoredUser & { phone?: string | null }).phone ?? null,
+      displayName: user.displayName,
+      status: user.status,
+      lastLoginAt: user.lastLoginAt
+    };
+  }
 
   async findTenant(scope: TenantScope): Promise<TenantSummary | null> {
     return this.tenants.get(scope.tenantId) ?? null;
@@ -3489,6 +3547,28 @@ export class InMemoryFitosRepository implements FitosRepository {
     );
   }
 
+  async listPlatformAuditEvents(): Promise<AuditEventResponse[]> {
+    return this.auditEvents.filter((event) => event.action.startsWith("tenant.")).slice(0, 200);
+  }
+
+  async getNotificationPreferences(userId: string) {
+    return (
+      this.notificationPreferences.get(userId) ?? {
+        email: true,
+        sms: false,
+        bookingReminders: true,
+        operationalAlerts: true,
+        leadFollowUps: true
+      }
+    );
+  }
+
+  async updateNotificationPreferences(userId: string, input: import("@fitos/contracts").UpdateNotificationPreferencesRequest) {
+    const value = { ...input };
+    this.notificationPreferences.set(userId, value);
+    return value;
+  }
+
   async publishEvent(event: DomainEvent): Promise<void> {
     this.domainEvents.push(event);
   }
@@ -4210,7 +4290,21 @@ export class InMemoryFitosRepository implements FitosRepository {
           (b) => b.occurrenceId === occ.id && b.status === "confirmed"
         );
         const bookedCount = bookingsForOcc.length;
-        const availableSpots = Math.max(0, occ.capacity - bookedCount);
+        const effectiveCapacity = (
+          this.serviceEquipmentRequirements.get(occ.serviceId) ?? []
+        ).reduce((capacity, requirement) => {
+          const available = [...this.equipmentAssets.values()].filter(
+            (asset) =>
+              asset.tenantId === tenant.id &&
+              asset.poolId === requirement.poolId &&
+              asset.branchId === occ.branchId &&
+              asset.status === "available"
+          ).length;
+          return requirement.quantityRequired > 0
+            ? Math.min(capacity, Math.floor(available / requirement.quantityRequired))
+            : capacity;
+        }, occ.capacity);
+        const availableSpots = Math.max(0, effectiveCapacity - bookedCount);
 
         return {
           id: occ.id,
@@ -4223,6 +4317,7 @@ export class InMemoryFitosRepository implements FitosRepository {
           startsAt: occ.startsAt,
           endsAt: occ.endsAt,
           capacity: occ.capacity,
+          effectiveCapacity,
           bookedCount,
           availableSpots,
           price: service?.price ?? null
@@ -4529,7 +4624,7 @@ export class InMemoryFitosRepository implements FitosRepository {
             (booking) =>
               booking.occurrenceId === occurrence.id &&
               booking.memberId === memberId &&
-              booking.status === "confirmed"
+              (booking.status === "confirmed" || booking.status === "waitlisted")
           );
           const confirmed = [...this.bookings.values()].filter(
             (booking) => booking.occurrenceId === occurrence.id && booking.status === "confirmed"
@@ -4541,7 +4636,11 @@ export class InMemoryFitosRepository implements FitosRepository {
                 message: "You are already booked into this session."
               }
             : confirmed >= (occurrence.effectiveCapacity ?? occurrence.capacity)
-              ? { canBook: false, reasonCode: "FULL" as const, message: "This session is full." }
+              ? {
+                  canBook: true,
+                  reasonCode: "WAITLIST_ONLY" as const,
+                  message: "This session is full, but you can join the waitlist."
+                }
               : creditBalance < required
                 ? {
                     canBook: false,
@@ -4578,11 +4677,12 @@ export class InMemoryFitosRepository implements FitosRepository {
     const activeBookings = [...this.bookings.values()].filter(
       (b) => b.occurrenceId === occ.id && b.status === "confirmed"
     );
-    if (activeBookings.length >= (occ.effectiveCapacity ?? occ.capacity)) {
-      throw new Error("Class is already at maximum capacity.");
-    }
     const alreadyBooked = activeBookings.some((b) => b.memberId === memberId);
-    if (alreadyBooked) throw new Error("You are already booked into this session.");
+    const alreadyWaitlisted = [...this.bookings.values()].some(
+      (b) => b.occurrenceId === occ.id && b.memberId === memberId && b.status === "waitlisted"
+    );
+    if (alreadyBooked || alreadyWaitlisted)
+      throw new Error("You are already booked into this session.");
 
     const service = this.services.get(occ.serviceId);
     const creditsRequired = service?.creditsRequired ?? 1;
@@ -4606,6 +4706,8 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (!activeMembership)
       throw new Error("An active membership is required to book this session.");
 
+    const waitlisted = activeBookings.length >= (occ.effectiveCapacity ?? occ.capacity);
+
     const bookingId = randomUUID();
     const ts = now();
     const booking: StoredBooking = {
@@ -4614,13 +4716,13 @@ export class InMemoryFitosRepository implements FitosRepository {
       branchId: occ.branchId,
       occurrenceId: occ.id,
       memberId: member.id,
-      status: "confirmed",
+      status: waitlisted ? "waitlisted" : "confirmed",
       source: "member_portal",
       bookedAt: ts,
       cancelledAt: null,
       cancellationReason: null,
       creditMembershipId: activeMembership?.id ?? null,
-      creditsDebited: creditsRequired,
+      creditsDebited: waitlisted ? 0 : creditsRequired,
       entitlementOverrideReason: null,
       lateCancelled: false,
       createdByUserId: null,
@@ -4630,6 +4732,8 @@ export class InMemoryFitosRepository implements FitosRepository {
     this.bookings.set(booking.id, booking);
 
     // Debit credit ledger
+    if (waitlisted) return booking;
+
     const ledgerEntry: StoredCreditLedgerEntry = {
       id: randomUUID(),
       tenantId: member.tenantId,
@@ -5620,6 +5724,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       id,
       tenantId: scope.tenantId,
       branchId: input.branchId,
+      poolId: input.poolId ?? null,
       roomId: input.roomId ?? null,
       branchName: branch?.name ?? null,
       roomName: room?.name ?? null,
@@ -5654,6 +5759,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       asset.branchId = input.branchId;
       asset.branchName = this.branches.get(input.branchId)?.name ?? null;
     }
+    if (input.poolId !== undefined) asset.poolId = input.poolId;
     if (input.roomId !== undefined) {
       asset.roomId = input.roomId;
       asset.roomName = input.roomId ? (this.rooms.get(input.roomId)?.name ?? null) : null;

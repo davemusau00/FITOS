@@ -392,9 +392,11 @@ export function MemberPortalPage() {
                               size="small"
                               variant="primary"
                             >
-                              {eligibility && !eligibility.canBook
-                                ? eligibility.message
-                                : "Book Class"}
+                              {eligibility?.reasonCode === "WAITLIST_ONLY"
+                                ? "Join Waitlist"
+                                : eligibility && !eligibility.canBook
+                                  ? eligibility.message
+                                  : "Book Class"}
                             </Button>
                           )}
                         </div>

@@ -5,6 +5,7 @@ export interface EquipmentAssetResponse {
   id: string;
   tenantId: string;
   branchId: string;
+  poolId?: string | null;
   roomId: string | null;
   branchName?: string | null;
   roomName?: string | null;
@@ -27,6 +28,7 @@ export interface EquipmentAssetResponse {
 
 export interface CreateEquipmentAssetRequest {
   branchId: string;
+  poolId?: string | null;
   roomId?: string | null;
   name: string;
   assetCode: string;
@@ -43,6 +45,7 @@ export interface CreateEquipmentAssetRequest {
 
 export interface UpdateEquipmentAssetRequest {
   branchId?: string;
+  poolId?: string | null;
   roomId?: string | null;
   name?: string;
   assetCode?: string;

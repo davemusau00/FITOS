@@ -38,6 +38,35 @@ describe("Equipment, Inventory, Diagnostics & Therapy - Tenancy & Integrity", ()
     });
     expect(asset.id).toBeDefined();
 
+    const pool = await repository.createEquipmentPool(gymScope, {
+      branchId: gym.branchIds[0]!,
+      name: "Reformer Pool",
+      category: "reformer",
+      assetIds: [asset.id]
+    });
+    await repository.updateEquipmentAsset(gymScope, asset.id, { poolId: pool.id });
+    const service = await repository.createService(gymScope, {
+      name: "Equipment Capacity Check",
+      serviceType: "class",
+      durationMinutes: 60,
+      defaultCapacity: 4,
+      branchId: gym.branchIds[0]!
+    });
+    await repository.replaceServiceEquipmentRequirements(gymScope, service.id, [
+      { poolId: pool.id, quantityRequired: 2 }
+    ]);
+    await repository.createScheduleOccurrence(gymScope, {
+      branchId: gym.branchIds[0]!,
+      serviceId: service.id,
+      startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+      endsAt: new Date(Date.now() + 90_000_000).toISOString(),
+      capacity: 4
+    });
+    const publicSchedule = await repository.listPublicSchedule("fitos-demo-gym");
+    const capacityCheck = publicSchedule.find((item) => item.serviceId === service.id);
+    expect(capacityCheck?.effectiveCapacity).toBe(0);
+    expect(capacityCheck?.availableSpots).toBe(0);
+
     // Gym can read its asset
     const gymAssets = await repository.listEquipmentAssets(gymScope);
     expect(gymAssets.some((a) => a.id === asset.id)).toBe(true);

@@ -184,6 +184,18 @@ export const api = {
     request<AuthMeResponse>("/auth/login", { method: "POST", body: json(payload) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   me: () => request<AuthMeResponse>("/auth/me"),
+  updateUserProfile: (payload: import("@fitos/contracts").UpdateUserProfileRequest) =>
+    request("/users/me/profile", { method: "PATCH", body: json(payload) }),
+  notificationPreferences: () =>
+    request<import("@fitos/contracts").NotificationPreferences>("/users/me/notifications"),
+  updateNotificationPreferences: (
+    payload: import("@fitos/contracts").UpdateNotificationPreferencesRequest
+  ) => request("/users/me/notifications", { method: "PATCH", body: json(payload) }),
+  changePassword: (payload: { currentPassword: string; newPassword: string }) =>
+    request<{ ok: boolean }>("/auth/password", { method: "PATCH", body: json(payload) }),
+  sessions: () => request<import("@fitos/contracts").SessionSummary[]>("/auth/sessions"),
+  revokeSession: (sessionId: string) =>
+    request<{ ok: boolean }>(`/auth/sessions/${sessionId}/revoke`, { method: "POST" }),
   setWorkspace: (workspace: import("@fitos/contracts").WorkspaceKey) =>
     request<AuthMeResponse>("/auth/workspace", {
       method: "PATCH",
@@ -192,6 +204,7 @@ export const api = {
   organization: () => request<TenantSummary>("/organization"),
   updateOrganization: (payload: UpdateOrganizationRequest) =>
     request<TenantSummary>("/organization", { method: "PATCH", body: json(payload) }),
+  auditEvents: () => request<import("@fitos/contracts").AuditEventResponse[]>("/audit-events"),
   branches: () => request<BranchResponse[]>("/branches"),
   branch: (id: string) => request<BranchResponse>(`/branches/${id}`),
   createBranch: (payload: CreateBranchRequest) =>
@@ -551,6 +564,7 @@ export const api = {
     request<import("@fitos/contracts").PlatformOverview>("/platform/overview"),
   platformFeatures: () =>
     request<import("@fitos/contracts").FeatureDefinition[]>("/platform/features"),
+  platformAudit: () => request<import("@fitos/contracts").AuditEventResponse[]>("/platform/audit"),
   transitionPlatformTenantStatus: (
     tenantId: string,
     status: import("@fitos/contracts").TenantAccountStatus,

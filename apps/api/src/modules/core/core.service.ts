@@ -31,6 +31,7 @@ import type {
   UpdateMemberRequest,
   UpdateLeadStageRequest,
   UpdateOrganizationRequest,
+  UpdateUserProfileRequest,
   CreateRoomRequest,
   UpdateRoomRequest,
   CreateScheduleOccurrenceRequest,
@@ -1534,6 +1535,45 @@ export class CoreService {
 
   async auditEvents(actor: RequestActor): Promise<AuditEventResponse[]> {
     return this.repository.listAuditEvents(scopeOf(actor));
+  }
+
+  async updateUserProfile(actor: RequestActor, requestId: string, input: UpdateUserProfileRequest) {
+    const before = (await this.repository.findUserById(actor.userId))?.displayName ?? null;
+    const updated = await this.repository.updateUserProfile(actor.userId, {
+      ...input,
+      ...(input.phone !== undefined
+        ? { phone: input.phone ? normalizePhone(input.phone) : null }
+        : {})
+    });
+    if (!updated) throw new DomainError("RESOURCE_NOT_FOUND", "User profile not found.", 404);
+    await this.audit(actor, requestId, "user.profile_updated", "user", actor.userId, null, {
+      previousDisplayName: before,
+      displayName: updated.displayName
+    });
+    return updated;
+  }
+
+  async notificationPreferences(actor: RequestActor) {
+    return this.repository.getNotificationPreferences(actor.userId);
+  }
+
+  async updateNotificationPreferences(
+    actor: RequestActor,
+    requestId: string,
+    input: import("@fitos/contracts").UpdateNotificationPreferencesRequest
+  ) {
+    const updated = await this.repository.updateNotificationPreferences(actor.userId, input);
+    if (!updated) throw new DomainError("RESOURCE_NOT_FOUND", "User not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "user.notification_preferences_updated",
+      "user",
+      actor.userId,
+      null,
+      updated as unknown as Record<string, unknown>
+    );
+    return updated;
   }
 
   private async requireAssignableRole(actor: RequestActor, roleId: string): Promise<RoleResponse> {

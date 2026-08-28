@@ -13,6 +13,7 @@ complete.
 - [x] Platform authentication has separate token lifecycle, logout/revoke-all/current-user behavior, and token hashes are not returned.
 - [x] Platform overview, tenant directory/control records, lifecycle transitions and feature registry are implemented.
 - [x] Public reservations use transactional capacity locking with confirmed/waitlist outcomes; Drizzle concurrency coverage passes.
+- [x] Member self-booking now creates a durable waitlisted booking when a class is full, without debiting credits; confirmed and waitlisted duplicate protection is enforced in both adapters.
 - [x] Automation provider dispatch, simulation mode, durable action results and authenticated internal task/CRM action callback are implemented.
 - [x] Internal automation branch resolution uses a dedicated tenant projection and does not weaken normal user branch-scope rules.
 - [x] Internal automation commands require an explicit configured actor identity for audit integrity.
@@ -60,6 +61,8 @@ complete.
 - [x] In-memory Today date boundaries now use the tenant-configured IANA timezone instead of UTC date slicing.
 - [x] Drizzle Today date comparisons now use the tenant's configured timezone for joined, booking, attendance, session and lead-day boundaries.
 - [x] Membership/booking integration coverage now verifies late member self-cancellation preserves the consumed credit and exposes the late-cancel state.
+- [x] Membership/booking integration coverage now verifies member self-booking joins a full class waitlist without a credit debit.
+- [x] Staff Bookings status filtering now exposes durable waitlisted bookings alongside confirmed and cancelled records.
 - [x] Member cancellation feedback now distinguishes late non-refunded cancellations, restored credits and bookings with no credit charge.
 - [x] Staff New Booking capacity advisories now use server-derived effective capacity when equipment constraints reduce a session's configured capacity.
 - [x] Member booking and cancellation mutations now emit consistent success/error toast feedback while retaining server-driven outcomes.
@@ -75,8 +78,10 @@ complete.
 - [x] Platform exposes an authenticated tenant-specific control-record endpoint with tenant-safe not-found behavior and a typed web client accessor.
 - [x] Platform tenant detail route now renders the safe control record with lifecycle, plan, quota usage, storage measurement state and enabled capabilities, without raw member records.
 - [x] Platform tenant detail renders enabled capabilities using authoritative registry names rather than opaque feature keys.
+- [x] Platform now exposes a separate audited control-plane activity endpoint and Platform Audit route containing tenant lifecycle/entitlement changes without customer records.
 - [x] Platform shell logout now revokes the server token before clearing the local credential, with a network-failure cleanup fallback.
 - [x] Platform authentication coverage now verifies the logout controller revokes the presented token and that it can no longer resolve.
+- [x] Platform audit projection has focused coverage proving control-plane tenant events are returned while unrelated tenant activity is excluded (12 platform-auth tests pass).
 
 ### Verified checks
 
@@ -85,6 +90,7 @@ complete.
 - [x] Configured Playwright suite passed 8/8, including role-boundary coverage and the pilot journey updated for the intentional Command access boundary.
 - [x] Configured Playwright suite was rerun after mobile-card changes and passed 8/8 with visible-instance selectors.
 - [x] Configured Playwright suite was rerun after timezone/auth/aggregate changes and passed 8/8 in 55.8 seconds.
+- [x] Priority mobile route matrix passed across 11 role/operational/settings routes at 390x844, 768x1024 and 1440x900 with no horizontal overflow.
 
 ### Verification snapshot — 2026-08-28
 
@@ -94,6 +100,10 @@ complete.
 - Full local `npm run check`: passed with PostgreSQL enabled, including lint, all package builds/typechecks, tests, and production build.
 - Full local `npm run check` was rerun after Today aggregate parity changes and passed with PostgreSQL enabled; API remained 44/44, web 1/1 and worker 7/7.
 - Full local `npm run check` was rerun after Platform tenant-detail and role-onboarding changes; format, lint, typechecks, 44 API tests, 1 web test, 7 worker tests and production build passed with PostgreSQL enabled.
+- Full local `npm run check` was rerun after effective-capacity projection and Platform logout coverage; format, lint, typechecks, 45 API tests, 1 web test, 7 worker tests and production build passed with PostgreSQL enabled.
+- Current full local `npm run check` passed after waitlist and UI changes: formatting, lint, package typechecks, 38 API tests, 1 web test, 7 worker tests and production build; 8 PostgreSQL integration tests were skipped because this invocation did not enable integration mode.
+- Focused post-audit verification passed: lint, API/web typechecks, Platform auth/audit and membership/booking tests (13/13), plus diff validation.
+- Explicit PostgreSQL-backed Drizzle tenancy run passed 8/8 with `RUN_DATABASE_TESTS=true` against the local seeded database after the waitlist migration work.
 - Configured Playwright suite was rerun after Platform tenant-detail and role-onboarding changes; all 8 tests passed in 59.6 seconds.
 - Focused pilot Playwright journey: passed after updating its Command-access assertion.
 - Full required golden/adversarial Playwright matrix: still pending; the configured 8-test suite is green but does not yet cover every journey listed below.
@@ -101,11 +111,26 @@ complete.
 ### Still in progress / not yet verified complete
 
 - [ ] Full golden-path and adversarial E2E journeys covering all role handoffs, member self-service, public reservation outcomes and branch switching.
-- [ ] Full mobile acceptance matrix across every priority page, including mobile table-card coverage and modal focus behavior.
+- [ ] Full mobile acceptance matrix across every priority page, including modal focus behavior; the current 11-route overflow matrix and mobile table-card coverage are verified below.
 - [ ] Complete CRM follow-up/conversion workflow and role-specific settings coverage; role-specific onboarding checklists are now implemented.
+- [x] Staff Account/Profile settings now persist notification preferences server-side alongside profile editing, password rotation and active-session management.
+- [x] Active-session management uses a token-free session-summary contract; password changes revoke other sessions and Account Profile can revoke individual sessions.
+- [x] Post-session-management consistency check passed: API/web typechecks, diff validation, Platform auth tests and in-memory tenancy tests passed (15/15 focused tests).
+- [x] Active staff sessions now have token-free list/revoke endpoints, ownership checks, current-session protection and Account Profile controls.
+- [x] Password changes now revoke the user’s other staff sessions while preserving the current authenticated session.
+- [x] Staff display-name, canonical phone and notification-preference updates now have tenant-authenticated API/repository paths, audit events and Account Profile UI; password and active-session controls are also implemented.
+- [x] Notification preferences have a forward PostgreSQL migration (`0028_user_notification_preferences`), in-memory parity, safe defaults and focused persistence coverage (5 tenancy tests pass).
 - [ ] Full Platform entitlement mutation UI and support/audit workflows.
 - [ ] Complete end-to-end validation of worker-to-API internal automation execution with configured callback secrets and a real persisted lead target.
 - [ ] Complete remaining eligibility policy states for waitlist behavior, booking windows, service inclusion, branch access and cancellation/rescheduling rules.
+- [x] Equipment asset contracts and both adapters now retain optional equipment-pool identity, enabling truthful in-memory public timetable effective-capacity projection.
+- [x] Equipment asset updates now persist pool reassignment in the Drizzle adapter, completing create/update pool identity parity.
+- [x] Equipment integration coverage verifies pool requirements reduce public timetable effective capacity and available spots.
+- [x] Drizzle public timetable now exposes effective capacity and available spots from the shared resource projection.
+- [x] Drizzle equipment-capacity calculations accept both canonical `available` and legacy persisted `operational` asset statuses without rewriting existing records.
+- [x] Tenant Settings now exposes a role-permissioned Activity & Audit route backed by tenant-scoped audit events, with an explicit neutral no-data state.
+- [x] Playwright coverage now opens the owner Activity & Audit route and accepts both real audit history and the truthful empty state.
+- [x] Playwright mobile coverage now exercises Command, Ops, Front Desk, Coach, Practice, member, booking, attendance, CRM, membership and Account routes at all three pilot viewports.
 - [ ] Final accessibility, terminology, activity timeline and archive/delete audit across all modules.
 
 ### Explicitly deferred for this sprint

@@ -1,7 +1,8 @@
 import type { Reflector } from "@nestjs/core";
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { ScryptPasswordHasher } from "@fitos/auth";
+import { hashSessionToken, ScryptPasswordHasher } from "@fitos/auth";
+import { AuthService } from "../src/common/auth/auth.service.js";
 import { InMemoryFitosRepository } from "../src/repositories/in-memory-fitos.repository.js";
 import { PlatformAdminGuard } from "../src/common/auth/platform-admin.guard.js";
 import { PlatformController } from "../src/modules/platform/signup.controller.js";
@@ -54,6 +55,76 @@ describe("platform authentication token lifecycle", () => {
 
     ownerUser.status = "inactive";
     expect(await repository.resolvePlatformAdminByTokenHash(hash("valid"))).toBeNull();
+  });
+});
+
+describe("platform audit projection", () => {
+  it("returns control-plane events without exposing unrelated tenant activity", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.recordAudit({
+      tenantId: "tenant-1",
+      actorUserId: "platform-user",
+      action: "tenant.capabilities_changed",
+      resourceType: "tenant_subscription",
+      resourceId: "tenant-1",
+      afterSummary: { capabilities: ["advanced_reporting"] },
+      requestId: "request-1"
+    });
+    await repository.recordAudit({
+      tenantId: "tenant-1",
+      actorUserId: "tenant-user",
+      action: "member.updated",
+      resourceType: "member",
+      resourceId: "member-1",
+      requestId: "request-2"
+    });
+
+    const events = await repository.listPlatformAuditEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      action: "tenant.capabilities_changed",
+      resourceType: "tenant_subscription"
+    });
+  });
+});
+
+describe("staff password and session lifecycle", () => {
+  it("changes the password, preserves the current session, and revokes other sessions", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.(await new ScryptPasswordHasher().hash("ChangeMe123!"));
+    const auth = new AuthService(repository);
+    const first = await auth.login(
+      { email: "owner@gym.fitos.test", password: "ChangeMe123!" },
+      { userAgentSummary: "test-current" }
+    );
+    const second = await auth.login(
+      { email: "owner@gym.fitos.test", password: "ChangeMe123!" },
+      { userAgentSummary: "test-other" }
+    );
+    const current = await repository.resolveSession(
+      hashSessionToken(first.sessionToken),
+      new Date().toISOString()
+    );
+    const other = await repository.resolveSession(
+      hashSessionToken(second.sessionToken),
+      new Date().toISOString()
+    );
+    if (!current || !other) throw new Error("Expected test sessions.");
+
+    await auth.changePassword(current, "ChangeMe123!", "NewChangeMe123!");
+
+    await expect(
+      repository.resolveSession(hashSessionToken(first.sessionToken), new Date().toISOString())
+    ).resolves.toMatchObject({ sessionId: current.sessionId });
+    await expect(
+      repository.resolveSession(hashSessionToken(second.sessionToken), new Date().toISOString())
+    ).resolves.toBeNull();
+    await expect(
+      auth.login({ email: "owner@gym.fitos.test", password: "ChangeMe123!" }, {})
+    ).rejects.toThrow(/incorrect/i);
+    await expect(
+      auth.login({ email: "owner@gym.fitos.test", password: "NewChangeMe123!" }, {})
+    ).resolves.toBeTruthy();
   });
 });
 

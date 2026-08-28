@@ -206,6 +206,7 @@ export function BookingsPage() {
         >
           <option value="">All statuses</option>
           <option value="confirmed">Confirmed</option>
+          <option value="waitlisted">Waitlisted</option>
           <option value="cancelled">Cancelled</option>
         </select>
       </section>

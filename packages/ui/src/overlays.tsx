@@ -15,11 +15,16 @@ function useDismissibleOverlay(
   onClose: () => void,
   initialFocus?: React.RefObject<HTMLElement | null>
 ) {
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!isOpen) return;
     const previous = document.activeElement as HTMLElement | null;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", closeOnEscape);
     document.body.style.overflow = "hidden";
@@ -27,9 +32,13 @@ function useDismissibleOverlay(
     return () => {
       document.removeEventListener("keydown", closeOnEscape);
       document.body.style.overflow = "";
-      previous?.focus();
+      // Restore after the closing state has committed. Parent mutations can
+      // re-render the trigger during unmount, which otherwise steals focus.
+      window.setTimeout(() => {
+        if (previous?.isConnected) previous.focus();
+      }, 0);
     };
-  }, [initialFocus, isOpen, onClose]);
+  }, [initialFocus, isOpen]);
 }
 
 export function Modal({ children, description, footer, isOpen, onClose, title }: OverlayProps) {
