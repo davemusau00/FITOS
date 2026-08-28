@@ -71,6 +71,32 @@ describeDatabase("Drizzle tenant isolation", () => {
     );
   });
 
+  it("receives an inventory lot atomically into stock and the movement ledger", async () => {
+    const scope = scopeOf(gym);
+    const branchId = gym.branchIds[0]!;
+    const item = await repository.createInventoryItem(scope, {
+      branchId,
+      sku: `LOT-${crypto.randomUUID().slice(0, 8)}`,
+      name: "Integration Lot Item",
+      category: "consumable",
+      costPriceMinor: 1250,
+      retailPriceMinor: 0,
+      isConsumable: true
+    });
+    const before = item.stockOnHand;
+    const lot = await repository.createInventoryLot(scope, {
+      branchId,
+      itemId: item.id,
+      lotCode: "BATCH-INTEGRATION",
+      quantityReceived: 7,
+      expiresOn: "2030-01-01"
+    });
+    expect(lot.quantityOnHand).toBe(7);
+    expect((await repository.findInventoryItemById(scope, item.id))?.stockOnHand).toBe(before + 7);
+    const movements = await repository.listInventoryMovements(scope, item.id);
+    expect(movements.some((movement) => movement.referenceId === lot.id && movement.movementType === "purchase_in")).toBe(true);
+  });
+
   it("denies exact operational UUIDs across services, rooms, occurrences, and bookings", async () => {
     const gymScope = scopeOf(gym);
     const pilatesScope = scopeOf(pilates);
