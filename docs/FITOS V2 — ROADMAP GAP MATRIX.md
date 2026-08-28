@@ -256,11 +256,11 @@ Same persistence/visibility requirements as above, with destructive-action safeg
 
 ### Acceptance
 
-**Current state:** Durable tenant plan-change requests and metadata-only Platform visibility now exist; Platform approval/rejection and applying an approved plan remain open.
+**Current state:** Durable tenant plan-change requests and Platform decision handling now exist; richer plan administration and effective-date scheduling remain open.
 
-**Implementation evidence (2026-08-28):** Added the `plan_change_requests` forward migration/schema, shared request contract, tenant-scoped PostgreSQL/in-memory persistence, idempotent tenant create/list endpoints, audit emission, and metadata-only Platform listing. Account Plan retains an assisted “Request a plan change” contact CTA with no checkout/payment collection. Platform decision actions and approved-plan application remain open.
+**Implementation evidence (2026-08-28):** Added the `plan_change_requests` forward migration/schema, shared request contract, tenant-scoped PostgreSQL/in-memory persistence, idempotent tenant create/list endpoints, audit emission, Platform listing, and Platform approve/reject endpoint with required reason. Approval applies the requested non-financial plan assignment and rejection preserves the current plan. Account Plan retains an assisted “Request a plan change” contact CTA with no checkout/payment collection. Effective-date scheduling and richer plan administration remain open.
 
-**Implementation evidence (2026-08-28):** Tenant request creation/listing and persisted `requested` status are implemented; Platform decision endpoint, actor/reason capture, and effective plan application are not yet implemented.
+**Implementation evidence (2026-08-28):** Tenant request creation/listing and persisted `requested` status are implemented. Platform decisions require an approved/rejected status and reason, persist actor/timestamp, emit an audit event, and apply the requested plan on approval; effective-date scheduling is not yet implemented.
 
 When implemented, tenant can:
 

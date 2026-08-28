@@ -5615,6 +5615,41 @@ export class InMemoryFitosRepository implements FitosRepository {
     return updated;
   }
 
+  async updateTenantPlan(tenantId: string, plan: import("@fitos/contracts").SaaSPlan) {
+    const subscription =
+      this.tenantSubscriptions.get(tenantId) ?? (await this.getTenantSubscription(tenantId));
+    if (!subscription) return null;
+    const updated = {
+      ...subscription,
+      plan,
+      planName: `FITOS ${plan[0]!.toUpperCase()}${plan.slice(1)}`
+    };
+    this.tenantSubscriptions.set(tenantId, updated);
+    return updated;
+  }
+
+  async decidePlanChangeRequest(
+    requestId: string,
+    status: "approved" | "rejected",
+    reason: string,
+    decidedByUserId: string
+  ) {
+    const request = this.planChangeRequests.get(requestId);
+    if (!request || request.status !== "requested") return null;
+    const decidedAt = now();
+    const updated = {
+      ...request,
+      status,
+      reason,
+      decidedByUserId,
+      decidedAt,
+      updatedAt: decidedAt
+    };
+    this.planChangeRequests.set(requestId, updated);
+    if (status === "approved") await this.updateTenantPlan(request.tenantId, request.requestedPlan);
+    return { ...updated };
+  }
+
   async listFeatureFlags(_tenantId: string): Promise<FeatureFlagResponse[]> {
     const capabilities = new Set((await this.getTenantSubscription(_tenantId)).capabilities);
     return PLATFORM_FEATURE_REGISTRY.map((feature) => ({

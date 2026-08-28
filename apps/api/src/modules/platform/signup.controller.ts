@@ -359,6 +359,42 @@ export class PlatformController {
     return this.repository.listPlatformPlanChangeRequests();
   }
 
+  @Patch("plan-change-requests/:requestId")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async decidePlanChangeRequest(
+    @Param("requestId") requestId: string,
+    @Body() body: unknown,
+    @RequestId() requestIdHeader: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        status: z.enum(["approved", "rejected"]),
+        reason: z.string().trim().min(3).max(500)
+      })
+      .strict()
+      .parse(body);
+    const updated = await this.repository.decidePlanChangeRequest(
+      requestId,
+      input.status,
+      input.reason,
+      request.platformActor?.userId ?? ""
+    );
+    if (!updated) throw new NotFoundException("Plan change request not found or already decided.");
+    await this.repository.recordAudit({
+      tenantId: updated.tenantId,
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "account.plan_change_decided",
+      resourceType: "plan_change_request",
+      resourceId: requestId,
+      beforeSummary: { status: "requested", requestedPlan: updated.requestedPlan },
+      afterSummary: { status: updated.status, reason: input.reason },
+      requestId: requestIdHeader
+    });
+    return updated;
+  }
+
   @Get("overview")
   @AuthMode("platform")
   @RequirePlatformAdmin()

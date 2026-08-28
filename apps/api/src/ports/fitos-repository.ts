@@ -577,6 +577,16 @@ export interface FitosRepository {
     tenantId: string,
     capabilities: import("@fitos/contracts").SaaSCapabilityKey[]
   ): Promise<TenantSubscriptionResponse | null>;
+  updateTenantPlan(
+    tenantId: string,
+    plan: import("@fitos/contracts").SaaSPlan
+  ): Promise<TenantSubscriptionResponse | null>;
+  decidePlanChangeRequest(
+    requestId: string,
+    status: "approved" | "rejected",
+    reason: string,
+    decidedByUserId: string
+  ): Promise<import("@fitos/contracts").PlanChangeRequestResponse | null>;
   listFeatureFlags(tenantId: string): Promise<FeatureFlagResponse[]>;
   saveImplementationInquiry(
     input: import("@fitos/contracts").ImplementationInquiryDraft,

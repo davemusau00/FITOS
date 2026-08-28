@@ -5148,6 +5148,41 @@ export class DrizzleFitosRepository implements FitosRepository {
     return row ? this.getTenantSubscription(row.tenantId) : null;
   }
 
+  async updateTenantPlan(tenantId: string, plan: import("@fitos/contracts").SaaSPlan) {
+    const [row] = await this.db
+      .update(tenantSubscriptions)
+      .set({ plan, updatedAt: new Date() })
+      .where(eq(tenantSubscriptions.tenantId, tenantId))
+      .returning({ tenantId: tenantSubscriptions.tenantId });
+    return row ? this.getTenantSubscription(row.tenantId) : null;
+  }
+
+  async decidePlanChangeRequest(
+    requestId: string,
+    status: "approved" | "rejected",
+    reason: string,
+    decidedByUserId: string
+  ) {
+    const [request] = await this.db
+      .select()
+      .from(planChangeRequests)
+      .where(eq(planChangeRequests.id, requestId))
+      .limit(1);
+    if (!request || request.status !== "requested") return null;
+    const decidedAt = new Date();
+    const [updated] = await this.db
+      .update(planChangeRequests)
+      .set({ status, reason, decidedByUserId, decidedAt, updatedAt: decidedAt })
+      .where(eq(planChangeRequests.id, requestId))
+      .returning();
+    if (status === "approved")
+      await this.updateTenantPlan(
+        request.tenantId,
+        request.requestedPlan as import("@fitos/contracts").SaaSPlan
+      );
+    return updated ? this.planChangeResponse(updated) : null;
+  }
+
   async listFeatureFlags(
     tenantId: string
   ): Promise<import("@fitos/contracts").FeatureFlagResponse[]> {
