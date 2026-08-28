@@ -14,7 +14,9 @@ import {
   StatCard
 } from "@fitos/ui";
 import type { LeadResponse } from "@fitos/contracts";
+import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { PageLoading, ErrorNotice, formatDate, useToast } from "../shared";
 
 export const leadStages = [
@@ -90,6 +92,7 @@ const LOST_REASONS = [
 export function LeadsPage() {
   const [params, setParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { activeBranchId } = useBranch();
   const { success: toastSuccess, error: toastError } = useToast();
   const [selectedLead, setSelectedLead] = useState<LeadResponse | null>(null);
   const [noteBody, setNoteBody] = useState("");
@@ -109,11 +112,12 @@ export function LeadsPage() {
     const next = new URLSearchParams();
     if (query) next.set("query", query);
     if (stage) next.set("stage", stage);
+    if (activeBranchId) next.set("branchId", activeBranchId);
     return next;
-  }, [query, stage]);
+  }, [query, stage, activeBranchId]);
 
   const leads = useQuery({
-    queryKey: ["leads", requestParams.toString()],
+    queryKey: branchQueryKeys.list("leads", activeBranchId, requestParams.toString()),
     queryFn: () => api.leads(requestParams)
   });
   const updateStage = useMutation({
@@ -128,7 +132,7 @@ export function LeadsPage() {
     }) => api.updateLeadStage(id, { stage: nextStage, ...(lostReason ? { lostReason } : {}) }),
     onSuccess: () => {
       toastSuccess("Lead stage updated");
-      void queryClient.invalidateQueries({ queryKey: ["leads"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("leads") });
     },
     onError: (cause) =>
       toastError("Could not update lead stage", cause instanceof Error ? cause.message : undefined)
@@ -140,7 +144,7 @@ export function LeadsPage() {
         result.alreadyConverted ? "Lead already linked to member" : "Lead converted to member"
       );
       setSelectedLead(result.lead);
-      void queryClient.invalidateQueries({ queryKey: ["leads"] });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("leads") });
     },
     onError: (cause) =>
       toastError("Could not convert lead", cause instanceof Error ? cause.message : undefined)
