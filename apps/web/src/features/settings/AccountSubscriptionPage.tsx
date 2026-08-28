@@ -14,7 +14,9 @@ import type {
   FeatureFlagResponse,
   TenantSubscriptionResponse,
   UsageQuotaMetricsResponse,
-  PlanChangeRequestResponse
+  PlanChangeRequestResponse,
+  AccountCancellationRequestResponse,
+  AccountDeletionRequestResponse
 } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading, formatDate } from "../shared";
@@ -27,6 +29,12 @@ export default function AccountSubscriptionPage() {
   const [requestedPlan, setRequestedPlan] = useState<"starter" | "pro" | "business">("starter");
   const [requestingPlan, setRequestingPlan] = useState(false);
   const [requestError, setRequestError] = useState<unknown>(null);
+  const [cancellationRequests, setCancellationRequests] = useState<
+    AccountCancellationRequestResponse[]
+  >([]);
+  const [deletionRequests, setDeletionRequests] = useState<AccountDeletionRequestResponse[]>([]);
+  const [deletionConfirmation, setDeletionConfirmation] = useState("");
+  const [lifecycleSubmitting, setLifecycleSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const loadAccountPlan = useCallback(() => {
@@ -36,14 +44,18 @@ export default function AccountSubscriptionPage() {
       api.tenantSubscription(),
       api.tenantUsageQuotas(),
       api.featureFlags(),
-      api.planChangeRequests()
+      api.planChangeRequests(),
+      api.cancellationRequests(),
+      api.deletionRequests()
     ])
-      .then(([subscription, quotas, featureFlags, requests]) => {
+      .then(([subscription, quotas, featureFlags, requests, cancellations, deletions]) => {
         setSub(subscription);
         setRequestedPlan(subscription.plan);
         setUsage(quotas);
         setFlags(featureFlags);
         setPlanRequests(requests);
+        setCancellationRequests(cancellations);
+        setDeletionRequests(deletions);
       })
       .catch(setError)
       .finally(() => setLoading(false));
@@ -200,19 +212,67 @@ export default function AccountSubscriptionPage() {
                 Your data remains preserved while a request is reviewed.
               </p>
               <div className="account-plan-card__actions">
-                <Link
+                <button
                   className="fitos-button fitos-button--secondary"
-                  to="/contact?reason=account-cancellation"
+                  disabled={
+                    lifecycleSubmitting ||
+                    cancellationRequests.some(
+                      (item) => item.status === "requested" || item.status === "reviewing"
+                    )
+                  }
+                  onClick={() => {
+                    setLifecycleSubmitting(true);
+                    setRequestError(null);
+                    void api
+                      .requestCancellation()
+                      .then((request) =>
+                        setCancellationRequests((current) => [request, ...current])
+                      )
+                      .catch(setRequestError)
+                      .finally(() => setLifecycleSubmitting(false));
+                  }}
                 >
                   Request cancellation
-                </Link>
-                <Link
+                </button>
+                <input
+                  className="fitos-input"
+                  aria-label="Deletion confirmation"
+                  placeholder="Type DELETE WORKSPACE"
+                  value={deletionConfirmation}
+                  onChange={(event) => setDeletionConfirmation(event.target.value)}
+                  disabled={lifecycleSubmitting}
+                />
+                <button
                   className="fitos-button fitos-button--ghost"
-                  to="/contact?reason=account-deletion"
+                  disabled={
+                    lifecycleSubmitting ||
+                    deletionConfirmation !== "DELETE WORKSPACE" ||
+                    deletionRequests.some(
+                      (item) => item.status === "requested" || item.status === "reviewing"
+                    )
+                  }
+                  onClick={() => {
+                    setLifecycleSubmitting(true);
+                    setRequestError(null);
+                    void api
+                      .requestDeletion()
+                      .then((request) => {
+                        setDeletionRequests((current) => [request, ...current]);
+                        setDeletionConfirmation("");
+                      })
+                      .catch(setRequestError)
+                      .finally(() => setLifecycleSubmitting(false));
+                  }}
                 >
                   Request deletion
-                </Link>
+                </button>
               </div>
+              {cancellationRequests.length || deletionRequests.length ? (
+                <p className="muted">
+                  Latest lifecycle request:{" "}
+                  {cancellationRequests[0]?.status ?? deletionRequests[0]?.status}.
+                </p>
+              ) : null}
             </Card>
             {usage ? (
               <Card>

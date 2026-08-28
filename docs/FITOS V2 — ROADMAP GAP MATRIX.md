@@ -252,6 +252,8 @@ Same persistence/visibility requirements as above, with destructive-action safeg
 
 ---
 
+**Additional evidence (2026-08-28):** Account Plan now submits cancellation/deletion requests directly, shows latest lifecycle status, protects duplicate submissions, and requires `DELETE WORKSPACE` confirmation for deletion.
+
 ## P1-010 — Durable Plan Change Requests
 
 ### Acceptance
