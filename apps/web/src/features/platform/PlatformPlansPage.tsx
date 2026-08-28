@@ -9,12 +9,13 @@ export function PlatformPlansPage() {
   const client = useQueryClient();
   const query = useQuery({ queryKey: ["platform", "plans"], queryFn: api.platformPlans });
   const features = useQuery({ queryKey: ["platform", "features"], queryFn: api.platformFeatures });
-  const [drafts, setDrafts] = useState<Record<string, SaaSPlanDefinition>>({});
+  type PlanDraft = SaaSPlanDefinition & { isActive?: boolean };
+  const [drafts, setDrafts] = useState<Record<string, PlanDraft>>({});
   useEffect(() => {
     if (query.data) setDrafts(Object.fromEntries(query.data.map((plan) => [plan.key, plan])));
   }, [query.data]);
   const mutation = useMutation({
-    mutationFn: ({ plan, reason }: { plan: SaaSPlanDefinition; reason: string }) =>
+    mutationFn: ({ plan, reason }: { plan: PlanDraft; reason: string }) =>
       api.updatePlatformPlan(plan.key, { ...plan, reason }),
     onSuccess: () => void client.invalidateQueries({ queryKey: ["platform", "plans"] })
   });
@@ -47,6 +48,19 @@ export function PlatformPlansPage() {
                   setDrafts((all) => ({ ...all, [plan.key]: { ...plan, name: e.target.value } }))
                 }
               />
+            </label>
+            <label className="fitos-check-row">
+              <input
+                type="checkbox"
+                checked={plan.isActive !== false}
+                onChange={(event) =>
+                  setDrafts((all) => ({
+                    ...all,
+                    [plan.key]: { ...plan, isActive: event.target.checked } as SaaSPlanDefinition
+                  }))
+                }
+              />
+              <span>Available for new assignments</span>
             </label>
             <label className="fitos-field">
               <span>Description</span>

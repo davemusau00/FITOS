@@ -594,7 +594,10 @@ export const api = {
   platformPlans: () => request<import("@fitos/contracts").SaaSPlanDefinition[]>("/platform/plans"),
   updatePlatformPlan: (
     key: import("@fitos/contracts").SaaSPlan,
-    payload: Omit<import("@fitos/contracts").SaaSPlanDefinition, "key"> & { reason: string }
+    payload: Omit<import("@fitos/contracts").SaaSPlanDefinition, "key"> & {
+      reason: string;
+      isActive?: boolean;
+    }
   ) =>
     request<import("@fitos/contracts").SaaSPlanDefinition>(`/platform/plans/${key}`, {
       method: "PATCH",
