@@ -204,30 +204,38 @@ function AppShellInner() {
 
             {quickCreateOpen ? (
               <ul className="quick-create-menu">
-                <li>
-                  <NavLink onClick={() => setQuickCreateOpen(false)} to="/app/members/new">
-                    <Icon name="users" size={14} />
-                    Add New Member
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink onClick={() => setQuickCreateOpen(false)} to="/app/bookings/new">
-                    <Icon name="calendar" size={14} />
-                    Book a Class / Session
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink onClick={() => setQuickCreateOpen(false)} to="/app/leads/new">
-                    <Icon name="user" size={14} />
-                    Create New Lead
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink onClick={() => setQuickCreateOpen(false)} to="/app/attendance">
-                    <Icon name="check" size={14} />
-                    Check-in / Attendance
-                  </NavLink>
-                </li>
+                {can(auth, "member:create") ? (
+                  <li>
+                    <NavLink onClick={() => setQuickCreateOpen(false)} to="/app/members/new">
+                      <Icon name="users" size={14} />
+                      Add New Member
+                    </NavLink>
+                  </li>
+                ) : null}
+                {can(auth, "booking:create") ? (
+                  <li>
+                    <NavLink onClick={() => setQuickCreateOpen(false)} to="/app/bookings/new">
+                      <Icon name="calendar" size={14} />
+                      Book a Class / Session
+                    </NavLink>
+                  </li>
+                ) : null}
+                {can(auth, "lead:create") ? (
+                  <li>
+                    <NavLink onClick={() => setQuickCreateOpen(false)} to="/app/leads/new">
+                      <Icon name="user" size={14} />
+                      Create New Lead
+                    </NavLink>
+                  </li>
+                ) : null}
+                {can(auth, "attendance:checkin") ? (
+                  <li>
+                    <NavLink onClick={() => setQuickCreateOpen(false)} to="/app/attendance">
+                      <Icon name="check" size={14} />
+                      Check-in / Attendance
+                    </NavLink>
+                  </li>
+                ) : null}
               </ul>
             ) : null}
           </div>
