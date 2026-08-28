@@ -477,6 +477,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       reason: row.reason,
       decidedByUserId: row.decidedByUserId,
       decidedAt: row.decidedAt?.toISOString() ?? null,
+      effectiveAt: row.effectiveAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString()
     };
@@ -5161,7 +5162,8 @@ export class DrizzleFitosRepository implements FitosRepository {
     requestId: string,
     status: "approved" | "rejected",
     reason: string,
-    decidedByUserId: string
+    decidedByUserId: string,
+    effectiveAt: Date | null
   ) {
     const [request] = await this.db
       .select()
@@ -5172,10 +5174,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     const decidedAt = new Date();
     const [updated] = await this.db
       .update(planChangeRequests)
-      .set({ status, reason, decidedByUserId, decidedAt, updatedAt: decidedAt })
+      .set({ status, reason, decidedByUserId, decidedAt, effectiveAt, updatedAt: decidedAt })
       .where(eq(planChangeRequests.id, requestId))
       .returning();
-    if (status === "approved")
+    if (status === "approved" && (!effectiveAt || effectiveAt <= new Date()))
       await this.updateTenantPlan(
         request.tenantId,
         request.requestedPlan as import("@fitos/contracts").SaaSPlan

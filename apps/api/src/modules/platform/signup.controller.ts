@@ -371,7 +371,8 @@ export class PlatformController {
     const input = z
       .object({
         status: z.enum(["approved", "rejected"]),
-        reason: z.string().trim().min(3).max(500)
+        reason: z.string().trim().min(3).max(500),
+        effectiveAt: z.string().datetime().nullable().optional()
       })
       .strict()
       .parse(body);
@@ -379,7 +380,8 @@ export class PlatformController {
       requestId,
       input.status,
       input.reason,
-      request.platformActor?.userId ?? ""
+      request.platformActor?.userId ?? "",
+      input.effectiveAt ? new Date(input.effectiveAt) : null
     );
     if (!updated) throw new NotFoundException("Plan change request not found or already decided.");
     await this.repository.recordAudit({

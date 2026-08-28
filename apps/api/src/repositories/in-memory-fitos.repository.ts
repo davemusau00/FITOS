@@ -3704,6 +3704,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       reason: null,
       decidedByUserId: null,
       decidedAt: null,
+      effectiveAt: null,
       createdAt: timestamp,
       updatedAt: timestamp
     };
@@ -5632,7 +5633,8 @@ export class InMemoryFitosRepository implements FitosRepository {
     requestId: string,
     status: "approved" | "rejected",
     reason: string,
-    decidedByUserId: string
+    decidedByUserId: string,
+    effectiveAt: Date | null
   ) {
     const request = this.planChangeRequests.get(requestId);
     if (!request || request.status !== "requested") return null;
@@ -5643,10 +5645,12 @@ export class InMemoryFitosRepository implements FitosRepository {
       reason,
       decidedByUserId,
       decidedAt,
+      effectiveAt: effectiveAt?.toISOString() ?? null,
       updatedAt: decidedAt
     };
     this.planChangeRequests.set(requestId, updated);
-    if (status === "approved") await this.updateTenantPlan(request.tenantId, request.requestedPlan);
+    if (status === "approved" && (!effectiveAt || effectiveAt <= new Date()))
+      await this.updateTenantPlan(request.tenantId, request.requestedPlan);
     return { ...updated };
   }
 

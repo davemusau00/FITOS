@@ -24,6 +24,7 @@ export interface PlanChangeRequestResponse {
   reason: string | null;
   decidedByUserId: string | null;
   decidedAt: string | null;
+  effectiveAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

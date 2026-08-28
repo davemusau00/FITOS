@@ -585,7 +585,8 @@ export interface FitosRepository {
     requestId: string,
     status: "approved" | "rejected",
     reason: string,
-    decidedByUserId: string
+    decidedByUserId: string,
+    effectiveAt: Date | null
   ): Promise<import("@fitos/contracts").PlanChangeRequestResponse | null>;
   listFeatureFlags(tenantId: string): Promise<FeatureFlagResponse[]>;
   saveImplementationInquiry(

@@ -792,6 +792,7 @@ export const planChangeRequests = pgTable(
       onDelete: "set null"
     }),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
+    effectiveAt: timestamp("effective_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
