@@ -3,18 +3,19 @@ import { Card, PageHeader, StatCard } from "@fitos/ui";
 import { useAuth } from "../../app/auth";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 export function CoachDashboardPage() {
   const { auth } = useAuth();
   const { activeBranchId, activeBranch } = useBranch();
   const services = useQuery({
-    queryKey: ["services", activeBranchId, "coach"],
+    queryKey: branchQueryKeys.list("services", activeBranchId, "coach"),
     queryFn: () => api.servicesByBranch(activeBranchId),
     enabled: Boolean(activeBranchId)
   });
   const schedule = useQuery({
-    queryKey: ["coach-aggregate", activeBranchId, auth?.user.id],
+    queryKey: [...branchQueryKeys.list("coach-aggregate", activeBranchId), auth?.user.id ?? ""],
     queryFn: () => api.coachAggregate(activeBranchId),
     enabled: Boolean(activeBranchId && auth?.user.id)
   });
