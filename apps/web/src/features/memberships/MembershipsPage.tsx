@@ -22,6 +22,7 @@ import type {
 } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { ErrorNotice, PageLoading, formatCurrency, formatDate } from "../shared";
 
 type PlanFormValues = {
@@ -47,7 +48,7 @@ export function MembershipsPage() {
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const plans = useQuery({
-    queryKey: ["membership-plans", selectedBranch],
+    queryKey: branchQueryKeys.list("membership-plans", selectedBranch || "all"),
     queryFn: () => api.membershipPlans(selectedBranch || undefined)
   });
   const members = useQuery({
