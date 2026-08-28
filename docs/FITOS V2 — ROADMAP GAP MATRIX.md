@@ -315,6 +315,8 @@ The update endpoint and dedicated Platform Plans screen now provide the editable
 
 Capability update requests are runtime-validated against `PLATFORM_FEATURE_REGISTRY`; undeclared keys are rejected with `400 Bad Request`, covered by the Platform controller test path.
 
+Plan-definition mutations now load the prior persisted definition and record it alongside the updated definition and reason in the Platform audit stream, satisfying the before/after audit requirement for this slice.
+
 ---
 
 ## P1-013 — Scoped Feature Flags
