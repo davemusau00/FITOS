@@ -313,7 +313,7 @@ export class PlatformController {
       action: "platform.plan_definition_updated",
       resourceType: "platform_plan_definition",
       resourceId: planKey,
-      beforeSummary: before,
+      beforeSummary: before as Record<string, unknown> | null,
       afterSummary: { ...updated, reason: input.reason },
       requestId
     });
