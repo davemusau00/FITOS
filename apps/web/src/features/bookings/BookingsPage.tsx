@@ -17,6 +17,7 @@ import {
 import type { BookingResponse, BookingStatus } from "@fitos/contracts";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { useBranch } from "../../app/branch-context";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
@@ -57,7 +58,7 @@ export function BookingsPage() {
   }, [statusFilter, activeBranchId]);
 
   const bookingsQuery = useQuery({
-    queryKey: ["bookings", activeBranchId, requestParams.toString()],
+    queryKey: branchQueryKeys.list("bookings", activeBranchId, requestParams.toString()),
     queryFn: () => api.bookings(requestParams),
     enabled: Boolean(activeBranchId)
   });
