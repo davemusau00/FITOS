@@ -10,6 +10,7 @@ type CommandItem = {
   icon: IconName;
   to: string;
   keywords?: string;
+  permission?: string;
 };
 
 const navigationCommands: CommandItem[] = routeManifest.map((route) => ({
@@ -18,7 +19,8 @@ const navigationCommands: CommandItem[] = routeManifest.map((route) => ({
   type: "Navigation" as const,
   icon: route.icon,
   to: route.path,
-  keywords: `${route.group} ${route.title ?? ""} ${route.description ?? ""}`
+  keywords: `${route.group} ${route.title ?? ""} ${route.description ?? ""}`,
+  permission: route.permission
 }));
 
 const actionCommands: CommandItem[] = [
@@ -171,15 +173,25 @@ const actionCommands: CommandItem[] = [
   }
 ];
 
-export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function CommandPalette({
+  isOpen,
+  onClose,
+  permissions
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  permissions: readonly string[];
+}) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const availableCommands = [...navigationCommands, ...actionCommands].filter(
-    (item, index, items) => items.findIndex((candidate) => candidate.to === item.to) === index
-  );
+  const availableCommands = [...navigationCommands, ...actionCommands]
+    .filter((item) => !item.permission || permissions.includes(item.permission))
+    .filter(
+      (item, index, items) => items.findIndex((candidate) => candidate.to === item.to) === index
+    );
   const filtered = availableCommands.filter((cmd) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();

@@ -430,7 +430,11 @@ function AppShellInner() {
       </nav>
 
       {/* Command Palette Modal */}
-      <CommandPalette isOpen={cmdOpen} onClose={() => setCmdOpen(false)} />
+      <CommandPalette
+        isOpen={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        permissions={auth.permissions}
+      />
     </div>
   );
 }
