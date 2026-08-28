@@ -866,6 +866,8 @@ Migrate advanced modules toward `@fitos/ui`.
 
 Progressively remove page-owned theme systems.
 
+**Implementation evidence (2026-08-28):** The shared staff shell no longer uses inline positioning, icon color/margin, or mobile menu reset styles; these are now expressed as `.app-sidebar__anchored-menu`, `.user-profile-btn__more`, and `.mobile-nav-item--menu` in `apps/web/src/styles/app.css`. Web typecheck and the 4-file/10-test web suite pass. Feature-level inline styles remain and this ticket stays open for the broader migration.
+
 ---
 
 ## P2-023 — Accessibility Sweep

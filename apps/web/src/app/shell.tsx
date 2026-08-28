@@ -152,7 +152,7 @@ function AppShellInner() {
             </p>
           ) : null}
           {/* Branch Switcher */}
-          <div ref={branchRef} style={{ position: "relative" }}>
+          <div className="app-sidebar__anchored-menu" ref={branchRef}>
             <button
               aria-expanded={branchMenuOpen}
               className="branch-switcher"
@@ -190,7 +190,7 @@ function AppShellInner() {
           </div>
 
           {/* Quick Create Button */}
-          <div ref={quickCreateRef} style={{ position: "relative" }}>
+          <div className="app-sidebar__anchored-menu" ref={quickCreateRef}>
             <button
               className="quick-create-btn"
               onClick={() => setQuickCreateOpen((prev) => !prev)}
@@ -318,11 +318,7 @@ function AppShellInner() {
                 {can(auth, "tenant:settings") ? "Administrator" : "Staff"}
               </span>
             </div>
-            <Icon
-              name="more"
-              size={16}
-              style={{ color: "var(--text-muted)", marginLeft: "auto" }}
-            />
+            <Icon className="user-profile-btn__more" name="more" size={16} />
           </button>
         </div>
       </aside>
@@ -419,9 +415,8 @@ function AppShellInner() {
           <span>Members</span>
         </NavLink>
         <button
-          className="mobile-nav-item"
+          className="mobile-nav-item mobile-nav-item--menu"
           onClick={() => setMenuOpen(true)}
-          style={{ background: "none", border: "none", cursor: "pointer" }}
           type="button"
         >
           <Icon name="menu" size={20} />
