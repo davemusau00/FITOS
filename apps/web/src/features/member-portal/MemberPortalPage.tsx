@@ -230,6 +230,7 @@ export function MemberPortalPage() {
 
       {/* ── Main Portal Body ── */}
       <main className="member-portal-content">
+        <ErrorNotice error={portalOverview.error} />
         {/* ── HOME TAB ── */}
         {activeTab === "home" && (
           <div className="form-stack">
