@@ -1665,6 +1665,13 @@ export class CoreService {
       null,
       { status: request.status, format: request.format }
     );
+    await this.repository.createNotification({
+      userId: actor.userId,
+      category: "system",
+      title: "Export request received",
+      body: "Your workspace export request is queued for Platform review.",
+      href: "/account/plan"
+    });
     return request;
   }
 
@@ -1694,6 +1701,13 @@ export class CoreService {
         status: request.status
       }
     );
+    await this.repository.createNotification({
+      userId: actor.userId,
+      category: "system",
+      title: "Plan change request received",
+      body: `Your request to move to ${request.requestedPlan} is awaiting Platform review.`,
+      href: "/account/plan"
+    });
     return request;
   }
 
@@ -1716,6 +1730,13 @@ export class CoreService {
       null,
       { status: request.status, reason: request.reason }
     );
+    await this.repository.createNotification({
+      userId: actor.userId,
+      category: "system",
+      title: "Cancellation request received",
+      body: "Your cancellation request is awaiting Platform review; workspace data is preserved.",
+      href: "/account/plan"
+    });
     return request;
   }
 
@@ -1743,6 +1764,13 @@ export class CoreService {
       null,
       { status: request.status }
     );
+    await this.repository.createNotification({
+      userId: actor.userId,
+      category: "system",
+      title: "Deletion request received",
+      body: "Your deletion request is awaiting Platform review. No destructive action has been taken.",
+      href: "/account/plan"
+    });
     return request;
   }
   async listAccountDeletionRequests(actor: RequestActor) {
