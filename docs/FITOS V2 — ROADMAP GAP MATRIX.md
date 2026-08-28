@@ -144,7 +144,7 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 
 **Current state:** A shared local-time calendar helper now exists and Reception uses it for today’s schedule; operator-selected date context across Ops, Schedule, Attendance, and Analytics remains open.
 
-**Implementation evidence (2026-08-28):** `apps/web/src/lib/date-context.ts` derives an ISO date from the browser’s local timezone and computes local calendar-day bounds, while `ReceptionPage` plus the Schedule creation workflow use local dates instead of UTC string truncation, preventing near-midnight date drift. Attendance now exposes a date selector, sends explicit local-day `from`/`to` bounds, and includes the selected date in its branch query key; the contract and in-memory/Drizzle repositories enforce the range. `apps/web/test/date-context.test.ts` passes and web/API typechecks pass. Shared operator-selected date state across Ops, Schedule, and Analytics remains required.
+**Implementation evidence (2026-08-28):** `apps/web/src/lib/date-context.ts` derives an ISO date from the browser’s local timezone and computes local calendar-day bounds, while `ReceptionPage` plus the Schedule creation workflow use local dates instead of UTC string truncation, preventing near-midnight date drift. Attendance now exposes a date selector, sends explicit local-day `from`/`to` bounds, and includes the selected date in its branch query key; the contract and in-memory/Drizzle repositories enforce the range. The PostgreSQL tenancy suite verifies the date range and passes 11/11; `apps/web/test/date-context.test.ts` passes and web/API typechecks pass. Shared operator-selected date state across Ops, Schedule, and Analytics remains required.
 
 ### Acceptance
 
