@@ -93,7 +93,7 @@ export function PlatformTenantsPage() {
         title="Tenants"
         description="Find a customer, understand its lifecycle and limits, then open the control record for reasoned changes."
       />
-      <ErrorNotice error={tenants.error} />
+      <ErrorNotice error={tenants.error} onRetry={() => void tenants.refetch()} />
       <FilterBar resultCount={rows.length}>
         <SearchBar
           aria-label="Search tenants"

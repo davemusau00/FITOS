@@ -20,7 +20,7 @@ export function PlatformOverviewPage() {
           </Link>
         }
       />
-      <ErrorNotice error={query.error} />
+      <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
       {data ? (
         <>
           <div className="platform-stat-grid">

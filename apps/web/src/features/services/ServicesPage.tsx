@@ -159,7 +159,7 @@ export function ServicesPage() {
         }
       />
 
-      <ErrorNotice error={services.error} />
+      <ErrorNotice error={services.error} onRetry={() => void services.refetch()} />
 
       <section className="filter-row">
         <select

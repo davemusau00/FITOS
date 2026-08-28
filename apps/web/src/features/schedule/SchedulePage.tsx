@@ -223,7 +223,7 @@ export function SchedulePage() {
         }
       />
 
-      <ErrorNotice error={occurrencesQuery.error} />
+      <ErrorNotice error={occurrencesQuery.error} onRetry={() => void occurrencesQuery.refetch()} />
 
       <section className="filter-row">
         <select
@@ -323,7 +323,10 @@ export function SchedulePage() {
             <p className="muted">Weekly intent is kept separate from generated class sessions.</p>
           </div>
         </div>
-        <ErrorNotice error={templatesQuery.error ?? extendTemplate.error} />
+        <ErrorNotice
+          error={templatesQuery.error ?? extendTemplate.error}
+          onRetry={() => void templatesQuery.refetch()}
+        />
         {templatesQuery.isLoading ? (
           <PageLoading />
         ) : templatesQuery.data?.length ? (
