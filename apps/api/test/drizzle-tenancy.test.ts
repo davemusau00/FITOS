@@ -634,4 +634,27 @@ describeDatabase("Drizzle tenant isolation", () => {
       expect.arrayContaining([expect.objectContaining({ id: created.id })])
     );
   });
+
+  it("persists lifecycle requests and isolates cancellation/deletion records", async () => {
+    const gymScope = scopeOf(gym);
+    const cancellation = await repository.createAccountCancellationRequest(
+      gymScope,
+      gym.user.id,
+      "Closing"
+    );
+    const deletion = await repository.createAccountDeletionRequest(
+      gymScope,
+      gym.user.id,
+      "DELETE WORKSPACE",
+      "Remove data"
+    );
+    expect(cancellation.status).toBe("requested");
+    expect(deletion.confirmation).toBe("DELETE WORKSPACE");
+    await expect(repository.listAccountCancellationRequests(scopeOf(pilates))).resolves.not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: cancellation.id })])
+    );
+    await expect(repository.listAccountDeletionRequests(scopeOf(pilates))).resolves.not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: deletion.id })])
+    );
+  });
 });
