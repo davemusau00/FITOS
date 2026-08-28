@@ -584,6 +584,7 @@ export const api = {
     request<import("@fitos/contracts").PlatformOverview>("/platform/overview"),
   platformFeatures: () =>
     request<import("@fitos/contracts").FeatureDefinition[]>("/platform/features"),
+  platformPlans: () => request<import("@fitos/contracts").SaaSPlanDefinition[]>("/platform/plans"),
   platformAudit: () => request<import("@fitos/contracts").AuditEventResponse[]>("/platform/audit"),
   platformAccountExportRequests: () =>
     request<import("@fitos/contracts").AccountExportRequestResponse[]>(

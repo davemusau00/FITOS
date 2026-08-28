@@ -10,6 +10,14 @@ export interface SaaSPlanQuotas {
   maxStorageMb: number;
 }
 
+export interface SaaSPlanDefinition {
+  key: SaaSPlan;
+  name: string;
+  description: string;
+  quotas: SaaSPlanQuotas;
+  capabilities: SaaSCapabilityKey[];
+}
+
 /** Product limits used by both adapters; usage itself is always measured from records. */
 export const SaaS_PLAN_QUOTAS: Record<SaaSPlan, SaaSPlanQuotas> = {
   starter: {
