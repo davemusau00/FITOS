@@ -490,6 +490,16 @@ export class DrizzleFitosRepository implements FitosRepository {
     requestedByUserId: string,
     requestedPlan: import("@fitos/contracts").SaaSPlan
   ) {
+    const [current] = await this.db
+      .select({ status: accountExportRequests.status })
+      .from(accountExportRequests)
+      .where(eq(accountExportRequests.id, requestId))
+      .limit(1);
+    if (
+      !current ||
+      ((["completed", "failed"] as string[]).includes(current.status) && current.status !== status)
+    )
+      return null;
     const [row] = await this.db
       .insert(planChangeRequests)
       .values({ tenantId: scope.tenantId, requestedByUserId, requestedPlan })

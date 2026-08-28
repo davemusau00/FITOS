@@ -174,6 +174,7 @@ describe("account export lifecycle", () => {
     ).toBe("processing");
     const completed = await repository.updateAccountExportRequestStatus(created.id, "completed");
     expect(completed?.completedAt).toBeTruthy();
+    expect(await repository.updateAccountExportRequestStatus(created.id, "processing")).toBeNull();
   });
 });
 

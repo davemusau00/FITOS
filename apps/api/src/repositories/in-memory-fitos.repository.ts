@@ -3652,6 +3652,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   ) {
     const request = this.accountExportRequests.get(requestId);
     if (!request) return null;
+    if (["completed", "failed"].includes(request.status) && request.status !== status) return null;
     const updated = {
       ...request,
       status,
