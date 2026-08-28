@@ -807,11 +807,14 @@ body {
 
 /* Recent bookings table */
 .recent-bookings {
-  overflow: auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .recent-bookings table {
   border-collapse: collapse;
   font-size: 0.8125rem;
+  table-layout: fixed;
   width: 100%;
 }
 .recent-bookings th {
@@ -834,6 +837,34 @@ body {
 }
 .recent-bookings tr:hover td {
   background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+}
+
+@media (max-width: 640px) {
+  .recent-bookings th,
+  .recent-bookings td {
+    padding-inline: 0.45rem;
+  }
+  .recent-bookings th:nth-child(1),
+  .recent-bookings td:nth-child(1) {
+    width: 42%;
+  }
+  .recent-bookings th:nth-child(2),
+  .recent-bookings td:nth-child(2) {
+    width: 29%;
+  }
+  .recent-bookings th:nth-child(3),
+  .recent-bookings td:nth-child(3) {
+    display: none;
+  }
+  .recent-bookings th:nth-child(4),
+  .recent-bookings td:nth-child(4) {
+    width: 29%;
+  }
+  .recent-bookings .member-cell__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* Quick actions */

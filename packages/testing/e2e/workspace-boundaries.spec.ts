@@ -47,6 +47,27 @@ test("automation result callbacks reject missing worker credentials", async ({ r
   expect(response.status()).toBe(401);
 });
 
+test("public tenant reservation submits through the real reservation flow", async ({ page }) => {
+  await page.goto("/fitos-demo-gym");
+  await page.getByRole("link", { name: "Timetable", exact: true }).click();
+  const dayPills = page.locator(".public-day-pill");
+  const reserve = page.getByRole("button", { name: /Reserve Spot|Join Waitlist/ }).first();
+  for (let index = 0; index < 7 && !(await reserve.isVisible().catch(() => false)); index += 1) {
+    await dayPills.nth(index).click();
+  }
+  await expect(reserve).toBeVisible();
+  await reserve.click();
+  const dialog = page.getByRole("dialog", { name: "Book Your Free Trial Pass" });
+  await expect(dialog).toBeVisible();
+  await dialog.locator('input[placeholder="Jane"]').fill("Public");
+  await dialog.locator('input[placeholder="Doe"]').fill("Reservation");
+  await dialog.locator('input[placeholder^="+254"]').fill("+254711123456");
+  await dialog.getByRole("button", { name: "Confirm Reservation" }).click();
+  await expect(dialog).toContainText(
+    /spot is confirmed|on the waitlist|reservation has been recorded/i
+  );
+});
+
 test("role surfaces remain usable at pilot viewports", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill("owner@gym.fitos.test");

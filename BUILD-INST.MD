@@ -91,6 +91,8 @@ complete.
 - [x] Configured Playwright suite was rerun after mobile-card changes and passed 8/8 with visible-instance selectors.
 - [x] Configured Playwright suite was rerun after timezone/auth/aggregate changes and passed 8/8 in 55.8 seconds.
 - [x] Priority mobile route matrix passed across 11 role/operational/settings routes at 390x844, 768x1024 and 1440x900 with no horizontal overflow.
+- [x] Isolated CI-mode public reservation journey passed against the clean in-memory seed, including timetable selection, reservation form submission and server-confirmed success state (1/1).
+- [x] Full isolated CI-mode Playwright suite passed 11/11 after containing the Command Recent Bookings table at mobile widths; this includes the pilot river, role boundaries, public reservation and priority mobile routes.
 
 ### Verification snapshot — 2026-08-28
 
@@ -106,12 +108,12 @@ complete.
 - Explicit PostgreSQL-backed Drizzle tenancy run passed 8/8 with `RUN_DATABASE_TESTS=true` against the local seeded database after the waitlist migration work.
 - Configured Playwright suite was rerun after Platform tenant-detail and role-onboarding changes; all 8 tests passed in 59.6 seconds.
 - Focused pilot Playwright journey: passed after updating its Command-access assertion.
-- Full required golden/adversarial Playwright matrix: still pending; the configured 8-test suite is green but does not yet cover every journey listed below.
+- Full required golden/adversarial Playwright matrix: still pending; the configured 11-test suite is green but does not yet cover every journey listed below.
 
 ### Still in progress / not yet verified complete
 
 - [ ] Full golden-path and adversarial E2E journeys covering all role handoffs, member self-service, public reservation outcomes and branch switching.
-- [ ] Full mobile acceptance matrix across every priority page, including modal focus behavior; the current 11-route overflow matrix and mobile table-card coverage are verified below.
+- [ ] Full mobile acceptance matrix across every priority page, including modal focus behavior; the current 11-route overflow matrix, mobile table-card coverage and isolated 11/11 browser suite are verified below.
 - [ ] Complete CRM follow-up/conversion workflow and role-specific settings coverage; role-specific onboarding checklists are now implemented.
 - [x] Staff Account/Profile settings now persist notification preferences server-side alongside profile editing, password rotation and active-session management.
 - [x] Active-session management uses a token-free session-summary contract; password changes revoke other sessions and Account Profile can revoke individual sessions.

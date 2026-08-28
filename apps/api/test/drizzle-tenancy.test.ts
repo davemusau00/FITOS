@@ -522,4 +522,24 @@ describeDatabase("Drizzle tenant isolation", () => {
       )
     ).rejects.toThrow();
   });
+
+  it("persists notification preferences for the authenticated user", async () => {
+    const defaults = await repository.getNotificationPreferences(gym.user.id);
+    expect(defaults).toMatchObject({ email: true, sms: false, bookingReminders: true });
+    const updated = await repository.updateNotificationPreferences(gym.user.id, {
+      email: false,
+      sms: true,
+      bookingReminders: false,
+      operationalAlerts: true,
+      leadFollowUps: false
+    });
+    expect(updated).toEqual({
+      email: false,
+      sms: true,
+      bookingReminders: false,
+      operationalAlerts: true,
+      leadFollowUps: false
+    });
+    await expect(repository.getNotificationPreferences(gym.user.id)).resolves.toEqual(updated);
+  });
 });
