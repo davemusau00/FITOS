@@ -371,3 +371,16 @@ export const roleNavigation: Record<"ops" | "front desk" | "coach" | "practice",
     }
   ]
 };
+
+/** The single route manifest used by shells, breadcrumbs, and contextual actions. */
+export const routeManifest: RouteMeta[] = [
+  ...platformNavigation,
+  ...commandNavigation,
+  ...memberNavigation,
+  ...Object.values(roleNavigation).flat()
+];
+
+export function routeMetaForPath(pathname: string): RouteMeta | undefined {
+  const normalized = pathname.split("?")[0]?.replace(/\/$/, "") || "/";
+  return routeManifest.find((route) => route.path.split("?")[0]?.replace(/\/$/, "") === normalized);
+}

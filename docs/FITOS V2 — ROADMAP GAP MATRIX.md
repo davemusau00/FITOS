@@ -167,7 +167,7 @@ Implement actual permitted domain search.
 
 UI copy exactly reflects behavior. Current implementation is explicitly Commands/Navigation: it filters a static command registry and does not claim domain-record search.
 
-**Implementation evidence (2026-08-28):** The command palette now says “Find a page or action…” and the shell labels its trigger as commands and navigation. Domain search remains a separate future capability.
+**Implementation evidence (2026-08-28):** The command palette now says “Find a page or action…” and the shell labels its trigger as commands and navigation. `apps/web/src/app/navigation.ts` now exposes a combined `routeManifest` and `routeMetaForPath()` lookup so route metadata can drive shells, breadcrumbs, and contextual actions from one manifest. Domain search remains a separate future capability.
 
 ---
 
