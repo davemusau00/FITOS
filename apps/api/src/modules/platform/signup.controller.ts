@@ -295,6 +295,10 @@ export class PlatformController {
     const planKey = z
       .enum(["starter", "pro", "business"])
       .parse(key) as import("@fitos/contracts").SaaSPlan;
+    const allowedCapabilities = new Set(PLATFORM_FEATURE_REGISTRY.map((feature) => feature.key));
+    if (input.capabilities.some((capability) => !allowedCapabilities.has(capability as never))) {
+      throw new BadRequestException("Plan capabilities must come from the FITOS feature registry.");
+    }
     const updated = await this.repository.updatePlatformPlanDefinition(planKey, {
       ...input,
       capabilities: input.capabilities as import("@fitos/contracts").SaaSCapabilityKey[]
