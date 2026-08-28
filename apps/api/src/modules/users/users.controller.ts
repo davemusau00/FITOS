@@ -102,8 +102,19 @@ export class UsersController {
 
   @Post("me/export-requests")
   @RequirePermission("tenant:settings")
-  requestExport(@Actor() actor: RequestActor, @RequestId() requestId: string) {
-    return this.core.createAccountExportRequest(actor, requestId);
+  requestExport(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") idempotencyKey: string | undefined
+  ) {
+    return this.idempotency.execute({
+      actor,
+      operation: "account:export-request",
+      key: idempotencyKey,
+      body: {},
+      status: 201,
+      action: () => this.core.createAccountExportRequest(actor, requestId)
+    });
   }
 
   @Post("invitations")
