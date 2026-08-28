@@ -17,7 +17,7 @@ import type { AttendanceRecordResponse, AttendanceStatus } from "@fitos/contract
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
-import { todayDate } from "../../lib/date-context";
+import { localDayBounds, todayDate } from "../../lib/date-context";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 export function AttendancePage() {
@@ -38,8 +38,9 @@ export function AttendancePage() {
     queryFn: () => {
       const params = new URLSearchParams();
       if (selectedBranch) params.set("branchId", selectedBranch);
-      params.set("from", `${selectedDate}T00:00:00.000Z`);
-      params.set("to", `${selectedDate}T23:59:59.999Z`);
+      const dayBounds = localDayBounds(selectedDate);
+      params.set("from", dayBounds.from);
+      params.set("to", dayBounds.to);
       params.set("limit", "100");
       return api.attendanceRecords(params);
     }
