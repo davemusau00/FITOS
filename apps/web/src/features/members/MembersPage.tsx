@@ -15,6 +15,7 @@ import {
 } from "@fitos/ui";
 import type { MemberListItem } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { useBranch } from "../../app/branch-context";
 import { PageLoading, ErrorNotice, formatDate } from "../shared";
 
@@ -39,7 +40,7 @@ export function MembersPage() {
   }, [query, status, activeSegment, activeBranchId]);
 
   const members = useQuery({
-    queryKey: ["members", activeBranchId, requestParams.toString()],
+    queryKey: branchQueryKeys.list("members", activeBranchId, requestParams.toString()),
     queryFn: () => api.members(requestParams),
     enabled: Boolean(activeBranchId)
   });
