@@ -134,7 +134,7 @@ export default function AccountSubscriptionPage() {
               <div className="account-plan-card__actions">
                 <Link
                   className="fitos-button fitos-button--primary"
-                  to="/contact?reason=plan-review"
+                  to="/contact?reason=plan-change"
                 >
                   Request a plan change
                 </Link>
