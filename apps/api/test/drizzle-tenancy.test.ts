@@ -111,10 +111,11 @@ describeDatabase("Drizzle tenant isolation", () => {
         title: "Integration page",
         sections: [{ type: "hero", heading: "Initial" }]
       }));
+    const nextTitle = `Integration edit ${page!.slug}`;
     const updated = await repository.saveSitePage(scope, {
       pageId: page!.id,
       slug: page!.slug,
-      title: `${page!.title} (integration edit)`,
+      title: nextTitle,
       sections: [{ type: "hero", heading: "Persisted integration edit" }],
       seo: { title: "Persisted integration edit" }
     });
@@ -123,7 +124,7 @@ describeDatabase("Drizzle tenant isolation", () => {
     const reloaded = (await repository.listSitePages(scope)).find(
       (candidate) => candidate.id === page!.id
     );
-    expect(reloaded?.title).toBe(`${page!.title} (integration edit)`);
+    expect(reloaded?.title).toBe(nextTitle);
     expect(reloaded?.sections[0]?.type).toBe("hero");
   });
 
