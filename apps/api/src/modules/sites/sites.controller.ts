@@ -9,6 +9,7 @@ import type { FitosRepository } from "../../ports/fitos-repository.js";
 
 const pageSchema = z
   .object({
+    pageId: z.string().uuid().optional(),
     slug: z
       .string()
       .trim()

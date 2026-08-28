@@ -5151,6 +5151,14 @@ export class DrizzleFitosRepository implements FitosRepository {
     scope: TenantScope,
     input: import("@fitos/contracts").SaveSitePageRequest
   ): Promise<import("@fitos/contracts").SitePageResponse> {
+    if (input.pageId) {
+      const [updated] = await this.db.update(sitePages).set({
+        slug: input.slug, title: input.title, sectionsJson: input.sections,
+        seoJson: input.seo ?? {}, status: "draft", version: sql`${sitePages.version} + 1`, updatedAt: new Date()
+      }).where(and(eq(sitePages.tenantId, scope.tenantId), eq(sitePages.id, input.pageId))).returning();
+      if (!updated) throw new Error("Site page not found.");
+      return this.sitePageResponse(updated);
+    }
     const [page] = await this.db
       .insert(sitePages)
       .values({

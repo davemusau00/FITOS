@@ -56,7 +56,7 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 **Area:** Sites  
 **Current state:** Persisted pages can be selected and loaded into the editor; edits are tracked and submitted through the existing save mutation.
 
-**Implementation evidence (2026-08-28):** `SitesPage` selects the first persisted page, supports keyboard-accessible page selection, hydrates title/slug/sections/SEO/theme, prevents accidental replacement of dirty drafts, guards browser unload, and invalidates the page query after save. Runtime verification that a reload preserves the edited page and updates only the selected record remains open.
+**Implementation evidence (2026-08-28):** `SitesPage` selects the first persisted page, supports keyboard-accessible page selection, hydrates title/slug/sections/SEO/theme, sends the selected `pageId` on save, prevents accidental replacement of dirty drafts, guards browser unload, and invalidates the page query after save. Both in-memory and Drizzle repositories update the tenant-scoped selected page when `pageId` is supplied; otherwise legacy slug upsert behavior is preserved. Contracts, API, and web typechecks pass. Runtime reload verification remains open.
 
 ### Acceptance
 

@@ -17,6 +17,7 @@ export interface SitePageResponse {
   updatedAt: string;
 }
 export interface SaveSitePageRequest {
+  pageId?: string;
   slug: string;
   title: string;
   sections: SiteSection[];

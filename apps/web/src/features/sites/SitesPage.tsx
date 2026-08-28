@@ -120,6 +120,7 @@ export function SitesPage() {
   const save = useMutation({
     mutationFn: () =>
       api.saveSitePage({
+        pageId: selectedPageId ?? undefined,
         title,
         slug,
         sections: blocks,
