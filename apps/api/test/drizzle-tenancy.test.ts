@@ -623,6 +623,23 @@ describeDatabase("Drizzle tenant isolation", () => {
     await expect(repository.getNotificationPreferences(gym.user.id)).resolves.toEqual(updated);
   });
 
+  it("persists and returns inactive Platform plan definitions", async () => {
+    const starter = (await repository.listPlatformPlanDefinitions()).find(
+      (plan) => plan.key === "starter"
+    );
+    expect(starter).toBeTruthy();
+    const updated = await repository.updatePlatformPlanDefinition("starter", {
+      name: starter!.name,
+      description: starter!.description,
+      quotas: starter!.quotas,
+      capabilities: starter!.capabilities,
+      isActive: false
+    });
+    expect(updated?.isActive).toBe(false);
+    await expect(repository.listPlatformPlanDefinitions()).resolves.toContainEqual(updated);
+    await repository.updatePlatformPlanDefinition("starter", { ...starter!, isActive: true });
+  });
+
   it("persists account export requests and isolates them by tenant", async () => {
     const created = await repository.createAccountExportRequest(scopeOf(gym), gym.user.id);
     expect(created.status).toBe("requested");
