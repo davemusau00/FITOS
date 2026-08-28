@@ -2573,6 +2573,31 @@ export class DrizzleFitosRepository implements FitosRepository {
       completedAt: row.completedAt?.toISOString() ?? null
     }));
   }
+  async updateAccountExportRequestStatus(
+    requestId: string,
+    status: import("@fitos/contracts").AccountExportStatus
+  ) {
+    const [row] = await this.db
+      .update(accountExportRequests)
+      .set({
+        status,
+        completedAt: status === "completed" ? new Date() : undefined,
+        updatedAt: new Date()
+      })
+      .where(eq(accountExportRequests.id, requestId))
+      .returning();
+    if (!row) return null;
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      requestedByUserId: row.requestedByUserId,
+      status: row.status as import("@fitos/contracts").AccountExportStatus,
+      format: row.format as "json",
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      completedAt: row.completedAt?.toISOString() ?? null
+    };
+  }
 
   async listPlatformPlanChangeRequests() {
     const rows = await this.db

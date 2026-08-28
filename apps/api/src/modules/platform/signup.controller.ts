@@ -351,6 +351,36 @@ export class PlatformController {
   async accountExportRequests() {
     return this.repository.listPlatformAccountExportRequests();
   }
+  @Patch("account-export-requests/:requestId")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async updateAccountExportRequest(
+    @Param("requestId") requestId: string,
+    @Body() body: unknown,
+    @RequestId() requestIdHeader: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        status: z.enum(["requested", "processing", "completed", "failed"]),
+        reason: z.string().trim().min(3).max(500)
+      })
+      .strict()
+      .parse(body);
+    const updated = await this.repository.updateAccountExportRequestStatus(requestId, input.status);
+    if (!updated) throw new NotFoundException("Account export request not found.");
+    await this.repository.recordAudit({
+      tenantId: updated.tenantId,
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "account.export_status_changed",
+      resourceType: "account_export_request",
+      resourceId: requestId,
+      beforeSummary: { status: "requested" },
+      afterSummary: { status: updated.status, reason: input.reason },
+      requestId: requestIdHeader
+    });
+    return updated;
+  }
 
   @Get("plan-change-requests")
   @AuthMode("platform")

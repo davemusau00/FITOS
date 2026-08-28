@@ -589,6 +589,15 @@ export const api = {
     request<import("@fitos/contracts").AccountExportRequestResponse[]>(
       "/platform/account-export-requests"
     ),
+  updatePlatformAccountExportRequest: (
+    requestId: string,
+    status: import("@fitos/contracts").AccountExportStatus,
+    reason: string
+  ) =>
+    request<import("@fitos/contracts").AccountExportRequestResponse>(
+      `/platform/account-export-requests/${requestId}`,
+      { method: "PATCH", body: json({ status, reason }) }
+    ),
   planChangeRequests: () =>
     request<import("@fitos/contracts").PlanChangeRequestResponse[]>(
       "/users/me/plan-change-requests"

@@ -416,6 +416,10 @@ export interface FitosRepository {
   listPlatformAccountExportRequests(): Promise<
     import("@fitos/contracts").AccountExportRequestResponse[]
   >;
+  updateAccountExportRequestStatus(
+    requestId: string,
+    status: import("@fitos/contracts").AccountExportStatus
+  ): Promise<import("@fitos/contracts").AccountExportRequestResponse | null>;
   listPlatformPlanChangeRequests(): Promise<import("@fitos/contracts").PlanChangeRequestResponse[]>;
   listPlatformAccountCancellationRequests(): Promise<
     import("@fitos/contracts").AccountCancellationRequestResponse[]

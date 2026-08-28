@@ -3646,6 +3646,21 @@ export class InMemoryFitosRepository implements FitosRepository {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map((request) => ({ ...request }));
   }
+  async updateAccountExportRequestStatus(
+    requestId: string,
+    status: import("@fitos/contracts").AccountExportStatus
+  ) {
+    const request = this.accountExportRequests.get(requestId);
+    if (!request) return null;
+    const updated = {
+      ...request,
+      status,
+      completedAt: status === "completed" ? now() : request.completedAt,
+      updatedAt: now()
+    };
+    this.accountExportRequests.set(requestId, updated);
+    return { ...updated };
+  }
 
   async listPlatformPlanChangeRequests() {
     return [...this.planChangeRequests.values()]
