@@ -80,7 +80,7 @@ export function StaffPage() {
         description="View the people who can operate this organization and the access they hold."
       />
       {staff.error ? (
-        <ErrorNotice error={staff.error} />
+        <ErrorNotice error={staff.error} onRetry={() => void staff.refetch()} />
       ) : !rows.length ? (
         <EmptyState
           description="Invite people after your first branch is ready."

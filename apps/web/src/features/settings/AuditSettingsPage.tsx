@@ -12,7 +12,7 @@ export function AuditSettingsPage() {
         title="Activity & audit"
         description="Important changes recorded for this organization."
       />
-      <ErrorNotice error={events.error} />
+      <ErrorNotice error={events.error} onRetry={() => void events.refetch()} />
       {(events.data ?? []).length ? (
         <div className="form-stack">
           {events.data?.map((event) => (

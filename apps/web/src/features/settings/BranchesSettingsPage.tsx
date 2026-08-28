@@ -128,7 +128,7 @@ export function BranchesSettingsPage() {
             />
           </FormField>
 
-          <ErrorNotice error={error} />
+          <ErrorNotice error={error ?? branches.error} onRetry={() => void branches.refetch()} />
 
           <div className="form-actions">
             <Button loading={isSubmitting} type="submit">

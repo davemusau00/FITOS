@@ -101,7 +101,10 @@ export function OrganizationSettingsPage() {
           </FormField>
         </div>
 
-        <ErrorNotice error={error} />
+        <ErrorNotice
+          error={error ?? organization.error}
+          onRetry={() => void organization.refetch()}
+        />
 
         <div className="form-actions">
           <Button loading={isSubmitting} type="submit">
