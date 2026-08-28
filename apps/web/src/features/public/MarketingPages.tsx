@@ -193,24 +193,27 @@ function SolutionDetail({
   );
 }
 
+const stableCapabilities = PLATFORM_FEATURE_REGISTRY.filter(
+  (feature) => feature.maturity === "stable"
+).map((feature) => feature.name);
 const plans = [
   {
     key: "starter",
     name: "Starter",
     summary: "Core member, booking, attendance, and site workflows for a focused facility.",
-    capabilities: ["CRM", "Insights", "Member Portal"]
+    capabilities: stableCapabilities
   },
   {
     key: "pro",
     name: "Pro",
-    summary: "Multi-workspace operations with automation and specialist capabilities.",
-    capabilities: ["Everything in Starter", "Automations", "Assessments", "Equipment"]
+    summary: "Multi-workspace operations with room to request beta and specialist capabilities.",
+    capabilities: stableCapabilities
   },
   {
     key: "business",
     name: "Business",
-    summary: "Higher limits and advanced facility workflows for growing organizations.",
-    capabilities: ["Everything in Pro", "Therapy", "Inventory", "Integrations"]
+    summary: "Higher limits for growing organizations; advanced workflows remain capability-gated.",
+    capabilities: stableCapabilities
   }
 ] as const;
 
