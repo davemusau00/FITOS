@@ -50,10 +50,18 @@ export function NewBookingPage() {
     enabled: Boolean(activeBranchId)
   });
 
-  const servicesQuery = useQuery({ queryKey: ["services"], queryFn: api.services });
+  const servicesQuery = useQuery({
+    queryKey: branchQueryKeys.list("services", activeBranchId),
+    queryFn: () => api.servicesByBranch(activeBranchId),
+    enabled: Boolean(activeBranchId)
+  });
   const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const staffQuery = useQuery({ queryKey: ["staff"], queryFn: api.staff });
-  const roomsQuery = useQuery({ queryKey: ["rooms"], queryFn: () => api.rooms() });
+  const roomsQuery = useQuery({
+    queryKey: branchQueryKeys.list("rooms", activeBranchId),
+    queryFn: () => api.rooms(activeBranchId),
+    enabled: Boolean(activeBranchId)
+  });
 
   const allBookingsQuery = useQuery({
     queryKey: branchQueryKeys.list("bookings", activeBranchId, "counts"),
