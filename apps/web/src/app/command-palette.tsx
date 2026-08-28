@@ -173,6 +173,18 @@ const actionCommands: CommandItem[] = [
   }
 ];
 
+export function filterCommandItems(
+  items: readonly CommandItem[],
+  permissions: readonly string[]
+): CommandItem[] {
+  return items
+    .filter((item) => !item.permission || permissions.includes(item.permission))
+    .filter(
+      (item, index, available) =>
+        available.findIndex((candidate) => candidate.to === item.to) === index
+    );
+}
+
 export function CommandPalette({
   isOpen,
   onClose,
@@ -187,11 +199,10 @@ export function CommandPalette({
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const availableCommands = [...navigationCommands, ...actionCommands]
-    .filter((item) => !item.permission || permissions.includes(item.permission))
-    .filter(
-      (item, index, items) => items.findIndex((candidate) => candidate.to === item.to) === index
-    );
+  const availableCommands = filterCommandItems(
+    [...navigationCommands, ...actionCommands],
+    permissions
+  );
   const filtered = availableCommands.filter((cmd) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();
