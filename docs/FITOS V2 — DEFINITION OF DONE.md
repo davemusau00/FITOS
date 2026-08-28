@@ -84,7 +84,7 @@ A task is **not done** until all applicable items are checked.
 
 ## Final Gate
 
-Membership hold, resume, and renewal are examples of the required bar: each is persisted, permission-gated, audited, covered by integration tests, and surfaced with recoverable UI feedback. Shared query failures likewise expose a keyboard-operable retry action on the verified tenant and Platform surfaces. Evidence is recorded in the roadmap matrix; payment collection is intentionally excluded.
+Membership hold, resume, and renewal are examples of the required bar: each is persisted, permission-gated, audited, covered by integration tests, and surfaced with recoverable UI feedback. Account export, plan-change, cancellation, and deletion requests now meet the same local persistence/audit boundary, with explicit confirmation for deletion and no automatic destructive execution. Shared query failures likewise expose a keyboard-operable retry action on the verified tenant and Platform surfaces. Evidence is recorded in the roadmap matrix; payment collection is intentionally excluded.
 
 ### Evidence boundary
 
