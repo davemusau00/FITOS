@@ -31,6 +31,7 @@ import type {
 import { can, useAuth } from "../../app/auth";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
 
 type OccurrenceFormValues = {
@@ -81,16 +82,20 @@ export function SchedulePage() {
   const services = useQuery({ queryKey: ["services"], queryFn: api.services });
   const staff = useQuery({ queryKey: ["staff"], queryFn: api.staff });
   const rooms = useQuery({
-    queryKey: ["rooms", selectedBranch],
+    queryKey: branchQueryKeys.list("rooms", selectedBranch || "all"),
     queryFn: () => api.rooms(selectedBranch || undefined)
   });
   const templatesQuery = useQuery({
-    queryKey: ["schedule-templates", selectedBranch],
+    queryKey: branchQueryKeys.list("schedule-templates", selectedBranch || "all"),
     queryFn: () => api.scheduleTemplates(selectedBranch || undefined)
   });
 
   const occurrencesQuery = useQuery({
-    queryKey: ["schedule", selectedBranch, selectedTrainer, selectedService],
+    queryKey: [
+      ...branchQueryKeys.list("schedule", selectedBranch || "all"),
+      selectedTrainer,
+      selectedService
+    ],
     queryFn: () => {
       const params = new URLSearchParams();
       if (selectedBranch) params.set("branchId", selectedBranch);
