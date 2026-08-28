@@ -608,7 +608,8 @@ export const api = {
       "/users/me/plan-change-requests",
       {
         method: "POST",
-        body: json({ requestedPlan })
+        body: json({ requestedPlan }),
+        headers: { "Idempotency-Key": idempotency() }
       }
     ),
   platformPlanChangeRequests: () =>
@@ -631,7 +632,7 @@ export const api = {
   requestCancellation: (reason?: string) =>
     request<import("@fitos/contracts").AccountCancellationRequestResponse>(
       "/users/me/cancellation-requests",
-      { method: "POST", body: json({ reason }) }
+      { method: "POST", body: json({ reason }), headers: { "Idempotency-Key": idempotency() } }
     ),
   platformCancellationRequests: () =>
     request<import("@fitos/contracts").AccountCancellationRequestResponse[]>(
@@ -653,7 +654,11 @@ export const api = {
   requestDeletion: (reason?: string) =>
     request<import("@fitos/contracts").AccountDeletionRequestResponse>(
       "/users/me/deletion-requests",
-      { method: "POST", body: json({ confirmation: "DELETE WORKSPACE", reason }) }
+      {
+        method: "POST",
+        body: json({ confirmation: "DELETE WORKSPACE", reason }),
+        headers: { "Idempotency-Key": idempotency() }
+      }
     ),
   platformDeletionRequests: () =>
     request<import("@fitos/contracts").AccountDeletionRequestResponse[]>(
