@@ -49,32 +49,13 @@ export function BranchesSettingsPage() {
             <ul className="branch-list">
               {branches.data.map((branch) => (
                 <li key={branch.id}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                    <div
-                      style={{
-                        background: "var(--surface-3)",
-                        borderRadius: "var(--radius-control)",
-                        color: "var(--fitos-energy)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "2.25rem",
-                        width: "2.25rem"
-                      }}
-                    >
+                  <div className="branch-list__identity">
+                    <div className="branch-list__icon">
                       <Icon name="building" size={16} />
                     </div>
                     <div>
-                      <strong
-                        style={{
-                          color: "var(--text-primary)",
-                          fontSize: "0.9rem",
-                          display: "block"
-                        }}
-                      >
-                        {branch.name}
-                      </strong>
-                      <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                      <strong className="branch-list__name">{branch.name}</strong>
+                      <span className="branch-list__meta">
                         {branch.city ?? "Primary"} · {branch.timezone ?? "Default Timezone"}
                       </span>
                     </div>
