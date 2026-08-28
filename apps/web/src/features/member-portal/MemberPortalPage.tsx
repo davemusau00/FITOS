@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Icon, Modal, StatusBadge } from "@fitos/ui";
 import { api } from "../../lib/api/client";
@@ -10,7 +11,18 @@ type MemberTab = "home" | "schedule" | "membership" | "attendance" | "profile";
 export function MemberPortalPage() {
   const queryClient = useQueryClient();
   const { success: toastSuccess, error: toastError } = useToast();
-  const [activeTab, setActiveTab] = useState<MemberTab>("home");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab") as MemberTab | null;
+  const [activeTab, setActiveTabState] = useState<MemberTab>(
+    requestedTab &&
+      ["home", "schedule", "membership", "attendance", "profile"].includes(requestedTab)
+      ? requestedTab
+      : "home"
+  );
+  const setActiveTab = (tab: MemberTab) => {
+    setActiveTabState(tab);
+    setSearchParams(tab === "home" ? {} : { tab }, { replace: true });
+  };
   const [selectedOccurrence, setSelectedOccurrence] = useState<string | null>(null);
   const [cancellationTarget, setCancellationTarget] = useState<{
     id: string;
