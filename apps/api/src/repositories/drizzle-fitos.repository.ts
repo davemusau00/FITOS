@@ -20,6 +20,7 @@ import {
   leadTasks,
   leads,
   memberMemberships,
+  notifications,
   members,
   memberIdentities,
   memberSessions,
@@ -431,6 +432,44 @@ export class DrizzleFitosRepository implements FitosRepository {
       .where(eq(users.id, userId))
       .returning({ preferences: users.notificationPreferences });
     return user?.preferences as import("@fitos/contracts").NotificationPreferences | null;
+  }
+
+  async listNotifications(userId: string) {
+    const rows = await this.db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      category: row.category as import("@fitos/contracts").NotificationCategory,
+      title: row.title,
+      body: row.body,
+      href: row.href,
+      readAt: row.readAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString()
+    }));
+  }
+
+  async markNotificationRead(userId: string, notificationId: string) {
+    const [row] = await this.db
+      .update(notifications)
+      .set({ readAt: new Date() })
+      .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)))
+      .returning();
+    return row
+      ? {
+          id: row.id,
+          userId: row.userId,
+          category: row.category as import("@fitos/contracts").NotificationCategory,
+          title: row.title,
+          body: row.body,
+          href: row.href,
+          readAt: row.readAt?.toISOString() ?? null,
+          createdAt: row.createdAt.toISOString()
+        }
+      : null;
   }
 
   async createAccountExportRequest(scope: TenantScope, requestedByUserId: string) {

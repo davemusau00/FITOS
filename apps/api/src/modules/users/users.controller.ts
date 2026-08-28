@@ -102,6 +102,19 @@ export class UsersController {
     );
   }
 
+  @Get("me/notification-inbox")
+  getNotificationInbox(@Actor() actor: RequestActor) {
+    return this.core.notifications(actor);
+  }
+
+  @Patch("me/notification-inbox/:notificationId/read")
+  markNotificationRead(
+    @Actor() actor: RequestActor,
+    @Param("notificationId") notificationId: string
+  ) {
+    return this.core.markNotificationRead(actor, uuid.parse(notificationId));
+  }
+
   @Get("me/export-requests")
   @RequirePermission("tenant:read")
   listExportRequests(@Actor() actor: RequestActor) {

@@ -104,6 +104,23 @@ export const users = pgTable(
   (table) => [index("idx_users_email").on(table.email)]
 );
 
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    category: varchar("category", { length: 30 }).notNull(),
+    title: varchar("title", { length: 180 }).notNull(),
+    body: text("body").notNull(),
+    href: text("href"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("idx_notifications_user_created").on(table.userId, table.createdAt)]
+);
+
 export const platformAdminTokens = pgTable(
   "platform_admin_tokens",
   {

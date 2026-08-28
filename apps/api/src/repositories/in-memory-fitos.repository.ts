@@ -257,6 +257,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     string,
     import("@fitos/contracts").NotificationPreferences
   >();
+  private readonly notifications = new Map<
+    string,
+    import("@fitos/contracts").NotificationResponse
+  >();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly memberPasswords = new Map<string, string>();
@@ -3724,6 +3728,20 @@ export class InMemoryFitosRepository implements FitosRepository {
     const value = { ...input };
     this.notificationPreferences.set(userId, value);
     return value;
+  }
+
+  async listNotifications(userId: string) {
+    return [...this.notifications.values()]
+      .filter((item) => item.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async markNotificationRead(userId: string, notificationId: string) {
+    const item = this.notifications.get(notificationId);
+    if (!item || item.userId !== userId) return null;
+    const updated = { ...item, readAt: item.readAt ?? now() };
+    this.notifications.set(notificationId, updated);
+    return updated;
   }
 
   async createAccountExportRequest(scope: TenantScope, requestedByUserId: string) {

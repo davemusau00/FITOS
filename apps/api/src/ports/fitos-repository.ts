@@ -446,6 +446,11 @@ export interface FitosRepository {
     userId: string,
     input: import("@fitos/contracts").UpdateNotificationPreferencesRequest
   ): Promise<import("@fitos/contracts").NotificationPreferences | null>;
+  listNotifications(userId: string): Promise<import("@fitos/contracts").NotificationResponse[]>;
+  markNotificationRead(
+    userId: string,
+    notificationId: string
+  ): Promise<import("@fitos/contracts").NotificationResponse | null>;
   createAccountExportRequest(
     scope: TenantScope,
     requestedByUserId: string

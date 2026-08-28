@@ -47,6 +47,18 @@ export interface NotificationPreferences {
 
 export type UpdateNotificationPreferencesRequest = NotificationPreferences;
 
+export type NotificationCategory = "booking" | "operations" | "crm" | "system";
+export interface NotificationResponse {
+  id: string;
+  userId: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  href: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
 export interface RoleResponse {
   id: string;
   key: RoleKey | null;

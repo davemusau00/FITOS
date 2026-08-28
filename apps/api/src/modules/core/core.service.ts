@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { normalizePhone } from "@fitos/shared";
 import {
   ATTENDANCE_TRANSITIONS,
@@ -1641,6 +1641,16 @@ export class CoreService {
       null,
       updated as unknown as Record<string, unknown>
     );
+    return updated;
+  }
+
+  async notifications(actor: RequestActor) {
+    return this.repository.listNotifications(actor.userId);
+  }
+
+  async markNotificationRead(actor: RequestActor, notificationId: string) {
+    const updated = await this.repository.markNotificationRead(actor.userId, notificationId);
+    if (!updated) throw new NotFoundException("Notification not found.");
     return updated;
   }
 
