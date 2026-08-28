@@ -21,7 +21,9 @@ Required for roadmap completeness but can follow core operating workflows.
 ## P0-001 — Restore V2 CI Green
 
 **Area:** Engineering / Release  
-**Current state:** CI fails at Playwright E2E. Later build/production checks are skipped.
+**Current state:** The CI workflow declares the full required verification chain, including Playwright, build, production configuration/image/smoke, dependency audit, and secret scan. A current green hosted run remains unverified in this checkout.
+
+**Implementation evidence (2026-08-28):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. Hosted CI status is still required to close P0-001.
 
 ### Acceptance
 
