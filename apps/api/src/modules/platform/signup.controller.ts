@@ -516,11 +516,16 @@ export class PlatformController {
   @AuthMode("platform")
   @RequirePlatformAdmin()
   async overview(): Promise<PlatformOverview> {
-    const [tenants, inquiries, databaseReady] = await Promise.all([
-      this.repository.listPlatformTenantControls(),
-      this.repository.listImplementationInquiries(),
-      this.repository.ping()
-    ]);
+    const [tenants, inquiries, databaseReady, exports, plans, cancellations, deletions] =
+      await Promise.all([
+        this.repository.listPlatformTenantControls(),
+        this.repository.listImplementationInquiries(),
+        this.repository.ping(),
+        this.repository.listPlatformAccountExportRequests(),
+        this.repository.listPlatformPlanChangeRequests(),
+        this.repository.listPlatformAccountCancellationRequests(),
+        this.repository.listPlatformAccountDeletionRequests()
+      ]);
     const count = (status: string) =>
       tenants.filter((item) => item.subscription.status === status).length;
     const statuses = [
@@ -559,6 +564,22 @@ export class PlatformController {
         return [];
       }
     );
+    const pending = (items: Array<{ status: string }>) =>
+      items.filter((item) => ["requested", "reviewing", "processing"].includes(item.status)).length;
+    for (const [key, label, countValue] of [
+      ["account-exports", "account export requests", pending(exports)],
+      ["plan-changes", "plan-change requests", pending(plans)],
+      ["cancellations", "cancellation requests", pending(cancellations)],
+      ["deletions", "deletion requests", pending(deletions)]
+    ] as const) {
+      if (countValue)
+        attention.push({
+          key,
+          severity: "warning",
+          label: `${countValue} ${label} need review`,
+          count: countValue
+        });
+    }
     return {
       tenants: {
         total: tenants.length,
