@@ -4,6 +4,9 @@ import type { SaaSCapabilityKey, WorkspaceKey } from "@fitos/contracts";
 export type RouteMeta = {
   path: string;
   label: string;
+  title?: string;
+  breadcrumb?: string[];
+  primaryAction?: { label: string; path: string };
   description?: string;
   group: string;
   icon: IconName;
@@ -18,6 +21,8 @@ export const platformNavigation: RouteMeta[] = [
   {
     path: "/platform",
     label: "Overview",
+    title: "Platform overview",
+    breadcrumb: ["Platform", "Overview"],
     group: "Control plane",
     icon: "dashboard",
     workspace: "platform",
@@ -53,6 +58,9 @@ export const commandNavigation: RouteMeta[] = [
   {
     path: "/app/overview",
     label: "Dashboard",
+    title: "Command dashboard",
+    breadcrumb: ["Command", "Dashboard"],
+    primaryAction: { label: "Open Front Desk", path: "/reception" },
     group: "Today",
     icon: "dashboard",
     workspace: "command",
