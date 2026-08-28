@@ -23,7 +23,7 @@ Required for roadmap completeness but can follow core operating workflows.
 **Area:** Engineering / Release  
 **Current state:** The CI workflow declares the full required verification chain, including Playwright, build, production configuration/image/smoke, dependency audit, and secret scan. A current green hosted run remains unverified in this checkout.
 
-**Implementation evidence (2026-08-28):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 52 tests; web tests, lint, and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
+**Implementation evidence (2026-08-28):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 53 tests; web tests, lint, and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
 
 ### Acceptance
 
@@ -61,7 +61,7 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 **Area:** Sites  
 **Current state:** Persisted pages can be selected and loaded into the editor; edits are tracked and submitted through the existing save mutation.
 
-**Implementation evidence (2026-08-28):** `SitesPage` selects the first persisted page, supports keyboard-accessible page selection, hydrates title/slug/sections/SEO/theme, sends the selected `pageId` on save, prevents accidental replacement of dirty drafts, guards browser unload, and invalidates the page query after save. Both in-memory and Drizzle repositories update the tenant-scoped selected page when `pageId` is supplied; otherwise legacy slug upsert behavior is preserved. The PostgreSQL regression path now creates a page when fixtures are empty, edits it by ID, reloads it, and verifies the persisted title, section, and incremented version; `drizzle-tenancy.test.ts` passes 11/11. Contracts, API, and web typechecks pass.
+**Implementation evidence (2026-08-28):** `SitesPage` selects the first persisted page, supports keyboard-accessible page selection, hydrates title/slug/sections/SEO/theme, sends the selected `pageId` on save, prevents accidental replacement of dirty drafts, guards browser unload, and invalidates the page query after save. Both in-memory and Drizzle repositories update the tenant-scoped selected page when `pageId` is supplied; otherwise legacy slug upsert behavior is preserved. The PostgreSQL regression path now creates a page when fixtures are empty, edits it by ID, reloads it, and verifies the persisted title, section, and incremented version; `drizzle-tenancy.test.ts` passes 12/12. Contracts, API, and web typechecks pass.
 
 ### Acceptance
 
@@ -79,7 +79,7 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 **Area:** Inventory  
 **Current state:** The Receive Lot action opens a validated, persisted workflow and the Drizzle repository now transactionally creates the lot, stock movement, and item stock recalculation.
 
-**Implementation evidence (2026-08-28):** `InventoryPage` renders a Receive Inventory Lot modal with required item and quantity validation, optional branch, lot/batch code, expiry, notes, pending/error feedback, and canonical reload after `POST /inventory/lots`. The Drizzle repository locks and validates the item, updates stock, inserts the lot and `purchase_in` movement in one transaction, and returns the canonical lot. API and web typechecks pass. Forward migrations `0031_guard_advanced_integrity_trigger.sql` and `0032_align_inventory_lots_schema.sql` repair the PostgreSQL trigger/schema drift found during verification. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the focused tenancy suite passes 11/11 and the complete API suite passes 52/52.
+**Implementation evidence (2026-08-28):** `InventoryPage` renders a Receive Inventory Lot modal with required item and quantity validation, optional branch, lot/batch code, expiry, notes, pending/error feedback, and canonical reload after `POST /inventory/lots`. The Drizzle repository locks and validates the item, updates stock, inserts the lot and `purchase_in` movement in one transaction, and returns the canonical lot. API and web typechecks pass. Forward migrations `0031_guard_advanced_integrity_trigger.sql` and `0032_align_inventory_lots_schema.sql` repair the PostgreSQL trigger/schema drift found during verification. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the focused tenancy suite passes 12/12 and the complete API suite passes 53/53.
 
 ### Acceptance
 
@@ -144,7 +144,7 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 
 **Current state:** Shared local-time date helpers now power Reception and Schedule defaults, while Attendance supports operator-selected calendar-day filtering; operator-selected date context across Ops, Schedule, and Analytics remains open.
 
-**Implementation evidence (2026-08-28):** `apps/web/src/lib/date-context.ts` derives an ISO date from the browser’s local timezone and computes local calendar-day bounds, while `ReceptionPage` plus the Schedule creation workflow use local dates instead of UTC string truncation, preventing near-midnight date drift. Reception’s schedule cache now keys by the actual local date rather than a static “today” token. Attendance now exposes a date selector, sends explicit local-day `from`/`to` bounds, and includes the selected date in its branch query key; Ops, Insights, and Schedule also include the local date in their operational cache keys. The contract and in-memory/Drizzle repositories enforce the range. The PostgreSQL tenancy suite verifies the date range and passes 11/11; `apps/web/test/date-context.test.ts` passes and web/API typechecks pass. Shared operator-selected date state across Ops, Schedule, and Analytics remains required.
+**Implementation evidence (2026-08-28):** `apps/web/src/lib/date-context.ts` derives an ISO date from the browser’s local timezone and computes local calendar-day bounds, while `ReceptionPage` plus the Schedule creation workflow use local dates instead of UTC string truncation, preventing near-midnight date drift. Reception’s schedule cache now keys by the actual local date rather than a static “today” token. Attendance now exposes a date selector, sends explicit local-day `from`/`to` bounds, and includes the selected date in its branch query key; Ops, Insights, and Schedule also include the local date in their operational cache keys. The contract and in-memory/Drizzle repositories enforce the range. The PostgreSQL tenancy suite verifies the date range and passes 12/12; `apps/web/test/date-context.test.ts` passes and web/API typechecks pass. Shared operator-selected date state across Ops, Schedule, and Analytics remains required.
 
 ### Acceptance
 
@@ -904,7 +904,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 52 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 53 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, and local date filtering have direct regression coverage.
 
