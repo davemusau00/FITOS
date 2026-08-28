@@ -52,11 +52,12 @@ export function MembershipsPage() {
     queryFn: () => api.membershipPlans(selectedBranch || undefined)
   });
   const members = useQuery({
-    queryKey: ["members", memberSearch],
+    queryKey: branchQueryKeys.list("members", selectedBranch || "all", memberSearch),
     queryFn: () =>
       api.members(
         new URLSearchParams({
           limit: "100",
+          ...(selectedBranch ? { branchId: selectedBranch } : {}),
           ...(memberSearch ? { query: memberSearch } : {})
         })
       )
