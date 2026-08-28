@@ -6,16 +6,22 @@ import { useAuth, workspacePath } from "../../app/auth";
 import { FitosLogo, Brandmark } from "../../app/logo";
 import { ErrorNotice } from "../shared";
 
+export function returnPathFromLocationState(state: unknown, fallback: string): string {
+  const destination = (
+    state as {
+      from?: { pathname?: string; search?: string; hash?: string };
+    } | null
+  )?.from;
+  return destination?.pathname
+    ? `${destination.pathname}${destination.search ?? ""}${destination.hash ?? ""}`
+    : fallback;
+}
+
 export function LoginPage() {
   const { auth, isLoading, signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const destination = (
-    location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null
-  )?.from;
-  const returnTo = destination?.pathname
-    ? `${destination.pathname}${destination.search ?? ""}${destination.hash ?? ""}`
-    : workspacePath(auth);
+  const returnTo = returnPathFromLocationState(location.state, workspacePath(auth));
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -60,12 +66,9 @@ export function LoginPage() {
               setError(null);
               try {
                 const session = await signIn(input);
-                navigate(
-                  destination?.pathname
-                    ? `${destination.pathname}${destination.search ?? ""}${destination.hash ?? ""}`
-                    : workspacePath(session),
-                  { replace: true }
-                );
+                navigate(returnPathFromLocationState(location.state, workspacePath(session)), {
+                  replace: true
+                });
               } catch (cause) {
                 setError(cause);
               }
