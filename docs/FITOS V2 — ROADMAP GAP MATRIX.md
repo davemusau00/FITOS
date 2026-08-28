@@ -301,7 +301,7 @@ Persist:
 
 **Additional evidence (2026-08-28):** Platform administrators can now update a canonical plan definition through reason-required `PATCH /platform/plans/:key`; quota and capability payloads are validated, persisted, and audited. The web client exposes the mutation for the forthcoming Plans administration surface.
 
-**Additional evidence (2026-08-28):** `/platform/plans` is now a responsive Platform administration surface with editable plan names, descriptions, quotas, registry-backed capability toggles (including maturity labels), reason-captured saves, pending/error feedback, and navigation metadata.
+**Additional evidence (2026-08-28):** `/platform/plans` is now a responsive Platform administration surface with editable plan names, descriptions, quotas, availability state, registry-backed capability toggles (including maturity labels), reason-captured saves, pending/error feedback, and navigation metadata.
 
 ## P1-012 — Persist Plan Capability Assignments
 
