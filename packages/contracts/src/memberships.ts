@@ -28,6 +28,8 @@ export interface MembershipPlanResponse {
   price: Money | null;
   durationDays: number | null;
   includedCredits: number;
+  /** Empty/null permits all services; otherwise only listed service IDs are bookable. */
+  includedServiceIds?: string[] | null;
   publicVisible: boolean;
   isActive: boolean;
   createdAt: string;
@@ -41,6 +43,7 @@ export interface CreateMembershipPlanRequest {
   price?: Money | null;
   durationDays?: number | null;
   includedCredits: number;
+  includedServiceIds?: string[] | null;
   publicVisible?: boolean;
 }
 

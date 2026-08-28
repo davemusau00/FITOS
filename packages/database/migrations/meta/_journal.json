@@ -190,6 +190,34 @@
       "when": 1788633600000,
       "tag": "0026_unique_member_contact",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1788720000000,
+      "tag": "0027_booking_waitlist",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1788806400000,
+      "tag": "0028_user_notification_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788892800000,
+      "tag": "0029_service_booking_window",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1788979200000,
+      "tag": "0030_membership_service_inclusion",
+      "breakpoints": true
     }
   ]
 }

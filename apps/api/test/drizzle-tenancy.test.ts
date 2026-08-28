@@ -524,6 +524,15 @@ describeDatabase("Drizzle tenant isolation", () => {
   });
 
   it("persists notification preferences for the authenticated user", async () => {
+    // Integration databases are intentionally reusable between runs; restore the
+    // fixture before checking the default contract.
+    await repository.updateNotificationPreferences(gym.user.id, {
+      email: true,
+      sms: false,
+      bookingReminders: true,
+      operationalAlerts: true,
+      leadFollowUps: true
+    });
     const defaults = await repository.getNotificationPreferences(gym.user.id);
     expect(defaults).toMatchObject({ email: true, sms: false, bookingReminders: true });
     const updated = await repository.updateNotificationPreferences(gym.user.id, {

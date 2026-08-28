@@ -88,6 +88,25 @@ test("role surfaces remain usable at pilot viewports", async ({ page }) => {
   }
 });
 
+test("branch context switches and persists across refresh", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("owner@gym.fitos.test");
+  await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
+  await page.getByRole("button", { name: /Sign in/ }).click();
+  await expect(page).toHaveURL(/\/app\/overview$/);
+
+  const switcher = page.locator(".branch-switcher");
+  await switcher.click();
+  await page.getByRole("button", { name: "Westlands", exact: true }).click();
+  await expect(switcher).toContainText("Westlands");
+  await page.reload();
+  await expect(page.locator(".branch-switcher")).toContainText("Westlands");
+
+  await page.locator(".branch-switcher").click();
+  await page.getByRole("button", { name: "Kilimani", exact: true }).click();
+  await expect(page.locator(".branch-switcher")).toContainText("Kilimani");
+});
+
 test("priority role routes remain readable without horizontal overflow on mobile", async ({
   page
 }) => {

@@ -90,15 +90,13 @@ export const users = pgTable(
     status: varchar("status", { length: 30 }).notNull().default("active"),
     /** When true this user can authenticate as a FITOS platform admin using X-Platform-Token. */
     isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
-    notificationPreferences: jsonb("notification_preferences")
-      .notNull()
-      .default({
-        email: true,
-        sms: false,
-        bookingReminders: true,
-        operationalAlerts: true,
-        leadFollowUps: true
-      }),
+    notificationPreferences: jsonb("notification_preferences").notNull().default({
+      email: true,
+      sms: false,
+      bookingReminders: true,
+      operationalAlerts: true,
+      leadFollowUps: true
+    }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
@@ -442,6 +440,7 @@ export const services = pgTable(
     creditsRequired: integer("credits_required").notNull().default(0),
     cancellationCutoffMinutes: integer("cancellation_cutoff_minutes").notNull().default(0),
     restoreCreditOnLateCancel: boolean("restore_credit_on_late_cancel").notNull().default(false),
+    bookingWindowHours: integer("booking_window_hours"),
     amountMinor: text("amount_minor"),
     currency: varchar("currency", { length: 3 }),
     publicVisible: boolean("public_visible").notNull().default(false),
@@ -670,6 +669,7 @@ export const membershipPlans = pgTable(
     currency: varchar("currency", { length: 3 }),
     durationDays: integer("duration_days"),
     includedCredits: integer("included_credits").notNull().default(0),
+    includedServiceIds: jsonb("included_service_ids").$type<string[] | null>(),
     publicVisible: boolean("public_visible").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

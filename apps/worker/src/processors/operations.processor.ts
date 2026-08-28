@@ -56,7 +56,7 @@ export async function processOperationsJob(job: WorkerJob): Promise<AutomationAc
   }
 }
 
-async function persistAutomationResult(result: AutomationActionResult): Promise<void> {
+export async function persistAutomationResult(result: AutomationActionResult): Promise<void> {
   const url = process.env.FITOS_AUTOMATION_RESULT_URL;
   const token = process.env.FITOS_WORKER_CALLBACK_TOKEN;
   if (!url || !token) return;

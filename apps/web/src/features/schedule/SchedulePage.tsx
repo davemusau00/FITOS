@@ -846,9 +846,11 @@ function OccurrenceDetailModal({
           <div className="session-detail-stat-card">
             <span className="session-detail-stat-card__label">LOCATION</span>
             <div className="session-detail-stat-card__value">
-              <strong>{room?.name ?? "Main Floor"}</strong>
+              <strong>{room?.name ?? "Location not configured"}</strong>
             </div>
-            <span className="session-detail-stat-card__sub">{branch?.name ?? "Main Branch"}</span>
+            <span className="session-detail-stat-card__sub">
+              {branch?.name ?? "Branch not available"}
+            </span>
           </div>
 
           <div className="session-detail-stat-card">

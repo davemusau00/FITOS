@@ -39,6 +39,7 @@ const createServiceSchema = z
     creditsRequired: z.coerce.number().int().min(0).max(1_000).optional(),
     cancellationCutoffMinutes: z.coerce.number().int().min(0).max(525_600).optional(),
     restoreCreditOnLateCancel: z.boolean().optional(),
+    bookingWindowHours: z.coerce.number().int().min(0).max(8_760).nullable().optional(),
     price: moneySchema.nullable().optional(),
     publicVisible: z.boolean().optional()
   })
@@ -52,6 +53,7 @@ const updateServiceSchema = createServiceSchema
     creditsRequired: true,
     cancellationCutoffMinutes: true,
     restoreCreditOnLateCancel: true,
+    bookingWindowHours: true,
     price: true,
     publicVisible: true
   })

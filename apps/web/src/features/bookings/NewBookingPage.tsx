@@ -222,7 +222,7 @@ export function NewBookingPage() {
                       <div>
                         <strong>{srv?.name ?? "Session"}</strong>
                         <span className="fitos-data-table__muted">
-                          {formatDateTime(occ.startsAt)} · {br?.name ?? "Main Branch"}
+                          {formatDateTime(occ.startsAt)} · {br?.name ?? "Branch not available"}
                         </span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>

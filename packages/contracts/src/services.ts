@@ -23,6 +23,7 @@ export interface ServiceResponse {
   /** A cancellation at or inside this window is late. */
   cancellationCutoffMinutes: number;
   restoreCreditOnLateCancel: boolean;
+  bookingWindowHours?: number | null;
   price: Money | null;
   publicVisible: boolean;
   isActive: boolean;
@@ -54,6 +55,7 @@ export interface CreateServiceRequest {
   creditsRequired?: number;
   cancellationCutoffMinutes?: number;
   restoreCreditOnLateCancel?: boolean;
+  bookingWindowHours?: number | null;
   price?: Money | null;
   publicVisible?: boolean;
 }
@@ -66,6 +68,7 @@ export interface UpdateServiceRequest {
   creditsRequired?: number;
   cancellationCutoffMinutes?: number;
   restoreCreditOnLateCancel?: boolean;
+  bookingWindowHours?: number | null;
   price?: Money | null;
   publicVisible?: boolean;
   isActive?: boolean;

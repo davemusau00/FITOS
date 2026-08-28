@@ -1061,6 +1061,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         creditsRequired: input.creditsRequired ?? 0,
         cancellationCutoffMinutes: input.cancellationCutoffMinutes ?? 0,
         restoreCreditOnLateCancel: input.restoreCreditOnLateCancel ?? false,
+        bookingWindowHours: input.bookingWindowHours ?? null,
         amountMinor: input.price?.amountMinor ?? null,
         currency: input.price?.currency ?? null,
         publicVisible: input.publicVisible ?? false
@@ -1090,6 +1091,9 @@ export class DrizzleFitosRepository implements FitosRepository {
           : {}),
         ...(input.restoreCreditOnLateCancel !== undefined
           ? { restoreCreditOnLateCancel: input.restoreCreditOnLateCancel }
+          : {}),
+        ...(input.bookingWindowHours !== undefined
+          ? { bookingWindowHours: input.bookingWindowHours }
           : {}),
         ...(input.price !== undefined
           ? {
@@ -1558,6 +1562,15 @@ export class DrizzleFitosRepository implements FitosRepository {
         .where(and(eq(services.id, occurrence.serviceId), eq(services.tenantId, scope.tenantId)))
         .limit(1);
       if (!service || !service.isActive) throw new Error("Service unavailable.");
+      if (
+        input.source === "member_portal" &&
+        service.bookingWindowHours !== null &&
+        service.bookingWindowHours !== undefined &&
+        new Date(occurrence.startsAt).getTime() - Date.now() >
+          service.bookingWindowHours * 60 * 60 * 1000
+      ) {
+        throw new Error("This session is not open for booking yet.");
+      }
       await tx.execute(sql`
         SELECT id FROM members
         WHERE id = ${input.memberId} AND tenant_id = ${scope.tenantId}
@@ -1665,6 +1678,12 @@ export class DrizzleFitosRepository implements FitosRepository {
         for (const candidate of candidates) {
           const snapshot = candidate.planSnapshot as MembershipPlanResponse;
           if (snapshot.branchId && snapshot.branchId !== occurrence.branchId) continue;
+          if (
+            Array.isArray(snapshot.includedServiceIds) &&
+            snapshot.includedServiceIds.length > 0 &&
+            !snapshot.includedServiceIds.includes(occurrence.serviceId)
+          )
+            continue;
           const [balance] = await tx
             .select({ total: sql<number>`coalesce(sum(${creditLedger.delta}), 0)::int` })
             .from(creditLedger)
@@ -1918,6 +1937,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         currency: input.price?.currency ?? null,
         durationDays: input.durationDays ?? null,
         includedCredits: input.includedCredits,
+        includedServiceIds: input.includedServiceIds ?? null,
         publicVisible: input.publicVisible ?? false,
         isActive: true
       })
@@ -1946,6 +1966,8 @@ export class DrizzleFitosRepository implements FitosRepository {
     }
     if (input.durationDays !== undefined) updates.durationDays = input.durationDays;
     if (input.includedCredits !== undefined) updates.includedCredits = input.includedCredits;
+    if (input.includedServiceIds !== undefined)
+      updates.includedServiceIds = input.includedServiceIds;
     if (input.publicVisible !== undefined) updates.publicVisible = input.publicVisible;
     if (input.isActive !== undefined) updates.isActive = input.isActive;
 
@@ -3163,6 +3185,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       creditsRequired: service.creditsRequired,
       cancellationCutoffMinutes: service.cancellationCutoffMinutes,
       restoreCreditOnLateCancel: service.restoreCreditOnLateCancel,
+      bookingWindowHours: service.bookingWindowHours,
       price:
         service.amountMinor === null || service.currency === null
           ? null
@@ -3284,6 +3307,7 @@ export class DrizzleFitosRepository implements FitosRepository {
           : { amountMinor: plan.amountMinor, currency: plan.currency },
       durationDays: plan.durationDays,
       includedCredits: plan.includedCredits,
+      includedServiceIds: plan.includedServiceIds,
       publicVisible: plan.publicVisible,
       isActive: plan.isActive,
       createdAt: plan.createdAt.toISOString(),
@@ -3716,7 +3740,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         and(
           eq(bookings.memberId, memberId),
           eq(bookings.tenantId, row.member.tenantId),
-          eq(bookings.status, "confirmed"),
+          inArray(bookings.status, ["confirmed", "waitlisted"]),
           gte(scheduleOccurrences.startsAt, new Date())
         )
       )
@@ -3762,7 +3786,10 @@ export class DrizzleFitosRepository implements FitosRepository {
     const portalEligibility = await Promise.all(
       occurrencesWithWarnings.map(async (occurrence) => {
         const [service] = await this.db
-          .select({ creditsRequired: services.creditsRequired })
+          .select({
+            creditsRequired: services.creditsRequired,
+            bookingWindowHours: services.bookingWindowHours
+          })
           .from(services)
           .where(eq(services.id, occurrence.serviceId))
           .limit(1);
@@ -3777,40 +3804,63 @@ export class DrizzleFitosRepository implements FitosRepository {
             and(
               eq(bookings.occurrenceId, occurrence.id),
               eq(bookings.memberId, memberId),
-              eq(bookings.status, "confirmed")
+              inArray(bookings.status, ["confirmed", "waitlisted"])
             )
           )
           .limit(1);
         const required = service?.creditsRequired ?? 1;
+        const outsideBookingWindow =
+          service?.bookingWindowHours !== null &&
+          service?.bookingWindowHours !== undefined &&
+          new Date(occurrence.startsAt).getTime() - Date.now() >
+            service.bookingWindowHours * 60 * 60 * 1000;
+        const includedServiceIds = (planSnapshot?.includedServiceIds ?? null) as string[] | null;
+        const serviceExcluded =
+          Array.isArray(includedServiceIds) &&
+          includedServiceIds.length > 0 &&
+          !includedServiceIds.includes(occurrence.serviceId);
         const eligibility = !activeMembership
           ? {
               canBook: false,
               reasonCode: "MEMBERSHIP_INACTIVE" as const,
               message: "An active membership is required to book this session."
             }
-          : memberBooking
+          : serviceExcluded
             ? {
                 canBook: false,
-                reasonCode: "ALREADY_BOOKED" as const,
-                message: "You are already booked into this session."
+                reasonCode: "SERVICE_NOT_INCLUDED" as const,
+                message: "Your membership does not include this service."
               }
-            : (bookingCount?.count ?? 0) >= (occurrence.effectiveCapacity ?? occurrence.capacity)
+            : outsideBookingWindow
               ? {
                   canBook: false,
-                  reasonCode: "FULL" as const,
-                  message: "This session is full."
+                  reasonCode: "OUTSIDE_BOOKING_WINDOW" as const,
+                  message: "This session is not open for booking yet."
                 }
-              : (balanceRow?.total ?? 0) < required
+              : memberBooking
                 ? {
                     canBook: false,
-                    reasonCode: "INSUFFICIENT_CREDITS" as const,
-                    message: `You need ${required} credit(s) but have ${balanceRow?.total ?? 0} remaining.`
+                    reasonCode: "ALREADY_BOOKED" as const,
+                    message: "You are already booked into this session."
                   }
-                : {
-                    canBook: true,
-                    reasonCode: "ELIGIBLE" as const,
-                    message: "You can book this session."
-                  };
+                : (bookingCount?.count ?? 0) >=
+                    (occurrence.effectiveCapacity ?? occurrence.capacity)
+                  ? {
+                      canBook: true,
+                      reasonCode: "WAITLIST_ONLY" as const,
+                      message: "This session is full, but you can join the waitlist."
+                    }
+                  : (balanceRow?.total ?? 0) < required
+                    ? {
+                        canBook: false,
+                        reasonCode: "INSUFFICIENT_CREDITS" as const,
+                        message: `You need ${required} credit(s) but have ${balanceRow?.total ?? 0} remaining.`
+                      }
+                    : {
+                        canBook: true,
+                        reasonCode: "ELIGIBLE" as const,
+                        message: "You can book this session."
+                      };
         return { ...occurrence, bookingEligibility: eligibility };
       })
     );

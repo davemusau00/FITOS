@@ -82,11 +82,12 @@ describe("Memberships and Booking Credits Integration", () => {
       durationMinutes: 60,
       defaultCapacity: 10,
       creditsRequired: 1,
+      bookingWindowHours: 48,
       branchId: gym.branchIds[0]
     });
 
-    const startsAt = new Date(Date.now() + 86400000).toISOString();
-    const endsAt = new Date(Date.now() + 86400000 + 3600000).toISOString();
+    const startsAt = new Date(Date.now() + 3 * 86400000).toISOString();
+    const endsAt = new Date(Date.now() + 3 * 86400000 + 3600000).toISOString();
     const occurrence = await repository.createScheduleOccurrence(gymScope, {
       branchId: gym.branchIds[0]!,
       serviceId: service.id,
@@ -94,6 +95,40 @@ describe("Memberships and Booking Credits Integration", () => {
       endsAt,
       capacity: 10
     });
+
+    const portalBeforeWindow = await repository.getMemberPortalOverview(member.id);
+    expect(
+      portalBeforeWindow?.bookableOccurrences.find((item) => item.id === occurrence.id)
+        ?.bookingEligibility?.reasonCode
+    ).toBe("OUTSIDE_BOOKING_WINDOW");
+    await expect(repository.memberSelfBook(member.id, occurrence.id)).rejects.toThrow(
+      /not open for booking yet/i
+    );
+    await repository.updateService(gymScope, service.id, { bookingWindowHours: null });
+
+    const includedPlan = await repository.createMembershipPlan(gymScope, {
+      branchId: gym.branchIds[0],
+      name: "Strength Only",
+      includedCredits: 5,
+      includedServiceIds: ["00000000-0000-4000-8000-000000000099"]
+    });
+    const excludedMember = await repository.createMember(
+      gymScope,
+      { contact: { firstName: "Excluded Service" }, homeBranchId: gym.branchIds[0]! },
+      "+254711000001"
+    );
+    await repository.activateMembership(gymScope, {
+      memberId: excludedMember.id,
+      planId: includedPlan.id
+    });
+    const excludedPortal = await repository.getMemberPortalOverview(excludedMember.id);
+    expect(
+      excludedPortal?.bookableOccurrences.find((item) => item.id === occurrence.id)
+        ?.bookingEligibility?.reasonCode
+    ).toBe("SERVICE_NOT_INCLUDED");
+    await expect(repository.memberSelfBook(excludedMember.id, occurrence.id)).rejects.toThrow(
+      /does not include this service/i
+    );
 
     // 6. Booking and entitlement debit are one repository transaction.
     const booking = await repository.createBooking(
@@ -163,6 +198,15 @@ describe("Memberships and Booking Credits Integration", () => {
     const waitlisted = await repository.memberSelfBook(waitlistMember.id, fullOccurrence.id);
     expect(waitlisted.status).toBe("waitlisted");
     expect(waitlisted.creditsDebited).toBe(0);
+    const portal = await repository.getMemberPortalOverview(waitlistMember.id);
+    expect(portal?.upcomingBookings.some((booking) => booking.id === waitlisted.id)).toBe(true);
+    const leftWaitlist = await repository.memberSelfCancel(
+      waitlistMember.id,
+      waitlisted.id,
+      "No longer interested"
+    );
+    expect(leftWaitlist.status).toBe("cancelled");
+    expect(leftWaitlist.lateCancelled).toBe(false);
 
     const strictService = await repository.createService(gymScope, {
       name: "Strict Cancellation Class",

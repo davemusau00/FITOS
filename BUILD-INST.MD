@@ -22,6 +22,8 @@ complete.
 - [x] Front Desk explicitly distinguishes confirmed session check-in from facility check-in when no booking exists.
 - [x] Public Member Portal navigation no longer points to staff login.
 - [x] Public tenant pages no longer claim trainer certification or invent timetable duration when configuration is absent.
+- [x] Member and staff booking/schedule surfaces now use neutral missing-configuration states instead of invented class, branch, floor or location facts.
+- [x] Public timetable cards now use neutral session and coach-unassigned states when service or trainer configuration is absent.
 - [x] Public timetable weekday selection and filtering use the tenant timezone instead of browser-local `Date.getDay()`.
 - [x] Public reservation success state reflects the server response (`confirmed` or `waitlisted`) and displays a reservation reference.
 - [x] Public timetable exposes explicit available versus full/waitlist action labels from server capacity data.
@@ -29,8 +31,9 @@ complete.
 - [x] Metric definitions are documented in `docs/METRIC_DEFINITIONS.md`.
 - [x] Member portal now consumes a typed server-provided booking eligibility result instead of relying only on frontend credit checks.
 - [x] Eligibility projections honor membership expiry in both Drizzle and in-memory adapters; in-memory coverage also evaluates service credits, duplicate bookings and full sessions.
-- [x] Drizzle portal eligibility now evaluates each service's credit requirement, duplicate confirmed bookings, effective capacity/full state and active membership before presenting a bookable occurrence.
+- [x] Drizzle portal eligibility now evaluates each service's credit requirement, duplicate confirmed/waitlisted bookings, effective capacity/full state (including waitlist-only), and active membership before presenting a bookable occurrence.
 - [x] Web destructive actions use FITOS confirmation modals; no native `alert`, `confirm` or `prompt` calls remain.
+- [x] Shared Modal and Drawer overlays now restore trigger focus and cycle keyboard focus within the active dialog, including reverse-tab behavior.
 - [x] Members table has a responsive mobile card renderer with quick-view and profile actions; the remaining priority tables still require the full mobile matrix.
 - [x] Bookings table has a responsive mobile card renderer with status, session context and authorized cancellation action.
 - [x] Attendance log has a responsive mobile card renderer with status, branch, member, notes and authorized status update action.
@@ -64,6 +67,11 @@ complete.
 - [x] Membership/booking integration coverage now verifies member self-booking joins a full class waitlist without a credit debit.
 - [x] Staff Bookings status filtering now exposes durable waitlisted bookings alongside confirmed and cancelled records.
 - [x] Member cancellation feedback now distinguishes late non-refunded cancellations, restored credits and bookings with no credit charge.
+- [x] Member self-cancellation now allows leaving a waitlist in both adapters without applying a late-cancel state or credit restoration.
+- [x] Member portal upcoming bookings now includes durable waitlisted bookings, so queue state remains visible until cancellation or promotion.
+- [x] Service booking windows are now typed, persisted through migration `0029_service_booking_window`, exposed through service management, and enforced for member eligibility/self-booking in both adapters; staff booking remains unaffected.
+- [x] Membership plans now support optional service inclusion allow-lists through migration `0030_membership_service_inclusion`; member eligibility and self-booking reject excluded services in both adapters while empty/null remains unrestricted.
+- [x] Membership booking-policy regression coverage now verifies booking-window rejection and service-inclusion rejection at both the portal projection and self-booking boundary.
 - [x] Staff New Booking capacity advisories now use server-derived effective capacity when equipment constraints reduce a session's configured capacity.
 - [x] Member booking and cancellation mutations now emit consistent success/error toast feedback while retaining server-driven outcomes.
 - [x] In-memory member self-booking now matches server policy for effective capacity, home-branch access and membership expiry.
@@ -79,6 +87,8 @@ complete.
 - [x] Platform tenant detail route now renders the safe control record with lifecycle, plan, quota usage, storage measurement state and enabled capabilities, without raw member records.
 - [x] Platform tenant detail renders enabled capabilities using authoritative registry names rather than opaque feature keys.
 - [x] Platform now exposes a separate audited control-plane activity endpoint and Platform Audit route containing tenant lifecycle/entitlement changes without customer records.
+- [x] Public-auth callback metadata is now honored by the session guard; an authenticated worker-token integration test executes `create_staff_task` against a persisted lead target and verifies the durable task through the API.
+- [x] Worker operations processor now has callback coverage for a real `automations.execute` job: dispatch produces an action result and posts it with the configured worker token; callback transport failure remains surfaced as a processor error.
 - [x] Platform shell logout now revokes the server token before clearing the local credential, with a network-failure cleanup fallback.
 - [x] Platform authentication coverage now verifies the logout controller revokes the presented token and that it can no longer resolve.
 - [x] Platform audit projection has focused coverage proving control-plane tenant events are returned while unrelated tenant activity is excluded (12 platform-auth tests pass).
@@ -102,13 +112,22 @@ complete.
 - Full local `npm run check`: passed with PostgreSQL enabled, including lint, all package builds/typechecks, tests, and production build.
 - Full local `npm run check` was rerun after Today aggregate parity changes and passed with PostgreSQL enabled; API remained 44/44, web 1/1 and worker 7/7.
 - Full local `npm run check` was rerun after Platform tenant-detail and role-onboarding changes; format, lint, typechecks, 44 API tests, 1 web test, 7 worker tests and production build passed with PostgreSQL enabled.
+- Full local `npm run check` was rerun after waitlist cancellation/visibility parity; format, lint, package builds/typechecks, API 49/49, web 1/1, worker 7/7 and production build passed with PostgreSQL enabled.
+- Full local `npm run check` was rerun after service-inclusion policy changes; format, lint, package builds/typechecks, API 49/49, web 1/1, worker 7/7 and production build passed with PostgreSQL enabled.
+- Full local `npm run check` was rerun after membership service-inclusion persistence and enforcement; format, lint, package builds/typechecks, API 49/49, web 1/1, worker 7/7 and production build passed with PostgreSQL enabled.
 - Full local `npm run check` was rerun after effective-capacity projection and Platform logout coverage; format, lint, typechecks, 45 API tests, 1 web test, 7 worker tests and production build passed with PostgreSQL enabled.
 - Current full local `npm run check` passed after waitlist and UI changes: formatting, lint, package typechecks, 38 API tests, 1 web test, 7 worker tests and production build; 8 PostgreSQL integration tests were skipped because this invocation did not enable integration mode.
 - Focused post-audit verification passed: lint, API/web typechecks, Platform auth/audit and membership/booking tests (13/13), plus diff validation.
 - Explicit PostgreSQL-backed Drizzle tenancy run passed 8/8 with `RUN_DATABASE_TESTS=true` against the local seeded database after the waitlist migration work.
+- Drizzle migration journal now includes and applies `0027_booking_waitlist` and `0028_user_notification_preferences`; PostgreSQL-backed tenancy/persistence coverage passes 9/9 with `RUN_DATABASE_TESTS=true`.
+- Drizzle migration `0030_membership_service_inclusion` was applied successfully to the local PostgreSQL database.
+- PostgreSQL-backed Drizzle tenancy coverage was rerun after membership service-inclusion changes and passed 9/9; membership booking coverage also passed with booking-window and service-inclusion assertions.
 - Configured Playwright suite was rerun after Platform tenant-detail and role-onboarding changes; all 8 tests passed in 59.6 seconds.
 - Focused pilot Playwright journey: passed after updating its Command-access assertion.
+- HTTP automation callback integration now passes 9/9 security tests, including real persisted lead-task creation through the worker-authenticated internal action endpoint; direct BullMQ worker-to-API execution remains open.
+- Worker operations processor tests pass 3/3, including a real `automations.execute` job and authenticated result transport; direct BullMQ/Redis process execution remains open.
 - Full required golden/adversarial Playwright matrix: still pending; the configured 11-test suite is green but does not yet cover every journey listed below.
+- Isolated Playwright rerun after worker callback and membership-policy changes passed 11/11; a reused-server failure was traced to the configured localhost versus 127.0.0.1 origin mismatch.
 
 ### Still in progress / not yet verified complete
 
@@ -124,7 +143,7 @@ complete.
 - [x] Notification preferences have a forward PostgreSQL migration (`0028_user_notification_preferences`), in-memory parity, safe defaults and focused persistence coverage (5 tenancy tests pass).
 - [ ] Full Platform entitlement mutation UI and support/audit workflows.
 - [ ] Complete end-to-end validation of worker-to-API internal automation execution with configured callback secrets and a real persisted lead target.
-- [ ] Complete remaining eligibility policy states for waitlist behavior, booking windows, service inclusion, branch access and cancellation/rescheduling rules.
+- [ ] Complete remaining eligibility policy states for branch access and cancellation/rescheduling rules; service inclusion, waitlist and booking-window behavior are implemented in both adapters.
 - [x] Equipment asset contracts and both adapters now retain optional equipment-pool identity, enabling truthful in-memory public timetable effective-capacity projection.
 - [x] Equipment asset updates now persist pool reassignment in the Drizzle adapter, completing create/update pool identity parity.
 - [x] Equipment integration coverage verifies pool requirements reduce public timetable effective capacity and available spots.

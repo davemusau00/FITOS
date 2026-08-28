@@ -2644,6 +2644,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       creditsRequired: input.creditsRequired ?? 0,
       cancellationCutoffMinutes: input.cancellationCutoffMinutes ?? 0,
       restoreCreditOnLateCancel: input.restoreCreditOnLateCancel ?? false,
+      bookingWindowHours: input.bookingWindowHours ?? null,
       price: input.price ?? null,
       publicVisible: input.publicVisible ?? false,
       isActive: true,
@@ -3223,6 +3224,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       price: input.price ?? null,
       durationDays: input.durationDays ?? null,
       includedCredits: input.includedCredits,
+      includedServiceIds: input.includedServiceIds ?? null,
       publicVisible: input.publicVisible ?? false,
       isActive: true,
       createdAt: timestamp,
@@ -3257,6 +3259,7 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (input.price !== undefined) plan.price = input.price;
     if (input.durationDays !== undefined) plan.durationDays = input.durationDays;
     if (input.includedCredits !== undefined) plan.includedCredits = input.includedCredits;
+    if (input.includedServiceIds !== undefined) plan.includedServiceIds = input.includedServiceIds;
     if (input.publicVisible !== undefined) plan.publicVisible = input.publicVisible;
     if (input.isActive !== undefined) plan.isActive = input.isActive;
     plan.updatedAt = now();
@@ -3563,7 +3566,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     );
   }
 
-  async updateNotificationPreferences(userId: string, input: import("@fitos/contracts").UpdateNotificationPreferencesRequest) {
+  async updateNotificationPreferences(
+    userId: string,
+    input: import("@fitos/contracts").UpdateNotificationPreferencesRequest
+  ) {
     const value = { ...input };
     this.notificationPreferences.set(userId, value);
     return value;
@@ -4569,7 +4575,9 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
 
     const upcomingBookings = [...this.bookings.values()]
-      .filter((b) => b.memberId === memberId && b.status === "confirmed")
+      .filter(
+        (b) => b.memberId === memberId && (b.status === "confirmed" || b.status === "waitlisted")
+      )
       .map((b) => {
         const occ = this.occurrences.get(b.occurrenceId);
         const service = occ ? this.services.get(occ.serviceId) : null;
@@ -4620,6 +4628,15 @@ export class InMemoryFitosRepository implements FitosRepository {
         .map((occurrence) => {
           const service = this.services.get(occurrence.serviceId);
           const required = service?.creditsRequired ?? 1;
+          const outsideBookingWindow =
+            service?.bookingWindowHours !== null &&
+            service?.bookingWindowHours !== undefined &&
+            new Date(occurrence.startsAt).getTime() - Date.now() >
+              service.bookingWindowHours * 60 * 60 * 1000;
+          const serviceExcluded =
+            Array.isArray(latestPlan?.planSnapshot.includedServiceIds) &&
+            latestPlan.planSnapshot.includedServiceIds.length > 0 &&
+            !latestPlan.planSnapshot.includedServiceIds.includes(occurrence.serviceId);
           const booked = [...this.bookings.values()].some(
             (booking) =>
               booking.occurrenceId === occurrence.id &&
@@ -4629,35 +4646,47 @@ export class InMemoryFitosRepository implements FitosRepository {
           const confirmed = [...this.bookings.values()].filter(
             (booking) => booking.occurrenceId === occurrence.id && booking.status === "confirmed"
           ).length;
-          const eligibility = booked
+          const eligibility = serviceExcluded
             ? {
                 canBook: false,
-                reasonCode: "ALREADY_BOOKED" as const,
-                message: "You are already booked into this session."
+                reasonCode: "SERVICE_NOT_INCLUDED" as const,
+                message: "Your membership does not include this service."
               }
-            : confirmed >= (occurrence.effectiveCapacity ?? occurrence.capacity)
+            : outsideBookingWindow
               ? {
-                  canBook: true,
-                  reasonCode: "WAITLIST_ONLY" as const,
-                  message: "This session is full, but you can join the waitlist."
+                  canBook: false,
+                  reasonCode: "OUTSIDE_BOOKING_WINDOW" as const,
+                  message: "This session is not open for booking yet."
                 }
-              : creditBalance < required
+              : booked
                 ? {
                     canBook: false,
-                    reasonCode: "INSUFFICIENT_CREDITS" as const,
-                    message: `You need ${required} credit(s) but have ${creditBalance} remaining.`
+                    reasonCode: "ALREADY_BOOKED" as const,
+                    message: "You are already booked into this session."
                   }
-                : !memberships.length
+                : confirmed >= (occurrence.effectiveCapacity ?? occurrence.capacity)
                   ? {
-                      canBook: false,
-                      reasonCode: "MEMBERSHIP_INACTIVE" as const,
-                      message: "An active membership is required to book this session."
-                    }
-                  : {
                       canBook: true,
-                      reasonCode: "ELIGIBLE" as const,
-                      message: "You can book this session."
-                    };
+                      reasonCode: "WAITLIST_ONLY" as const,
+                      message: "This session is full, but you can join the waitlist."
+                    }
+                  : creditBalance < required
+                    ? {
+                        canBook: false,
+                        reasonCode: "INSUFFICIENT_CREDITS" as const,
+                        message: `You need ${required} credit(s) but have ${creditBalance} remaining.`
+                      }
+                    : !memberships.length
+                      ? {
+                          canBook: false,
+                          reasonCode: "MEMBERSHIP_INACTIVE" as const,
+                          message: "An active membership is required to book this session."
+                        }
+                      : {
+                          canBook: true,
+                          reasonCode: "ELIGIBLE" as const,
+                          message: "You can book this session."
+                        };
           return { ...occurrence, bookingEligibility: eligibility };
         }),
       upcomingBookings,
@@ -4673,6 +4702,14 @@ export class InMemoryFitosRepository implements FitosRepository {
       throw new Error("Class occurrence not found.");
     }
     if (occ.status !== "scheduled") throw new Error("This class is not open for booking.");
+    const service = this.services.get(occ.serviceId);
+    if (
+      service?.bookingWindowHours !== null &&
+      service?.bookingWindowHours !== undefined &&
+      new Date(occ.startsAt).getTime() - Date.now() > service.bookingWindowHours * 60 * 60 * 1000
+    ) {
+      throw new Error("This session is not open for booking yet.");
+    }
 
     const activeBookings = [...this.bookings.values()].filter(
       (b) => b.occurrenceId === occ.id && b.status === "confirmed"
@@ -4684,7 +4721,6 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (alreadyBooked || alreadyWaitlisted)
       throw new Error("You are already booked into this session.");
 
-    const service = this.services.get(occ.serviceId);
     const creditsRequired = service?.creditsRequired ?? 1;
 
     // Check credit balance
@@ -4705,6 +4741,13 @@ export class InMemoryFitosRepository implements FitosRepository {
     });
     if (!activeMembership)
       throw new Error("An active membership is required to book this session.");
+    if (
+      Array.isArray(activeMembership.planSnapshot.includedServiceIds) &&
+      activeMembership.planSnapshot.includedServiceIds.length > 0 &&
+      !activeMembership.planSnapshot.includedServiceIds.includes(occ.serviceId)
+    ) {
+      throw new Error("Your membership does not include this service.");
+    }
 
     const waitlisted = activeBookings.length >= (occ.effectiveCapacity ?? occ.capacity);
 
@@ -4757,7 +4800,9 @@ export class InMemoryFitosRepository implements FitosRepository {
   ): Promise<BookingResponse> {
     const booking = this.bookings.get(bookingId);
     if (!booking || booking.memberId !== memberId) throw new Error("Booking not found.");
-    if (booking.status !== "confirmed") throw new Error("Booking is already cancelled.");
+    if (booking.status !== "confirmed" && booking.status !== "waitlisted") {
+      throw new Error("Booking is already cancelled.");
+    }
 
     const ts = now();
     const occurrence = this.occurrences.get(booking.occurrenceId);
@@ -4766,7 +4811,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       occurrence && service
         ? new Date(occurrence.startsAt).getTime() - service.cancellationCutoffMinutes * 60_000
         : Number.POSITIVE_INFINITY;
-    const lateCancelled = Date.now() >= cutoffAt;
+    const lateCancelled = booking.status === "confirmed" && Date.now() >= cutoffAt;
     booking.status = "cancelled";
     booking.cancelledAt = ts;
     booking.cancellationReason = reason || "Member self-cancelled";

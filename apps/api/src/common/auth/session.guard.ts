@@ -30,7 +30,7 @@ export class SessionGuard implements CanActivate {
       context.getHandler(),
       context.getClass()
     ]);
-    if (authMode === "platform" || authMode === "member") return true;
+    if (authMode === "public" || authMode === "platform" || authMode === "member") return true;
 
     const request = context.switchToHttp().getRequest<FitosRequest>();
     const cookies = parseCookieHeader(request.headers.cookie);

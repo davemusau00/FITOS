@@ -54,6 +54,7 @@ beforeAll(async () => {
   process.env.SESSION_SECRET = testSecret;
   process.env.CSRF_SECRET = testSecret;
   process.env.WEB_PUBLIC_URL = "http://localhost:5173";
+  process.env.FITOS_WORKER_CALLBACK_TOKEN = "worker-callback-test-token";
   const { app } = await createApplication();
   await app.listen(0, "127.0.0.1");
   const address = app.getHttpServer().address() as AddressInfo;
@@ -209,6 +210,48 @@ describe("HTTP security boundary", () => {
       headers: { cookie: `fitos_session=${pilatesOwner.session}; fitos_csrf=${pilatesOwner.csrf}` }
     });
     expect(leaked.status).toBe(404);
+  });
+
+  it("executes an internal automation action against a persisted lead target", async () => {
+    const owner = await login("owner@gym.fitos.test");
+    const meResponse = await fetch(`${baseUrl}/api/v1/auth/me`, {
+      headers: { cookie: `fitos_session=${owner.session}; fitos_csrf=${owner.csrf}` }
+    });
+    const me = await meResponse.json();
+    process.env.FITOS_AUTOMATION_ACTOR_USER_ID = me.user.id as string;
+    const leadResponse = await fetch(`${baseUrl}/api/v1/leads`, {
+      method: "POST",
+      headers: protectedHeaders(owner),
+      body: JSON.stringify({
+        contact: { firstName: "Worker Target", phone: "+254711123499" },
+        branchId: me.branches[0].id,
+        source: "automation-test"
+      })
+    });
+    expect(leadResponse.status).toBe(201);
+    const lead = await leadResponse.json();
+    const actionResponse = await fetch(`${baseUrl}/api/v1/automations/internal-actions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-fitos-worker-token": process.env.FITOS_WORKER_CALLBACK_TOKEN!
+      },
+      body: JSON.stringify({
+        actionId: crypto.randomUUID(),
+        actionType: "create_staff_task",
+        tenantId: me.tenant.id,
+        targetEntityId: lead.id,
+        config: { body: "Follow up from worker execution" }
+      })
+    });
+    expect(actionResponse.status).toBe(201);
+    const tasksResponse = await fetch(`${baseUrl}/api/v1/leads/${lead.id}/tasks`, {
+      headers: { cookie: `fitos_session=${owner.session}; fitos_csrf=${owner.csrf}` }
+    });
+    expect(tasksResponse.status).toBe(200);
+    expect(await tasksResponse.json()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ body: "Follow up from worker execution" })])
+    );
   });
 
   it("enforces tenant-safe services and room/trainer schedule conflicts", async () => {

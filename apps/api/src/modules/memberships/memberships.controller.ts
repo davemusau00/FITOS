@@ -33,6 +33,7 @@ const createPlanSchema = z
     price: moneySchema.nullable().optional(),
     durationDays: z.coerce.number().int().min(1).max(3_650).nullable().optional(),
     includedCredits: z.coerce.number().int().min(1).max(10_000),
+    includedServiceIds: z.array(z.string().uuid()).max(500).nullable().optional(),
     publicVisible: z.boolean().optional()
   })
   .strict();

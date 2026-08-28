@@ -371,8 +371,8 @@ export function MemberPortalPage() {
                           </span>
                         </div>
                         <div className="member-portal-class-item__info">
-                          <h4>Class Session</h4>
-                          <p>Available session · reserve with credits</p>
+                          <h4>Session</h4>
+                          <p>Available session · reserve according to your membership policy</p>
                         </div>
                         <div className="member-portal-class-item__action">
                           {isBooked ? (

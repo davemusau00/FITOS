@@ -272,9 +272,9 @@ export function TenantPublicPage() {
                     </span>
                   </div>
                   <div className="public-timetable-item__details">
-                    <h4>{svc?.name ?? occ.serviceName ?? "Class Session"}</h4>
+                    <h4>{svc?.name ?? occ.serviceName ?? "Session"}</h4>
                     <p>
-                      Coach: {occ.trainerName ?? "Trainer TBA"}
+                      Coach: {occ.trainerName ?? "Coach not assigned"}
                       {svc?.durationMinutes ? ` · ${svc.durationMinutes} mins` : ""}·{" "}
                       {occ.availableSpots > 0
                         ? `${occ.availableSpots} spots left`
