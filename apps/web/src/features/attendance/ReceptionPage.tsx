@@ -13,6 +13,7 @@ export function ReceptionPage() {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const currentDate = todayDate();
   const [highlightedResult, setHighlightedResult] = useState(0);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
@@ -43,11 +44,15 @@ export function ReceptionPage() {
   });
 
   const occurrences = useQuery({
-    queryKey: branchQueryKeys.list("schedule", activeBranchId, "today"),
+    queryKey: branchQueryKeys.list("schedule", activeBranchId, currentDate),
     queryFn: () => {
-      const today = todayDate();
       return api.scheduleOccurrences(
-        new URLSearchParams({ from: today, to: today, branchId: activeBranchId, limit: "50" })
+        new URLSearchParams({
+          from: currentDate,
+          to: currentDate,
+          branchId: activeBranchId,
+          limit: "50"
+        })
       );
     },
     enabled: Boolean(activeBranchId)
