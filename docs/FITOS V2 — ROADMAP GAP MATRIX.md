@@ -295,9 +295,9 @@ Persist:
 
 ---
 
-**Additional evidence (2026-08-28):** Added shared `SaaSPlanDefinition` contract and permission-gated `GET /platform/plans`, exposing canonical Starter/Pro/Business names, quotas, and capability registry projections. Editable persisted plan definitions remain open.
+**Additional evidence (2026-08-28):** Added shared `SaaSPlanDefinition` contract and permission-gated `GET /platform/plans`, exposing canonical Starter/Pro/Business names, quotas, availability, and capability registry projections.
 
-**Additional evidence (2026-08-28):** Migration `0039_platform_plan_definitions` now persists active canonical plan definitions, quotas, and capability assignments for Starter/Pro/Business. The Platform plans endpoint reads the persisted catalog through both Drizzle and in-memory adapters; the API plan-catalog regression verifies canonical keys, quotas, and stable capability claims. Admin editing and scoped feature-flag overrides remain open.
+**Additional evidence (2026-08-28):** Migration `0039_platform_plan_definitions` persists canonical plan definitions, quotas, availability, and capability assignments for Starter/Pro/Business. The Platform plans endpoint reads the persisted catalog through both Drizzle and in-memory adapters; the API plan-catalog regression verifies canonical keys, quotas, and stable capability claims. Scoped feature-flag overrides remain open.
 
 **Additional evidence (2026-08-28):** Platform administrators can now update a canonical plan definition through reason-required `PATCH /platform/plans/:key`; quota and capability payloads are validated, persisted, and audited. The web client exposes the mutation for the forthcoming Plans administration surface.
 
@@ -309,7 +309,7 @@ Persist:
 
 Capability plan defaults no longer depend on static frontend assumptions.
 
-**Implementation evidence (2026-08-28):** Capability assignments are stored in the persisted plan catalog as JSON arrays and returned by `GET /platform/plans`; seeded assignments are limited to the stable capability registry. An editable Platform administration workflow and historical override records remain open.
+**Implementation evidence (2026-08-28):** Capability assignments are stored in the persisted plan catalog as JSON arrays and returned by `GET /platform/plans`; seeded assignments are limited to the stable capability registry. The Platform administration workflow edits these assignments with reason capture and audit history.
 
 The update endpoint and dedicated Platform Plans screen now provide the editable assignment boundary; historical before/after assignment history and scoped feature-flag overrides remain open.
 
