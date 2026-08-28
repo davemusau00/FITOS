@@ -101,6 +101,32 @@ describeDatabase("Drizzle tenant isolation", () => {
     ).toBe(true);
   });
 
+  it("updates the selected persisted Sites page and retains the edit", async () => {
+    const scope = scopeOf(gym);
+    const initial = await repository.listSitePages(scope);
+    const page =
+      initial[0] ??
+      (await repository.saveSitePage(scope, {
+        slug: `integration-${crypto.randomUUID().slice(0, 8)}`,
+        title: "Integration page",
+        sections: [{ type: "hero", heading: "Initial" }]
+      }));
+    const updated = await repository.saveSitePage(scope, {
+      pageId: page!.id,
+      slug: page!.slug,
+      title: `${page!.title} (integration edit)`,
+      sections: [{ type: "hero", heading: "Persisted integration edit" }],
+      seo: { title: "Persisted integration edit" }
+    });
+    expect(updated.id).toBe(page!.id);
+    expect(updated.version).toBeGreaterThan(page!.version);
+    const reloaded = (await repository.listSitePages(scope)).find(
+      (candidate) => candidate.id === page!.id
+    );
+    expect(reloaded?.title).toBe(`${page!.title} (integration edit)`);
+    expect(reloaded?.sections[0]?.type).toBe("hero");
+  });
+
   it("denies exact operational UUIDs across services, rooms, occurrences, and bookings", async () => {
     const gymScope = scopeOf(gym);
     const pilatesScope = scopeOf(pilates);
