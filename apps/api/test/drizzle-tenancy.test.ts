@@ -633,6 +633,14 @@ describeDatabase("Drizzle tenant isolation", () => {
     await expect(repository.listAccountExportRequests(scopeOf(pilates))).resolves.not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: created.id })])
     );
+    await expect(
+      repository.updateAccountExportRequestStatus(created.id, "completed")
+    ).resolves.toMatchObject({
+      status: "completed"
+    });
+    await expect(
+      repository.updateAccountExportRequestStatus(created.id, "processing")
+    ).resolves.toBeNull();
   });
 
   it("persists lifecycle requests and isolates cancellation/deletion records", async () => {
