@@ -4,7 +4,7 @@ import { Card, Icon, PageHeader } from "@fitos/ui";
 export function SecuritySettingsPage() {
   return (
     <>
-      <div style={{ marginBottom: "1rem" }}>
+      <div className="settings-back-link">
         <Link className="text-link" to="/app/settings">
           <Icon name="arrow-left" size={14} /> Back to Settings
         </Link>
