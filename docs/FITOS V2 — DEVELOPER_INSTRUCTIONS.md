@@ -711,6 +711,6 @@ If the system cannot keep the promise:
 
 # 42. EVIDENCE LEDGER
 
-Current verified slices include membership hold/resume/renewal, durable account export/plan-change/cancellation/deletion requests with Platform metadata and review decisions, and shared recoverable query failures across Ops, Insights, Bookings, Members, Attendance, Memberships, Schedule, Services, Equipment, and Platform overview/directory. Each slice has explicit roadmap evidence and local verification; hosted browser coverage remains separate.
+Current verified slices include membership hold/resume/renewal, durable account export/plan-change/cancellation/deletion requests with Platform metadata and review decisions, shared recoverable query failures across Ops, Insights, Bookings, Members, Attendance, Memberships, Schedule, Services, Equipment, and Platform overview/directory, and stable-only SaaS pricing claims backed by the capability registry. Each slice has explicit roadmap evidence and local verification; hosted browser coverage remains separate. Queue schemas and API handoffs remain non-fulfillment until a worker consumer updates durable state.
 
 For every gap-resolution change, update `docs/FITOS V2 — ROADMAP GAP MATRIX.md` with the verified scope and test evidence. Use `docs/FITOS V2 — DEFINITION OF DONE.md` as the completion gate. Local checks must be labeled as local; they do not substitute for hosted CI, Playwright, production-image, or deployment evidence.
