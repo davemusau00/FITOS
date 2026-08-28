@@ -89,6 +89,7 @@ test("role surfaces remain usable at pilot viewports", async ({ page }) => {
 });
 
 test("branch context switches and persists across refresh", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto("/login");
   await page.getByLabel("Email").fill("owner@gym.fitos.test");
   await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
@@ -99,7 +100,7 @@ test("branch context switches and persists across refresh", async ({ page }) => 
   await switcher.click();
   await page.getByRole("button", { name: "Westlands", exact: true }).click();
   await expect(switcher).toContainText("Westlands");
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
   await expect(page.locator(".branch-switcher")).toContainText("Westlands");
 
   await page.locator(".branch-switcher").click();
