@@ -8,6 +8,7 @@ import { ErrorNotice, PageLoading } from "../shared";
 export function PlatformPlansPage() {
   const client = useQueryClient();
   const query = useQuery({ queryKey: ["platform", "plans"], queryFn: api.platformPlans });
+  const features = useQuery({ queryKey: ["platform", "features"], queryFn: api.platformFeatures });
   const [drafts, setDrafts] = useState<Record<string, SaaSPlanDefinition>>({});
   useEffect(() => {
     if (query.data) setDrafts(Object.fromEntries(query.data.map((plan) => [plan.key, plan])));
@@ -26,6 +27,7 @@ export function PlatformPlansPage() {
         description="Manage non-financial plan definitions, quotas, and stable capabilities."
       />
       <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
+      <ErrorNotice error={features.error} onRetry={() => void features.refetch()} />
       <ErrorNotice error={mutation.error} onRetry={() => mutation.reset()} />
       <div className="platform-overview-grid">
         {Object.values(drafts).map((plan) => (
@@ -81,6 +83,31 @@ export function PlatformPlansPage() {
                 </label>
               ))}
             </div>
+            <fieldset className="fitos-fieldset">
+              <legend>Capabilities</legend>
+              {(features.data ?? []).map((feature) => (
+                <label className="fitos-check-row" key={feature.key}>
+                  <input
+                    type="checkbox"
+                    checked={plan.capabilities.includes(feature.key)}
+                    onChange={(event) =>
+                      setDrafts((all) => ({
+                        ...all,
+                        [plan.key]: {
+                          ...plan,
+                          capabilities: event.target.checked
+                            ? [...new Set([...plan.capabilities, feature.key])]
+                            : plan.capabilities.filter((key) => key !== feature.key)
+                        }
+                      }))
+                    }
+                  />
+                  <span>
+                    {feature.name} <small>({feature.maturity})</small>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
             <button
               className="fitos-button fitos-button--primary"
               disabled={mutation.isPending}
