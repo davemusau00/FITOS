@@ -4,6 +4,7 @@ import { and, desc, eq, gt, gte, ilike, inArray, isNull, lt, lte, or, sql } from
 import {
   auditEvents,
   accountExportRequests,
+  accountCancellationRequests,
   planChangeRequests,
   bookings,
   branches,
@@ -2578,6 +2579,48 @@ export class DrizzleFitosRepository implements FitosRepository {
       .from(planChangeRequests)
       .orderBy(desc(planChangeRequests.createdAt));
     return rows.map((row) => this.planChangeResponse(row));
+  }
+
+  private cancellationResponse(row: typeof accountCancellationRequests.$inferSelect) {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      requestedByUserId: row.requestedByUserId,
+      status: row.status as import("@fitos/contracts").AccountCancellationStatus,
+      reason: row.reason,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString()
+    };
+  }
+
+  async createAccountCancellationRequest(
+    scope: TenantScope,
+    requestedByUserId: string,
+    reason?: string
+  ) {
+    const [row] = await this.db
+      .insert(accountCancellationRequests)
+      .values({ tenantId: scope.tenantId, requestedByUserId, reason: reason ?? null })
+      .returning();
+    if (!row) throw new Error("Unable to create account cancellation request.");
+    return this.cancellationResponse(row);
+  }
+
+  async listAccountCancellationRequests(scope: TenantScope) {
+    const rows = await this.db
+      .select()
+      .from(accountCancellationRequests)
+      .where(eq(accountCancellationRequests.tenantId, scope.tenantId))
+      .orderBy(desc(accountCancellationRequests.createdAt));
+    return rows.map((row) => this.cancellationResponse(row));
+  }
+
+  async listPlatformAccountCancellationRequests() {
+    const rows = await this.db
+      .select()
+      .from(accountCancellationRequests)
+      .orderBy(desc(accountCancellationRequests.createdAt));
+    return rows.map((row) => this.cancellationResponse(row));
   }
 
   async publishEvent(_event: DomainEvent): Promise<void> {

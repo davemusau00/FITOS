@@ -253,6 +253,13 @@
       "when": 1789411200000,
       "tag": "0035_plan_change_effective_at",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1789497600000,
+      "tag": "0036_account_cancellation_requests",
+      "breakpoints": true
     }
   ]
 }

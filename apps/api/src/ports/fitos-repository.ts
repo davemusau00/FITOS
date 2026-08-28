@@ -417,6 +417,9 @@ export interface FitosRepository {
     import("@fitos/contracts").AccountExportRequestResponse[]
   >;
   listPlatformPlanChangeRequests(): Promise<import("@fitos/contracts").PlanChangeRequestResponse[]>;
+  listPlatformAccountCancellationRequests(): Promise<
+    import("@fitos/contracts").AccountCancellationRequestResponse[]
+  >;
   getNotificationPreferences(
     userId: string
   ): Promise<import("@fitos/contracts").NotificationPreferences>;
@@ -439,6 +442,14 @@ export interface FitosRepository {
   listPlanChangeRequests(
     scope: TenantScope
   ): Promise<import("@fitos/contracts").PlanChangeRequestResponse[]>;
+  createAccountCancellationRequest(
+    scope: TenantScope,
+    requestedByUserId: string,
+    reason?: string
+  ): Promise<import("@fitos/contracts").AccountCancellationRequestResponse>;
+  listAccountCancellationRequests(
+    scope: TenantScope
+  ): Promise<import("@fitos/contracts").AccountCancellationRequestResponse[]>;
   publishEvent(event: DomainEvent): Promise<void>;
 
   // Payments

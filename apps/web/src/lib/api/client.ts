@@ -614,6 +614,19 @@ export const api = {
       `/platform/plan-change-requests/${requestId}`,
       { method: "PATCH", body: json({ status, reason }) }
     ),
+  cancellationRequests: () =>
+    request<import("@fitos/contracts").AccountCancellationRequestResponse[]>(
+      "/users/me/cancellation-requests"
+    ),
+  requestCancellation: (reason?: string) =>
+    request<import("@fitos/contracts").AccountCancellationRequestResponse>(
+      "/users/me/cancellation-requests",
+      { method: "POST", body: json({ reason }) }
+    ),
+  platformCancellationRequests: () =>
+    request<import("@fitos/contracts").AccountCancellationRequestResponse[]>(
+      "/platform/cancellation-requests"
+    ),
   transitionPlatformTenantStatus: (
     tenantId: string,
     status: import("@fitos/contracts").TenantAccountStatus,

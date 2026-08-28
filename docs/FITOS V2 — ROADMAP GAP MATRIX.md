@@ -234,9 +234,9 @@ Actions filtered by:
 
 ## P1-008 — Account Cancellation Request
 
-**Current state:** No persistent cancellation request resource, lifecycle, Platform visibility, or audit workflow exists; payment collection remains deferred.
+**Current state:** Durable tenant cancellation request creation/listing, audit emission, and metadata-only Platform visibility now exist; Platform lifecycle decision handling remains open and payment collection remains deferred.
 
-**Implementation evidence (2026-08-28):** Account Plan now provides an explicit assisted-contact cancellation action and explains that tenant data is preserved during review. Durable request persistence and Platform lifecycle handling remain open.
+**Implementation evidence (2026-08-28):** Added `account_cancellation_requests` migration/schema, shared contract, tenant-scoped PostgreSQL/in-memory persistence, idempotent tenant create/list endpoints, audit emission, and metadata-only Platform listing. Account Plan continues to explain that tenant data is preserved during review. Platform lifecycle decisions remain open.
 
 Same persistence/visibility requirements as above.
 

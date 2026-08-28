@@ -28,3 +28,20 @@ export interface PlanChangeRequestResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export const ACCOUNT_CANCELLATION_STATUSES = [
+  "requested",
+  "reviewing",
+  "approved",
+  "rejected"
+] as const;
+export type AccountCancellationStatus = (typeof ACCOUNT_CANCELLATION_STATUSES)[number];
+export interface AccountCancellationRequestResponse {
+  id: string;
+  tenantId: string;
+  requestedByUserId: string;
+  status: AccountCancellationStatus;
+  reason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

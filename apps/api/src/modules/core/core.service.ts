@@ -1691,6 +1691,28 @@ export class CoreService {
     return this.repository.listPlanChangeRequests(scopeOf(actor));
   }
 
+  async createAccountCancellationRequest(actor: RequestActor, requestId: string, reason?: string) {
+    const request = await this.repository.createAccountCancellationRequest(
+      scopeOf(actor),
+      actor.userId,
+      reason
+    );
+    await this.audit(
+      actor,
+      requestId,
+      "account.cancellation_requested",
+      "account_cancellation_request",
+      request.id,
+      null,
+      { status: request.status, reason: request.reason }
+    );
+    return request;
+  }
+
+  async listAccountCancellationRequests(actor: RequestActor) {
+    return this.repository.listAccountCancellationRequests(scopeOf(actor));
+  }
+
   private async requireAssignableRole(actor: RequestActor, roleId: string): Promise<RoleResponse> {
     const role = await this.repository.findRoleById(scopeOf(actor), roleId);
     if (!role)

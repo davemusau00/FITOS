@@ -359,6 +359,13 @@ export class PlatformController {
     return this.repository.listPlatformPlanChangeRequests();
   }
 
+  @Get("cancellation-requests")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async cancellationRequests() {
+    return this.repository.listPlatformAccountCancellationRequests();
+  }
+
   @Patch("plan-change-requests/:requestId")
   @AuthMode("platform")
   @RequirePlatformAdmin()

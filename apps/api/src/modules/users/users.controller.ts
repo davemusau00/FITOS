@@ -150,6 +150,34 @@ export class UsersController {
     });
   }
 
+  @Get("me/cancellation-requests")
+  @RequirePermission("tenant:read")
+  listCancellationRequests(@Actor() actor: RequestActor) {
+    return this.core.listAccountCancellationRequests(actor);
+  }
+
+  @Post("me/cancellation-requests")
+  @RequirePermission("tenant:settings")
+  requestCancellation(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Body() body: unknown
+  ) {
+    const input = z
+      .object({ reason: z.string().trim().max(500).optional() })
+      .strict()
+      .parse(body);
+    return this.idempotency.execute({
+      actor,
+      operation: "account:cancellation-request",
+      key: idempotencyKey,
+      body: input,
+      status: 201,
+      action: () => this.core.createAccountCancellationRequest(actor, requestId, input.reason)
+    });
+  }
+
   @Post("invitations")
   @RequirePermission("staff:manage")
   invite(
