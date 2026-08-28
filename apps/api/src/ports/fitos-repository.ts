@@ -420,6 +420,9 @@ export interface FitosRepository {
   listPlatformAccountCancellationRequests(): Promise<
     import("@fitos/contracts").AccountCancellationRequestResponse[]
   >;
+  listPlatformAccountDeletionRequests(): Promise<
+    import("@fitos/contracts").AccountDeletionRequestResponse[]
+  >;
   decideAccountCancellationRequest(
     requestId: string,
     status: "reviewing" | "approved" | "rejected",
@@ -456,6 +459,15 @@ export interface FitosRepository {
   listAccountCancellationRequests(
     scope: TenantScope
   ): Promise<import("@fitos/contracts").AccountCancellationRequestResponse[]>;
+  createAccountDeletionRequest(
+    scope: TenantScope,
+    requestedByUserId: string,
+    confirmation: string,
+    reason?: string
+  ): Promise<import("@fitos/contracts").AccountDeletionRequestResponse>;
+  listAccountDeletionRequests(
+    scope: TenantScope
+  ): Promise<import("@fitos/contracts").AccountDeletionRequestResponse[]>;
   publishEvent(event: DomainEvent): Promise<void>;
 
   // Payments

@@ -260,6 +260,13 @@
       "when": 1789497600000,
       "tag": "0036_account_cancellation_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1789584000000,
+      "tag": "0037_account_deletion_requests",
+      "breakpoints": true
     }
   ]
 }

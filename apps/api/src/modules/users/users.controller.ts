@@ -177,6 +177,36 @@ export class UsersController {
       action: () => this.core.createAccountCancellationRequest(actor, requestId, input.reason)
     });
   }
+  @Get("me/deletion-requests")
+  @RequirePermission("tenant:read")
+  listDeletionRequests(@Actor() actor: RequestActor) {
+    return this.core.listAccountDeletionRequests(actor);
+  }
+  @Post("me/deletion-requests")
+  @RequirePermission("tenant:settings")
+  requestDeletion(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Body() body: unknown
+  ) {
+    const input = z
+      .object({
+        confirmation: z.literal("DELETE WORKSPACE"),
+        reason: z.string().trim().max(500).optional()
+      })
+      .strict()
+      .parse(body);
+    return this.idempotency.execute({
+      actor,
+      operation: "account:deletion-request",
+      key: idempotencyKey,
+      body: input,
+      status: 201,
+      action: () =>
+        this.core.createAccountDeletionRequest(actor, requestId, input.confirmation, input.reason)
+    });
+  }
 
   @Post("invitations")
   @RequirePermission("staff:manage")

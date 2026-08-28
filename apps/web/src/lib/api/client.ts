@@ -636,6 +636,19 @@ export const api = {
       `/platform/cancellation-requests/${requestId}`,
       { method: "PATCH", body: json({ status, reason }) }
     ),
+  deletionRequests: () =>
+    request<import("@fitos/contracts").AccountDeletionRequestResponse[]>(
+      "/users/me/deletion-requests"
+    ),
+  requestDeletion: (reason?: string) =>
+    request<import("@fitos/contracts").AccountDeletionRequestResponse>(
+      "/users/me/deletion-requests",
+      { method: "POST", body: json({ confirmation: "DELETE WORKSPACE", reason }) }
+    ),
+  platformDeletionRequests: () =>
+    request<import("@fitos/contracts").AccountDeletionRequestResponse[]>(
+      "/platform/deletion-requests"
+    ),
   transitionPlatformTenantStatus: (
     tenantId: string,
     status: import("@fitos/contracts").TenantAccountStatus,

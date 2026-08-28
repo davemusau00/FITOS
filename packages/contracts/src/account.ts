@@ -45,3 +45,15 @@ export interface AccountCancellationRequestResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export type AccountDeletionStatus = AccountCancellationStatus;
+export interface AccountDeletionRequestResponse {
+  id: string;
+  tenantId: string;
+  requestedByUserId: string;
+  status: AccountDeletionStatus;
+  confirmation: string;
+  reason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

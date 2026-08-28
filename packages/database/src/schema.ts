@@ -819,6 +819,27 @@ export const accountCancellationRequests = pgTable(
   ]
 );
 
+export const accountDeletionRequests = pgTable(
+  "account_deletion_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    status: varchar("status", { length: 30 }).notNull().default("requested"),
+    confirmation: varchar("confirmation", { length: 80 }).notNull(),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_account_deletion_requests_tenant_created").on(table.tenantId, table.createdAt)
+  ]
+);
+
 export const idempotencyKeys = pgTable(
   "idempotency_keys",
   {

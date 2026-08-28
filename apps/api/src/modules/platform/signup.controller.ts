@@ -365,6 +365,12 @@ export class PlatformController {
   async cancellationRequests() {
     return this.repository.listPlatformAccountCancellationRequests();
   }
+  @Get("deletion-requests")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async deletionRequests() {
+    return this.repository.listPlatformAccountDeletionRequests();
+  }
 
   @Patch("cancellation-requests/:requestId")
   @AuthMode("platform")

@@ -1712,6 +1712,32 @@ export class CoreService {
   async listAccountCancellationRequests(actor: RequestActor) {
     return this.repository.listAccountCancellationRequests(scopeOf(actor));
   }
+  async createAccountDeletionRequest(
+    actor: RequestActor,
+    requestId: string,
+    confirmation: string,
+    reason?: string
+  ) {
+    const request = await this.repository.createAccountDeletionRequest(
+      scopeOf(actor),
+      actor.userId,
+      confirmation,
+      reason
+    );
+    await this.audit(
+      actor,
+      requestId,
+      "account.deletion_requested",
+      "account_deletion_request",
+      request.id,
+      null,
+      { status: request.status }
+    );
+    return request;
+  }
+  async listAccountDeletionRequests(actor: RequestActor) {
+    return this.repository.listAccountDeletionRequests(scopeOf(actor));
+  }
 
   private async requireAssignableRole(actor: RequestActor, roleId: string): Promise<RoleResponse> {
     const role = await this.repository.findRoleById(scopeOf(actor), roleId);
