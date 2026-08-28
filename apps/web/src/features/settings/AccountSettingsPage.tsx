@@ -64,6 +64,7 @@ export function AccountSettingsPage() {
       />
       <Card>
         <h3>Notification preferences</h3>
+        <ErrorNotice error={preferences.error} onRetry={() => void preferences.refetch()} />
         {preferences.data ? (
           <div className="form-stack">
             {(Object.keys(preferences.data) as Array<keyof typeof preferences.data>).map((key) => (
@@ -128,6 +129,7 @@ export function AccountSettingsPage() {
       </Card>
       <Card>
         <h3>Active sessions</h3>
+        <ErrorNotice error={sessions.error} onRetry={() => void sessions.refetch()} />
         {sessions.data?.length ? (
           sessions.data.map((session) => (
             <div key={session.id} className="fitos-mobile-data-card">
