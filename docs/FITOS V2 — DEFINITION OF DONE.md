@@ -1,0 +1,91 @@
+# FITOS V2 — DEFINITION OF DONE
+
+Use this checklist on every significant implementation or PR.
+
+A task is **not done** until all applicable items are checked.
+
+## Product
+
+- [ ] Solves a documented user/roadmap gap.
+- [ ] Existing architecture was inspected before adding new abstractions.
+- [ ] UI behavior matches what the copy promises.
+- [ ] No new dead controls or placeholder success states.
+- [ ] Empty/loading/error states exist where needed.
+
+## Contracts & Backend
+
+- [ ] Shared contracts are authoritative.
+- [ ] Server validates inputs.
+- [ ] Server enforces permissions.
+- [ ] Tenant isolation is enforced.
+- [ ] Branch behavior is explicit.
+- [ ] Capability gating is enforced where applicable.
+- [ ] Important mutations return canonical state or durable job ID.
+
+## Persistence
+
+- [ ] Result survives refresh.
+- [ ] Result survives navigation.
+- [ ] Result survives logout/login when applicable.
+- [ ] Multi-record operations are transactional where required.
+- [ ] Audit/history/ledger exists where appropriate.
+- [ ] Migration is forward-only.
+
+## Frontend
+
+- [ ] Mutation has pending state.
+- [ ] Duplicate submission is prevented.
+- [ ] Validation errors are understandable.
+- [ ] Success feedback is clear.
+- [ ] Failed mutation is recoverable.
+- [ ] Correct queries are invalidated/refetched.
+- [ ] Permission-inaccessible actions are hidden or explained.
+- [ ] Capability-inaccessible actions are hidden or explained.
+
+## Branch / Scope
+
+- [ ] Correct branch scope appears in query keys.
+- [ ] Switching branch cannot leave stale data.
+- [ ] All Locations behavior is correct where supported.
+- [ ] Mutations requiring a branch require a concrete branch.
+
+## Quality
+
+- [ ] No unnecessary `any`.
+- [ ] No unsafe `as unknown as` contract bypass.
+- [ ] No new duplicated page-level design system.
+- [ ] Shared UI primitives used where practical.
+- [ ] Responsive behavior checked.
+- [ ] Keyboard/focus behavior checked.
+
+## Tests
+
+- [ ] Domain logic test added/updated where applicable.
+- [ ] Persistence/integration test added where applicable.
+- [ ] Tenant/branch boundary test added where applicable.
+- [ ] Component test added for reusable UI behavior where applicable.
+- [ ] E2E test added/updated for business-critical flow.
+- [ ] Failure state is tested.
+- [ ] Reload/persistence behavior is tested where important.
+
+## CI
+
+- [ ] Format passes.
+- [ ] Lint passes.
+- [ ] Typecheck passes.
+- [ ] Migrations pass.
+- [ ] Seed passes.
+- [ ] API/integration/security tests pass.
+- [ ] Playwright passes.
+- [ ] Build passes.
+- [ ] Required production validation passes.
+
+## Final Gate
+
+Before merge, answer **YES** to all three:
+
+- [ ] Can a seeded permitted user perform the workflow without developer knowledge?
+- [ ] Does the persisted system state match what the interface shows?
+- [ ] Would a regression in this workflow be caught by automated tests?
+
+If any answer is **NO**, the implementation is not complete.

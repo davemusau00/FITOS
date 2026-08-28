@@ -5,17 +5,10 @@ import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading } from "../shared";
 import type { SiteSection } from "@fitos/contracts";
 
-export type SiteBlockType =
-  | "hero"
-  | "feature_grid"
-  | "services_list"
-  | "schedule_embed"
-  | "trainer_profiles"
-  | "testimonials"
-  | "cta_banner"
-  | "contact_form";
+export type SiteBlockType = SiteSection["type"];
 
 export interface SiteBlock {
+  [key: string]: unknown;
   id: string;
   type: SiteBlockType;
   heading?: string;
@@ -37,7 +30,7 @@ const DEFAULT_BLOCKS: SiteBlock[] = [
   },
   {
     id: "b-2",
-    type: "feature_grid",
+    type: "service_grid",
     heading: "World-Class Facilities",
     items: [
       {
@@ -55,13 +48,13 @@ const DEFAULT_BLOCKS: SiteBlock[] = [
   },
   {
     id: "b-3",
-    type: "schedule_embed",
+    type: "schedule",
     heading: "Live Studio Timetable",
     subheading: "Real-time spot availability and instant reservation."
   },
   {
     id: "b-4",
-    type: "cta_banner",
+    type: "cta",
     heading: "Ready to Train Differently?",
     subheading: "Join our active community with a 7-day complimentary pass.",
     ctaText: "Claim Your Pass",
@@ -89,7 +82,7 @@ export function SitesPage() {
       api.saveSitePage({
         title,
         slug,
-        sections: blocks as unknown as SiteSection[],
+        sections: blocks,
         seo: { title: metaTitle, description: metaDesc, themeColor }
       }),
     onSuccess: () => void cache.invalidateQueries({ queryKey: ["site-pages"] })
@@ -107,20 +100,14 @@ export function SitesPage() {
       heading:
         type === "hero"
           ? "New Hero Headline"
-          : type === "services_list"
+          : type === "service_grid"
             ? "Our Signature Services"
-            : type === "testimonials"
-              ? "What Our Athletes Say"
-              : type === "trainer_profiles"
-                ? "Meet the Coaching Staff"
-                : type === "contact_form"
-                  ? "Get in Touch"
-                  : "New Section",
+            : "New Section",
       subheading: "Customizable subtext describing this facility feature.",
       ctaText: "Get Started",
       ctaLink: "#",
       items:
-        type === "feature_grid"
+        type === "service_grid"
           ? [
               { title: "Feature 1", desc: "Description of benefit", icon: "✨" },
               { title: "Feature 2", desc: "Description of benefit", icon: "⚡" },
@@ -229,34 +216,25 @@ export function SitesPage() {
                   >
                     <h3 style={{ fontSize: "1rem", margin: 0 }}>Sections on this Page</h3>
                     <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                      {(
-                        [
-                          "hero",
-                          "feature_grid",
-                          "services_list",
-                          "schedule_embed",
-                          "trainer_profiles",
-                          "testimonials",
-                          "cta_banner",
-                          "contact_form"
-                        ] as const
-                      ).map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => addBlock(type)}
-                          style={{
-                            padding: "0.3rem 0.6rem",
-                            fontSize: "0.75rem",
-                            borderRadius: "0.3rem",
-                            background: "rgba(59, 130, 246, 0.15)",
-                            border: "1px solid rgba(59, 130, 246, 0.3)",
-                            color: "#60a5fa",
-                            cursor: "pointer"
-                          }}
-                        >
-                          + {type.replace("_", " ")}
-                        </button>
-                      ))}
+                      {(["hero", "rich_text", "cta", "service_grid", "schedule"] as const).map(
+                        (type) => (
+                          <button
+                            key={type}
+                            onClick={() => addBlock(type)}
+                            style={{
+                              padding: "0.3rem 0.6rem",
+                              fontSize: "0.75rem",
+                              borderRadius: "0.3rem",
+                              background: "rgba(59, 130, 246, 0.15)",
+                              border: "1px solid rgba(59, 130, 246, 0.3)",
+                              color: "#60a5fa",
+                              cursor: "pointer"
+                            }}
+                          >
+                            + {type.replace("_", " ")}
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
 
@@ -356,7 +334,7 @@ export function SitesPage() {
                             }
                           />
                         </label>
-                        {(block.type === "hero" || block.type === "cta_banner") && (
+                        {(block.type === "hero" || block.type === "cta") && (
                           <div
                             style={{
                               display: "grid",
