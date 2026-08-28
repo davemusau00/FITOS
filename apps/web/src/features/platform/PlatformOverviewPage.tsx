@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Alert, Card, PageHeader, StatCard, StatusBadge, WorkspacePage } from "@fitos/ui";
+import { AttentionCentre, Card, PageHeader, StatCard, StatusBadge, WorkspacePage } from "@fitos/ui";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading } from "../shared";
 
@@ -53,30 +53,15 @@ export function PlatformOverviewPage() {
             />
           </div>
           <div className="platform-overview-grid">
-            <Card>
-              <div className="section-header-row">
-                <div>
-                  <p className="fitos-page-header__eyebrow">Action queue</p>
-                  <h2>Attention</h2>
-                </div>
-                <Link to="/platform/tenants">Open tenants</Link>
-              </div>
-              {data.attention.length ? (
-                <ul className="platform-attention-list">
-                  {data.attention.map((item) => (
-                    <li key={item.key}>
-                      <StatusBadge status={item.severity} />
-                      <span>{item.label}</span>
-                      <strong>{item.count}</strong>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <Alert tone="success">
-                  No tenant lifecycle or quota items currently need attention.
-                </Alert>
-              )}
-            </Card>
+            <AttentionCentre
+              empty="No tenant lifecycle or quota items currently need attention."
+              items={data.attention.map((item) => ({
+                id: item.key,
+                title: `${item.count} ${item.label}`,
+                tone: item.severity === "critical" ? "danger" : "warning",
+                action: <Link to="/platform/tenants">Review tenants</Link>
+              }))}
+            />
             <Card>
               <div className="section-header-row">
                 <div>
