@@ -36,6 +36,7 @@ export function PlatformTenantDetailPage() {
   const [tab, setTab] = useState("summary");
   const [nextStatus, setNextStatus] = useState<TenantAccountStatus>("active");
   const [reason, setReason] = useState("");
+  const [capabilityReason, setCapabilityReason] = useState("");
   const tenant = useQuery({
     queryKey: ["platform", "tenant", tenantId],
     queryFn: () => api.platformTenant(tenantId),
@@ -65,8 +66,8 @@ export function PlatformTenantDetailPage() {
       toast.error(cause instanceof Error ? cause.message : "Unable to update lifecycle.")
   });
   const capabilities = useMutation({
-    mutationFn: (values: SaaSCapabilityKey[]) =>
-      api.updatePlatformTenantCapabilities(tenantId, values),
+    mutationFn: ({ values, reason }: { values: SaaSCapabilityKey[]; reason: string }) =>
+      api.updatePlatformTenantCapabilities(tenantId, values, reason),
     onSuccess: () => {
       refresh();
       toast.success("Tenant capability override updated.");
@@ -258,13 +259,19 @@ export function PlatformTenantDetailPage() {
                     <input
                       checked={enabled}
                       disabled={capabilities.isPending}
-                      onChange={() =>
-                        capabilities.mutate(
-                          (enabled
+                      onChange={() => {
+                        const next = (
+                          enabled
                             ? subscription.capabilities.filter((key) => key !== feature.key)
-                            : [...subscription.capabilities, feature.key]) as SaaSCapabilityKey[]
-                        )
-                      }
+                            : [...subscription.capabilities, feature.key]
+                        ) as SaaSCapabilityKey[];
+                        const nextReason = window
+                          .prompt("Reason for this capability override:", capabilityReason)
+                          ?.trim();
+                        if (!nextReason || nextReason.length < 3) return;
+                        setCapabilityReason(nextReason);
+                        capabilities.mutate({ values: next, reason: nextReason });
+                      }}
                       type="checkbox"
                     />
                     <span>

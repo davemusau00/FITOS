@@ -574,10 +574,10 @@ export const api = {
       `/platform/tenants/${tenantId}/status`,
       { method: "PATCH", body: json({ status, reason }) }
     ),
-  updatePlatformTenantCapabilities: (tenantId: string, capabilities: string[]) =>
+  updatePlatformTenantCapabilities: (tenantId: string, capabilities: string[], reason: string) =>
     request<import("@fitos/contracts").TenantSubscriptionResponse>(
       `/platform/tenants/${tenantId}/capabilities`,
-      { method: "PATCH", body: json({ capabilities }) }
+      { method: "PATCH", body: json({ capabilities, reason }) }
     ),
   saveImplementationInquiryDraft: (payload: ImplementationInquiryDraft) =>
     request<ImplementationInquiryResponse>("/platform/implementation-inquiries/draft", {

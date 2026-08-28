@@ -306,7 +306,10 @@ export class PlatformController {
     @Req() request: FitosRequest
   ) {
     const input = z
-      .object({ capabilities: z.array(z.string()).max(100) })
+      .object({
+        capabilities: z.array(z.string()).max(100),
+        reason: z.string().trim().min(3).max(500)
+      })
       .strict()
       .parse(body);
     const allowed = new Set(PLATFORM_FEATURE_REGISTRY.map((feature) => feature.key));
@@ -329,7 +332,7 @@ export class PlatformController {
       resourceType: "tenant_subscription",
       resourceId: tenantId,
       beforeSummary: { capabilities: current.subscription.capabilities },
-      afterSummary: { capabilities: updated.capabilities },
+      afterSummary: { capabilities: updated.capabilities, reason: input.reason },
       requestId
     });
     return updated;
