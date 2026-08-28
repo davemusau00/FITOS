@@ -7,7 +7,7 @@ import { CommandPalette } from "./command-palette";
 import { BranchProvider, useBranch } from "./branch-context";
 import { api } from "../lib/api/client";
 import type { WorkspaceKey } from "@fitos/contracts";
-import { commandNavigation } from "./navigation";
+import { routeManifest } from "./navigation";
 
 const workspaceLinks: Partial<Record<WorkspaceKey, { label: string; path: string }>> = {
   command: { label: "Command", path: "/app/overview" },
@@ -74,13 +74,11 @@ function AppShellInner() {
 
   if (!auth) return null;
 
-  const navGroups = commandNavigation.reduce<Record<string, typeof commandNavigation>>(
-    (groups, item) => {
-      (groups[item.group] ??= []).push(item);
-      return groups;
-    },
-    {}
-  );
+  const commandRoutes = routeManifest.filter((item) => item.workspace === "command");
+  const navGroups = commandRoutes.reduce<Record<string, typeof commandRoutes>>((groups, item) => {
+    (groups[item.group] ??= []).push(item);
+    return groups;
+  }, {});
 
   if (!auth.availableWorkspaces.includes("command")) {
     return (
