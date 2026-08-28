@@ -704,3 +704,7 @@ If the system cannot keep the promise:
 ## Persist what users change.
 
 ## Test what businesses depend on.
+
+# 42. EVIDENCE LEDGER
+
+For every gap-resolution change, update `docs/FITOS V2 — ROADMAP GAP MATRIX.md` with the verified scope and test evidence. Use `docs/FITOS V2 — DEFINITION OF DONE.md` as the completion gate. Local checks must be labeled as local; they do not substitute for hosted CI, Playwright, production-image, or deployment evidence.
