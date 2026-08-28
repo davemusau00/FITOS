@@ -621,4 +621,16 @@ describeDatabase("Drizzle tenant isolation", () => {
     });
     await expect(repository.getNotificationPreferences(gym.user.id)).resolves.toEqual(updated);
   });
+
+  it("persists account export requests and isolates them by tenant", async () => {
+    const created = await repository.createAccountExportRequest(scopeOf(gym), gym.user.id);
+    expect(created.status).toBe("requested");
+    expect(created.format).toBe("json");
+    await expect(repository.listAccountExportRequests(scopeOf(gym))).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: created.id, tenantId: gym.tenant.id })])
+    );
+    await expect(repository.listAccountExportRequests(scopeOf(pilates))).resolves.not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: created.id })])
+    );
+  });
 });

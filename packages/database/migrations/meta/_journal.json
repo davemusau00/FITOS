@@ -232,6 +232,13 @@
       "when": 1789152000000,
       "tag": "0032_align_inventory_lots_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1789238400000,
+      "tag": "0033_account_export_requests",
+      "breakpoints": true
     }
   ]
 }
