@@ -3364,6 +3364,14 @@ body {
 .insights-section-note--wide {
   margin-bottom: 1.5rem;
 }
+.heatmap-legend-swatch {
+  width: 20px;
+  height: 14px;
+  border-radius: 3px;
+}
+.retention-cohort-row__bar--energy {
+  background: var(--fitos-energy);
+}
 .insights-bar-chart__col {
   align-items: center;
   display: flex;

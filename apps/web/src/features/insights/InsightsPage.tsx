@@ -264,12 +264,8 @@ export function InsightsPage() {
                   {[0.08, 0.25, 0.45, 0.65, 0.9].map((v) => (
                     <div
                       key={v}
-                      style={{
-                        background: `rgba(198,255,0,${v})`,
-                        width: 20,
-                        height: 14,
-                        borderRadius: 3
-                      }}
+                      className="heatmap-legend-swatch"
+                      style={{ background: `rgba(198,255,0,${v})` }}
                     />
                   ))}
                 </div>
@@ -358,11 +354,8 @@ export function InsightsPage() {
                     </span>
                     <div className="retention-cohort-row__bar-wrap">
                       <div
-                        className="retention-cohort-row__bar"
-                        style={{
-                          width: `${c.month3Retention}%`,
-                          background: "var(--fitos-energy)"
-                        }}
+                        className="retention-cohort-row__bar retention-cohort-row__bar--energy"
+                        style={{ width: `${c.month3Retention}%` }}
                       />
                     </div>
                     <span className="retention-cohort-row__pct">
