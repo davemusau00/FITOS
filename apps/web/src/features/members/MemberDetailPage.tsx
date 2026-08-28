@@ -153,6 +153,13 @@ export function MemberDetailPage() {
       void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits"] });
     }
   });
+  const renewMembershipMutation = useMutation({
+    mutationFn: (membershipId: string) => api.renewMembership(memberId!, membershipId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["member", memberId, "memberships"] });
+      void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits"] });
+    }
+  });
 
   const creditColumns: DataTableColumn<CreditLedgerEntryResponse>[] = [
     {
@@ -428,6 +435,14 @@ export function MemberDetailPage() {
                 <div className="form-actions">
                   {currentMembership && can(auth, "membership:manage") ? (
                     <>
+                      <Button
+                        disabled={renewMembershipMutation.isPending}
+                        onClick={() => renewMembershipMutation.mutate(currentMembership.id)}
+                        size="small"
+                        variant="ghost"
+                      >
+                        Renew Plan
+                      </Button>
                       <Button
                         disabled={membershipLifecycleMutation.isPending}
                         onClick={() =>

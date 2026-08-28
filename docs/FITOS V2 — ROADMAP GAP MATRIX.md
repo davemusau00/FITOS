@@ -484,6 +484,8 @@ Server lifecycle operation.
 
 Server lifecycle operation including credits/dates.
 
+**Implementation evidence (2026-08-28):** Added permission-gated renewal endpoint and transactional in-memory/PostgreSQL operations. Renewal extends from the later of the current end date or now, restores the active state, issues the plan’s reference credits, emits an audit event, and exposes a pending-safe Member Detail action. Integration coverage verifies renewed status and credit issuance; financial collection remains deferred.
+
 ---
 
 ## P1-033 — Booking Reschedule

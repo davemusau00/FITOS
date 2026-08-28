@@ -1127,6 +1127,34 @@ export class CoreService {
     return membership;
   }
 
+  async renewMembership(actor: RequestActor, requestId: string, membershipId: string) {
+    const result = await this.repository.renewMembership(
+      scopeOf(actor),
+      membershipId,
+      actor.userId
+    );
+    if (!result) throw new DomainError("RESOURCE_NOT_FOUND", "Membership cannot be renewed.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "membership.renewed",
+      "member_membership",
+      result.membership.id,
+      null,
+      {
+        memberId: result.membership.memberId,
+        credits: result.ledgerEntry.delta
+      }
+    );
+    await this.publish(
+      eventOf(actor, "membership.renewed", {
+        membershipId: result.membership.id,
+        memberId: result.membership.memberId
+      })
+    );
+    return result;
+  }
+
   async listCreditLedger(
     actor: RequestActor,
     memberId: string

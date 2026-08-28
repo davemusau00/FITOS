@@ -3385,6 +3385,53 @@ export class InMemoryFitosRepository implements FitosRepository {
     return { ...membership };
   }
 
+  async renewMembership(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<{
+    membership: MemberMembershipResponse;
+    ledgerEntry: CreditLedgerEntryResponse;
+  } | null> {
+    const membership = this.memberMemberships.get(membershipId);
+    if (
+      !membership ||
+      membership.tenantId !== scope.tenantId ||
+      !["active", "paused", "expired"].includes(membership.status)
+    )
+      return null;
+    const plan = this.membershipPlans.get(membership.planId ?? "");
+    if (
+      !plan ||
+      !plan.isActive ||
+      (plan.branchId !== null && !scope.branchIds.includes(plan.branchId))
+    )
+      return null;
+    const timestamp = now();
+    const base =
+      membership.endsAt && new Date(membership.endsAt) > new Date(timestamp)
+        ? new Date(membership.endsAt)
+        : new Date(timestamp);
+    membership.startsAt = base.toISOString();
+    membership.endsAt = plan.durationDays
+      ? new Date(base.getTime() + plan.durationDays * 86400000).toISOString()
+      : null;
+    membership.status = "active";
+    membership.updatedAt = timestamp;
+    const ledgerEntry: StoredCreditLedgerEntry = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      membershipId,
+      memberId: membership.memberId,
+      delta: plan.includedCredits,
+      reason: "purchase",
+      bookingId: null,
+      note: `Membership renewed: ${plan.name}`,
+      createdAt: timestamp
+    };
+    this.creditLedger.set(ledgerEntry.id, ledgerEntry);
+    return { membership: { ...membership }, ledgerEntry: { ...ledgerEntry } };
+  }
+
   async listCreditLedger(
     scope: TenantScope,
     memberId: string

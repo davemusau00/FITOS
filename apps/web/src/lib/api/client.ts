@@ -411,6 +411,11 @@ export const api = {
     request<MemberMembershipResponse>(`/members/${memberId}/memberships/${membershipId}/resume`, {
       method: "POST"
     }),
+  renewMembership: (memberId: string, membershipId: string) =>
+    request<{ membership: MemberMembershipResponse; ledgerEntry: CreditLedgerEntryResponse }>(
+      `/members/${memberId}/memberships/${membershipId}/renew`,
+      { method: "POST" }
+    ),
   creditLedger: (memberId: string) =>
     request<CreditLedgerEntryResponse[]>(`/members/${memberId}/credits`),
   creditBalance: (memberId: string) =>

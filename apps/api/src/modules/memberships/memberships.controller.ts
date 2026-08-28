@@ -195,6 +195,16 @@ export class MembershipsController {
     return this.core.resumeMembership(actor, requestId, z.string().uuid().parse(membershipId));
   }
 
+  @Post("members/:memberId/memberships/:membershipId/renew")
+  @RequirePermission("membership:manage")
+  renewMembership(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("membershipId") membershipId: string
+  ) {
+    return this.core.renewMembership(actor, requestId, z.string().uuid().parse(membershipId));
+  }
+
   @Get("members/:memberId/credits")
   @RequirePermission("membership:read")
   listCredits(@Actor() actor: RequestActor, @Param("memberId") memberId: string) {

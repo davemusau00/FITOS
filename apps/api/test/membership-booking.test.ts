@@ -283,6 +283,10 @@ describe("Memberships and Booking Credits Integration", () => {
     const pilatesCredits = await repository.listCreditLedger(pilatesScope, member.id);
     expect(pilatesCredits).toEqual([]);
 
+    const renewed = await repository.renewMembership(gymScope, activation.membership.id);
+    expect(renewed?.membership.status).toBe("active");
+    expect(renewed?.ledgerEntry.delta).toBe(20);
+
     const noBranchScope = { ...gymScope, branchIds: [] };
     expect(await repository.listMembershipPlans(noBranchScope)).toEqual([]);
     expect(await repository.findMembershipPlanById(noBranchScope, plan.id)).toBeNull();

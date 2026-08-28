@@ -2140,6 +2140,60 @@ export class DrizzleFitosRepository implements FitosRepository {
     return row ? this.memberMembershipResponse(row) : null;
   }
 
+  async renewMembership(
+    scope: TenantScope,
+    membershipId: string
+  ): Promise<{
+    membership: MemberMembershipResponse;
+    ledgerEntry: CreditLedgerEntryResponse;
+  } | null> {
+    return this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(memberMemberships)
+        .where(
+          and(
+            eq(memberMemberships.id, membershipId),
+            eq(memberMemberships.tenantId, scope.tenantId)
+          )
+        )
+        .for("update")
+        .limit(1);
+      if (!current || !["active", "paused", "expired"].includes(current.status)) return null;
+      const plan = current.planSnapshot as import("@fitos/contracts").MembershipPlanResponse;
+      if (!plan?.isActive || (plan.branchId !== null && !scope.branchIds.includes(plan.branchId)))
+        return null;
+      const nowAt = new Date();
+      const base = current.endsAt && current.endsAt > nowAt ? current.endsAt : nowAt;
+      const endsAt = plan.durationDays
+        ? new Date(base.getTime() + plan.durationDays * 86400000)
+        : null;
+      const [updated] = await tx
+        .update(memberMemberships)
+        .set({ startsAt: base, endsAt, status: "active", updatedAt: nowAt })
+        .where(eq(memberMemberships.id, membershipId))
+        .returning();
+      const [ledger] = await tx
+        .insert(creditLedger)
+        .values({
+          tenantId: scope.tenantId,
+          membershipId,
+          memberId: current.memberId,
+          delta: plan.includedCredits,
+          reason: "purchase",
+          bookingId: null,
+          note: `Membership renewed: ${plan.name}`
+        })
+        .returning();
+      return updated && ledger
+        ? {
+            membership: this.memberMembershipResponse(updated),
+            ledgerEntry: this.creditLedgerEntryResponse(ledger)
+          }
+        : null;
+    });
+  }
+
   async listCreditLedger(
     scope: TenantScope,
     memberId: string
