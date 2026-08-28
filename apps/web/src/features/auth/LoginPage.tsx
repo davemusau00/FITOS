@@ -10,7 +10,9 @@ export function LoginPage() {
   const { auth, isLoading, signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const destination = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
+  const destination = (
+    location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null
+  )?.from;
   const returnTo = destination?.pathname
     ? `${destination.pathname}${destination.search ?? ""}${destination.hash ?? ""}`
     : workspacePath(auth);

@@ -381,7 +381,9 @@ export function SchedulePage() {
           onClose={() => setIsCreating(false)}
           onSuccess={() => {
             void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule") });
-            void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule-templates") });
+            void queryClient.invalidateQueries({
+              queryKey: branchQueryKeys.all("schedule-templates")
+            });
             setIsCreating(false);
           }}
           rooms={rooms.data ?? []}

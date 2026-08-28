@@ -379,7 +379,9 @@ export function MembershipsPage() {
           isOpen={true}
           onClose={() => setIsCreatingPlan(false)}
           onSuccess={() => {
-            void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("membership-plans") });
+            void queryClient.invalidateQueries({
+              queryKey: branchQueryKeys.all("membership-plans")
+            });
             setIsCreatingPlan(false);
           }}
         />
