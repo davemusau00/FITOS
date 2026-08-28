@@ -136,7 +136,7 @@ export default function AccountSubscriptionPage() {
                   className="fitos-button fitos-button--primary"
                   to="/contact?reason=plan-review"
                 >
-                  Request a plan review
+                  Request a plan change
                 </Link>
                 <Link className="fitos-button fitos-button--secondary" to="/pricing">
                   Compare plans

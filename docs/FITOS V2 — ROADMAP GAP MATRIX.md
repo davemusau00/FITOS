@@ -258,15 +258,17 @@ Same persistence/visibility requirements as above, with destructive-action safeg
 
 **Current state:** No durable non-financial plan-change request resource or Platform approval/rejection workflow exists.
 
-**Implementation evidence (2026-08-28):** No tenant request endpoint, persisted request status, Platform decision endpoint, or audit reason contract was found in the current API or shared contracts.
+**Implementation evidence (2026-08-28):** Account Plan now labels the assisted contact CTA as “Request a plan change” and retains explicit no-checkout/payment-collection copy. Durable request persistence and Platform approval/rejection remain open.
 
-Tenant can:
+**Implementation evidence (2026-08-28):** No tenant request endpoint, persisted request status, Platform decision endpoint, or audit reason contract was found in the current API or shared contracts. The Account Plan CTA is currently an assisted contact handoff only.
+
+When implemented, tenant can:
 
 - compare;
 - submit;
 - view status.
 
-Platform can:
+When implemented, Platform can:
 
 - approve/reject;
 - provide reason;
