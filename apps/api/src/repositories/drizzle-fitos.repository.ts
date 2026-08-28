@@ -4224,28 +4224,53 @@ export class DrizzleFitosRepository implements FitosRepository {
     input: import("@fitos/contracts").CreateInventoryLotRequest
   ): Promise<import("@fitos/contracts").InventoryLotResponse> {
     const row = await this.db.transaction(async (tx) => {
-      const [item] = await tx.select().from(inventoryItems).where(and(
-        eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, input.itemId)
-      ));
+      const [item] = await tx
+        .select()
+        .from(inventoryItems)
+        .where(
+          and(eq(inventoryItems.tenantId, scope.tenantId), eq(inventoryItems.id, input.itemId))
+        );
       if (!item) throw new Error("Inventory item not found.");
       const branchId = input.branchId ?? item.branchId;
       if (!branchId) throw new Error("A branch is required to receive inventory.");
-      if (item.branchId !== branchId) throw new Error("Inventory item is not available in this branch.");
+      if (item.branchId !== branchId)
+        throw new Error("Inventory item is not available in this branch.");
       await tx.execute(sql`SELECT id FROM inventory_items WHERE id = ${item.id} FOR UPDATE`);
       const newStock = item.currentStock + Math.round(input.quantityReceived);
-      await tx.update(inventoryItems).set({ currentStock: newStock, updatedAt: new Date() }).where(eq(inventoryItems.id, item.id));
-      const [created] = await tx.insert(inventoryLots).values({
-        tenantId: scope.tenantId, branchId, itemId: input.itemId, lotCode: input.lotCode ?? null,
-        purchaseOrderId: input.purchaseOrderId ?? null, quantityReceived: String(input.quantityReceived),
-        quantityOnHand: String(input.quantityReceived), unitCostMinor: input.unitCostMinor ?? item.costPriceMinor,
-        expiresOn: input.expiresOn ?? null, notes: input.notes ?? null
-      }).returning();
+      await tx
+        .update(inventoryItems)
+        .set({ currentStock: newStock, updatedAt: new Date() })
+        .where(eq(inventoryItems.id, item.id));
+      const [created] = await tx
+        .insert(inventoryLots)
+        .values({
+          tenantId: scope.tenantId,
+          branchId,
+          itemId: input.itemId,
+          lotCode: input.lotCode ?? null,
+          purchaseOrderId: input.purchaseOrderId ?? null,
+          quantityReceived: String(input.quantityReceived),
+          quantityOnHand: String(input.quantityReceived),
+          unitCostMinor: input.unitCostMinor ?? item.costPriceMinor,
+          expiresOn: input.expiresOn ?? null,
+          notes: input.notes ?? null
+        })
+        .returning();
       if (!created) throw new Error("Failed to create inventory lot.");
-      const [movement] = await tx.insert(inventoryMovements).values({
-        tenantId: scope.tenantId, branchId, itemId: item.id, type: "purchase_in",
-        quantity: Math.round(input.quantityReceived), balanceAfter: newStock,
-        reason: "Inventory lot received", referenceId: created.id, recordedByUserId: null
-      }).returning({ id: inventoryMovements.id });
+      const [movement] = await tx
+        .insert(inventoryMovements)
+        .values({
+          tenantId: scope.tenantId,
+          branchId,
+          itemId: item.id,
+          type: "purchase_in",
+          quantity: Math.round(input.quantityReceived),
+          balanceAfter: newStock,
+          reason: "Inventory lot received",
+          referenceId: created.id,
+          recordedByUserId: null
+        })
+        .returning({ id: inventoryMovements.id });
       if (!movement) throw new Error("Failed to record inventory receipt movement.");
       return created;
     });
@@ -5152,10 +5177,19 @@ export class DrizzleFitosRepository implements FitosRepository {
     input: import("@fitos/contracts").SaveSitePageRequest
   ): Promise<import("@fitos/contracts").SitePageResponse> {
     if (input.pageId) {
-      const [updated] = await this.db.update(sitePages).set({
-        slug: input.slug, title: input.title, sectionsJson: input.sections,
-        seoJson: input.seo ?? {}, status: "draft", version: sql`${sitePages.version} + 1`, updatedAt: new Date()
-      }).where(and(eq(sitePages.tenantId, scope.tenantId), eq(sitePages.id, input.pageId))).returning();
+      const [updated] = await this.db
+        .update(sitePages)
+        .set({
+          slug: input.slug,
+          title: input.title,
+          sectionsJson: input.sections,
+          seoJson: input.seo ?? {},
+          status: "draft",
+          version: sql`${sitePages.version} + 1`,
+          updatedAt: new Date()
+        })
+        .where(and(eq(sitePages.tenantId, scope.tenantId), eq(sitePages.id, input.pageId)))
+        .returning();
       if (!updated) throw new Error("Site page not found.");
       return this.sitePageResponse(updated);
     }

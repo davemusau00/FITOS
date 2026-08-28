@@ -1230,36 +1230,128 @@ function NewLotModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    api.branches().then((b) => {
-      setBranches(b.map((br) => ({ id: br.id, name: br.name })));
-      if (b[0]) setBranchId(b[0].id);
-    }).catch(() => setError("Unable to load branches. Please retry."));
+    api
+      .branches()
+      .then((b) => {
+        setBranches(b.map((br) => ({ id: br.id, name: br.name })));
+        if (b[0]) setBranchId(b[0].id);
+      })
+      .catch(() => setError("Unable to load branches. Please retry."));
   }, []);
   const submit = async () => {
     if (!form.itemId || !form.quantityReceived || form.quantityReceived <= 0) {
       setError("Select an item and enter a quantity greater than zero.");
       return;
     }
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
-      await api.createInventoryLot({ ...form, branchId: branchId || undefined, lotCode: form.lotCode || undefined, expiresOn: form.expiresOn || undefined, notes: form.notes || undefined });
+      await api.createInventoryLot({
+        ...form,
+        branchId: branchId || undefined,
+        lotCode: form.lotCode || undefined,
+        expiresOn: form.expiresOn || undefined,
+        notes: form.notes || undefined
+      });
       onCreated();
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to receive lot."); }
-    finally { setLoading(false); }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to receive lot.");
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "520px" }}>
-        <div className="modal-header"><h2>Receive Inventory Lot</h2><button className="drawer-close" onClick={onClose}>×</button></div>
-        <div className="modal-body">
-          <div className="form-group"><label>Item *</label><select value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Select item</option>{items.map((i) => <option key={i.id} value={i.id}>{i.sku} · {i.name}</option>)}</select></div>
-          <div className="form-row"><div className="form-group"><label>Quantity received *</label><input type="number" min={1} value={form.quantityReceived} onChange={(e) => setForm({ ...form, quantityReceived: Number(e.target.value) })} /></div><div className="form-group"><label>Branch</label><select value={branchId} onChange={(e) => setBranchId(e.target.value)}><option value="">Default branch</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div></div>
-          <div className="form-row"><div className="form-group"><label>Lot / batch code</label><input value={form.lotCode ?? ""} onChange={(e) => setForm({ ...form, lotCode: e.target.value })} placeholder="Optional" /></div><div className="form-group"><label>Expiry date</label><input type="date" value={form.expiresOn ?? ""} onChange={(e) => setForm({ ...form, expiresOn: e.target.value })} /></div></div>
-          <div className="form-group"><label>Notes</label><textarea value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} /></div>
-          {error && <p className="form-error" role="alert">{error}</p>}
-          <div className="modal-actions"><button className="btn-secondary" onClick={onClose}>Cancel</button><button className="btn-primary" onClick={submit} disabled={loading || !form.itemId || form.quantityReceived <= 0}>{loading ? "Receiving…" : "Receive Lot"}</button></div>
+        <div className="modal-header">
+          <h2>Receive Inventory Lot</h2>
+          <button className="drawer-close" onClick={onClose}>
+            ×
+          </button>
         </div>
-      </div><style>{modalStyles}</style>
+        <div className="modal-body">
+          <div className="form-group">
+            <label>Item *</label>
+            <select
+              value={form.itemId}
+              onChange={(e) => setForm({ ...form, itemId: e.target.value })}
+            >
+              <option value="">Select item</option>
+              {items.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.sku} · {i.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Quantity received *</label>
+              <input
+                type="number"
+                min={1}
+                value={form.quantityReceived}
+                onChange={(e) => setForm({ ...form, quantityReceived: Number(e.target.value) })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Branch</label>
+              <select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+                <option value="">Default branch</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Lot / batch code</label>
+              <input
+                value={form.lotCode ?? ""}
+                onChange={(e) => setForm({ ...form, lotCode: e.target.value })}
+                placeholder="Optional"
+              />
+            </div>
+            <div className="form-group">
+              <label>Expiry date</label>
+              <input
+                type="date"
+                value={form.expiresOn ?? ""}
+                onChange={(e) => setForm({ ...form, expiresOn: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Notes</label>
+            <textarea
+              value={form.notes ?? ""}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              rows={2}
+            />
+          </div>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="modal-actions">
+            <button className="btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn-primary"
+              onClick={submit}
+              disabled={loading || !form.itemId || form.quantityReceived <= 0}
+            >
+              {loading ? "Receiving…" : "Receive Lot"}
+            </button>
+          </div>
+        </div>
+      </div>
+      <style>{modalStyles}</style>
     </div>
   );
 }

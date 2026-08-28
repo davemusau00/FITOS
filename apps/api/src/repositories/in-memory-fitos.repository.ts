@@ -5575,9 +5575,18 @@ export class InMemoryFitosRepository implements FitosRepository {
   ): Promise<import("@fitos/contracts").SitePageResponse> {
     if (input.pageId) {
       const selected = this.sitePages.get(input.pageId);
-      if (!selected || selected.tenantId !== scope.tenantId) throw new Error("Site page not found.");
-      const updated = { ...selected, slug: input.slug, title: input.title, status: "draft" as const,
-        sections: input.sections, seo: input.seo ?? {}, version: selected.version + 1, updatedAt: now() };
+      if (!selected || selected.tenantId !== scope.tenantId)
+        throw new Error("Site page not found.");
+      const updated = {
+        ...selected,
+        slug: input.slug,
+        title: input.title,
+        status: "draft" as const,
+        sections: input.sections,
+        seo: input.seo ?? {},
+        version: selected.version + 1,
+        updatedAt: now()
+      };
       this.sitePages.set(updated.id, updated);
       return updated;
     }

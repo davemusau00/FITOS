@@ -94,7 +94,11 @@ describeDatabase("Drizzle tenant isolation", () => {
     expect(lot.quantityOnHand).toBe(7);
     expect((await repository.findInventoryItemById(scope, item.id))?.stockOnHand).toBe(before + 7);
     const movements = await repository.listInventoryMovements(scope, item.id);
-    expect(movements.some((movement) => movement.referenceId === lot.id && movement.movementType === "purchase_in")).toBe(true);
+    expect(
+      movements.some(
+        (movement) => movement.referenceId === lot.id && movement.movementType === "purchase_in"
+      )
+    ).toBe(true);
   });
 
   it("denies exact operational UUIDs across services, rooms, occurrences, and bookings", async () => {
