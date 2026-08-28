@@ -116,7 +116,12 @@ export function MemberPortalPage() {
           </div>
 
           <Card>
-            {memberProfile.error ? <ErrorNotice error={memberProfile.error} /> : null}
+            {memberProfile.error ? (
+              <ErrorNotice
+                error={memberProfile.error}
+                onRetry={() => void memberProfile.refetch()}
+              />
+            ) : null}
             <form
               className="form-stack"
               onSubmit={(e) => {
@@ -230,7 +235,7 @@ export function MemberPortalPage() {
 
       {/* ── Main Portal Body ── */}
       <main className="member-portal-content">
-        <ErrorNotice error={portalOverview.error} />
+        <ErrorNotice error={portalOverview.error} onRetry={() => void portalOverview.refetch()} />
         {/* ── HOME TAB ── */}
         {activeTab === "home" && (
           <div className="form-stack">
