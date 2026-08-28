@@ -182,7 +182,7 @@ describe("saas plan catalog", () => {
   it("exposes canonical plans with shared quotas and only stable defaults", async () => {
     const repository = new InMemoryFitosRepository();
     const controller = new PlatformController(repository);
-    const plans = controller.listPlatformPlans();
+    const plans = await controller.listPlatformPlans();
     expect(plans.map((plan) => plan.key)).toEqual(["starter", "pro", "business"]);
     expect(plans[0]?.quotas.maxMembers).toBe(500);
     expect(plans.every((plan) => !plan.capabilities.includes("feature.therapy"))).toBe(true);
