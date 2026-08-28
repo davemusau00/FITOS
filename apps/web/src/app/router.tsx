@@ -1,8 +1,9 @@
-import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "./auth";
 import { AppShell } from "./shell";
 import { SurfaceShell } from "./surface-shell";
+import { PlatformShell } from "./platform-shell";
 import { api } from "../lib/api/client";
 import {
   AttendancePage,
@@ -54,7 +55,6 @@ import {
 } from "../features";
 
 function PlatformRoute() {
-  const navigate = useNavigate();
   const [state, setState] = useState<"loading" | "ready" | "denied">("loading");
   useEffect(() => {
     void api
@@ -67,35 +67,7 @@ function PlatformRoute() {
   }, []);
   if (state === "loading") return <main className="boot-screen">Loading FITOS Platform…</main>;
   if (state === "denied") return <Navigate replace to="/platform/login" />;
-  return (
-    <div className="surface-shell surface-shell--platform">
-      <header className="surface-shell__header">
-        <strong>FITOS Platform</strong>
-        <nav aria-label="Platform navigation" className="surface-shell__nav">
-          <Link to="/platform">Overview</Link>
-          <Link to="/platform/tenants">Tenants</Link>
-          <Link to="/platform/inquiries">Implementation</Link>
-          <Link to="/platform/audit">Audit</Link>
-        </nav>
-        <button
-          onClick={() => {
-            void api
-              .platformLogout()
-              .catch(() => undefined)
-              .finally(() => {
-                window.localStorage.removeItem("fitos_platform_token");
-                navigate("/platform/login", { replace: true });
-              });
-          }}
-        >
-          Sign out
-        </button>
-      </header>
-      <main className="surface-shell__content">
-        <Outlet />
-      </main>
-    </div>
-  );
+  return <Outlet />;
 }
 
 function ProtectedRoute() {
@@ -186,12 +158,14 @@ export function AppRouter() {
         <Route element={<OnboardingPage />} path="/onboarding" />
       </Route>
       <Route element={<PlatformRoute />} path="/platform">
-        <Route element={<PlatformOverviewPage />} index />
-        <Route element={<PlatformTenantsPage />} path="tenants" />
-        <Route element={<PlatformTenantDetailPage />} path="tenants/:tenantId" />
-        <Route element={<ImplementationInquiriesPage />} path="inquiries" />
-        <Route element={<PlatformAuditPage />} path="audit" />
-        <Route element={<ImplementationInquiryDetailPage />} path="inquiries/:inquiryId" />
+        <Route element={<PlatformShell />}>
+          <Route element={<PlatformOverviewPage />} index />
+          <Route element={<PlatformTenantsPage />} path="tenants" />
+          <Route element={<PlatformTenantDetailPage />} path="tenants/:tenantId" />
+          <Route element={<ImplementationInquiriesPage />} path="inquiries" />
+          <Route element={<PlatformAuditPage />} path="audit" />
+          <Route element={<ImplementationInquiryDetailPage />} path="inquiries/:inquiryId" />
+        </Route>
       </Route>
 
       {/* Public Tenant Website */}

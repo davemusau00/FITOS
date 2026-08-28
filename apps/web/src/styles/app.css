@@ -4613,6 +4613,48 @@ body {
 .surface-shell--platform .surface-shell__content {
   color: #f4f7ef;
 }
+
+/* Platform control plane */
+.platform-shell {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+.platform-sidebar {
+  background: var(--surface-1);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 1rem;
+  position: sticky;
+  top: 0;
+}
+.platform-sidebar__brand { align-items: center; display: flex; gap: .75rem; padding: .5rem; }
+.platform-sidebar__brand > span { border-left: 1px solid var(--border-strong); color: var(--text-secondary); font-size: .75rem; font-weight: 800; letter-spacing: .08em; padding-left: .75rem; text-transform: uppercase; }
+.platform-sidebar__context { color: var(--text-muted); font-size: .75rem; margin: .35rem .5rem 1.5rem; }
+.platform-nav { display: grid; gap: .35rem; }
+.platform-nav__link { align-items: center; border: 1px solid transparent; border-radius: var(--radius-control); color: var(--text-secondary); display: flex; font-size: .875rem; font-weight: 650; gap: .75rem; min-height: 2.75rem; padding: .65rem .75rem; text-decoration: none; }
+.platform-nav__link:hover { background: var(--surface-2); color: var(--text-primary); }
+.platform-nav__link.is-active { background: color-mix(in srgb, var(--fitos-energy) 10%, var(--surface-2)); border-color: color-mix(in srgb, var(--fitos-energy) 25%, transparent); color: var(--fitos-energy); }
+.platform-sidebar__footer { border-top: 1px solid var(--border-subtle); margin-top: auto; padding-top: 1rem; }
+.platform-shell__main { min-width: 0; }
+.platform-topbar { align-items: center; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--surface-0) 88%, transparent); border-bottom: 1px solid var(--border-subtle); display: flex; min-height: 4.5rem; padding: .75rem clamp(1rem, 3vw, 2rem); position: sticky; top: 0; z-index: 20; }
+.platform-topbar > div { display: grid; gap: .15rem; }
+.platform-topbar span { color: var(--text-muted); font-size: .75rem; }
+.platform-menu-button { align-items: center; background: var(--surface-2); border: 1px solid var(--border-subtle); border-radius: var(--radius-control); color: var(--text-primary); display: none; height: 2.75rem; justify-content: center; margin-right: .75rem; width: 2.75rem; }
+.platform-shell__content { padding: clamp(1rem, 3vw, 2rem); }
+.platform-shell__backdrop { display: none; }
+
+@media (max-width: 800px) {
+  .platform-shell { display: block; }
+  .platform-sidebar { box-shadow: var(--shadow-panel); inset: 0 auto 0 0; position: fixed; transform: translateX(-105%); transition: transform var(--transition-standard); width: min(18rem, 86vw); z-index: 60; }
+  .platform-sidebar.is-open { transform: translateX(0); }
+  .platform-menu-button { display: inline-flex; }
+  .platform-shell__backdrop { background: rgb(0 0 0 / 60%); border: 0; display: block; inset: 0; position: fixed; z-index: 50; }
+}
 @media (max-width: 760px) {
   .surface-shell-header div {
     display: block;
