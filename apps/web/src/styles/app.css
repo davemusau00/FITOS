@@ -1675,6 +1675,9 @@ body {
   gap: 0.375rem;
   text-transform: uppercase;
 }
+.login-demo-header__icon {
+  color: var(--fitos-energy);
+}
 
 .login-demo-pills {
   display: flex;

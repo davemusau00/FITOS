@@ -105,7 +105,7 @@ export function LoginPage() {
           {/* Quick Demo Credentials */}
           <div className="login-demo-box">
             <div className="login-demo-header">
-              <Icon name="spark" size={14} style={{ color: "var(--fitos-energy)" }} />
+              <Icon className="login-demo-header__icon" name="spark" size={14} />
               <span>Demo Accounts (Click to load):</span>
             </div>
             <div className="login-demo-pills">
