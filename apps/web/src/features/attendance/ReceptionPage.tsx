@@ -5,7 +5,7 @@ import type { MemberListItem } from "@fitos/contracts";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
-import { todayDate } from "../../lib/date-context";
+import { localDayBounds, todayDate } from "../../lib/date-context";
 import { ErrorNotice } from "../shared";
 
 export function ReceptionPage() {
@@ -48,8 +48,7 @@ export function ReceptionPage() {
     queryFn: () => {
       return api.scheduleOccurrences(
         new URLSearchParams({
-          from: currentDate,
-          to: currentDate,
+          ...localDayBounds(currentDate),
           branchId: activeBranchId,
           limit: "50"
         })
