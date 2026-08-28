@@ -668,12 +668,12 @@ export function FitosLandingPage({ showChrome = true }: { showChrome?: boolean }
               scope: "Core operations",
               desc: "For single-location studios and boutique gyms launching self-service operations.",
               features: [
-                "1 Branch location",
-                "Up to 500 active members",
+                "Usage limits shown in plan comparison",
+                "Member and staff quota visibility",
                 "Class booking & waitlists",
                 "Membership entitlement tracking",
                 "Mobile-first Member Portal",
-                "Basic Inventory"
+                "Capability availability shown after workspace setup"
               ]
             },
             {
@@ -682,14 +682,11 @@ export function FitosLandingPage({ showChrome = true }: { showChrome?: boolean }
               popular: true,
               desc: "For growing gyms, reformer studios, and recovery centers requiring full hardware and therapy.",
               features: [
-                "Up to 5 Branch locations",
-                "Up to 3,000 active members",
-                "Resource-aware equipment capacity",
-                "Reviewed assessment file imports",
-                "NEUBIE & AlterG therapy protocols",
-                "Inventory Lots & Stocktakes",
-                "Automated marketing rules",
-                "FITOS Sites CMS builder"
+                "Higher member and branch quotas",
+                "Usage pressure visibility",
+                "Capability review for advanced workflows",
+                "Higher operational limits",
+                "Assisted implementation guidance"
               ]
             },
             {
@@ -700,9 +697,9 @@ export function FitosLandingPage({ showChrome = true }: { showChrome?: boolean }
                 "Higher branch and member limits",
                 "Multi-branch operating workspaces",
                 "Cross-branch access and reporting",
-                "Approved integration framework",
-                "Dedicated migration architect",
-                "Full SLA & custom domain hosting"
+                "Capability review for multi-location workflows",
+                "Assisted implementation guidance",
+                "Plan changes handled without checkout"
               ]
             }
           ].map((tier, i) => (
