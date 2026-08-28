@@ -115,6 +115,7 @@ export function MemberPortalPage() {
           </div>
 
           <Card>
+            {memberProfile.error ? <ErrorNotice error={memberProfile.error} /> : null}
             <form
               className="form-stack"
               onSubmit={(e) => {
