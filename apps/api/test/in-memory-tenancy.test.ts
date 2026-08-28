@@ -27,6 +27,22 @@ describe("tenant isolation", () => {
     ]);
   });
 
+  it("persists editable canonical plan definitions", async () => {
+    const repository = new InMemoryFitosRepository();
+    const current = (await repository.listPlatformPlanDefinitions()).find(
+      (plan) => plan.key === "starter"
+    );
+    expect(current).toBeTruthy();
+    const updated = await repository.updatePlatformPlanDefinition("starter", {
+      name: "FITOS Starter Plus",
+      description: "Updated starter workspace plan",
+      quotas: { ...current!.quotas, maxMembers: 600 },
+      capabilities: current!.capabilities
+    });
+    expect(updated?.name).toBe("FITOS Starter Plus");
+    await expect(repository.listPlatformPlanDefinitions()).resolves.toContainEqual(updated);
+  });
+
   it("persists staff notification preferences with safe defaults", async () => {
     const repository = new InMemoryFitosRepository();
     const defaults = await repository.getNotificationPreferences("user-1");
