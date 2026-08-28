@@ -94,27 +94,13 @@ export function MemberPortalPage() {
     return (
       <div
         className="member-portal-shell"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "100vh"
-        }}
+        className="member-portal-shell member-portal-shell--login"
       >
-        <div style={{ maxWidth: "26rem", width: "100%", padding: "1.5rem" }}>
-          <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+        <div className="member-portal-login-card">
+          <div className="member-portal-login-heading">
             <FitosLogo height={32} />
-            <h1
-              style={{
-                fontSize: "1.5rem",
-                fontWeight: 800,
-                marginTop: "1rem",
-                marginBottom: "0.25rem"
-              }}
-            >
-              Member Portal Sign In
-            </h1>
-            <p className="muted" style={{ fontSize: "0.85rem" }}>
+            <h1 className="member-portal-login-title">Member Portal Sign In</h1>
+            <p className="muted member-portal-login-copy">
               Enter your phone number, member number, or email with your password.
             </p>
           </div>
@@ -166,8 +152,8 @@ export function MemberPortalPage() {
             </form>
           </Card>
 
-          <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
-            <p className="muted" style={{ fontSize: "0.8rem" }}>
+          <div className="member-portal-login-footnote">
+            <p className="muted member-portal-login-footnote-text">
               Use the password created for your member account.
             </p>
           </div>

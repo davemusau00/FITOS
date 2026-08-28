@@ -4191,6 +4191,37 @@ body {
   background: var(--surface-0);
   min-height: 100vh;
 }
+
+.member-portal-shell--login {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+.member-portal-login-card {
+  max-width: 26rem;
+  padding: 1.5rem;
+  width: 100%;
+}
+.member-portal-login-heading {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.member-portal-login-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 1rem 0 0.25rem;
+}
+.member-portal-login-copy {
+  font-size: 0.85rem;
+}
+.member-portal-login-footnote {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+.member-portal-login-footnote-text {
+  font-size: 0.8rem;
+}
 .member-portal-topbar {
   background: var(--surface-1);
   border-bottom: 1px solid var(--border-subtle);
