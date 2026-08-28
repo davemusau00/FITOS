@@ -177,7 +177,9 @@ export function AttentionCentre({
           <span className="fitos-eyebrow">Attention centre</span>
           <h2>Next actions</h2>
         </div>
-        <Badge tone={items.length ? "warning" : "success"}>{items.length}</Badge>
+        <span aria-live="polite">
+          <Badge tone={items.length ? "warning" : "success"}>{items.length}</Badge>
+        </span>
       </div>
       {items.length ? (
         <ul className="fitos-attention-centre__list">
@@ -201,7 +203,9 @@ export function AttentionCentre({
           ))}
         </ul>
       ) : (
-        <p className="fitos-attention-centre__empty">{empty}</p>
+        <p aria-live="polite" className="fitos-attention-centre__empty">
+          {empty}
+        </p>
       )}
     </section>
   );
