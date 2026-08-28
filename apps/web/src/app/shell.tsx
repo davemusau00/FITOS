@@ -343,7 +343,7 @@ function AppShellInner() {
             variant="ghost"
           />
 
-          {/* Global Search / Command Palette Trigger */}
+          {/* Commands and navigation trigger */}
           <div
             aria-label="Search or type a command"
             className="topbar-search"

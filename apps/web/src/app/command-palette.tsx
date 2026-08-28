@@ -234,7 +234,7 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder="Type a command, search pages or actions..."
+            placeholder="Find a page or action..."
             ref={inputRef}
             type="text"
             value={query}

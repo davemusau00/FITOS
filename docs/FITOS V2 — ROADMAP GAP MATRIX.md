@@ -153,7 +153,9 @@ Implement actual permitted domain search.
 
 ### Acceptance
 
-UI copy exactly reflects behavior.
+UI copy exactly reflects behavior. Current implementation is explicitly Commands/Navigation: it filters a static command registry and does not claim domain-record search.
+
+**Implementation evidence (2026-08-28):** The command palette now says “Find a page or action…” and the shell labels its trigger as commands and navigation. Domain search remains a separate future capability.
 
 ---
 
