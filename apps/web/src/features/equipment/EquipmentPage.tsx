@@ -126,6 +126,15 @@ export default function EquipmentPage() {
               key={s}
               className="equip-stat-card"
               onClick={() => setFilterStatus(s === filterStatus ? "all" : s)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setFilterStatus(s === filterStatus ? "all" : s);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-pressed={filterStatus === s}
               style={{ cursor: "pointer" }}
             >
               <div className="stat-dot" style={{ background: meta.color }} />
@@ -537,6 +546,7 @@ export default function EquipmentPage() {
           transition: border-color .2s;
         }
         .equip-stat-card:hover { border-color: rgba(255,255,255,0.15); }
+        .equip-stat-card:focus-visible { outline: 2px solid var(--fitos-energy); outline-offset: 3px; }
         .stat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
         .stat-count { font-size: 1.5rem; font-weight: 800; color: white; line-height: 1; }
         .stat-label { font-size: .72rem; color: rgba(255,255,255,0.4); }

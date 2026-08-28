@@ -900,6 +900,8 @@ All major surfaces at keyboard/touch/zoom.
 
 ---
 
+**Additional evidence (2026-08-28):** Equipment status summary cards now expose button semantics, Enter/Space activation, pressed state, and visible focus styling for keyboard users.
+
 ## P2-024 — Screenshot Regression
 
 Baselines for key shells/workflows.
