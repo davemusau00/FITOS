@@ -775,6 +775,29 @@ export const accountExportRequests = pgTable(
   ]
 );
 
+export const planChangeRequests = pgTable(
+  "plan_change_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    requestedPlan: varchar("requested_plan", { length: 30 }).notNull(),
+    status: varchar("status", { length: 30 }).notNull().default("requested"),
+    reason: text("reason"),
+    decidedByUserId: uuid("decided_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [index("idx_plan_change_requests_tenant_created").on(table.tenantId, table.createdAt)]
+);
+
 export const idempotencyKeys = pgTable(
   "idempotency_keys",
   {

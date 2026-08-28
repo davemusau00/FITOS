@@ -1,7 +1,12 @@
 import { Body, Controller, Get, Headers, Inject, Param, Patch, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
-import type { InviteStaffRequest, RequestActor, UpdateUserProfileRequest } from "@fitos/contracts";
+import type {
+  InviteStaffRequest,
+  RequestActor,
+  SaaSPlan,
+  UpdateUserProfileRequest
+} from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
 import { IdempotencyService } from "../../common/idempotency/idempotency.service.js";
@@ -32,6 +37,9 @@ const profileSchema = z
     displayName: z.string().trim().min(1).max(160),
     phone: z.string().trim().max(40).nullable().optional()
   })
+  .strict();
+const planChangeSchema = z
+  .object({ requestedPlan: z.enum(["starter", "pro", "business"]) })
   .strict();
 
 @ApiTags("staff access")
@@ -114,6 +122,31 @@ export class UsersController {
       body: {},
       status: 201,
       action: () => this.core.createAccountExportRequest(actor, requestId)
+    });
+  }
+
+  @Get("me/plan-change-requests")
+  @RequirePermission("tenant:read")
+  listPlanChangeRequests(@Actor() actor: RequestActor) {
+    return this.core.listPlanChangeRequests(actor);
+  }
+
+  @Post("me/plan-change-requests")
+  @RequirePermission("tenant:settings")
+  requestPlanChange(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Body() body: unknown
+  ) {
+    const input = planChangeSchema.parse(body) as { requestedPlan: SaaSPlan };
+    return this.idempotency.execute({
+      actor,
+      operation: "account:plan-change-request",
+      key: idempotencyKey,
+      body: input,
+      status: 201,
+      action: () => this.core.createPlanChangeRequest(actor, requestId, input.requestedPlan)
     });
   }
 

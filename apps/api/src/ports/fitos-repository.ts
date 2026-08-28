@@ -416,6 +416,7 @@ export interface FitosRepository {
   listPlatformAccountExportRequests(): Promise<
     import("@fitos/contracts").AccountExportRequestResponse[]
   >;
+  listPlatformPlanChangeRequests(): Promise<import("@fitos/contracts").PlanChangeRequestResponse[]>;
   getNotificationPreferences(
     userId: string
   ): Promise<import("@fitos/contracts").NotificationPreferences>;
@@ -430,6 +431,14 @@ export interface FitosRepository {
   listAccountExportRequests(
     scope: TenantScope
   ): Promise<import("@fitos/contracts").AccountExportRequestResponse[]>;
+  createPlanChangeRequest(
+    scope: TenantScope,
+    requestedByUserId: string,
+    requestedPlan: import("@fitos/contracts").SaaSPlan
+  ): Promise<import("@fitos/contracts").PlanChangeRequestResponse>;
+  listPlanChangeRequests(
+    scope: TenantScope
+  ): Promise<import("@fitos/contracts").PlanChangeRequestResponse[]>;
   publishEvent(event: DomainEvent): Promise<void>;
 
   // Payments

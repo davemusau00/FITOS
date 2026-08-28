@@ -4,6 +4,7 @@ import { and, desc, eq, gt, gte, ilike, inArray, isNull, lt, lte, or, sql } from
 import {
   auditEvents,
   accountExportRequests,
+  planChangeRequests,
   bookings,
   branches,
   contacts,
@@ -464,6 +465,43 @@ export class DrizzleFitosRepository implements FitosRepository {
       updatedAt: row.updatedAt.toISOString(),
       completedAt: row.completedAt?.toISOString() ?? null
     }));
+  }
+
+  private planChangeResponse(row: typeof planChangeRequests.$inferSelect) {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      requestedByUserId: row.requestedByUserId,
+      requestedPlan: row.requestedPlan as import("@fitos/contracts").SaaSPlan,
+      status: row.status as import("@fitos/contracts").PlanChangeRequestStatus,
+      reason: row.reason,
+      decidedByUserId: row.decidedByUserId,
+      decidedAt: row.decidedAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString()
+    };
+  }
+
+  async createPlanChangeRequest(
+    scope: TenantScope,
+    requestedByUserId: string,
+    requestedPlan: import("@fitos/contracts").SaaSPlan
+  ) {
+    const [row] = await this.db
+      .insert(planChangeRequests)
+      .values({ tenantId: scope.tenantId, requestedByUserId, requestedPlan })
+      .returning();
+    if (!row) throw new Error("Unable to create plan change request.");
+    return this.planChangeResponse(row);
+  }
+
+  async listPlanChangeRequests(scope: TenantScope) {
+    const rows = await this.db
+      .select()
+      .from(planChangeRequests)
+      .where(eq(planChangeRequests.tenantId, scope.tenantId))
+      .orderBy(desc(planChangeRequests.createdAt));
+    return rows.map((row) => this.planChangeResponse(row));
   }
 
   async findTenant(scope: TenantScope): Promise<TenantSummary | null> {
@@ -2531,6 +2569,14 @@ export class DrizzleFitosRepository implements FitosRepository {
       updatedAt: row.updatedAt.toISOString(),
       completedAt: row.completedAt?.toISOString() ?? null
     }));
+  }
+
+  async listPlatformPlanChangeRequests() {
+    const rows = await this.db
+      .select()
+      .from(planChangeRequests)
+      .orderBy(desc(planChangeRequests.createdAt));
+    return rows.map((row) => this.planChangeResponse(row));
   }
 
   async publishEvent(_event: DomainEvent): Promise<void> {

@@ -1662,6 +1662,35 @@ export class CoreService {
     return this.repository.listAccountExportRequests(scopeOf(actor));
   }
 
+  async createPlanChangeRequest(
+    actor: RequestActor,
+    requestId: string,
+    requestedPlan: import("@fitos/contracts").SaaSPlan
+  ) {
+    const request = await this.repository.createPlanChangeRequest(
+      scopeOf(actor),
+      actor.userId,
+      requestedPlan
+    );
+    await this.audit(
+      actor,
+      requestId,
+      "account.plan_change_requested",
+      "plan_change_request",
+      request.id,
+      null,
+      {
+        requestedPlan: request.requestedPlan,
+        status: request.status
+      }
+    );
+    return request;
+  }
+
+  async listPlanChangeRequests(actor: RequestActor) {
+    return this.repository.listPlanChangeRequests(scopeOf(actor));
+  }
+
   private async requireAssignableRole(actor: RequestActor, roleId: string): Promise<RoleResponse> {
     const role = await this.repository.findRoleById(scopeOf(actor), roleId);
     if (!role)

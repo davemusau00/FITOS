@@ -239,6 +239,13 @@
       "when": 1789238400000,
       "tag": "0033_account_export_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1789324800000,
+      "tag": "0034_plan_change_requests",
+      "breakpoints": true
     }
   ]
 }

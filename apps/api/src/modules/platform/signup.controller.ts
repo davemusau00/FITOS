@@ -352,6 +352,13 @@ export class PlatformController {
     return this.repository.listPlatformAccountExportRequests();
   }
 
+  @Get("plan-change-requests")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async planChangeRequests() {
+    return this.repository.listPlatformPlanChangeRequests();
+  }
+
   @Get("overview")
   @AuthMode("platform")
   @RequirePlatformAdmin()

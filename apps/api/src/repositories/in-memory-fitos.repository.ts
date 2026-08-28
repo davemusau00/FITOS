@@ -220,6 +220,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     string,
     import("@fitos/contracts").AccountExportRequestResponse
   >();
+  private readonly planChangeRequests = new Map<
+    string,
+    import("@fitos/contracts").PlanChangeRequestResponse
+  >();
   private readonly payments = new Map<string, StoredPaymentTransaction>();
   private readonly attendance = new Map<string, StoredAttendanceRecord>();
   private readonly automations = new Map<string, AutomationRuleResponse>();
@@ -3635,6 +3639,12 @@ export class InMemoryFitosRepository implements FitosRepository {
       .map((request) => ({ ...request }));
   }
 
+  async listPlatformPlanChangeRequests() {
+    return [...this.planChangeRequests.values()]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((request) => ({ ...request }));
+  }
+
   async getNotificationPreferences(userId: string) {
     return (
       this.notificationPreferences.get(userId) ?? {
@@ -3674,6 +3684,35 @@ export class InMemoryFitosRepository implements FitosRepository {
 
   async listAccountExportRequests(scope: TenantScope) {
     return [...this.accountExportRequests.values()]
+      .filter((request) => request.tenantId === scope.tenantId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((request) => ({ ...request }));
+  }
+
+  async createPlanChangeRequest(
+    scope: TenantScope,
+    requestedByUserId: string,
+    requestedPlan: import("@fitos/contracts").SaaSPlan
+  ) {
+    const timestamp = now();
+    const request = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      requestedByUserId,
+      requestedPlan,
+      status: "requested" as const,
+      reason: null,
+      decidedByUserId: null,
+      decidedAt: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.planChangeRequests.set(request.id, request);
+    return { ...request };
+  }
+
+  async listPlanChangeRequests(scope: TenantScope) {
+    return [...this.planChangeRequests.values()]
       .filter((request) => request.tenantId === scope.tenantId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map((request) => ({ ...request }));
