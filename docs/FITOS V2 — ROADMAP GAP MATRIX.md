@@ -252,6 +252,10 @@ Same persistence/visibility requirements as above, with destructive-action safeg
 
 ### Acceptance
 
+**Current state:** No durable non-financial plan-change request resource or Platform approval/rejection workflow exists.
+
+**Implementation evidence (2026-08-28):** No tenant request endpoint, persisted request status, Platform decision endpoint, or audit reason contract was found in the current API or shared contracts.
+
 Tenant can:
 
 - compare;
