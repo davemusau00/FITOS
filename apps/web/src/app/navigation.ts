@@ -67,6 +67,14 @@ export const commandNavigation: RouteMeta[] = [
     permission: "tenant:read"
   },
   {
+    path: "/platform/plans",
+    label: "Plans",
+    group: "Control plane",
+    icon: "settings",
+    workspace: "platform",
+    branchMode: "none"
+  },
+  {
     path: "/app/schedule",
     label: "Schedule",
     group: "Operations",

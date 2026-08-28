@@ -43,6 +43,7 @@ import {
   TherapyPage,
   AccountSubscriptionPage,
   NotificationInboxPage,
+  PlatformPlansPage,
   FitosLandingPage,
   ConfigureFitosPage,
   ImplementationInquiriesPage,
@@ -191,6 +192,7 @@ export function AppRouter() {
           <Route element={<PlatformTenantDetailPage />} path="tenants/:tenantId" />
           <Route element={<ImplementationInquiriesPage />} path="inquiries" />
           <Route element={<PlatformAuditPage />} path="audit" />
+          <Route element={<PlatformPlansPage />} path="plans" />
           <Route element={<ImplementationInquiryDetailPage />} path="inquiries/:inquiryId" />
         </Route>
       </Route>
