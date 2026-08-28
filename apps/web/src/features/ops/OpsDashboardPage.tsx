@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, PageHeader, StatusBadge } from "@fitos/ui";
+import { AttentionCentre, Card, PageHeader } from "@fitos/ui";
+import { Link } from "react-router-dom";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading, formatDateTime } from "../shared";
@@ -26,6 +27,22 @@ export function OpsDashboardPage() {
         eyebrow="FITOS Ops"
         title={`Today at ${activeBranch?.name ?? "your branch"}`}
         description="Operational signals and exceptions for the next several hours."
+        actions={
+          <div className="workspace-dashboard__actions">
+            <Link
+              className="fitos-button fitos-button--primary fitos-button--small"
+              to="/app/bookings/new"
+            >
+              Book member
+            </Link>
+            <Link
+              className="fitos-button fitos-button--secondary fitos-button--small"
+              to="/reception"
+            >
+              Open Front Desk
+            </Link>
+          </div>
+        }
       />
       <ErrorNotice error={today.error} />
       {metrics ? (
@@ -64,25 +81,30 @@ export function OpsDashboardPage() {
             <p className="muted">No upcoming sessions.</p>
           )}
         </Card>
-        <Card>
-          <h2>Operational alerts</h2>
-          <ul className="workspace-alerts">
-            {metrics && metrics.attendance.noShows > 0 ? (
-              <li>
-                <StatusBadge status="warning" /> {metrics.attendance.noShows} no-shows need review
-              </li>
-            ) : null}
-            {metrics && metrics.bookings.waitlisted > 0 ? (
-              <li>
-                <StatusBadge status="pending" /> {metrics.bookings.waitlisted} waitlisted booking
-                {metrics.bookings.waitlisted === 1 ? "" : "s"}
-              </li>
-            ) : null}
-            {!metrics?.attendance.noShows && !metrics?.bookings.waitlisted ? (
-              <li className="muted">No active operational alerts.</li>
-            ) : null}
-          </ul>
-        </Card>
+        <AttentionCentre
+          items={[
+            ...(metrics && metrics.attendance.noShows > 0
+              ? [
+                  {
+                    id: "no-shows",
+                    title: `${metrics.attendance.noShows} no-show${metrics.attendance.noShows === 1 ? "" : "s"} need review`,
+                    tone: "warning" as const,
+                    action: <Link to="/app/attendance">Review</Link>
+                  }
+                ]
+              : []),
+            ...(metrics && metrics.bookings.waitlisted > 0
+              ? [
+                  {
+                    id: "waitlist",
+                    title: `${metrics.bookings.waitlisted} waitlisted booking${metrics.bookings.waitlisted === 1 ? "" : "s"}`,
+                    tone: "info" as const,
+                    action: <Link to="/app/bookings">Open bookings</Link>
+                  }
+                ]
+              : [])
+          ]}
+        />
       </div>
       <Card>
         <h2>Scheduled sessions</h2>

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, PageHeader } from "@fitos/ui";
+import { Card, PageHeader, StatCard } from "@fitos/ui";
 import { useAuth } from "../../app/auth";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
@@ -28,6 +28,21 @@ export function CoachDashboardPage() {
         description={`Your assigned sessions at ${activeBranch?.name ?? "your branch"}.`}
       />
       <ErrorNotice error={schedule.error} />
+      <div className="platform-stat-grid workspace-dashboard__coach-stats">
+        <StatCard
+          icon="calendar"
+          label="Assigned today"
+          value={sessions.length}
+          detail="Your sessions at this branch"
+          tone={sessions.length ? "info" : "neutral"}
+        />
+        <StatCard
+          icon="users"
+          label="Next action"
+          value={sessions.length ? "Open roster" : "No session"}
+          detail={sessions.length ? "Review arrival status and notes" : "Nothing assigned today"}
+        />
+      </div>
       <Card>
         <h2>Today’s sessions</h2>
         {sessions.length ? (

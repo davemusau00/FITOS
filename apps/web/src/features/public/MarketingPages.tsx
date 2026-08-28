@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Badge,
@@ -264,6 +264,7 @@ export function PricingPage() {
 
 export function ContactPage() {
   useDocumentTitle("Talk to FITOS", "Send the FITOS team a short implementation inquiry.");
+  const [searchParams] = useSearchParams();
   const [result, setResult] = useState<ImplementationInquiryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -272,7 +273,10 @@ export function ContactPage() {
     businessName: "",
     email: "",
     phone: "",
-    message: ""
+    message:
+      searchParams.get("reason") === "plan-review"
+        ? "I would like a FITOS plan and capability review. Our expected branches, members, and workflows are: "
+        : ""
   });
   const canSubmit = useMemo(
     () =>

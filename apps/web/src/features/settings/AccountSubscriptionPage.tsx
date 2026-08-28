@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   Alert,
   Badge,
-  Button,
   Card,
   PageHeader,
   ProgressBar,
@@ -17,7 +16,7 @@ import type {
   UsageQuotaMetricsResponse
 } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
-import { ErrorNotice, PageLoading, formatDate, useToast } from "../shared";
+import { ErrorNotice, PageLoading, formatDate } from "../shared";
 
 export default function AccountSubscriptionPage() {
   const [sub, setSub] = useState<TenantSubscriptionResponse | null>(null);
@@ -25,8 +24,6 @@ export default function AccountSubscriptionPage() {
   const [flags, setFlags] = useState<FeatureFlagResponse[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
-  const [requestSent, setRequestSent] = useState(false);
-  const toast = useToast();
   useEffect(() => {
     void Promise.all([api.tenantSubscription(), api.tenantUsageQuotas(), api.featureFlags()])
       .then(([subscription, quotas, featureFlags]) => {
@@ -89,25 +86,16 @@ export default function AccountSubscriptionPage() {
                 or plan request and the Platform team will review it.
               </Alert>
               <div className="account-plan-card__actions">
-                <Button
-                  onClick={() => {
-                    setRequestSent(true);
-                    toast.success("Plan request noted. Use Talk to FITOS to submit context.");
-                  }}
-                  variant="primary"
+                <Link
+                  className="fitos-button fitos-button--primary"
+                  to="/contact?reason=plan-review"
                 >
                   Request a plan review
-                </Button>
+                </Link>
                 <Link className="fitos-button fitos-button--secondary" to="/pricing">
                   Compare plans
                 </Link>
               </div>
-              {requestSent ? (
-                <Alert tone="success">
-                  Your request is ready to send. Include the branches, members, or capabilities you
-                  expect to add.
-                </Alert>
-              ) : null}
             </Card>
             {usage ? (
               <Card>

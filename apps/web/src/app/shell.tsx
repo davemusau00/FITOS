@@ -1,25 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Icon, IconButton, type IconName } from "@fitos/ui";
+import { Icon, IconButton } from "@fitos/ui";
 import { can, useAuth } from "./auth";
 import { FitosLogo } from "./logo";
 import { CommandPalette } from "./command-palette";
 import { BranchProvider, useBranch } from "./branch-context";
 import { api } from "../lib/api/client";
 import type { WorkspaceKey } from "@fitos/contracts";
-
-type NavItem = {
-  to: string;
-  label: string;
-  icon: IconName;
-  permission: string;
-  badge?: string | number;
-};
-
-type NavGroup = {
-  group: string;
-  items: NavItem[];
-};
+import { commandNavigation } from "./navigation";
 
 const workspaceLinks: Partial<Record<WorkspaceKey, { label: string; path: string }>> = {
   command: { label: "Command", path: "/app/overview" },
@@ -28,84 +16,6 @@ const workspaceLinks: Partial<Record<WorkspaceKey, { label: string; path: string
   coach: { label: "Coach", path: "/coach" },
   practice: { label: "Practice", path: "/practice" }
 };
-
-const navGroups: NavGroup[] = [
-  {
-    group: "Today",
-    items: [
-      { to: "/app/overview", label: "Dashboard", icon: "dashboard", permission: "tenant:read" }
-    ]
-  },
-  {
-    group: "Operations",
-    items: [
-      { to: "/app/schedule", label: "Schedule", icon: "calendar", permission: "schedule:read" },
-      { to: "/app/bookings", label: "Bookings", icon: "calendar", permission: "booking:read" },
-      { to: "/app/attendance", label: "Attendance", icon: "check", permission: "attendance:read" },
-      { to: "/app/reception", label: "Front Desk", icon: "check", permission: "attendance:read" }
-    ]
-  },
-  {
-    group: "People",
-    items: [
-      { to: "/app/members", label: "Members", icon: "users", permission: "member:read" },
-      {
-        to: "/app/assessments",
-        label: "FITOS Assess",
-        icon: "spark",
-        permission: "assessment:read"
-      },
-      { to: "/app/therapy", label: "FITOS Therapy", icon: "spark", permission: "service:read" },
-      {
-        to: "/app/memberships",
-        label: "Memberships",
-        icon: "shield",
-        permission: "membership:read"
-      }
-    ]
-  },
-  {
-    group: "Growth",
-    items: [
-      { to: "/app/leads", label: "Leads & CRM", icon: "user", permission: "lead:read" },
-      {
-        to: "/app/insights",
-        label: "Insights & Analytics",
-        icon: "dashboard",
-        permission: "tenant:read"
-      },
-      { to: "/app/automations", label: "Automations", icon: "spark", permission: "tenant:read" }
-    ]
-  },
-  {
-    group: "Business",
-    items: [
-      {
-        to: "/app/services",
-        label: "Services & Classes",
-        icon: "spark",
-        permission: "service:read"
-      },
-      {
-        to: "/app/equipment",
-        label: "Equipment & Assets",
-        icon: "check",
-        permission: "schedule:read"
-      },
-      {
-        to: "/app/inventory",
-        label: "Inventory & Stock",
-        icon: "check",
-        permission: "tenant:read"
-      },
-      { to: "/app/staff", label: "Team & Staff", icon: "team", permission: "staff:read" }
-    ]
-  },
-  {
-    group: "Settings",
-    items: [{ to: "/app/settings", label: "Settings", icon: "settings", permission: "tenant:read" }]
-  }
-];
 
 function AppShellInner() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -163,6 +73,14 @@ function AppShellInner() {
   }, []);
 
   if (!auth) return null;
+
+  const navGroups = commandNavigation.reduce<Record<string, typeof commandNavigation>>(
+    (groups, item) => {
+      (groups[item.group] ??= []).push(item);
+      return groups;
+    },
+    {}
+  );
 
   if (!auth.availableWorkspaces.includes("command")) {
     return (
@@ -316,24 +234,25 @@ function AppShellInner() {
 
           {/* Grouped Navigation */}
           <nav className="app-nav">
-            {navGroups.map((group) => {
-              const accessibleItems = group.items.filter((item) => can(auth, item.permission));
+            {Object.entries(navGroups).map(([group, items]) => {
+              const accessibleItems = items.filter(
+                (item) => !item.permission || can(auth, item.permission)
+              );
               if (accessibleItems.length === 0) return null;
               return (
-                <div className="nav-group" key={group.group}>
-                  <div className="nav-group__label">{group.group}</div>
+                <div className="nav-group" key={group}>
+                  <div className="nav-group__label">{group}</div>
                   {accessibleItems.map((item) => (
                     <NavLink
                       className={({ isActive }) =>
                         `app-nav__link ${isActive ? "app-nav__link--active" : ""}`
                       }
-                      key={item.to}
+                      key={item.path}
                       onClick={() => setMenuOpen(false)}
-                      to={item.to}
+                      to={item.path}
                     >
                       <Icon name={item.icon} size={17} />
                       {item.label}
-                      {item.badge ? <span className="nav-badge">{item.badge}</span> : null}
                     </NavLink>
                   ))}
                 </div>
@@ -347,9 +266,21 @@ function AppShellInner() {
           {userMenuOpen ? (
             <ul className="user-dropdown">
               <li>
-                <NavLink onClick={() => setUserMenuOpen(false)} to="/app/settings/organization">
+                <NavLink onClick={() => setUserMenuOpen(false)} to="/account/profile">
+                  <Icon name="user" size={14} />
+                  Account Profile
+                </NavLink>
+              </li>
+              <li>
+                <NavLink onClick={() => setUserMenuOpen(false)} to="/account/organization">
                   <Icon name="building" size={14} />
                   Organization Profile
+                </NavLink>
+              </li>
+              <li>
+                <NavLink onClick={() => setUserMenuOpen(false)} to="/account/plan">
+                  <Icon name="spark" size={14} />
+                  Plan & Capabilities
                 </NavLink>
               </li>
               <li>

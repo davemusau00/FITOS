@@ -1,11 +1,25 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { BranchProvider } from "./branch-context";
+import { BranchProvider, useBranch } from "./branch-context";
 import { useAuth } from "./auth";
 import type { WorkspaceKey } from "@fitos/contracts";
 import { api } from "../lib/api/client";
 
 type Surface = "ops" | "front desk" | "coach" | "practice";
+const surfaceNavigation: Record<Surface, Array<{ label: string; path: string }>> = {
+  ops: [
+    { label: "Today", path: "/ops" },
+    { label: "Schedule", path: "/ops/schedule" },
+    { label: "Bookings", path: "/ops/bookings" },
+    { label: "Attendance", path: "/ops/attendance" }
+  ],
+  "front desk": [{ label: "Front Desk", path: "/reception" }],
+  coach: [{ label: "My Day", path: "/coach" }],
+  practice: [
+    { label: "Practice today", path: "/practice" },
+    { label: "Assessments", path: "/practice/assessments" }
+  ]
+};
 const surfaceCopy: Record<Surface, { name: string; question: string }> = {
   ops: { name: "FITOS Ops", question: "What needs attention today?" },
   "front desk": {
@@ -15,7 +29,6 @@ const surfaceCopy: Record<Surface, { name: string; question: string }> = {
   coach: { name: "FITOS Coach", question: "Who am I training today?" },
   practice: { name: "FITOS Practice", question: "Which appointments and records need care?" }
 };
-
 const workspaceLinks: Partial<Record<WorkspaceKey, { label: string; path: string }>> = {
   command: { label: "Command", path: "/app/overview" },
   ops: { label: "Ops", path: "/ops" },
@@ -24,14 +37,9 @@ const workspaceLinks: Partial<Record<WorkspaceKey, { label: string; path: string
   practice: { label: "Practice", path: "/practice" }
 };
 
-export function SurfaceShell({
-  surface,
-  workspace
-}: {
-  surface: Surface;
-  workspace: WorkspaceKey;
-}) {
+function SurfaceShellInner({ surface, workspace }: { surface: Surface; workspace: WorkspaceKey }) {
   const { auth } = useAuth();
+  const { activeBranchId, branches, setActiveBranch } = useBranch();
   const navigate = useNavigate();
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const copy = surfaceCopy[surface];
@@ -44,12 +52,29 @@ export function SurfaceShell({
     );
   }
   return (
-    <BranchProvider>
-      <div className={`surface-shell surface-shell-${surface.replace(" ", "-")}`}>
-        <header className="surface-shell-header">
-          <div>
+    <div className={`surface-shell surface-shell-${surface.replace(" ", "-")}`}>
+      <header className="surface-shell-header">
+        <div>
+          <div className="surface-shell-header__identity">
             <strong>{copy.name}</strong>
             <span>{copy.question}</span>
+          </div>
+          <div className="surface-shell-header__controls">
+            <label className="surface-branch-select">
+              Branch
+              <select
+                aria-label="Active branch"
+                className="fitos-control"
+                onChange={(event) => setActiveBranch(event.target.value)}
+                value={activeBranchId}
+              >
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <nav aria-label="Available workspaces" className="surface-workspace-switcher">
               {auth.availableWorkspaces.map((key) => {
                 const link = workspaceLinks[key];
@@ -63,11 +88,11 @@ export function SurfaceShell({
                       void api
                         .setWorkspace(key)
                         .then(() => navigate(link.path))
-                        .catch((error: unknown) => {
+                        .catch((error: unknown) =>
                           setWorkspaceError(
                             error instanceof Error ? error.message : "Unable to switch workspace."
-                          );
-                        });
+                          )
+                        );
                     }}
                   >
                     {link.label}
@@ -75,17 +100,38 @@ export function SurfaceShell({
                 ) : null;
               })}
             </nav>
-            {workspaceError ? (
-              <p className="surface-shell-error" role="alert">
-                {workspaceError}
-              </p>
-            ) : null}
           </div>
-        </header>
-        <main className="surface-shell-content">
-          <Outlet />
-        </main>
-      </div>
+          <nav aria-label={`${copy.name} navigation`} className="surface-shell-nav">
+            {surfaceNavigation[surface].map((item) => (
+              <NavLink end={item.path === `/${workspace}`} key={item.path} to={item.path}>
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+          {workspaceError ? (
+            <p className="surface-shell-error" role="alert">
+              {workspaceError}
+            </p>
+          ) : null}
+        </div>
+      </header>
+      <main className="surface-shell-content">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+export function SurfaceShell({
+  surface,
+  workspace
+}: {
+  surface: Surface;
+  workspace: WorkspaceKey;
+}) {
+  return (
+    <BranchProvider>
+      <SurfaceShellInner surface={surface} workspace={workspace} />
     </BranchProvider>
   );
 }
