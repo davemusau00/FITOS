@@ -555,6 +555,20 @@ describeDatabase("Drizzle tenant isolation", () => {
     expect(
       (await repository.listAttendanceRecords(gymScope, { occurrenceId: occurrence.id })).data
     ).toHaveLength(1);
+    const today = new Date();
+    const from = new Date(today);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(today);
+    to.setHours(23, 59, 59, 999);
+    expect(
+      (
+        await repository.listAttendanceRecords(gymScope, {
+          occurrenceId: occurrence.id,
+          from: from.toISOString(),
+          to: to.toISOString()
+        })
+      ).data
+    ).toHaveLength(1);
     expect(await repository.findAttendanceRecord(pilatesScope, attempts[0].id)).toBeNull();
 
     await repository.updateAttendanceStatus(
