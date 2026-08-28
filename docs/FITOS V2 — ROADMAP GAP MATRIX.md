@@ -34,7 +34,7 @@ Required for roadmap completeness but can follow core operating workflows.
 ## P0-002 — Fix FITOS Sites Block Contract
 
 **Area:** Sites  
-**Current state:** Frontend block types differ from server/shared contract.
+**Current state:** Frontend block types now derive from the server/shared controlled block contract.
 
 ### Acceptance
 
@@ -43,6 +43,11 @@ Required for roadmap completeness but can follow core operating workflows.
 - Server validation accepts the exact controlled block set.
 - No unsafe `as unknown as SiteSection[]` bridge.
 - Existing default page saves successfully.
+
+**Implementation evidence (2026-08-28):** `SitesPage.tsx` derives `SiteBlockType` from
+`SiteSection["type"]`, uses canonical `hero`, `rich_text`, `cta`, `service_grid`, and `schedule`
+types, and submits sections without an unsafe cast. Persisted pages populate the editor and dirty
+draft replacement/unload guards are implemented; save/reload runtime verification remains open.
 
 ---
 
