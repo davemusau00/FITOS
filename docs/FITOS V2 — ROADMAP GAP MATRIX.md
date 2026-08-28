@@ -295,6 +295,8 @@ Persist:
 
 ---
 
+**Additional evidence (2026-08-28):** Added shared `SaaSPlanDefinition` contract and permission-gated `GET /platform/plans`, exposing canonical Starter/Pro/Business names, quotas, and capability registry projections. Editable persisted plan definitions remain open.
+
 ## P1-012 — Persist Plan Capability Assignments
 
 ### Acceptance
