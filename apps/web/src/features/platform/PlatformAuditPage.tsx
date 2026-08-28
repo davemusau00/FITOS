@@ -20,12 +20,25 @@ export function PlatformAuditPage() {
       (query.data ?? []).filter(
         (event) =>
           !search.trim() ||
-          `${event.action} ${event.resourceType} ${event.resourceId ?? ""}`
+          `${event.action} ${event.resourceType} ${event.resourceId ?? ""} ${JSON.stringify(event.afterSummary ?? {})}`
             .toLowerCase()
             .includes(search.trim().toLowerCase())
       ),
     [query.data, search]
   );
+  const summarize = (event: (typeof events)[number]) => {
+    const before = event.beforeSummary ?? {};
+    const after = event.afterSummary ?? {};
+    if (Array.isArray(before.capabilities) || Array.isArray(after.capabilities)) {
+      const beforeCount = Array.isArray(before.capabilities) ? before.capabilities.length : 0;
+      const afterCount = Array.isArray(after.capabilities) ? after.capabilities.length : 0;
+      return `${beforeCount} capabilities → ${afterCount}${typeof after.reason === "string" ? ` · ${after.reason}` : ""}`;
+    }
+    if (typeof after.status === "string") {
+      return `${String(before.status ?? "unknown")} → ${after.status}${typeof after.reason === "string" ? ` · ${after.reason}` : ""}`;
+    }
+    return "Control-plane change recorded";
+  };
   if (query.isLoading) return <PageLoading />;
   return (
     <WorkspacePage density="record">
@@ -49,7 +62,7 @@ export function PlatformAuditPage() {
             id: event.id,
             title: event.action.replaceAll("_", " "),
             meta: formatDateTime(event.createdAt),
-            body: `${event.resourceType} · ${event.resourceId ?? "No resource identifier"}`,
+            body: `${event.resourceType} · ${summarize(event)}`,
             tone:
               event.action.includes("suspend") ||
               event.action.includes("cancel") ||
