@@ -33,7 +33,7 @@ export function ReceptionPage() {
   const [checkedIn, setCheckedIn] = useState<Set<string>>(new Set());
 
   const members = useQuery({
-    queryKey: ["members", activeBranchId, "reception", searchQuery],
+    queryKey: branchQueryKeys.list("members", activeBranchId, `reception:${searchQuery}`),
     queryFn: () =>
       api.members(
         new URLSearchParams({ query: searchQuery, branchId: activeBranchId, limit: "8" })
@@ -42,7 +42,7 @@ export function ReceptionPage() {
   });
 
   const occurrences = useQuery({
-    queryKey: ["schedule", activeBranchId, "today"],
+    queryKey: branchQueryKeys.list("schedule", activeBranchId, "today"),
     queryFn: () => {
       const today = todayDate();
       return api.scheduleOccurrences(
@@ -53,12 +53,12 @@ export function ReceptionPage() {
   });
 
   const services = useQuery({
-    queryKey: ["services", activeBranchId],
+    queryKey: branchQueryKeys.list("services", activeBranchId),
     queryFn: () => api.servicesByBranch(activeBranchId),
     enabled: Boolean(activeBranchId)
   });
   const sessionBookings = useQuery({
-    queryKey: ["bookings", "reception", activeBranchId],
+    queryKey: branchQueryKeys.list("bookings", activeBranchId, "reception"),
     queryFn: () => api.bookings(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
     enabled: Boolean(activeBranchId)
   });
