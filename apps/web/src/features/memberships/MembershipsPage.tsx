@@ -131,7 +131,7 @@ export function MembershipsPage() {
         }
       />
 
-      <ErrorNotice error={plans.error} />
+      <ErrorNotice error={plans.error} onRetry={() => void plans.refetch()} />
 
       {/* KPI Stats */}
       <div className="kpi-grid">

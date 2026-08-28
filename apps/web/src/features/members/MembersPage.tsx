@@ -146,7 +146,7 @@ export function MembersPage() {
         }
       />
 
-      <ErrorNotice error={members.error} />
+      <ErrorNotice error={members.error} onRetry={() => void members.refetch()} />
 
       {/* KPI Stats Row */}
       <div className="kpi-grid">

@@ -159,7 +159,7 @@ export function AttendancePage() {
         </FormField>
       </div>
 
-      <ErrorNotice error={attendance.error} />
+      <ErrorNotice error={attendance.error} onRetry={() => void attendance.refetch()} />
 
       {/* Hero Check-in Search */}
       <Card>

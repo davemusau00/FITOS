@@ -190,7 +190,7 @@ export function BookingsPage() {
         }
       />
 
-      <ErrorNotice error={bookingsQuery.error} />
+      <ErrorNotice error={bookingsQuery.error} onRetry={() => void bookingsQuery.refetch()} />
 
       <section className="filter-row">
         <SearchBar
