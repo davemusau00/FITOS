@@ -46,6 +46,41 @@ export default function AccountSubscriptionPage() {
   const daysLeft = sub?.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(sub.trialEndsAt).getTime() - Date.now()) / 86400000))
     : null;
+  const lifecycleMessage: Record<
+    string,
+    { tone: "info" | "warning" | "danger"; title: string; body: string }
+  > = {
+    trial: {
+      tone: "info",
+      title: "Trial workspace",
+      body: "Core setup remains available while you evaluate FITOS. Request a plan review before the trial ends."
+    },
+    active: {
+      tone: "info",
+      title: "Workspace active",
+      body: "Your team can continue using the enabled capabilities shown below."
+    },
+    grace: {
+      tone: "warning",
+      title: "Grace period",
+      body: "Some access may be limited soon. Contact FITOS to agree the next workspace state."
+    },
+    suspended: {
+      tone: "danger",
+      title: "Workspace suspended",
+      body: "Operational access may be restricted. Contact FITOS to request recovery; tenant data is preserved."
+    },
+    cancelled: {
+      tone: "warning",
+      title: "Workspace cancelled",
+      body: "Access is being wound down while tenant data is preserved. Contact FITOS if this was unexpected."
+    },
+    archived: {
+      tone: "warning",
+      title: "Workspace archived",
+      body: "This workspace is no longer operational. Contact FITOS about an approved recovery path."
+    }
+  };
   return (
     <WorkspacePage density="record">
       <PageHeader
@@ -85,6 +120,14 @@ export default function AccountSubscriptionPage() {
                 There is no checkout or payment collection in this release. Submit an implementation
                 or plan request and the Platform team will review it.
               </Alert>
+              {lifecycleMessage[sub.status] ? (
+                <Alert
+                  tone={lifecycleMessage[sub.status].tone}
+                  title={lifecycleMessage[sub.status].title}
+                >
+                  {lifecycleMessage[sub.status].body}
+                </Alert>
+              ) : null}
               <div className="account-plan-card__actions">
                 <Link
                   className="fitos-button fitos-button--primary"
