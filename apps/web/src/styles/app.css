@@ -253,6 +253,9 @@ body {
   border: none;
   cursor: pointer;
 }
+.error-notice__retry {
+  margin-top: 0.5rem;
+}
 
 /* ── Grouped Navigation ──────────────────────────────────────────────────── */
 .app-nav {

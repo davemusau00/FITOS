@@ -11,15 +11,26 @@ export function PageLoading() {
   );
 }
 
-export function ErrorNotice({ error }: { error: unknown }) {
+export function ErrorNotice({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   if (!error) return null;
   const message =
     error instanceof ApiClientError ? error.message : "Something went wrong. Try again.";
   const requestId = error instanceof ApiClientError ? error.requestId : undefined;
   return (
     <Alert title="Unable to complete that action" tone="danger">
-      {message}
-      {requestId ? ` Reference: ${requestId}` : ""}
+      <span>
+        {message}
+        {requestId ? ` Reference: ${requestId}` : ""}
+      </span>
+      {onRetry ? (
+        <button
+          className="fitos-button fitos-button--secondary fitos-button--small error-notice__retry"
+          onClick={onRetry}
+          type="button"
+        >
+          Retry
+        </button>
+      ) : null}
     </Alert>
   );
 }

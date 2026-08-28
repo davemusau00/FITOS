@@ -46,7 +46,7 @@ export function OpsDashboardPage() {
           </div>
         }
       />
-      <ErrorNotice error={today.error} />
+      <ErrorNotice error={today.error} onRetry={() => void today.refetch()} />
       {metrics ? (
         <div className="kpi-grid">
           <Card className="kpi kpi--energy">

@@ -87,7 +87,7 @@ export function InsightsPage() {
         }
       />
 
-      <ErrorNotice error={insights.error} />
+      <ErrorNotice error={insights.error} onRetry={() => void insights.refetch()} />
 
       {/* Tab Bar */}
       <div className="member-tab-bar">

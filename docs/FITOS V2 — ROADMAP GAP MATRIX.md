@@ -880,6 +880,8 @@ Progressively remove page-owned theme systems.
 
 All major surfaces at keyboard/touch/zoom.
 
+**Implementation evidence (2026-08-28):** Shared `ErrorNotice` now supports an accessible, keyboard-operable Retry action, wired into Ops and Insights data failures. This is a targeted recovery/accessibility improvement; the full responsive and keyboard sweep remains open.
+
 ---
 
 ## P2-024 — Screenshot Regression
