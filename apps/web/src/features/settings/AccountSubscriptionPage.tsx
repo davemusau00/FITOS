@@ -143,6 +143,32 @@ export default function AccountSubscriptionPage() {
                 </Link>
               </div>
             </Card>
+            <Card>
+              <div className="section-header-row">
+                <div>
+                  <p className="fitos-page-header__eyebrow">Workspace lifecycle</p>
+                  <h2>Need to change or close this workspace?</h2>
+                </div>
+              </div>
+              <p className="muted">
+                Cancellation and deletion requests are handled by the FITOS team in this release.
+                Your data remains preserved while a request is reviewed.
+              </p>
+              <div className="account-plan-card__actions">
+                <Link
+                  className="fitos-button fitos-button--secondary"
+                  to="/contact?reason=account-cancellation"
+                >
+                  Request cancellation
+                </Link>
+                <Link
+                  className="fitos-button fitos-button--ghost"
+                  to="/contact?reason=account-deletion"
+                >
+                  Request deletion
+                </Link>
+              </div>
+            </Card>
             {usage ? (
               <Card>
                 <div className="section-header-row">

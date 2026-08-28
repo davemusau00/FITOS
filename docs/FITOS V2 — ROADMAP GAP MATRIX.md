@@ -236,6 +236,8 @@ Actions filtered by:
 
 **Current state:** No persistent cancellation request resource, lifecycle, Platform visibility, or audit workflow exists; payment collection remains deferred.
 
+**Implementation evidence (2026-08-28):** Account Plan now provides an explicit assisted-contact cancellation action and explains that tenant data is preserved during review. Durable request persistence and Platform lifecycle handling remain open.
+
 Same persistence/visibility requirements as above.
 
 ---
@@ -243,6 +245,8 @@ Same persistence/visibility requirements as above.
 ## P1-009 — Account Deletion Request
 
 **Current state:** No persistent deletion request resource or destructive-action safeguards exist.
+
+**Implementation evidence (2026-08-28):** Account Plan now provides an explicit assisted deletion path and explains that automated deletion is not yet available. Durable deletion request persistence and Platform review remain open.
 
 Same persistence/visibility requirements as above, with destructive-action safeguards.
 
