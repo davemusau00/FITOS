@@ -70,6 +70,7 @@ A task is **not done** until all applicable items are checked.
 
 ## CI
 
+- [ ] Roadmap gap evidence is updated with the exact verification scope.
 - [ ] Format passes.
 - [ ] Lint passes.
 - [ ] Typecheck passes.
