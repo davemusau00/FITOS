@@ -142,6 +142,10 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 
 ## P1-003 — Shared Date Context
 
+**Current state:** A shared local-time calendar helper now exists and Reception uses it for today’s schedule; operator-selected date context across Ops, Schedule, Attendance, and Analytics remains open.
+
+**Implementation evidence (2026-08-28):** `apps/web/src/lib/date-context.ts` derives an ISO date from the browser’s local timezone, and `ReceptionPage` uses it instead of UTC string truncation, preventing near-midnight date drift. Full shared date selection and migration remain required.
+
 ### Acceptance
 
 - Today/date-sensitive workflows share date context.
