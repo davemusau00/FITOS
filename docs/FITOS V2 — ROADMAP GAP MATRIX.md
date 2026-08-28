@@ -79,7 +79,7 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 **Area:** Inventory  
 **Current state:** The Receive Lot action opens a validated, persisted workflow and the Drizzle repository now transactionally creates the lot, stock movement, and item stock recalculation.
 
-**Implementation evidence (2026-08-28):** `InventoryPage` renders a Receive Inventory Lot modal with required item and quantity validation, optional branch, lot/batch code, expiry, notes, pending/error feedback, and canonical reload after `POST /inventory/lots`. The Drizzle repository locks and validates the item, updates stock, inserts the lot and `purchase_in` movement in one transaction, and returns the canonical lot. API and web typechecks pass. A PostgreSQL integration regression test covers stock, lot, and movement consistency; it is gated by `RUN_DATABASE_TESTS=true` and was collected (skipped without the configured database) locally.
+**Implementation evidence (2026-08-28):** `InventoryPage` renders a Receive Inventory Lot modal with required item and quantity validation, optional branch, lot/batch code, expiry, notes, pending/error feedback, and canonical reload after `POST /inventory/lots`. The Drizzle repository locks and validates the item, updates stock, inserts the lot and `purchase_in` movement in one transaction, and returns the canonical lot. API and web typechecks pass. Forward migrations `0031_guard_advanced_integrity_trigger.sql` and `0032_align_inventory_lots_schema.sql` repair the PostgreSQL trigger/schema drift found during verification. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, `apps/api/test/drizzle-tenancy.test.ts` passes all 10 tests.
 
 ### Acceptance
 

@@ -218,6 +218,20 @@
       "when": 1788979200000,
       "tag": "0030_membership_service_inclusion",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1789065600000,
+      "tag": "0031_guard_advanced_integrity_trigger",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1789152000000,
+      "tag": "0032_align_inventory_lots_schema",
+      "breakpoints": true
     }
   ]
 }
