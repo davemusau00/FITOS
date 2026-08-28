@@ -260,7 +260,7 @@ Same persistence/visibility requirements as above, with destructive-action safeg
 
 **Implementation evidence (2026-08-28):** Added the `plan_change_requests` forward migration/schema, shared request contract, tenant-scoped PostgreSQL/in-memory persistence, idempotent tenant create/list endpoints, audit emission, Platform listing, and Platform approve/reject endpoint with required reason and optional `effectiveAt`. Immediate approval applies the requested non-financial plan assignment; future-dated approval persists the effective timestamp for worker execution. Rejection preserves the current plan. Account Plan retains an assisted “Request a plan change” contact CTA with no checkout/payment collection. Scheduled execution workers and richer plan administration remain open.
 
-**Implementation evidence (2026-08-28):** Tenant request creation/listing and persisted `requested` status are implemented. Platform decisions require an approved/rejected status and reason, persist actor/timestamp, optionally persist `effectiveAt`, emit an audit event, and apply the requested plan immediately when due; future-dated approvals await scheduled execution support.
+**Implementation evidence (2026-08-28):** Tenant request creation/listing and persisted `requested` status are implemented. Account Plan now loads recent requests, offers canonical Starter/Pro/Business selection, prevents duplicate submission, and displays returned status after reload. Platform decisions require an approved/rejected status and reason, persist actor/timestamp, optionally persist `effectiveAt`, emit an audit event, and apply the requested plan immediately when due; future-dated approvals await scheduled execution support.
 
 When implemented, tenant can:
 

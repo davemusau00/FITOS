@@ -13,7 +13,8 @@ import {
 import type {
   FeatureFlagResponse,
   TenantSubscriptionResponse,
-  UsageQuotaMetricsResponse
+  UsageQuotaMetricsResponse,
+  PlanChangeRequestResponse
 } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading, formatDate } from "../shared";
@@ -22,16 +23,27 @@ export default function AccountSubscriptionPage() {
   const [sub, setSub] = useState<TenantSubscriptionResponse | null>(null);
   const [usage, setUsage] = useState<UsageQuotaMetricsResponse | null>(null);
   const [flags, setFlags] = useState<FeatureFlagResponse[]>([]);
+  const [planRequests, setPlanRequests] = useState<PlanChangeRequestResponse[]>([]);
+  const [requestedPlan, setRequestedPlan] = useState<"starter" | "pro" | "business">("starter");
+  const [requestingPlan, setRequestingPlan] = useState(false);
+  const [requestError, setRequestError] = useState<unknown>(null);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const loadAccountPlan = useCallback(() => {
     setLoading(true);
     setError(null);
-    void Promise.all([api.tenantSubscription(), api.tenantUsageQuotas(), api.featureFlags()])
-      .then(([subscription, quotas, featureFlags]) => {
+    void Promise.all([
+      api.tenantSubscription(),
+      api.tenantUsageQuotas(),
+      api.featureFlags(),
+      api.planChangeRequests()
+    ])
+      .then(([subscription, quotas, featureFlags, requests]) => {
         setSub(subscription);
+        setRequestedPlan(subscription.plan);
         setUsage(quotas);
         setFlags(featureFlags);
+        setPlanRequests(requests);
       })
       .catch(setError)
       .finally(() => setLoading(false));
@@ -100,6 +112,7 @@ export default function AccountSubscriptionPage() {
         }
       />
       <ErrorNotice error={error} onRetry={loadAccountPlan} />
+      <ErrorNotice error={requestError} />
       {sub ? (
         <>
           <div className="account-plan-grid">
@@ -132,16 +145,47 @@ export default function AccountSubscriptionPage() {
                 </Alert>
               ) : null}
               <div className="account-plan-card__actions">
-                <Link
-                  className="fitos-button fitos-button--primary"
-                  to="/contact?reason=plan-change"
+                <select
+                  className="fitos-select"
+                  aria-label="Requested plan"
+                  value={requestedPlan}
+                  onChange={(event) => setRequestedPlan(event.target.value as typeof requestedPlan)}
+                  disabled={requestingPlan}
                 >
-                  Request a plan change
-                </Link>
+                  <option value="starter">FITOS Starter</option>
+                  <option value="pro">FITOS Pro</option>
+                  <option value="business">FITOS Business</option>
+                </select>
+                <button
+                  className="fitos-button fitos-button--primary"
+                  disabled={requestingPlan || requestedPlan === sub.plan}
+                  onClick={() => {
+                    setRequestingPlan(true);
+                    setRequestError(null);
+                    void api
+                      .requestPlanChange(requestedPlan)
+                      .then((request) => setPlanRequests((current) => [request, ...current]))
+                      .catch(setRequestError)
+                      .finally(() => setRequestingPlan(false));
+                  }}
+                >
+                  {requestingPlan ? "Submitting…" : "Request a plan change"}
+                </button>
                 <Link className="fitos-button fitos-button--secondary" to="/pricing">
                   Compare plans
                 </Link>
               </div>
+              {planRequests.length ? (
+                <div className="account-plan-requests">
+                  <strong>Recent plan requests</strong>
+                  {planRequests.slice(0, 3).map((request) => (
+                    <div key={request.id} className="account-plan-request">
+                      <span>FITOS {request.requestedPlan}</span>
+                      <StatusBadge status={request.status} />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </Card>
             <Card>
               <div className="section-header-row">
