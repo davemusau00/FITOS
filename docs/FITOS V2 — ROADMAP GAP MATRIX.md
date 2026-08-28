@@ -330,6 +330,8 @@ Scopes:
 
 Override history required.
 
+**Current implementation boundary (2026-08-29):** Tenant-scoped capability overrides are persisted on tenant subscriptions and exposed through the Platform tenant capability mutation with reasoned audit events. Global, plan-default override records, pilot cohorts, effective dates, and a dedicated scoped-flag history model remain open.
+
 ---
 
 ## P1-014 — Platform Support Notes
