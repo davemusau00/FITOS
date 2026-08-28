@@ -85,11 +85,7 @@ export function Tabs({
   );
 }
 
-export function DetailList({
-  items
-}: {
-  items: Array<{ label: string; value: ReactNode }>;
-}) {
+export function DetailList({ items }: { items: Array<{ label: string; value: ReactNode }> }) {
   return (
     <dl className="fitos-detail-list">
       {items.map((item) => (
@@ -108,9 +104,18 @@ export function ProgressBar({ label, max, value }: { label: string; max: number;
     <div className="fitos-progress">
       <div className="fitos-progress__label">
         <span>{label}</span>
-        <strong>{value.toLocaleString()} / {max.toLocaleString()}</strong>
+        <strong>
+          {value.toLocaleString()} / {max.toLocaleString()}
+        </strong>
       </div>
-      <div aria-label={label} aria-valuemax={max} aria-valuemin={0} aria-valuenow={value} className="fitos-progress__track" role="progressbar">
+      <div
+        aria-label={label}
+        aria-valuemax={max}
+        aria-valuemin={0}
+        aria-valuenow={value}
+        className="fitos-progress__track"
+        role="progressbar"
+      >
         <span style={{ width: `${percent}%` }} />
       </div>
     </div>
@@ -122,13 +127,22 @@ export function Timeline({
   items
 }: {
   empty?: ReactNode;
-  items: Array<{ id: string; title: ReactNode; meta?: ReactNode; body?: ReactNode; tone?: BadgeTone }>;
+  items: Array<{
+    id: string;
+    title: ReactNode;
+    meta?: ReactNode;
+    body?: ReactNode;
+    tone?: BadgeTone;
+  }>;
 }) {
   if (!items.length) return <>{empty ?? null}</>;
   return (
     <ol className="fitos-timeline">
       {items.map((item) => (
-        <li key={item.id} className={cn("fitos-timeline__item", `fitos-timeline__item--${item.tone ?? "neutral"}`)}>
+        <li
+          key={item.id}
+          className={cn("fitos-timeline__item", `fitos-timeline__item--${item.tone ?? "neutral"}`)}
+        >
           <span className="fitos-timeline__marker" />
           <div>
             <strong>{item.title}</strong>

@@ -61,8 +61,7 @@ const navGroups: NavGroup[] = [
         label: "Memberships",
         icon: "shield",
         permission: "membership:read"
-      },
-      { to: "/app/payments", label: "Payments", icon: "building", permission: "payment:read" }
+      }
     ]
   },
   {

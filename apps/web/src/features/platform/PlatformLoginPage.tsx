@@ -7,7 +7,7 @@ import { ErrorNotice } from "../shared";
 
 export function PlatformLoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@fitos.test");
+  const [email, setEmail] = useState("platform.admin@fitos.test");
   const [password, setPassword] = useState("ChangeMe123!");
   const [error, setError] = useState<unknown>(null);
   const [submitting, setSubmitting] = useState(false);

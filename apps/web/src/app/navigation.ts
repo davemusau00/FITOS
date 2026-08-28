@@ -15,10 +15,38 @@ export type RouteMeta = {
 };
 
 export const platformNavigation: RouteMeta[] = [
-  { path: "/platform", label: "Overview", group: "Control plane", icon: "dashboard", workspace: "platform", branchMode: "none" },
-  { path: "/platform/tenants", label: "Tenants", group: "Customers", icon: "building", workspace: "platform", branchMode: "none" },
-  { path: "/platform/inquiries", label: "Implementations", group: "Customers", icon: "spark", workspace: "platform", branchMode: "none" },
-  { path: "/platform/audit", label: "Audit", group: "Governance", icon: "shield", workspace: "platform", branchMode: "none" }
+  {
+    path: "/platform",
+    label: "Overview",
+    group: "Control plane",
+    icon: "dashboard",
+    workspace: "platform",
+    branchMode: "none"
+  },
+  {
+    path: "/platform/tenants",
+    label: "Tenants",
+    group: "Customers",
+    icon: "building",
+    workspace: "platform",
+    branchMode: "none"
+  },
+  {
+    path: "/platform/inquiries",
+    label: "Implementations",
+    group: "Customers",
+    icon: "spark",
+    workspace: "platform",
+    branchMode: "none"
+  },
+  {
+    path: "/platform/audit",
+    label: "Audit",
+    group: "Governance",
+    icon: "shield",
+    workspace: "platform",
+    branchMode: "none"
+  }
 ];
 
 export const marketingNavigation = [

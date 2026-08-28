@@ -4,6 +4,7 @@ import { useAuth } from "./auth";
 import { AppShell } from "./shell";
 import { SurfaceShell } from "./surface-shell";
 import { PlatformShell } from "./platform-shell";
+import { MarketingShell } from "./marketing-shell";
 import { api } from "../lib/api/client";
 import {
   AttendancePage,
@@ -51,7 +52,11 @@ import {
   PlatformAuditPage,
   OpsDashboardPage,
   CoachDashboardPage,
-  SitesPage
+  SitesPage,
+  FeaturesPage,
+  SolutionsPage,
+  PricingPage,
+  ContactPage
 } from "../features";
 
 function PlatformRoute() {
@@ -81,7 +86,14 @@ function ProtectedRoute() {
 export function AppRouter() {
   return (
     <Routes>
-      <Route element={<FitosLandingPage />} path="/" />
+      <Route element={<MarketingShell />} path="/">
+        <Route element={<FitosLandingPage showChrome={false} />} index />
+        <Route element={<FeaturesPage />} path="features" />
+        <Route element={<SolutionsPage />} path="solutions" />
+        <Route element={<SolutionsPage />} path="solutions/:solution" />
+        <Route element={<PricingPage />} path="pricing" />
+        <Route element={<ContactPage />} path="contact" />
+      </Route>
       <Route element={<ConfigureFitosPage />} path="/configure" />
       <Route element={<LoginPage />} path="/login" />
       <Route element={<PlatformLoginPage />} path="/platform/login" />
@@ -151,9 +163,15 @@ export function AppRouter() {
           <Route element={<StaffPage />} path="settings/team" />
           <Route element={<SecuritySettingsPage />} path="settings/security" />
           <Route element={<AuditSettingsPage />} path="settings/audit" />
-          <Route element={<AccountSettingsPage />} path="settings/account" />
-          <Route element={<AccountSubscriptionPage />} path="settings/subscription" />
+          <Route element={<Navigate replace to="/account/profile" />} path="settings/account" />
+          <Route element={<Navigate replace to="/account/plan" />} path="settings/subscription" />
           <Route element={<SitesPage />} path="sites" />
+        </Route>
+        <Route element={<AppShell />} path="/account">
+          <Route element={<Navigate replace to="profile" />} index />
+          <Route element={<AccountSettingsPage />} path="profile" />
+          <Route element={<OrganizationSettingsPage />} path="organization" />
+          <Route element={<AccountSubscriptionPage />} path="plan" />
         </Route>
         <Route element={<OnboardingPage />} path="/onboarding" />
       </Route>

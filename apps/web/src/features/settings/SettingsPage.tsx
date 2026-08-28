@@ -74,13 +74,13 @@ export function SettingsPage() {
           icon="user"
           title="Account profile"
           description="Your staff identity"
-          to="/app/settings/account"
+          to="/account/profile"
         />
         <SettingsLink
           icon="building"
           title="Subscription & usage"
           description="Plan, quotas, and enabled capabilities"
-          to="/app/settings/subscription"
+          to="/account/plan"
         />
       </section>
     </>

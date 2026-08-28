@@ -1879,6 +1879,248 @@ body {
   font-family: var(--font-sans) !important;
   min-height: 100dvh;
 }
+
+.marketing-shell {
+  background: var(--surface-0);
+  min-height: 100vh;
+}
+.marketing-header {
+  backdrop-filter: blur(16px);
+  background: color-mix(in srgb, var(--surface-0) 88%, transparent);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 45;
+}
+.marketing-header__inner {
+  align-items: center;
+  display: flex;
+  gap: 2rem;
+  margin: 0 auto;
+  max-width: 80rem;
+  min-height: 4.5rem;
+  padding: 0.75rem 1.5rem;
+}
+.marketing-brand {
+  align-items: center;
+  display: inline-flex;
+  flex: none;
+  text-decoration: none;
+}
+.marketing-nav {
+  align-items: center;
+  display: flex;
+  gap: 1.35rem;
+}
+.marketing-nav a {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+.marketing-nav a:hover,
+.marketing-nav a.active {
+  color: var(--text-primary);
+}
+.marketing-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.marketing-menu {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  display: none;
+  height: 2.75rem;
+  justify-content: center;
+  margin-left: auto;
+  width: 2.75rem;
+}
+.marketing-main {
+  min-height: 65vh;
+}
+.marketing-content {
+  padding: clamp(3rem, 7vw, 6rem) 1.5rem;
+}
+.marketing-card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+}
+.marketing-card-grid .fitos-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 13rem;
+}
+.marketing-card-grid .fitos-card .fitos-button {
+  margin-top: auto;
+  align-self: flex-start;
+}
+.marketing-card__topline {
+  display: flex;
+  justify-content: flex-end;
+}
+.marketing-card-grid h2,
+.marketing-plan-card h2 {
+  font-size: 1.15rem;
+  line-height: 1.35;
+  margin: 0;
+}
+.marketing-plan-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.marketing-plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.marketing-plan-card.is-featured {
+  border-color: color-mix(in srgb, var(--fitos-energy) 42%, var(--border-subtle));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fitos-energy) 10%, transparent);
+}
+.marketing-plan-card .fitos-button {
+  margin-top: auto;
+}
+.marketing-check-list {
+  color: var(--text-secondary);
+  display: grid;
+  gap: 0.65rem;
+  list-style: none;
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+}
+.marketing-check-list li {
+  padding-left: 1.5rem;
+  position: relative;
+}
+.marketing-check-list li::before {
+  color: var(--fitos-energy);
+  content: "✓";
+  left: 0;
+  position: absolute;
+}
+.marketing-contact-grid {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 0.75fr);
+}
+.marketing-cta {
+  align-items: center;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--fitos-energy) 12%, var(--surface-1)),
+    var(--surface-1)
+  );
+  border: 1px solid color-mix(in srgb, var(--fitos-energy) 28%, var(--border-subtle));
+  border-radius: var(--radius-panel);
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  padding: clamp(1.5rem, 5vw, 3rem);
+}
+.marketing-cta h2 {
+  margin: 0.3rem 0 0.6rem;
+}
+.marketing-cta p {
+  color: var(--text-secondary);
+  margin: 0;
+}
+.marketing-cta > div:last-child {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.marketing-footer {
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr auto;
+  margin: 0 auto;
+  max-width: 80rem;
+  padding: 3rem 1.5rem;
+}
+.marketing-footer p {
+  max-width: 34rem;
+}
+.marketing-footer nav {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(2, minmax(8rem, 1fr));
+}
+.marketing-footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.marketing-footer a:hover {
+  color: var(--text-primary);
+}
+.marketing-footer small {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .marketing-menu {
+    display: inline-flex;
+  }
+  .marketing-nav {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-panel);
+    display: none;
+    left: 1rem;
+    padding: 0.75rem;
+    position: absolute;
+    right: 1rem;
+    top: calc(100% + 0.5rem);
+  }
+  .marketing-nav.is-open {
+    display: grid;
+  }
+  .marketing-nav a {
+    border-radius: var(--radius-control);
+    padding: 0.75rem;
+  }
+  .marketing-actions .fitos-button--ghost,
+  .marketing-actions .fitos-button--secondary {
+    display: none;
+  }
+  .marketing-plan-grid {
+    grid-template-columns: 1fr;
+  }
+  .marketing-contact-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .marketing-header__inner {
+    gap: 0.75rem;
+    padding-inline: 1rem;
+  }
+  .marketing-actions .fitos-button {
+    padding-inline: 0.7rem;
+  }
+  .marketing-cta {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .marketing-cta > div:last-child {
+    display: grid;
+  }
+  .marketing-footer {
+    grid-template-columns: 1fr;
+  }
+}
 .saas-public-page a {
   color: inherit;
 }
@@ -4632,28 +4874,369 @@ body {
   position: sticky;
   top: 0;
 }
-.platform-sidebar__brand { align-items: center; display: flex; gap: .75rem; padding: .5rem; }
-.platform-sidebar__brand > span { border-left: 1px solid var(--border-strong); color: var(--text-secondary); font-size: .75rem; font-weight: 800; letter-spacing: .08em; padding-left: .75rem; text-transform: uppercase; }
-.platform-sidebar__context { color: var(--text-muted); font-size: .75rem; margin: .35rem .5rem 1.5rem; }
-.platform-nav { display: grid; gap: .35rem; }
-.platform-nav__link { align-items: center; border: 1px solid transparent; border-radius: var(--radius-control); color: var(--text-secondary); display: flex; font-size: .875rem; font-weight: 650; gap: .75rem; min-height: 2.75rem; padding: .65rem .75rem; text-decoration: none; }
-.platform-nav__link:hover { background: var(--surface-2); color: var(--text-primary); }
-.platform-nav__link.is-active { background: color-mix(in srgb, var(--fitos-energy) 10%, var(--surface-2)); border-color: color-mix(in srgb, var(--fitos-energy) 25%, transparent); color: var(--fitos-energy); }
-.platform-sidebar__footer { border-top: 1px solid var(--border-subtle); margin-top: auto; padding-top: 1rem; }
-.platform-shell__main { min-width: 0; }
-.platform-topbar { align-items: center; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--surface-0) 88%, transparent); border-bottom: 1px solid var(--border-subtle); display: flex; min-height: 4.5rem; padding: .75rem clamp(1rem, 3vw, 2rem); position: sticky; top: 0; z-index: 20; }
-.platform-topbar > div { display: grid; gap: .15rem; }
-.platform-topbar span { color: var(--text-muted); font-size: .75rem; }
-.platform-menu-button { align-items: center; background: var(--surface-2); border: 1px solid var(--border-subtle); border-radius: var(--radius-control); color: var(--text-primary); display: none; height: 2.75rem; justify-content: center; margin-right: .75rem; width: 2.75rem; }
-.platform-shell__content { padding: clamp(1rem, 3vw, 2rem); }
-.platform-shell__backdrop { display: none; }
+.platform-sidebar__brand {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem;
+}
+.platform-sidebar__brand > span {
+  border-left: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding-left: 0.75rem;
+  text-transform: uppercase;
+}
+.platform-sidebar__context {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin: 0.35rem 0.5rem 1.5rem;
+}
+.platform-nav {
+  display: grid;
+  gap: 0.35rem;
+}
+.platform-nav__link {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  display: flex;
+  font-size: 0.875rem;
+  font-weight: 650;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  text-decoration: none;
+}
+.platform-nav__link:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+.platform-nav__link.is-active {
+  background: color-mix(in srgb, var(--fitos-energy) 10%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--fitos-energy) 25%, transparent);
+  color: var(--fitos-energy);
+}
+.platform-sidebar__footer {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: auto;
+  padding-top: 1rem;
+}
+.platform-shell__main {
+  min-width: 0;
+}
+.platform-topbar {
+  align-items: center;
+  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--surface-0) 88%, transparent);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  min-height: 4.5rem;
+  padding: 0.75rem clamp(1rem, 3vw, 2rem);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.platform-topbar > div {
+  display: grid;
+  gap: 0.15rem;
+}
+.platform-topbar span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.platform-menu-button {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  display: none;
+  height: 2.75rem;
+  justify-content: center;
+  margin-right: 0.75rem;
+  width: 2.75rem;
+}
+.platform-shell__content {
+  padding: clamp(1rem, 3vw, 2rem);
+}
+.platform-shell__backdrop {
+  display: none;
+}
+.platform-stat-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.platform-overview-grid,
+.platform-detail-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.platform-attention-list {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+.platform-attention-list li {
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto 1fr auto;
+  padding-bottom: 0.75rem;
+}
+.platform-funnel {
+  display: grid;
+  gap: 0;
+}
+.platform-funnel > div,
+.platform-health-grid > div {
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  padding: 0.7rem 0;
+  text-transform: capitalize;
+}
+.platform-funnel > div:last-child,
+.platform-health-grid > div:last-child {
+  border-bottom: 0;
+}
+.platform-health-grid {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+.platform-health-grid > div {
+  margin-right: 1rem;
+}
+.platform-health-note {
+  margin-bottom: 0;
+}
+.platform-tenant-mobile {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  color: var(--text-primary);
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  text-align: left;
+  width: 100%;
+}
+.platform-tenant-mobile > div {
+  display: grid;
+  gap: 0.15rem;
+}
+.platform-tenant-mobile span {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+.platform-usage-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+.platform-capability-list {
+  display: grid;
+  gap: 0.5rem;
+}
+.platform-capability-list label {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+.platform-capability-list input {
+  accent-color: var(--fitos-energy);
+  height: 1.1rem;
+  width: 1.1rem;
+}
+.platform-capability-list span {
+  display: grid;
+  gap: 0.1rem;
+}
+.platform-capability-list small {
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+.platform-action-strip {
+  align-items: center;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+.platform-payload-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+.platform-payload-grid > div {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem;
+}
+.platform-payload-grid > div > span:first-child {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.platform-payload-grid .platform-payload-grid {
+  margin-top: 0.25rem;
+}
+.platform-value-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+}
+.platform-seed-sections {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.platform-seed-sections > section {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 1rem;
+}
+.platform-seed-sections h3 {
+  margin-top: 0;
+}
+.account-plan-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+}
+.account-plan-card {
+  display: grid;
+  gap: 1rem;
+}
+.account-plan-card__heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.account-plan-card__heading h2 {
+  margin: 0.2rem 0 0;
+}
+.account-plan-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.account-usage-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.account-capability-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.account-capability-grid section {
+  align-content: start;
+  display: grid;
+  gap: 0.5rem;
+}
+.account-capability-grid h3 {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.25rem;
+  text-transform: uppercase;
+}
+.account-capability {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.75rem;
+}
+.account-capability.is-enabled {
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border-subtle));
+}
+.account-capability > div {
+  min-width: 0;
+}
+.account-capability p {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin: 0.2rem 0 0;
+}
 
 @media (max-width: 800px) {
-  .platform-shell { display: block; }
-  .platform-sidebar { box-shadow: var(--shadow-panel); inset: 0 auto 0 0; position: fixed; transform: translateX(-105%); transition: transform var(--transition-standard); width: min(18rem, 86vw); z-index: 60; }
-  .platform-sidebar.is-open { transform: translateX(0); }
-  .platform-menu-button { display: inline-flex; }
-  .platform-shell__backdrop { background: rgb(0 0 0 / 60%); border: 0; display: block; inset: 0; position: fixed; z-index: 50; }
+  .platform-shell {
+    display: block;
+  }
+  .platform-sidebar {
+    box-shadow: var(--shadow-panel);
+    inset: 0 auto 0 0;
+    position: fixed;
+    transform: translateX(-105%);
+    transition: transform var(--transition-standard);
+    width: min(18rem, 86vw);
+    z-index: 60;
+  }
+  .platform-sidebar.is-open {
+    transform: translateX(0);
+  }
+  .platform-menu-button {
+    display: inline-flex;
+  }
+  .platform-shell__backdrop {
+    background: rgb(0 0 0 / 60%);
+    border: 0;
+    display: block;
+    inset: 0;
+    position: fixed;
+    z-index: 50;
+  }
+  .platform-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .platform-overview-grid,
+  .platform-detail-grid,
+  .platform-seed-sections {
+    grid-template-columns: 1fr;
+  }
+  .account-plan-grid,
+  .account-capability-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .platform-stat-grid,
+  .platform-usage-grid {
+    grid-template-columns: 1fr;
+  }
+  .account-usage-grid {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 760px) {
   .surface-shell-header div {

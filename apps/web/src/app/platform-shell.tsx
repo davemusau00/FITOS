@@ -35,10 +35,13 @@ export function PlatformShell() {
             fullWidth
             icon="logout"
             onClick={() => {
-              void api.platformLogout().catch(() => undefined).finally(() => {
-                window.localStorage.removeItem("fitos_platform_token");
-                navigate("/platform/login", { replace: true });
-              });
+              void api
+                .platformLogout()
+                .catch(() => undefined)
+                .finally(() => {
+                  window.localStorage.removeItem("fitos_platform_token");
+                  navigate("/platform/login", { replace: true });
+                });
             }}
             variant="ghost"
           >
@@ -48,7 +51,13 @@ export function PlatformShell() {
       </aside>
       <div className="platform-shell__main">
         <header className="platform-topbar">
-          <button aria-expanded={menuOpen} aria-label="Toggle platform navigation" className="platform-menu-button" onClick={() => setMenuOpen((value) => !value)} type="button">
+          <button
+            aria-expanded={menuOpen}
+            aria-label="Toggle platform navigation"
+            className="platform-menu-button"
+            onClick={() => setMenuOpen((value) => !value)}
+            type="button"
+          >
             <Icon name={menuOpen ? "close" : "menu"} size={20} />
           </button>
           <div>
@@ -60,7 +69,14 @@ export function PlatformShell() {
           <Outlet />
         </main>
       </div>
-      {menuOpen ? <button aria-label="Close navigation" className="platform-shell__backdrop" onClick={() => setMenuOpen(false)} type="button" /> : null}
+      {menuOpen ? (
+        <button
+          aria-label="Close navigation"
+          className="platform-shell__backdrop"
+          onClick={() => setMenuOpen(false)}
+          type="button"
+        />
+      ) : null}
     </div>
   );
 }

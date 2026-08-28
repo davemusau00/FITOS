@@ -2,19 +2,18 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FitosLogo } from "../../app/logo";
 
-export function FitosLandingPage() {
+export function FitosLandingPage({ showChrome = true }: { showChrome?: boolean }) {
   const [activeSolution, setActiveSolution] = useState<"gym" | "studio" | "lab" | "therapy">("gym");
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("annual");
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
   const solutions = {
     gym: {
       title: "Commercial Health Clubs & Multi-Branch Gyms",
       tagline:
-        "Turnstile access, automated recurring billing, member CRM, and multi-location operations.",
+        "Member CRM, attendance, scheduling, and multi-location operations in one workspace.",
       features: [
         "Multi-branch access governance & unified member roving",
-        "Automated recurring subscriptions with M-Pesa, card & direct debit",
+        "Membership entitlements, expiry queues, and retention workflows",
         "Real-time turnstile and QR biometric check-in engine",
         "Automated retention workflows for inactive & churn-risk members"
       ],
@@ -28,7 +27,7 @@ export function FitosLandingPage() {
         "Hard equipment-aware booking capacity (Reformer, Megaformer, Bike pools)",
         "Automated waitlist promotion and late-cancellation credit rules",
         "Instructor payout calculations and session utilization heatmaps",
-        "Custom branded member booking portal and PWA app"
+        "Mobile-first member booking portal"
       ],
       metrics: "Zero equipment overbooking • 94% average class occupancy"
     },
@@ -36,7 +35,7 @@ export function FitosLandingPage() {
       title: "High-Performance Sports Science & Diagnostic Labs",
       tagline: "InBody, VALD ForceDecks, COSMED VO2 Max spirometry, and athlete metric trends.",
       features: [
-        "Direct diagnostic device integration with versioned vendor mappings",
+        "Reviewed file imports with versioned vendor mappings and provenance",
         "Athlete neuromuscular asymmetry & reactive strength index (RSI)",
         "VO2 Max, aerobic threshold (VT1) and anaerobic threshold (VT2) spirometry",
         "Clinical longitudinal progress tracking and athlete export dossiers"
@@ -64,7 +63,7 @@ export function FitosLandingPage() {
     },
     {
       q: "Can I connect my InBody or VALD ForceDecks hardware to FITOS?",
-      a: "Yes. FITOS includes vendor normalization connectors for LookinBody (InBody 970/770), VALD ForceDecks, COSMED K5, and PNOE. Uploaded CSV/JSON diagnostic dossiers are parsed, validated with SHA-256 checksums, and normalized into standard SI units."
+      a: "FITOS supports reviewed CSV and JSON imports with provenance for assessment data. Live InBody, VALD, COSMED, or PNOE APIs are added only when approved vendor access and documentation are available."
     },
     {
       q: "What is the difference between Self-Service Signup and Configure FITOS?",
@@ -72,104 +71,109 @@ export function FitosLandingPage() {
     },
     {
       q: "Does FITOS provide a public website builder for our gym?",
-      a: "Yes. FITOS Sites is a built-in CMS that lets you build, theme, and publish SEO-optimized member-facing websites with live timetable widgets, instructor rosters, and trial lead capture forms without writing code."
+      a: "FITOS Sites currently provides controlled tenant pages and publishing. The broader block library, version history, media, SEO, and domain workflows are being completed progressively and are labelled by maturity."
     }
   ];
 
   return (
     <div className="saas-public-page saas-landing-page">
       {/* ── Top Navigation ── */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          backdropFilter: "blur(16px)",
-          backgroundColor: "rgba(9, 13, 22, 0.85)",
-          borderBottom: "1px solid rgba(255,255,255,0.08)"
-        }}
-      >
-        <div
+      {showChrome ? (
+        <header
           style={{
-            maxWidth: "80rem",
-            margin: "0 auto",
-            padding: "1rem 2rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
+            position: "sticky",
+            top: 0,
+            zIndex: 100,
+            backdropFilter: "blur(16px)",
+            backgroundColor: "rgba(9, 13, 22, 0.85)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)"
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "2.5rem" }}>
-            <Link to="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
-              <FitosLogo height={28} />
-            </Link>
-            <nav style={{ display: "flex", gap: "1.75rem", fontSize: "0.9rem", fontWeight: 500 }}>
-              <a
-                href="#features"
-                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+          <div
+            style={{
+              maxWidth: "80rem",
+              margin: "0 auto",
+              padding: "1rem 2rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "2.5rem" }}>
+              <Link
+                to="/"
+                style={{ display: "flex", alignItems: "center", textDecoration: "none" }}
               >
-                Capabilities
-              </a>
-              <a
-                href="#solutions"
-                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+                <FitosLogo height={28} />
+              </Link>
+              <nav style={{ display: "flex", gap: "1.75rem", fontSize: "0.9rem", fontWeight: 500 }}>
+                <a
+                  href="#features"
+                  style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+                >
+                  Capabilities
+                </a>
+                <a
+                  href="#solutions"
+                  style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+                >
+                  Solutions
+                </a>
+                <a
+                  href="#performance"
+                  style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+                >
+                  Performance Lab
+                </a>
+                <a
+                  href="#pricing"
+                  style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+                >
+                  Pricing
+                </a>
+                <a
+                  href="#faq"
+                  style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+                >
+                  FAQ
+                </a>
+              </nav>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <Link
+                to="/login"
+                style={{
+                  color: "#e2e8f0",
+                  textDecoration: "none",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  padding: "0.5rem 1rem"
+                }}
               >
-                Solutions
-              </a>
-              <a
-                href="#performance"
-                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+                Sign In
+              </Link>
+              <Link
+                to="/configure"
+                className="fitos-button fitos-button--secondary"
+                style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
               >
-                Performance Lab
-              </a>
-              <a
-                href="#pricing"
-                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
+                Configure FITOS
+              </Link>
+              <Link
+                to="/signup"
+                className="fitos-button fitos-button--primary"
+                style={{
+                  fontSize: "0.85rem",
+                  padding: "0.5rem 1.25rem",
+                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
+                }}
               >
-                Pricing
-              </a>
-              <a
-                href="#faq"
-                style={{ color: "#94a3b8", textDecoration: "none", transition: "color 0.2s" }}
-              >
-                FAQ
-              </a>
-            </nav>
+                Start Free Trial
+              </Link>
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <Link
-              to="/login"
-              style={{
-                color: "#e2e8f0",
-                textDecoration: "none",
-                fontSize: "0.9rem",
-                fontWeight: 600,
-                padding: "0.5rem 1rem"
-              }}
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/configure"
-              className="fitos-button fitos-button--secondary"
-              style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
-            >
-              Configure FITOS
-            </Link>
-            <Link
-              to="/signup"
-              className="fitos-button fitos-button--primary"
-              style={{
-                fontSize: "0.85rem",
-                padding: "0.5rem 1.25rem",
-                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)"
-              }}
-            >
-              Start Free Trial
-            </Link>
-          </div>
-        </div>
-      </header>
+        </header>
+      ) : null}
 
       {/* ── Hero Section ── */}
       <section
@@ -640,54 +644,15 @@ export function FitosLandingPage() {
               textTransform: "uppercase"
             }}
           >
-            Transparent Subscriptions
+            Capability-based plans
           </p>
           <h2 style={{ fontSize: "2.5rem", fontWeight: 700 }}>
             Built for Operators, Scaled for Growth
           </h2>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              background: "rgba(30, 41, 59, 0.8)",
-              padding: "0.25rem 0.5rem",
-              borderRadius: "0.5rem",
-              border: "1px solid rgba(255,255,255,0.1)",
-              marginTop: "1rem"
-            }}
-          >
-            <button
-              onClick={() => setBillingPeriod("monthly")}
-              style={{
-                padding: "0.4rem 1rem",
-                borderRadius: "0.35rem",
-                border: "none",
-                background: billingPeriod === "monthly" ? "#3b82f6" : "transparent",
-                color: "#fff",
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: "0.85rem"
-              }}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBillingPeriod("annual")}
-              style={{
-                padding: "0.4rem 1rem",
-                borderRadius: "0.35rem",
-                border: "none",
-                background: billingPeriod === "annual" ? "#3b82f6" : "transparent",
-                color: "#fff",
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: "0.85rem"
-              }}
-            >
-              Annual (Save 20%)
-            </button>
-          </div>
+          <p style={{ color: "#94a3b8", marginTop: "1rem" }}>
+            Compare operational scope and usage limits. Payment collection is not part of this
+            release.
+          </p>
         </div>
 
         <div
@@ -700,27 +665,27 @@ export function FitosLandingPage() {
           {[
             {
               plan: "Starter",
-              price: billingPeriod === "annual" ? "$79" : "$99",
+              scope: "Core operations",
               desc: "For single-location studios and boutique gyms launching self-service operations.",
               features: [
                 "1 Branch location",
                 "Up to 500 active members",
                 "Class booking & waitlists",
-                "M-Pesa & Card payments",
-                "Member Portal PWA",
+                "Membership entitlement tracking",
+                "Mobile-first Member Portal",
                 "Basic Inventory"
               ]
             },
             {
               plan: "Pro",
-              price: billingPeriod === "annual" ? "$199" : "$249",
+              scope: "Advanced operations",
               popular: true,
               desc: "For growing gyms, reformer studios, and recovery centers requiring full hardware and therapy.",
               features: [
                 "Up to 5 Branch locations",
                 "Up to 3,000 active members",
                 "Resource-aware equipment capacity",
-                "InBody & VALD hardware ingestion",
+                "Reviewed assessment file imports",
                 "NEUBIE & AlterG therapy protocols",
                 "Inventory Lots & Stocktakes",
                 "Automated marketing rules",
@@ -729,13 +694,13 @@ export function FitosLandingPage() {
             },
             {
               plan: "Business",
-              price: billingPeriod === "annual" ? "$399" : "$499",
+              scope: "Multi-location scale",
               desc: "For multi-chain enterprise operators, franchise brands, and high-performance institutes.",
               features: [
-                "Unlimited Branch locations",
-                "Unlimited active members",
-                "Multi-branch roving & settlement",
-                "Custom hardware API adapters",
+                "Higher branch and member limits",
+                "Multi-branch operating workspaces",
+                "Cross-branch access and reporting",
+                "Approved integration framework",
                 "Dedicated migration architect",
                 "Full SLA & custom domain hosting"
               ]
@@ -786,8 +751,7 @@ export function FitosLandingPage() {
                   {tier.desc}
                 </p>
                 <div style={{ fontSize: "2.75rem", fontWeight: 800, marginBottom: "1.5rem" }}>
-                  {tier.price}{" "}
-                  <span style={{ fontSize: "1rem", fontWeight: 500, color: "#64748b" }}>/mo</span>
+                  {tier.scope}
                 </div>
                 <ul
                   style={{
@@ -820,7 +784,7 @@ export function FitosLandingPage() {
                 className={`fitos-button ${tier.popular ? "fitos-button--primary" : "fitos-button--secondary"}`}
                 style={{ width: "100%", textAlign: "center" }}
               >
-                Start 14-day Pro Trial
+                Start FITOS trial
               </Link>
             </div>
           ))}
@@ -926,42 +890,44 @@ export function FitosLandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer
-        style={{
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          padding: "3rem 2rem",
-          color: "#64748b",
-          fontSize: "0.85rem"
-        }}
-      >
-        <div
+      {showChrome ? (
+        <footer
           style={{
-            maxWidth: "80rem",
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "1rem"
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            padding: "3rem 2rem",
+            color: "#64748b",
+            fontSize: "0.85rem"
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-            <FitosLogo height={22} />
-            <span>© 2026 FITOS Operating System. All rights reserved.</span>
+          <div
+            style={{
+              maxWidth: "80rem",
+              margin: "0 auto",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "1rem"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+              <FitosLogo height={22} />
+              <span>© 2026 FITOS Operating System. All rights reserved.</span>
+            </div>
+            <div style={{ display: "flex", gap: "1.5rem" }}>
+              <Link to="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>
+                Staff Sign In
+              </Link>
+              <Link to="/configure" style={{ color: "#94a3b8", textDecoration: "none" }}>
+                Configure FITOS
+              </Link>
+              <Link to="/signup" style={{ color: "#94a3b8", textDecoration: "none" }}>
+                SaaS Trial
+              </Link>
+            </div>
           </div>
-          <div style={{ display: "flex", gap: "1.5rem" }}>
-            <Link to="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>
-              Staff Sign In
-            </Link>
-            <Link to="/configure" style={{ color: "#94a3b8", textDecoration: "none" }}>
-              Configure FITOS
-            </Link>
-            <Link to="/signup" style={{ color: "#94a3b8", textDecoration: "none" }}>
-              SaaS Trial
-            </Link>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      ) : null}
     </div>
   );
 }

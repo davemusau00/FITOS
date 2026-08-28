@@ -1,57 +1,122 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, PageHeader, StatusBadge } from "@fitos/ui";
+import { Link } from "react-router-dom";
+import { Alert, Card, PageHeader, StatCard, StatusBadge, WorkspacePage } from "@fitos/ui";
 import { api } from "../../lib/api/client";
 import { ErrorNotice, PageLoading } from "../shared";
 
 export function PlatformOverviewPage() {
-  const query = useQuery({ queryKey: ["platform-overview"], queryFn: api.platformOverview });
+  const query = useQuery({ queryKey: ["platform", "overview"], queryFn: api.platformOverview });
   if (query.isLoading) return <PageLoading />;
   const data = query.data;
   return (
-    <>
+    <WorkspacePage density="executive">
       <PageHeader
+        eyebrow="Control plane"
         title="Platform overview"
-        description="SaaS health and customer lifecycle signals."
+        description="Customer lifecycle, implementation workload, and signals requiring a decision."
+        actions={
+          <Link className="fitos-button fitos-button--primary" to="/platform/inquiries">
+            Review implementations
+          </Link>
+        }
       />
       <ErrorNotice error={query.error} />
-      {data && (
+      {data ? (
         <>
-          <div className="card-grid">
+          <div className="platform-stat-grid">
+            <StatCard
+              icon="building"
+              label="Active tenants"
+              value={data.tenants.active}
+              detail={`${data.tenants.total} tenants across all lifecycle states`}
+              tone="success"
+            />
+            <StatCard
+              icon="spark"
+              label="Trials"
+              value={data.tenants.trial}
+              detail={`${data.tenants.onboarding} still onboarding`}
+              tone={data.tenants.trial ? "info" : "neutral"}
+            />
+            <StatCard
+              icon="users"
+              label="Active members"
+              value={data.activity.activeMembers}
+              detail="Control-plane aggregate only"
+            />
+            <StatCard
+              icon="warning"
+              label="Needs attention"
+              value={data.attention.reduce((sum, item) => sum + item.count, 0)}
+              detail="Lifecycle and quota signals"
+              tone={data.attention.length ? "warning" : "success"}
+            />
+          </div>
+          <div className="platform-overview-grid">
             <Card>
-              <strong>{data.tenants.active}</strong>
-              <p className="muted">Active tenants</p>
+              <div className="section-header-row">
+                <div>
+                  <p className="fitos-page-header__eyebrow">Action queue</p>
+                  <h2>Attention</h2>
+                </div>
+                <Link to="/platform/tenants">Open tenants</Link>
+              </div>
+              {data.attention.length ? (
+                <ul className="platform-attention-list">
+                  {data.attention.map((item) => (
+                    <li key={item.key}>
+                      <StatusBadge status={item.severity} />
+                      <span>{item.label}</span>
+                      <strong>{item.count}</strong>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Alert tone="success">
+                  No tenant lifecycle or quota items currently need attention.
+                </Alert>
+              )}
             </Card>
             <Card>
-              <strong>{data.tenants.trial}</strong>
-              <p className="muted">Trials</p>
-            </Card>
-            <Card>
-              <strong>{data.activity.activeMembers}</strong>
-              <p className="muted">Active members</p>
-            </Card>
-            <Card>
-              <strong>{data.implementation.submitted}</strong>
-              <p className="muted">Submitted inquiries</p>
+              <div className="section-header-row">
+                <div>
+                  <p className="fitos-page-header__eyebrow">Implementation funnel</p>
+                  <h2>Assisted setup</h2>
+                </div>
+                <Link to="/platform/inquiries">Open queue</Link>
+              </div>
+              <div className="platform-funnel">
+                {Object.entries(data.implementation).map(([status, count]) => (
+                  <div key={status}>
+                    <span>{status.replaceAll("_", " ")}</span>
+                    <strong>{count}</strong>
+                  </div>
+                ))}
+              </div>
             </Card>
           </div>
           <Card>
-            <h3>Platform health</h3>
-            {Object.entries(data.health).map(([key, value]) => (
-              <p key={key}>
-                {key} <StatusBadge status={value} />
-              </p>
-            ))}
-          </Card>
-          <Card>
-            <h3>Attention</h3>
-            {data.attention.length ? (
-              data.attention.map((item) => <p key={item.key}>{item.label}</p>)
-            ) : (
-              <p className="muted">No platform attention items.</p>
-            )}
+            <div className="section-header-row">
+              <div>
+                <p className="fitos-page-header__eyebrow">Existing signals</p>
+                <h2>Platform services</h2>
+              </div>
+            </div>
+            <div className="platform-health-grid">
+              {Object.entries(data.health).map(([key, value]) => (
+                <div key={key}>
+                  <span>{key}</span>
+                  <StatusBadge status={value} />
+                </div>
+              ))}
+            </div>
+            <p className="muted platform-health-note">
+              This view reports existing service summaries only; infrastructure observability
+              expansion is outside this product slice.
+            </p>
           </Card>
         </>
-      )}
-    </>
+      ) : null}
+    </WorkspacePage>
   );
 }
