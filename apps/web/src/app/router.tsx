@@ -6,6 +6,7 @@ import { SurfaceShell } from "./surface-shell";
 import { PlatformShell } from "./platform-shell";
 import { MarketingShell } from "./marketing-shell";
 import { api } from "../lib/api/client";
+import { routeMetaForPath } from "./navigation";
 import {
   AttendancePage,
   AutomationsPage,
@@ -84,6 +85,12 @@ function ProtectedRoute() {
 }
 
 export function AppRouter() {
+  const location = useLocation();
+  useEffect(() => {
+    const meta = routeMetaForPath(location.pathname);
+    if (meta?.title) document.title = `${meta.title} · FITOS`;
+  }, [location.pathname]);
+
   return (
     <Routes>
       <Route element={<MarketingShell />} path="/">
