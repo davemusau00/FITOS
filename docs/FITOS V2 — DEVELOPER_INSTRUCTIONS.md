@@ -426,6 +426,8 @@ Avoid adding:
 
 When touching an old page-local pattern, migrate reusable pieces toward shared primitives where practical.
 
+Static layout, spacing, typography, and state colors belong in shared semantic CSS classes. Keep inline styles only for values that are genuinely data-driven at render time, such as chart dimensions or calculated opacity.
+
 ---
 
 # 25. RESPONSIVE QUALITY

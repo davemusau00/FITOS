@@ -55,6 +55,7 @@ A task is **not done** until all applicable items are checked.
 - [ ] No unsafe `as unknown as` contract bypass.
 - [ ] No new duplicated page-level design system.
 - [ ] Shared UI primitives used where practical.
+- [ ] Static presentation uses shared semantic CSS; remaining inline styles are demonstrably data-driven.
 - [ ] Responsive behavior checked.
 - [ ] Keyboard/focus behavior checked.
 
