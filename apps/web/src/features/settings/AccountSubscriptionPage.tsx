@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Alert,
@@ -24,7 +24,9 @@ export default function AccountSubscriptionPage() {
   const [flags, setFlags] = useState<FeatureFlagResponse[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
+  const loadAccountPlan = useCallback(() => {
+    setLoading(true);
+    setError(null);
     void Promise.all([api.tenantSubscription(), api.tenantUsageQuotas(), api.featureFlags()])
       .then(([subscription, quotas, featureFlags]) => {
         setSub(subscription);
@@ -34,6 +36,9 @@ export default function AccountSubscriptionPage() {
       .catch(setError)
       .finally(() => setLoading(false));
   }, []);
+  useEffect(() => {
+    loadAccountPlan();
+  }, [loadAccountPlan]);
   const byCategory = useMemo(
     () =>
       flags.reduce<Record<string, FeatureFlagResponse[]>>((groups, flag) => {
@@ -94,7 +99,7 @@ export default function AccountSubscriptionPage() {
           </Link>
         }
       />
-      <ErrorNotice error={error} />
+      <ErrorNotice error={error} onRetry={loadAccountPlan} />
       {sub ? (
         <>
           <div className="account-plan-grid">
