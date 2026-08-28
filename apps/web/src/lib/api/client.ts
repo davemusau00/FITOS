@@ -649,6 +649,15 @@ export const api = {
     request<import("@fitos/contracts").AccountDeletionRequestResponse[]>(
       "/platform/deletion-requests"
     ),
+  decidePlatformDeletionRequest: (
+    requestId: string,
+    status: "reviewing" | "approved" | "rejected",
+    reason: string
+  ) =>
+    request<import("@fitos/contracts").AccountDeletionRequestResponse>(
+      `/platform/deletion-requests/${requestId}`,
+      { method: "PATCH", body: json({ status, reason }) }
+    ),
   transitionPlatformTenantStatus: (
     tenantId: string,
     status: import("@fitos/contracts").TenantAccountStatus,

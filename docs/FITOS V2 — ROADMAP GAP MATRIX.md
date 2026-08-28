@@ -244,9 +244,9 @@ Same persistence/visibility requirements as above.
 
 ## P1-009 — Account Deletion Request
 
-**Current state:** Durable deletion request creation/listing and metadata-only Platform visibility now exist, with explicit confirmation safeguards; destructive execution and Platform decision handling remain open.
+**Current state:** Durable deletion request creation/listing and Platform review decision handling now exist, with explicit confirmation safeguards; destructive execution remains open.
 
-**Implementation evidence (2026-08-28):** Added `account_deletion_requests` migration/schema, shared contract, tenant-scoped PostgreSQL/in-memory persistence, idempotent tenant create/list endpoints requiring the exact `DELETE WORKSPACE` confirmation, audit emission, and metadata-only Platform listing. Account Plan continues to explain that automated deletion is not yet available; destructive execution and Platform review remain open.
+**Implementation evidence (2026-08-28):** Added `account_deletion_requests` migration/schema, shared contract, tenant-scoped PostgreSQL/in-memory persistence, idempotent tenant create/list endpoints requiring the exact `DELETE WORKSPACE` confirmation, audit emission, Platform listing, and reason-required reviewing/approve/reject decision endpoint. Account Plan continues to explain that automated deletion is not yet available; destructive execution remains open.
 
 Same persistence/visibility requirements as above, with destructive-action safeguards.
 

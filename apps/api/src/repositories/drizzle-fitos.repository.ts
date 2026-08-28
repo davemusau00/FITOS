@@ -2664,6 +2664,19 @@ export class DrizzleFitosRepository implements FitosRepository {
       .orderBy(desc(accountDeletionRequests.createdAt));
     return rows.map((row) => this.deletionResponse(row));
   }
+  async decideAccountDeletionRequest(
+    requestId: string,
+    status: "reviewing" | "approved" | "rejected",
+    reason: string,
+    _decidedByUserId: string
+  ) {
+    const [row] = await this.db
+      .update(accountDeletionRequests)
+      .set({ status, reason, updatedAt: new Date() })
+      .where(eq(accountDeletionRequests.id, requestId))
+      .returning();
+    return row ? this.deletionResponse(row) : null;
+  }
 
   async decideAccountCancellationRequest(
     requestId: string,

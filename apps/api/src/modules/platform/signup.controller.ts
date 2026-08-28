@@ -372,6 +372,42 @@ export class PlatformController {
     return this.repository.listPlatformAccountDeletionRequests();
   }
 
+  @Patch("deletion-requests/:requestId")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async decideDeletionRequest(
+    @Param("requestId") requestId: string,
+    @Body() body: unknown,
+    @RequestId() requestIdHeader: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        status: z.enum(["reviewing", "approved", "rejected"]),
+        reason: z.string().trim().min(3).max(500)
+      })
+      .strict()
+      .parse(body);
+    const updated = await this.repository.decideAccountDeletionRequest(
+      requestId,
+      input.status,
+      input.reason,
+      request.platformActor?.userId ?? ""
+    );
+    if (!updated) throw new NotFoundException("Deletion request not found or already decided.");
+    await this.repository.recordAudit({
+      tenantId: updated.tenantId,
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "account.deletion_decided",
+      resourceType: "account_deletion_request",
+      resourceId: requestId,
+      beforeSummary: { status: "requested" },
+      afterSummary: { status: updated.status, reason: input.reason },
+      requestId: requestIdHeader
+    });
+    return updated;
+  }
+
   @Patch("cancellation-requests/:requestId")
   @AuthMode("platform")
   @RequirePlatformAdmin()

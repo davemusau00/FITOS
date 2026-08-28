@@ -423,6 +423,12 @@ export interface FitosRepository {
   listPlatformAccountDeletionRequests(): Promise<
     import("@fitos/contracts").AccountDeletionRequestResponse[]
   >;
+  decideAccountDeletionRequest(
+    requestId: string,
+    status: "reviewing" | "approved" | "rejected",
+    reason: string,
+    decidedByUserId: string
+  ): Promise<import("@fitos/contracts").AccountDeletionRequestResponse | null>;
   decideAccountCancellationRequest(
     requestId: string,
     status: "reviewing" | "approved" | "rejected",

@@ -3663,6 +3663,18 @@ export class InMemoryFitosRepository implements FitosRepository {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map((request) => ({ ...request }));
   }
+  async decideAccountDeletionRequest(
+    requestId: string,
+    status: "reviewing" | "approved" | "rejected",
+    reason: string,
+    _decidedByUserId: string
+  ) {
+    const request = this.accountDeletionRequests.get(requestId);
+    if (!request || !["requested", "reviewing"].includes(request.status)) return null;
+    const updated = { ...request, status, reason, updatedAt: now() };
+    this.accountDeletionRequests.set(requestId, updated);
+    return { ...updated };
+  }
 
   async decideAccountCancellationRequest(
     requestId: string,
