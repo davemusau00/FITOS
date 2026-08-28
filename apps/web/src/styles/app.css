@@ -4275,6 +4275,60 @@ body {
   max-width: 1000px;
   padding: 2rem 1.5rem;
 }
+
+.member-portal-profile {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 1rem 0;
+}
+
+.member-portal-profile > div {
+  background: var(--fitos-surface-raised, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--fitos-border, rgba(148, 163, 184, 0.2));
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.85rem;
+}
+
+.member-portal-profile span {
+  color: var(--fitos-muted, #94a3b8);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .member-portal-nav {
+    bottom: 0;
+    position: fixed;
+    top: auto;
+    width: 100%;
+    z-index: 20;
+  }
+
+  .member-portal-nav__inner {
+    gap: 0;
+    justify-content: space-around;
+    overflow-x: auto;
+  }
+
+  .member-portal-nav__tab {
+    flex: 1 0 20%;
+    font-size: 0.68rem;
+    justify-content: center;
+    min-height: 3.5rem;
+    padding: 0.45rem 0.2rem;
+    white-space: normal;
+  }
+
+  .member-portal-content {
+    padding-bottom: 5.5rem;
+  }
+
+  .member-portal-profile {
+    grid-template-columns: 1fr;
+  }
+}
 .member-portal-booking-card {
   display: flex;
   flex-direction: column;

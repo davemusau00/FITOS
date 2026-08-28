@@ -5,7 +5,7 @@ import { api } from "../../lib/api/client";
 import { FitosLogo } from "../../app/logo";
 import { ErrorNotice, PageLoading, formatDateTime, useToast } from "../shared";
 
-type MemberTab = "home" | "schedule" | "membership" | "attendance";
+type MemberTab = "home" | "schedule" | "membership" | "attendance" | "profile";
 
 export function MemberPortalPage() {
   const queryClient = useQueryClient();
@@ -217,12 +217,14 @@ export function MemberPortalPage() {
             { id: "home", label: "My Dashboard", icon: "dashboard" as const },
             { id: "schedule", label: "Book a Class", icon: "calendar" as const },
             { id: "membership", label: "My Membership", icon: "shield" as const },
-            { id: "attendance", label: "Visit History", icon: "check" as const }
+            { id: "attendance", label: "Visit History", icon: "check" as const },
+            { id: "profile", label: "Profile", icon: "users" as const }
           ].map((tab) => (
             <button
               className={`member-portal-nav__tab${activeTab === tab.id ? " member-portal-nav__tab--active" : ""}`}
               key={tab.id}
               onClick={() => setActiveTab(tab.id as MemberTab)}
+              aria-current={activeTab === tab.id ? "page" : undefined}
               type="button"
             >
               <Icon name={tab.icon} size={16} />
@@ -474,6 +476,29 @@ export function MemberPortalPage() {
             ) : (
               <p className="muted">No past attendance records recorded yet.</p>
             )}
+          </Card>
+        )}
+
+        {activeTab === "profile" && (
+          <Card>
+            <h2>My profile</h2>
+            <div className="member-portal-profile">
+              <div>
+                <span>Name</span>
+                <strong>
+                  {profile.firstName} {profile.lastName ?? ""}
+                </strong>
+              </div>
+              <div>
+                <span>Member number</span>
+                <strong>{profile.memberNumber ?? "Not assigned"}</strong>
+              </div>
+              <div>
+                <span>Account status</span>
+                <StatusBadge status={profile.status} />
+              </div>
+            </div>
+            <p className="muted">To update your contact details, please ask the front desk team.</p>
           </Card>
         )}
       </main>
