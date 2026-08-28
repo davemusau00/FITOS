@@ -88,7 +88,7 @@ Membership hold, resume, and renewal are examples of the required bar: each is p
 
 ### Evidence boundary
 
-Local typechecks, tests, and builds are necessary evidence for a change, but do not substitute for hosted CI, Playwright browser execution, production-image validation, or a verified deployment. Record each verification at the scope in which it was actually run.
+Local typechecks, tests, and builds are necessary evidence for a change, but do not substitute for hosted CI, Playwright browser execution, production-image validation, or a verified deployment. Queue schemas and API handoffs do not count as fulfilled worker behavior until a consumer updates durable state. Record each verification at the scope in which it was actually run.
 
 Before merge, answer **YES** to all three:
 

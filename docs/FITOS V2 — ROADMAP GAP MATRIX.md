@@ -924,7 +924,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 
-Hosted CI, Playwright browser execution, production image/smoke stages, and the remaining roadmap workflows are not implied by these local results.
+Hosted CI, Playwright browser execution, production image/smoke stages, and the remaining roadmap workflows are not implied by these local results. Worker queue schemas exist for generic exports, but no account-export fulfillment processor or future-dated plan executor is wired yet.
 
 ## Sprint Group A
 
