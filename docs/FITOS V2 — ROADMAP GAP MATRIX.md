@@ -124,9 +124,9 @@ draft replacement/unload guards are implemented; save/reload runtime verificatio
 
 ## P1-002 — Shared Branch Query-Key Strategy
 
-**Current state:** A canonical branch query-key helper exists and core Ops, Insights, Attendance, and Bookings queries now use it; broader screen migration remains in progress.
+**Current state:** A canonical branch query-key helper exists and core Ops, Insights, Attendance, Bookings, and Memberships plan queries now use it; broader screen migration remains in progress.
 
-**Implementation evidence (2026-08-28):** `apps/web/src/lib/query-keys.ts` emits stable `{ branchId }` scope segments (including explicit `all`), and `OpsDashboardPage`, `InsightsPage`, `AttendancePage`, and `BookingsPage` consume the factory. Remaining branch-sensitive screens require migration and review.
+**Implementation evidence (2026-08-28):** `apps/web/src/lib/query-keys.ts` emits stable `{ branchId }` scope segments (including explicit `all`), and `OpsDashboardPage`, `InsightsPage`, `AttendancePage`, `BookingsPage`, and `MembershipsPage` consume the factory. Remaining branch-sensitive screens require migration and review.
 
 ### Acceptance
 
