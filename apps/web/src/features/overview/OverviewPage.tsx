@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Icon, StatusBadge, EmptyState } from "@fitos/ui";
 import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
+import { branchQueryKeys } from "../../lib/query-keys";
 import { useBranch } from "../../app/branch-context";
 import { PageLoading, ErrorNotice, formatDateTime } from "../shared";
 
@@ -18,13 +19,13 @@ export function OverviewPage() {
   const { auth } = useAuth();
   const { activeBranchId, activeBranch } = useBranch();
   const today = useQuery({
-    queryKey: ["today-overview", activeBranchId],
+    queryKey: branchQueryKeys.list("today-overview", activeBranchId),
     queryFn: () => api.todayOverview(activeBranchId),
     enabled: Boolean(activeBranchId)
   });
 
   const members = useQuery({
-    queryKey: ["members", activeBranchId, "overview"],
+    queryKey: branchQueryKeys.list("members", activeBranchId, "overview"),
     queryFn: () => api.members(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
     enabled: Boolean(activeBranchId)
   });
@@ -38,13 +39,13 @@ export function OverviewPage() {
   });
 
   const bookings = useQuery({
-    queryKey: ["bookings", activeBranchId, "overview"],
+    queryKey: branchQueryKeys.list("bookings", activeBranchId, "overview"),
     queryFn: () => api.bookings(new URLSearchParams({ branchId: activeBranchId, limit: "100" })),
     enabled: can(auth, "booking:read")
   });
 
   const services = useQuery({
-    queryKey: ["services", activeBranchId, "overview"],
+    queryKey: branchQueryKeys.list("services", activeBranchId, "overview"),
     queryFn: () => api.servicesByBranch(activeBranchId),
     enabled: can(auth, "service:read")
   });
