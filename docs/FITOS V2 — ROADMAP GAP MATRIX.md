@@ -456,7 +456,7 @@ Conversion:
 
 Persist and expose CRUD.
 
-**Implementation evidence (2026-09-01):** Migration `0045_member_tags` adds tenant-scoped tag definitions and member assignments with cascading cleanup and uniqueness constraints. Shared contracts, in-memory and Drizzle repositories, and permission-gated `/members/tags` plus `/:memberId/tags` endpoints support create, update, delete, assign, unassign, and reload-safe reads with audit events. Member Detail replaces fabricated static labels with persisted tags and assignment/create/remove controls. In-memory and PostgreSQL tenancy tests cover CRUD and cross-tenant assignment isolation; the API suite passes 13 files / 79 tests. Full tag management browser coverage remains open.
+**Implementation evidence (2026-09-01):** Migration `0045_member_tags` adds tenant-scoped tag definitions and member assignments with cascading cleanup and uniqueness constraints. Shared contracts, in-memory and Drizzle repositories, and permission-gated `/members/tags` plus `/:memberId/tags` endpoints support create, update, delete, assign, unassign, and reload-safe reads with audit events. Member Detail replaces fabricated static labels with persisted tags and assignment/create/remove controls, and the Members Directory can filter by a persisted tag. In-memory and PostgreSQL tenancy tests cover CRUD, tag filtering, and cross-tenant assignment isolation; the API suite passes 13 files / 79 tests. Full tag management browser coverage remains open.
 
 ---
 

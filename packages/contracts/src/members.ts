@@ -58,6 +58,7 @@ export interface MemberListFilters {
   query?: string;
   status?: MemberStatus;
   branchId?: string;
+  tagId?: string;
   membershipStatus?: string;
   cursor?: string;
   limit?: number;

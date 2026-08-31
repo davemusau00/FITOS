@@ -1,6 +1,20 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createCsrfToken, createOpaqueSessionToken, hashSessionToken } from "@fitos/auth";
-import { and, desc, eq, gt, gte, ilike, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  exists,
+  gt,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql
+} from "drizzle-orm";
 import {
   auditEvents,
   accountExportRequests,
@@ -1019,6 +1033,22 @@ export class DrizzleFitosRepository implements FitosRepository {
     const conditions = [eq(members.tenantId, scope.tenantId), branchAccessCondition(scope)];
     if (filters.branchId) conditions.push(eq(members.homeBranchId, filters.branchId));
     if (filters.status) conditions.push(eq(members.status, filters.status));
+    if (filters.tagId) {
+      conditions.push(
+        exists(
+          this.db
+            .select({ memberId: memberTagAssignments.memberId })
+            .from(memberTagAssignments)
+            .where(
+              and(
+                eq(memberTagAssignments.tenantId, scope.tenantId),
+                eq(memberTagAssignments.memberId, members.id),
+                eq(memberTagAssignments.tagId, filters.tagId)
+              )
+            )
+        )
+      );
+    }
     if (filters.query) {
       const term = `%${filters.query.trim().replace(/[\\%_]/g, "\\$&")}%`;
       conditions.push(

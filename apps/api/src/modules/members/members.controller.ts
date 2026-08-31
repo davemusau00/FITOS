@@ -58,6 +58,7 @@ const listQuerySchema = z
     query: z.string().trim().max(160).optional(),
     status: z.enum(memberStatuses).optional(),
     branchId: z.string().uuid().optional(),
+    tagId: z.string().uuid().optional(),
     membershipStatus: z.string().trim().max(30).optional(),
     cursor: z.string().min(1).max(512).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional()

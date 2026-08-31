@@ -2380,6 +2380,16 @@ export class InMemoryFitosRepository implements FitosRepository {
       .filter((member) => !member.homeBranchId || scope.branchIds.includes(member.homeBranchId))
       .filter((member) => !filters.branchId || member.homeBranchId === filters.branchId)
       .filter((member) => !filters.status || member.status === filters.status)
+      .filter(
+        (member) =>
+          !filters.tagId ||
+          [...this.memberTagAssignments.values()].some(
+            (assignment) =>
+              assignment.tenantId === scope.tenantId &&
+              assignment.memberId === member.id &&
+              assignment.tagId === filters.tagId
+          )
+      )
       .map((member) => ({ member, contact: this.contacts.get(member.contactId) }))
       .filter((record): record is { member: StoredMember; contact: StoredContact } =>
         Boolean(record.contact)

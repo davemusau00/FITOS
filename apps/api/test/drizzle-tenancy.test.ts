@@ -67,6 +67,9 @@ describeDatabase("Drizzle tenant isolation", () => {
       repository.assignMemberTag(gymScope, member.id, tag.id, gym.user.id)
     ).resolves.toEqual(tag);
     await expect(repository.listMemberTagsForMember(gymScope, member.id)).resolves.toEqual([tag]);
+    await expect(
+      repository.searchMembers(gymScope, { tagId: tag.id, limit: 10 })
+    ).resolves.toMatchObject({ data: [expect.objectContaining({ id: member.id })] });
     await expect(repository.listMemberTagsForMember(pilatesScope, member.id)).resolves.toEqual([]);
     await expect(
       repository.assignMemberTag(pilatesScope, member.id, tag.id, pilates.user.id)

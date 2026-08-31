@@ -28,21 +28,27 @@ export function MembersPage() {
 
   const query = params.get("query") ?? "";
   const status = params.get("status") ?? "";
+  const tagId = params.get("tagId") ?? "";
   const requestParams = useMemo(() => {
     const next = new URLSearchParams();
     if (query) next.set("query", query);
     if (status) next.set("status", status);
+    if (tagId) next.set("tagId", tagId);
     else if (activeSegment === "active") next.set("status", "active");
     else if (activeSegment === "inactive") next.set("status", "inactive");
     if (activeBranchId) next.set("branchId", activeBranchId);
     next.set("limit", "100");
     return next;
-  }, [query, status, activeSegment, activeBranchId]);
+  }, [query, status, tagId, activeSegment, activeBranchId]);
 
   const members = useQuery({
     queryKey: branchQueryKeys.list("members", activeBranchId, requestParams.toString()),
     queryFn: () => api.members(requestParams),
     enabled: Boolean(activeBranchId)
+  });
+  const memberTags = useQuery({
+    queryKey: ["member-tags"],
+    queryFn: api.memberTags
   });
 
   const allMembers = members.data?.data ?? [];
@@ -147,6 +153,7 @@ export function MembersPage() {
       />
 
       <ErrorNotice error={members.error} onRetry={() => void members.refetch()} />
+      <ErrorNotice error={memberTags.error} onRetry={() => void memberTags.refetch()} />
 
       {/* KPI Stats Row */}
       <div className="kpi-grid">
@@ -222,6 +229,19 @@ export function MembersPage() {
           <option value="inactive">Inactive</option>
           <option value="suspended">Suspended</option>
           <option value="archived">Archived</option>
+        </select>
+        <select
+          aria-label="Filter members by tag"
+          className="fitos-control"
+          onChange={(event) => set("tagId", event.currentTarget.value)}
+          value={tagId}
+        >
+          <option value="">All tags</option>
+          {memberTags.data?.map((tag) => (
+            <option key={tag.id} value={tag.id}>
+              {tag.name}
+            </option>
+          ))}
         </select>
       </section>
 

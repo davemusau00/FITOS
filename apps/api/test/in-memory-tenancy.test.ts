@@ -28,6 +28,11 @@ describe("tenant isolation", () => {
       repository.assignMemberTag(scope, member.id, tag.id, owner.user.id)
     ).resolves.toEqual(tag);
     await expect(repository.listMemberTagsForMember(scope, member.id)).resolves.toEqual([tag]);
+    await expect(
+      repository.searchMembers(scope, { tagId: tag.id, limit: 10 })
+    ).resolves.toMatchObject({
+      data: [expect.objectContaining({ id: member.id })]
+    });
     const updated = await repository.updateMemberTag(scope, tag.id, {
       name: "Priority",
       color: null
