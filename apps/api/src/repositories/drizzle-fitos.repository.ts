@@ -21,6 +21,7 @@ import {
   leads,
   memberMemberships,
   notifications,
+  platformFeatureFlagOverrides,
   platformPlanDefinitions,
   members,
   memberIdentities,
@@ -491,6 +492,53 @@ export class DrizzleFitosRepository implements FitosRepository {
           isActive: row.isActive
         }
       : null;
+  }
+
+  async listPlatformFeatureFlagOverrides() {
+    const rows = await this.db
+      .select()
+      .from(platformFeatureFlagOverrides)
+      .orderBy(desc(platformFeatureFlagOverrides.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      key: row.key as import("@fitos/contracts").SaaSCapabilityKey,
+      scope: row.scope as import("@fitos/contracts").FeatureFlagScope,
+      scopeValue: row.scopeValue,
+      enabled: row.enabled,
+      reason: row.reason,
+      actorUserId: row.actorUserId,
+      previousEnabled: row.previousEnabled,
+      effectiveFrom: row.effectiveFrom?.toISOString() ?? null,
+      effectiveUntil: row.effectiveUntil?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString()
+    }));
+  }
+
+  async createPlatformFeatureFlagOverride(
+    input: Omit<import("@fitos/contracts").FeatureFlagOverrideResponse, "id" | "createdAt">
+  ) {
+    const [row] = await this.db
+      .insert(platformFeatureFlagOverrides)
+      .values({
+        ...input,
+        effectiveFrom: input.effectiveFrom ? new Date(input.effectiveFrom) : null,
+        effectiveUntil: input.effectiveUntil ? new Date(input.effectiveUntil) : null
+      })
+      .returning();
+    if (!row) throw new Error("Unable to create feature flag override.");
+    return {
+      id: row.id,
+      key: row.key as import("@fitos/contracts").SaaSCapabilityKey,
+      scope: row.scope as import("@fitos/contracts").FeatureFlagScope,
+      scopeValue: row.scopeValue,
+      enabled: row.enabled,
+      reason: row.reason,
+      actorUserId: row.actorUserId,
+      previousEnabled: row.previousEnabled,
+      effectiveFrom: row.effectiveFrom?.toISOString() ?? null,
+      effectiveUntil: row.effectiveUntil?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString()
+    };
   }
 
   async createNotification(

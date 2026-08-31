@@ -265,6 +265,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     string,
     import("@fitos/contracts").SaaSPlanDefinition
   >();
+  private readonly platformFeatureFlagOverrides = new Map<
+    string,
+    import("@fitos/contracts").FeatureFlagOverrideResponse
+  >();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly memberPasswords = new Map<string, string>();
@@ -3771,6 +3775,20 @@ export class InMemoryFitosRepository implements FitosRepository {
     };
     this.platformPlanDefinitions.set(key, updated);
     return updated;
+  }
+
+  async listPlatformFeatureFlagOverrides() {
+    return [...this.platformFeatureFlagOverrides.values()].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt)
+    );
+  }
+
+  async createPlatformFeatureFlagOverride(
+    input: Omit<import("@fitos/contracts").FeatureFlagOverrideResponse, "id" | "createdAt">
+  ) {
+    const item = { ...input, id: randomUUID(), createdAt: now() };
+    this.platformFeatureFlagOverrides.set(item.id, item);
+    return item;
   }
 
   async createNotification(
