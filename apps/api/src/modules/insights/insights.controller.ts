@@ -60,11 +60,100 @@ export class InsightsController {
       this.repository.listScheduleOccurrences(scope, {
         branchId,
         startsAfter: new Date().toISOString(),
-        endsBefore: new Date(Date.now() + 24 * 60 * 60 * 1_000).toISOString(),
+        endsBefore: new Date(Date.now() + 6 * 60 * 60 * 1_000).toISOString(),
         limit: 100
       })
     ]);
-    return { overview, sessions: sessions.data };
+    const upcoming = sessions.data;
+    const unassignedSessions = upcoming.filter((session) => !session.trainerUserId).length;
+    const constrainedSessions = upcoming.filter(
+      (session) => (session.effectiveCapacity ?? session.capacity) < session.capacity
+    ).length;
+    const alertedSessions = upcoming.filter((session) => Boolean(session.capacityAlert)).length;
+    const resourceConflicts = upcoming.filter(
+      (session) => (session.resourceWarnings?.length ?? 0) > 0
+    ).length;
+    const actionQueue: OpsAggregateResponse["signals"]["actionQueue"] = [
+      ...(overview.attendance.noShows > 0
+        ? [
+            {
+              id: "no-shows",
+              type: "no_show" as const,
+              label: "No-shows need follow-up",
+              count: overview.attendance.noShows,
+              href: "/app/attendance"
+            }
+          ]
+        : []),
+      ...(overview.bookings.waitlisted > 0
+        ? [
+            {
+              id: "waitlist",
+              type: "waitlist" as const,
+              label: "Waitlisted bookings",
+              count: overview.bookings.waitlisted,
+              href: "/app/bookings"
+            }
+          ]
+        : []),
+      ...(overview.leads.followUpsDue > 0
+        ? [
+            {
+              id: "follow-ups",
+              type: "follow_up" as const,
+              label: "Lead follow-ups due",
+              count: overview.leads.followUpsDue,
+              href: "/app/leads"
+            }
+          ]
+        : []),
+      ...(unassignedSessions > 0
+        ? [
+            {
+              id: "unassigned-staff",
+              type: "unassigned_staff" as const,
+              label: "Sessions without staff coverage",
+              count: unassignedSessions,
+              href: "/app/schedule"
+            }
+          ]
+        : []),
+      ...(resourceConflicts > 0
+        ? [
+            {
+              id: "resource-conflicts",
+              type: "resource_conflict" as const,
+              label: "Resource conflicts to resolve",
+              count: resourceConflicts,
+              href: "/app/schedule"
+            }
+          ]
+        : []),
+      ...(alertedSessions > 0
+        ? [
+            {
+              id: "capacity-alerts",
+              type: "capacity_alert" as const,
+              label: "Capacity alerts",
+              count: alertedSessions,
+              href: "/app/schedule"
+            }
+          ]
+        : [])
+    ];
+    return {
+      overview,
+      sessions: upcoming,
+      signals: {
+        staffCoverage: {
+          assignedSessions: upcoming.length - unassignedSessions,
+          unassignedSessions
+        },
+        capacityPressure: { constrainedSessions, alertedSessions },
+        resourceConflicts,
+        actionQueue
+      }
+    };
   }
 
   @Get("/coach/aggregate")

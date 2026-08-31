@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MetricsService, normalizeMetricPath } from "../src/common/metrics/metrics.service.js";
 import { InMemoryFitosRepository } from "../src/repositories/in-memory-fitos.repository.js";
+import { InsightsController } from "../src/modules/insights/insights.controller.js";
 
 describe("API metrics", () => {
   it("normalizes identifiers and exports request/error counters without tenant labels", () => {
@@ -37,5 +38,34 @@ describe("Insights no-data behavior", () => {
     expect(result.retentionCohorts).toEqual([]);
     expect(result.leadFunnel.every((stage) => stage.count === 0)).toBe(true);
     expect(result.occupancyHeatmap.every((point) => point.sessionCount === 0)).toBe(true);
+  });
+
+  it("returns operational board signals from the branch-scoped aggregate", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    const result = await new InsightsController(repository).opsAggregate(
+      {
+        tenantId: owner.tenant.id,
+        tenantUserId: owner.tenantUserId,
+        userId: owner.user.id,
+        branchIds: owner.branchIds
+      },
+      { branchId: owner.branchIds[0] }
+    );
+    expect(result.signals.staffCoverage).toEqual(
+      expect.objectContaining({
+        assignedSessions: expect.any(Number),
+        unassignedSessions: expect.any(Number)
+      })
+    );
+    expect(result.signals.capacityPressure).toEqual(
+      expect.objectContaining({
+        constrainedSessions: expect.any(Number),
+        alertedSessions: expect.any(Number)
+      })
+    );
+    expect(result.signals.actionQueue).toEqual(expect.any(Array));
   });
 });

@@ -71,6 +71,36 @@ export function OpsDashboardPage() {
           <p className="muted">Today’s operational metrics are unavailable.</p>
         </Card>
       )}
+      {today.data?.signals ? (
+        <div className="workspace-dashboard__grid">
+          <Card>
+            <h2>Staff coverage</h2>
+            <div className="workspace-session-list">
+              <div className="workspace-session">
+                <strong>{today.data.signals.staffCoverage.assignedSessions}</strong>
+                <span>Assigned upcoming sessions</span>
+              </div>
+              <div className="workspace-session">
+                <strong>{today.data.signals.staffCoverage.unassignedSessions}</strong>
+                <span>Sessions needing coverage</span>
+              </div>
+            </div>
+          </Card>
+          <Card>
+            <h2>Capacity and resources</h2>
+            <div className="workspace-session-list">
+              <div className="workspace-session">
+                <strong>{today.data.signals.capacityPressure.constrainedSessions}</strong>
+                <span>Sessions constrained by capacity</span>
+              </div>
+              <div className="workspace-session">
+                <strong>{today.data.signals.resourceConflicts}</strong>
+                <span>Resource conflicts</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      ) : null}
       <div className="workspace-dashboard__grid">
         <Card>
           <h2>Happening next</h2>
@@ -108,6 +138,24 @@ export function OpsDashboardPage() {
           ]}
         />
       </div>
+      {today.data?.signals ? (
+        <Card>
+          <h2>Action queue</h2>
+          {today.data.signals.actionQueue.length ? (
+            <div className="workspace-session-list">
+              {today.data.signals.actionQueue.map((item) => (
+                <div className="workspace-session" key={item.id}>
+                  <strong>{item.label}</strong>
+                  <span>{item.count}</span>
+                  <Link to={item.href}>Review</Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">No exceptions require action in the next six hours.</p>
+          )}
+        </Card>
+      ) : null}
       <Card>
         <h2>Scheduled sessions</h2>
         {sessions.length ? (

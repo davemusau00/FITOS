@@ -23,7 +23,7 @@ Required for roadmap completeness but can follow core operating workflows.
 **Area:** Engineering / Release  
 **Current state:** The CI workflow declares the full required verification chain, including Playwright, build, production configuration/image/smoke, dependency audit, and secret scan. A current green hosted run remains unverified in this checkout.
 
-**Implementation evidence (2026-08-31):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 75 tests; web tests and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
+**Implementation evidence (2026-08-31):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 76 tests; web tests and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
 
 ### Acceptance
 
@@ -395,7 +395,7 @@ Conversion:
 - audits conversion;
 - only then marks converted.
 
-**Implementation evidence (2026-08-31):** Added a guarded Platform `POST /platform/implementation-inquiries/:id/convert` workflow. It requires an approved inquiry and schema-validated deterministic seed manifest, supports attaching an existing tenant or creating a new tenant from the reviewed brief, revokes the generated signup session for new tenants, records a durable `conversion_handoff` event, then advances the inquiry to `converted` with `convertedTenantId` and a Platform audit record. The raw status endpoint rejects direct `converted` mutations. The Platform detail UI now exposes a conversion form with target selection, owner-password validation, reason capture, manifest counts, pending/error feedback, and persisted history. PostgreSQL persistence is covered by migration `0044_implementation_inquiry_resume_tokens` (closing the existing resume-token schema drift), Drizzle conversion/event tests, in-memory repository tests, and Platform controller tests; the API suite passes 13 files / 74 tests.
+**Implementation evidence (2026-08-31):** Added a guarded Platform `POST /platform/implementation-inquiries/:id/convert` workflow. It requires an approved inquiry and schema-validated deterministic seed manifest, supports attaching an existing tenant or creating a new tenant from the reviewed brief, revokes the generated signup session for new tenants, records a durable `conversion_handoff` event, then advances the inquiry to `converted` with `convertedTenantId` and a Platform audit record. The raw status endpoint rejects direct `converted` mutations. The Platform detail UI now exposes a conversion form with target selection, owner-password validation, reason capture, manifest counts, pending/error feedback, and persisted history. PostgreSQL persistence is covered by migration `0044_implementation_inquiry_resume_tokens` (closing the existing resume-token schema drift), Drizzle conversion/event tests, in-memory repository tests, and Platform controller tests; the API suite passes 13 files / 76 tests.
 
 ---
 
@@ -407,6 +407,8 @@ Conversion:
 - resource conflicts;
 - capacity pressure;
 - action queue.
+
+**Implementation evidence (2026-08-31):** The branch-scoped `GET /insights/ops/aggregate` now limits the working session board to the next six hours and derives staff coverage (assigned versus unassigned sessions), capacity constraints, capacity alerts, resource conflicts, and a permission-safe action queue linking no-shows, waitlist, follow-ups, unassigned coverage, resource conflicts, and capacity alerts to their existing workflows. `OpsDashboardPage` presents these signals alongside the existing KPI and session views, with an honest no-exception state. In-memory aggregate coverage passes and API/web typechecks pass; the full PostgreSQL-backed API suite passes 13 files / 76 tests.
 
 ---
 
@@ -948,7 +950,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 75 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 76 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 
