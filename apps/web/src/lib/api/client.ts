@@ -811,6 +811,10 @@ export const api = {
     ),
   implementationSeedManifest: (id: string) =>
     request<TenantSeedManifest | null>(`/platform/implementation-inquiries/${id}/seed-manifest`),
+  implementationInquiryEvents: (id: string) =>
+    request<import("@fitos/contracts").ImplementationInquiryEventResponse[]>(
+      `/platform/implementation-inquiries/${id}/events`
+    ),
   sitePages: () => request<SitePageResponse[]>("/sites/pages"),
   saveSitePage: (payload: SaveSitePageRequest) =>
     request<SitePageResponse>("/sites/pages", { method: "POST", body: json(payload) }),

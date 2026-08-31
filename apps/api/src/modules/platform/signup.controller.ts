@@ -849,6 +849,13 @@ export class PlatformController {
     return this.repository.buildTenantSeedManifest(id);
   }
 
+  @Get("implementation-inquiries/:id/events")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  listInquiryEvents(@Param("id") id: string) {
+    return this.repository.listImplementationInquiryEvents(id);
+  }
+
   // ─── Tenant Settings / Quotas ───────────────────────────────────────────────
   @Get("subscription")
   subscription(@Actor() actor: RequestActor) {

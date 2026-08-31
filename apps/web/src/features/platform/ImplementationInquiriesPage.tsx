@@ -188,6 +188,11 @@ export function ImplementationInquiryDetailPage() {
     queryFn: () => api.implementationSeedManifest(inquiryId),
     enabled: Boolean(inquiryId)
   });
+  const events = useQuery({
+    queryKey: ["platform", "inquiry", inquiryId, "events"],
+    queryFn: () => api.implementationInquiryEvents(inquiryId),
+    enabled: Boolean(inquiryId)
+  });
   const platformTenants = useQuery({
     queryKey: ["platform", "tenants"],
     queryFn: () => api.platformTenants(),
@@ -427,6 +432,25 @@ export function ImplementationInquiryDetailPage() {
             </Alert>
             {item.convertedTenantId ? (
               <p className="muted">Converted tenant: {item.convertedTenantId}</p>
+            ) : null}
+          </Card>
+          <Card>
+            <h2>Handoff history</h2>
+            {events.isLoading ? <p className="muted">Loading inquiry history…</p> : null}
+            {events.error ? <ErrorNotice error={events.error} /> : null}
+            {!events.isLoading && !events.error && events.data?.length ? (
+              <div className="platform-value-list">
+                {events.data.map((event) => (
+                  <div key={event.id} className="workspace-session">
+                    <strong>{event.eventType.replaceAll("_", " ")}</strong>
+                    <span>{formatDateTime(event.createdAt)}</span>
+                    <PayloadObject value={event.details} />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {!events.isLoading && !events.error && !events.data?.length ? (
+              <p className="muted">No Platform handoff events recorded yet.</p>
             ) : null}
           </Card>
         </div>

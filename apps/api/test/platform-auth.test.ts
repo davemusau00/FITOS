@@ -321,6 +321,9 @@ describe("implementation inquiry conversion", () => {
       status: "converted",
       convertedTenantId: owner.tenant.id
     });
+    await expect(controller.listInquiryEvents(inquiry.id)).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ eventType: "conversion_handoff" })])
+    );
     expect((await repository.listPlatformAuditEvents())[0]?.action).toBe(
       "platform.implementation_inquiry_converted"
     );
