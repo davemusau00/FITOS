@@ -650,7 +650,7 @@ Before broad feature expansion, prioritize:
 9. Complete booking waitlist.
 10. Complete membership hold/resume/renew.
 
-The Sites contract, persisted-page editing, Inventory Receive Lot foundations, and the persisted notification inbox are implemented and PostgreSQL-verified in the roadmap evidence ledger. They still require hosted/browser acceptance where noted; the next active product blockers are Playwright CI, notification producer coverage, all-location semantics, and account/workflow completion.
+The Sites contract, persisted-page editing, Inventory Receive Lot foundations, persisted notification inbox, and scoped feature-flag evaluation are implemented and PostgreSQL-verified in the roadmap evidence ledger. They still require hosted/browser acceptance where noted; the next active product blockers are Playwright CI, notification producer coverage, all-location semantics, and account/workflow completion.
 
 ---
 
