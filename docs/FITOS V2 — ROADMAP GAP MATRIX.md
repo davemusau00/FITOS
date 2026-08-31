@@ -332,7 +332,7 @@ Override history required.
 
 **Current implementation boundary (2026-08-29):** Tenant-scoped capability overrides are persisted on tenant subscriptions and exposed through the Platform tenant capability mutation with reasoned audit events. Global, plan-default override records, pilot cohorts, effective dates, and a dedicated scoped-flag history model remain open.
 
-**Additional evidence (2026-08-29):** Migration `0040_platform_feature_flag_overrides` and the shared `FeatureFlagOverrideResponse` contract now establish durable global/plan/tenant/pilot scope, effective-window, actor, reason, and previous-value fields. CRUD endpoints and evaluation semantics remain open until adapters and Platform controls consume this model.
+**Additional evidence (2026-08-29):** Migration `0040_platform_feature_flag_overrides` and the shared `FeatureFlagOverrideResponse` contract establish durable global/plan/tenant/pilot scope, effective-window, actor, reason, and previous-value fields. Drizzle/in-memory adapters and authenticated Platform `GET/POST /platform/feature-flag-overrides` endpoints now validate registry keys, scope/value combinations, and temporal windows, with audit events. Evaluation semantics and a dedicated Platform controls screen remain open.
 
 ---
 
