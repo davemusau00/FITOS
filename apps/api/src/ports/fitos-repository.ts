@@ -15,6 +15,9 @@ import type {
   MemberSegmentResponse,
   CreateMemberSegmentRequest,
   UpdateMemberSegmentRequest,
+  MemberSavedViewResponse,
+  CreateMemberSavedViewRequest,
+  UpdateMemberSavedViewRequest,
   CreateLeadRequest,
   LeadListFilters,
   LeadConversionResponse,
@@ -264,6 +267,23 @@ export interface FitosRepository {
     input: UpdateMemberSegmentRequest
   ): Promise<MemberSegmentResponse | null>;
   deleteMemberSegment(scope: TenantScope, segmentId: string): Promise<MemberSegmentResponse | null>;
+  listMemberSavedViews(scope: TenantScope, userId: string): Promise<MemberSavedViewResponse[]>;
+  createMemberSavedView(
+    scope: TenantScope,
+    userId: string,
+    input: CreateMemberSavedViewRequest
+  ): Promise<MemberSavedViewResponse>;
+  updateMemberSavedView(
+    scope: TenantScope,
+    userId: string,
+    viewId: string,
+    input: UpdateMemberSavedViewRequest
+  ): Promise<MemberSavedViewResponse | null>;
+  deleteMemberSavedView(
+    scope: TenantScope,
+    userId: string,
+    viewId: string
+  ): Promise<MemberSavedViewResponse | null>;
 
   createLead(
     scope: TenantScope,

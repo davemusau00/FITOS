@@ -109,6 +109,29 @@ describeDatabase("Drizzle tenant isolation", () => {
     });
   });
 
+  it("persists saved member views per user and isolates tenants", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const view = await repository.createMemberSavedView(gymScope, gym.user.id, {
+      name: `Active view ${crypto.randomUUID().slice(0, 8)}`,
+      filters: { query: "Amina", status: "active", branchId: gym.branchIds[0]! }
+    });
+    await expect(repository.listMemberSavedViews(gymScope, gym.user.id)).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: view.id, userId: gym.user.id })])
+    );
+    await expect(
+      repository.listMemberSavedViews(pilatesScope, pilates.user.id)
+    ).resolves.not.toEqual(expect.arrayContaining([expect.objectContaining({ id: view.id })]));
+    await expect(
+      repository.updateMemberSavedView(gymScope, gym.user.id, view.id, {
+        name: "Updated saved view"
+      })
+    ).resolves.toMatchObject({ name: "Updated saved view" });
+    await expect(
+      repository.deleteMemberSavedView(gymScope, gym.user.id, view.id)
+    ).resolves.toMatchObject({ id: view.id });
+  });
+
   it("scopes CRM records and reuses a lead contact on conversion", async () => {
     const gymScope = scopeOf(gym);
     const pilatesScope = scopeOf(pilates);

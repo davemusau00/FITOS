@@ -23,6 +23,9 @@ import type {
   MemberSegmentResponse,
   CreateMemberSegmentRequest,
   UpdateMemberSegmentRequest,
+  MemberSavedViewResponse,
+  CreateMemberSavedViewRequest,
+  UpdateMemberSavedViewRequest,
   LeadListFilters,
   LeadConversionResponse,
   LeadNoteResponse,
@@ -503,6 +506,106 @@ export class CoreService {
       }
     );
     return segment;
+  }
+
+  async listMemberSavedViews(actor: RequestActor): Promise<MemberSavedViewResponse[]> {
+    return this.repository.listMemberSavedViews(scopeOf(actor), actor.userId);
+  }
+
+  async createMemberSavedView(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateMemberSavedViewRequest
+  ): Promise<MemberSavedViewResponse> {
+    if (input.filters.branchId) this.assertBranchesAccessible(actor, [input.filters.branchId]);
+    let view: MemberSavedViewResponse;
+    try {
+      view = await this.repository.createMemberSavedView(scopeOf(actor), actor.userId, input);
+    } catch (error) {
+      if (error instanceof Error && /already exists|duplicate|unique/i.test(error.message)) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "A saved member view with this name already exists.",
+          409
+        );
+      }
+      throw error;
+    }
+    await this.audit(
+      actor,
+      requestId,
+      "member_saved_view.created",
+      "member_saved_view",
+      view.id,
+      null,
+      {
+        name: view.name,
+        filters: view.filters
+      }
+    );
+    return view;
+  }
+
+  async updateMemberSavedView(
+    actor: RequestActor,
+    requestId: string,
+    viewId: string,
+    input: UpdateMemberSavedViewRequest
+  ): Promise<MemberSavedViewResponse> {
+    if (input.filters?.branchId) this.assertBranchesAccessible(actor, [input.filters.branchId]);
+    let view: MemberSavedViewResponse | null;
+    try {
+      view = await this.repository.updateMemberSavedView(
+        scopeOf(actor),
+        actor.userId,
+        viewId,
+        input
+      );
+    } catch (error) {
+      if (error instanceof Error && /already exists|duplicate|unique/i.test(error.message)) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "A saved member view with this name already exists.",
+          409
+        );
+      }
+      throw error;
+    }
+    if (!view) throw new DomainError("RESOURCE_NOT_FOUND", "Saved member view not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "member_saved_view.updated",
+      "member_saved_view",
+      view.id,
+      null,
+      {
+        changed: Object.keys(input),
+        filters: view.filters
+      }
+    );
+    return view;
+  }
+
+  async deleteMemberSavedView(
+    actor: RequestActor,
+    requestId: string,
+    viewId: string
+  ): Promise<MemberSavedViewResponse> {
+    const view = await this.repository.deleteMemberSavedView(scopeOf(actor), actor.userId, viewId);
+    if (!view) throw new DomainError("RESOURCE_NOT_FOUND", "Saved member view not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "member_saved_view.deleted",
+      "member_saved_view",
+      view.id,
+      null,
+      {
+        name: view.name
+      }
+    );
+    return view;
   }
 
   async memberTimeline(actor: RequestActor, memberId: string): Promise<AuditEventResponse[]> {

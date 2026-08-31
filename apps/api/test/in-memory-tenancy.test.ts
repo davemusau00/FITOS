@@ -78,6 +78,54 @@ describe("tenant isolation", () => {
     await expect(repository.listMemberSegments(scope)).resolves.toEqual([]);
   });
 
+  it("persists saved member views per user and isolates tenants", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    const reception = await repository.findLoginIdentity("reception@gym.fitos.test");
+    const pilates = await repository.findLoginIdentity("owner@pilates.fitos.test");
+    if (!owner || !reception || !pilates) throw new Error("Seed identities missing.");
+    const ownerScope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const receptionScope = {
+      tenantId: reception.tenant.id,
+      tenantUserId: reception.tenantUserId,
+      userId: reception.user.id,
+      branchIds: reception.branchIds
+    };
+    const pilatesScope = {
+      tenantId: pilates.tenant.id,
+      tenantUserId: pilates.tenantUserId,
+      userId: pilates.user.id,
+      branchIds: pilates.branchIds
+    };
+    const view = await repository.createMemberSavedView(ownerScope, owner.user.id, {
+      name: "Active follow-up",
+      filters: { query: "Amina", status: "active", branchId: owner.branchIds[0] }
+    });
+    await expect(repository.listMemberSavedViews(ownerScope, owner.user.id)).resolves.toEqual([
+      view
+    ]);
+    await expect(
+      repository.listMemberSavedViews(receptionScope, reception.user.id)
+    ).resolves.toEqual([]);
+    await expect(repository.listMemberSavedViews(pilatesScope, pilates.user.id)).resolves.toEqual(
+      []
+    );
+    await expect(
+      repository.updateMemberSavedView(ownerScope, owner.user.id, view.id, {
+        name: "Active follow-up updated"
+      })
+    ).resolves.toMatchObject({ name: "Active follow-up updated" });
+    await expect(
+      repository.deleteMemberSavedView(ownerScope, owner.user.id, view.id)
+    ).resolves.toMatchObject({ id: view.id });
+  });
+
   it("scopes inbox items to their user and persists read state", async () => {
     const repository = new InMemoryFitosRepository();
     const item = await repository.createNotification({

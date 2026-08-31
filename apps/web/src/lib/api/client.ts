@@ -13,6 +13,9 @@ import type {
   MemberSegmentResponse,
   CreateMemberSegmentRequest,
   UpdateMemberSegmentRequest,
+  MemberSavedViewResponse,
+  CreateMemberSavedViewRequest,
+  UpdateMemberSavedViewRequest,
   LeadListResponse,
   LeadNoteResponse,
   LeadResponse,
@@ -284,6 +287,20 @@ export const api = {
     }),
   deleteMemberSegment: (id: string) =>
     request<MemberSegmentResponse>(`/members/segments/${id}`, { method: "DELETE" }),
+  memberSavedViews: () => request<MemberSavedViewResponse[]>("/members/views"),
+  createMemberSavedView: (payload: CreateMemberSavedViewRequest) =>
+    request<MemberSavedViewResponse>("/members/views", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateMemberSavedView: (id: string, payload: UpdateMemberSavedViewRequest) =>
+    request<MemberSavedViewResponse>(`/members/views/${id}`, {
+      method: "PATCH",
+      body: json(payload)
+    }),
+  deleteMemberSavedView: (id: string) =>
+    request<MemberSavedViewResponse>(`/members/views/${id}`, { method: "DELETE" }),
   memberTimeline: (id: string) =>
     request<
       Array<{

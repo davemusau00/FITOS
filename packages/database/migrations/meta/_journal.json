@@ -330,6 +330,13 @@
       "when": 1790361600000,
       "tag": "0046_member_segments",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1790448000000,
+      "tag": "0047_member_saved_views",
+      "breakpoints": true
     }
   ]
 }

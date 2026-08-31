@@ -46,6 +46,7 @@ import {
   memberTags,
   memberTagAssignments,
   memberSegments,
+  memberSavedViews,
   memberIdentities,
   memberSessions,
   membershipPlans,
@@ -113,6 +114,10 @@ import type {
   MemberSegmentResponse,
   CreateMemberSegmentRequest,
   UpdateMemberSegmentRequest,
+  MemberSavedViewFilters,
+  MemberSavedViewResponse,
+  CreateMemberSavedViewRequest,
+  UpdateMemberSavedViewRequest,
   LeadListFilters,
   LeadConversionResponse,
   LeadNoteResponse,
@@ -1348,6 +1353,88 @@ export class DrizzleFitosRepository implements FitosRepository {
       .where(and(eq(memberSegments.id, segmentId), eq(memberSegments.tenantId, scope.tenantId)))
       .returning();
     return segment ? this.memberSegmentResponse(segment) : null;
+  }
+
+  async listMemberSavedViews(
+    scope: TenantScope,
+    userId: string
+  ): Promise<MemberSavedViewResponse[]> {
+    if (!scope.branchIds.length) return [];
+    const rows = await this.db
+      .select()
+      .from(memberSavedViews)
+      .where(
+        and(eq(memberSavedViews.tenantId, scope.tenantId), eq(memberSavedViews.userId, userId))
+      )
+      .orderBy(memberSavedViews.name);
+    return rows.map((view) => this.memberSavedViewResponse(view));
+  }
+
+  async createMemberSavedView(
+    scope: TenantScope,
+    userId: string,
+    input: CreateMemberSavedViewRequest
+  ): Promise<MemberSavedViewResponse> {
+    if (!scope.branchIds.length) throw new Error("Branch unavailable.");
+    if (input.filters.branchId && !scope.branchIds.includes(input.filters.branchId))
+      throw new Error("Branch unavailable.");
+    const [view] = await this.db
+      .insert(memberSavedViews)
+      .values({
+        tenantId: scope.tenantId,
+        userId,
+        name: input.name.trim(),
+        filters: input.filters
+      })
+      .returning();
+    if (!view) throw new Error("Unable to create saved member view.");
+    return this.memberSavedViewResponse(view);
+  }
+
+  async updateMemberSavedView(
+    scope: TenantScope,
+    userId: string,
+    viewId: string,
+    input: UpdateMemberSavedViewRequest
+  ): Promise<MemberSavedViewResponse | null> {
+    if (!scope.branchIds.length) return null;
+    if (input.filters?.branchId && !scope.branchIds.includes(input.filters.branchId))
+      throw new Error("Branch unavailable.");
+    const [view] = await this.db
+      .update(memberSavedViews)
+      .set({
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.filters !== undefined ? { filters: input.filters } : {}),
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(memberSavedViews.id, viewId),
+          eq(memberSavedViews.tenantId, scope.tenantId),
+          eq(memberSavedViews.userId, userId)
+        )
+      )
+      .returning();
+    return view ? this.memberSavedViewResponse(view) : null;
+  }
+
+  async deleteMemberSavedView(
+    scope: TenantScope,
+    userId: string,
+    viewId: string
+  ): Promise<MemberSavedViewResponse | null> {
+    if (!scope.branchIds.length) return null;
+    const [view] = await this.db
+      .delete(memberSavedViews)
+      .where(
+        and(
+          eq(memberSavedViews.id, viewId),
+          eq(memberSavedViews.tenantId, scope.tenantId),
+          eq(memberSavedViews.userId, userId)
+        )
+      )
+      .returning();
+    return view ? this.memberSavedViewResponse(view) : null;
   }
 
   async createLead(
@@ -4273,6 +4360,20 @@ export class DrizzleFitosRepository implements FitosRepository {
       createdByUserId: segment.createdByUserId,
       createdAt: segment.createdAt.toISOString(),
       updatedAt: segment.updatedAt.toISOString()
+    };
+  }
+
+  private memberSavedViewResponse(
+    view: typeof memberSavedViews.$inferSelect
+  ): MemberSavedViewResponse {
+    return {
+      id: view.id,
+      tenantId: view.tenantId,
+      userId: view.userId,
+      name: view.name,
+      filters: (view.filters ?? {}) as MemberSavedViewFilters,
+      createdAt: view.createdAt.toISOString(),
+      updatedAt: view.updatedAt.toISOString()
     };
   }
 

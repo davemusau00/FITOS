@@ -472,6 +472,8 @@ Support reusable filtered segment definitions.
 
 Persist per user/tenant.
 
+**Implementation evidence (2026-09-01):** Migration `0047_member_saved_views` persists named member-directory views per tenant and authenticated staff user, with tenant/user/name uniqueness and updated timestamps. Permission-gated `/members/views` CRUD returns canonical resources, records create/update/delete audit events, validates branch scope, and prevents cross-user or cross-tenant reads. Members Directory can save and restore query, status, tag, and branch context; in-memory and PostgreSQL tenancy tests cover persistence and isolation, contributing to the full API suite's 13 files / 83 tests. Rename/delete controls and richer view layouts remain open.
+
 ---
 
 ## P1-025 — Member Bulk Actions
@@ -962,7 +964,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 81 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 83 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

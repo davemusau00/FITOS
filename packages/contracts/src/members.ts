@@ -114,6 +114,34 @@ export interface UpdateMemberSegmentRequest {
   filters?: MemberSegmentFilters;
 }
 
+export interface MemberSavedViewFilters {
+  query?: string;
+  status?: MemberStatus;
+  branchId?: string;
+  tagId?: string;
+  membershipStatus?: string;
+}
+
+export interface MemberSavedViewResponse {
+  id: string;
+  tenantId: string;
+  userId: string;
+  name: string;
+  filters: MemberSavedViewFilters;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMemberSavedViewRequest {
+  name: string;
+  filters: MemberSavedViewFilters;
+}
+
+export interface UpdateMemberSavedViewRequest {
+  name?: string;
+  filters?: MemberSavedViewFilters;
+}
+
 export interface MemberTimelineItem {
   id: string;
   action: string;

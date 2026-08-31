@@ -16,11 +16,13 @@ import type {
   CreateMemberRequest,
   CreateMemberTagRequest,
   CreateMemberSegmentRequest,
+  CreateMemberSavedViewRequest,
   MemberListFilters,
   RequestActor,
   UpdateMemberRequest,
   UpdateMemberTagRequest,
-  UpdateMemberSegmentRequest
+  UpdateMemberSegmentRequest,
+  UpdateMemberSavedViewRequest
 } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
@@ -70,6 +72,22 @@ const createMemberSegmentSchema = z
   })
   .strict();
 const updateMemberSegmentSchema = createMemberSegmentSchema.partial();
+const memberSavedViewFiltersSchema = z
+  .object({
+    query: z.string().trim().max(160).optional(),
+    status: z.enum(memberStatuses).optional(),
+    branchId: z.string().uuid().optional(),
+    tagId: z.string().uuid().optional(),
+    membershipStatus: z.string().trim().max(30).optional()
+  })
+  .strict();
+const createMemberSavedViewSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    filters: memberSavedViewFiltersSchema
+  })
+  .strict();
+const updateMemberSavedViewSchema = createMemberSavedViewSchema.partial();
 const listQuerySchema = z
   .object({
     query: z.string().trim().max(160).optional(),
@@ -216,6 +234,57 @@ export class MembersController {
     @Param("segmentId") segmentId: string
   ) {
     return this.core.deleteMemberSegment(actor, requestId, uuid.parse(segmentId));
+  }
+
+  @Get("views")
+  @RequirePermission("member:read")
+  listSavedViews(@Actor() actor: RequestActor) {
+    return this.core.listMemberSavedViews(actor);
+  }
+
+  @Post("views")
+  @RequirePermission("member:update")
+  createSavedView(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Body() body: unknown
+  ) {
+    const input = createMemberSavedViewSchema.parse(body) satisfies CreateMemberSavedViewRequest;
+    return this.idempotency.execute({
+      actor,
+      operation: "member-saved-view:create",
+      key: idempotencyKey,
+      body: input,
+      status: 201,
+      action: () => this.core.createMemberSavedView(actor, requestId, input)
+    });
+  }
+
+  @Patch("views/:viewId")
+  @RequirePermission("member:update")
+  updateSavedView(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("viewId") viewId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.updateMemberSavedView(
+      actor,
+      requestId,
+      uuid.parse(viewId),
+      updateMemberSavedViewSchema.parse(body) satisfies UpdateMemberSavedViewRequest
+    );
+  }
+
+  @Delete("views/:viewId")
+  @RequirePermission("member:update")
+  deleteSavedView(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("viewId") viewId: string
+  ) {
+    return this.core.deleteMemberSavedView(actor, requestId, uuid.parse(viewId));
   }
 
   @Get(":memberId/tags")

@@ -16,6 +16,9 @@ import type {
   MemberSegmentResponse,
   CreateMemberSegmentRequest,
   UpdateMemberSegmentRequest,
+  MemberSavedViewResponse,
+  CreateMemberSavedViewRequest,
+  UpdateMemberSavedViewRequest,
   CreateLeadRequest,
   LeadListFilters,
   LeadConversionResponse,
@@ -161,6 +164,7 @@ type StoredMemberTagAssignment = {
   createdAt: string;
 };
 type StoredMemberSegment = MemberSegmentResponse;
+type StoredMemberSavedView = MemberSavedViewResponse;
 type StoredLeadNote = LeadNoteResponse & { tenantId: string; leadId: string };
 type StoredLeadTask = LeadTaskResponse & { tenantId: string; leadId: string };
 type StoredService = ServiceResponse;
@@ -222,6 +226,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly memberTags = new Map<string, StoredMemberTag>();
   private readonly memberTagAssignments = new Map<string, StoredMemberTagAssignment>();
   private readonly memberSegments = new Map<string, StoredMemberSegment>();
+  private readonly memberSavedViews = new Map<string, StoredMemberSavedView>();
   private readonly leads = new Map<string, StoredLead>();
   private readonly leadNotes = new Map<string, StoredLeadNote>();
   private readonly leadTasks = new Map<string, StoredLeadTask>();
@@ -2688,6 +2693,101 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (!segment || segment.tenantId !== scope.tenantId || !scope.branchIds.length) return null;
     this.memberSegments.delete(segmentId);
     return { ...segment, filters: { ...segment.filters } };
+  }
+
+  async listMemberSavedViews(
+    scope: TenantScope,
+    userId: string
+  ): Promise<MemberSavedViewResponse[]> {
+    if (!scope.branchIds.length) return [];
+    return [...this.memberSavedViews.values()]
+      .filter((view) => view.tenantId === scope.tenantId && view.userId === userId)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((view) => ({ ...view, filters: { ...view.filters } }));
+  }
+
+  async createMemberSavedView(
+    scope: TenantScope,
+    userId: string,
+    input: CreateMemberSavedViewRequest
+  ): Promise<MemberSavedViewResponse> {
+    if (!scope.branchIds.length) throw new Error("Branch unavailable.");
+    if (input.filters.branchId && !scope.branchIds.includes(input.filters.branchId))
+      throw new Error("Branch unavailable.");
+    const name = input.name.trim();
+    if (
+      [...this.memberSavedViews.values()].some(
+        (view) =>
+          view.tenantId === scope.tenantId &&
+          view.userId === userId &&
+          view.name.toLowerCase() === name.toLowerCase()
+      )
+    )
+      throw new Error("A saved member view with this name already exists.");
+    const timestamp = now();
+    const view: StoredMemberSavedView = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      userId,
+      name,
+      filters: { ...input.filters },
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.memberSavedViews.set(view.id, view);
+    return { ...view, filters: { ...view.filters } };
+  }
+
+  async updateMemberSavedView(
+    scope: TenantScope,
+    userId: string,
+    viewId: string,
+    input: UpdateMemberSavedViewRequest
+  ): Promise<MemberSavedViewResponse | null> {
+    const view = this.memberSavedViews.get(viewId);
+    if (
+      !view ||
+      view.tenantId !== scope.tenantId ||
+      view.userId !== userId ||
+      !scope.branchIds.length
+    )
+      return null;
+    if (input.filters?.branchId && !scope.branchIds.includes(input.filters.branchId))
+      throw new Error("Branch unavailable.");
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (
+        [...this.memberSavedViews.values()].some(
+          (candidate) =>
+            candidate.id !== viewId &&
+            candidate.tenantId === scope.tenantId &&
+            candidate.userId === userId &&
+            candidate.name.toLowerCase() === name.toLowerCase()
+        )
+      )
+        throw new Error("A saved member view with this name already exists.");
+      view.name = name;
+    }
+    if (input.filters !== undefined) view.filters = { ...input.filters };
+    view.updatedAt = now();
+    return { ...view, filters: { ...view.filters } };
+  }
+
+  async deleteMemberSavedView(
+    scope: TenantScope,
+    userId: string,
+    viewId: string
+  ): Promise<MemberSavedViewResponse | null> {
+    const view = this.memberSavedViews.get(viewId);
+    if (
+      !view ||
+      view.tenantId !== scope.tenantId ||
+      view.userId !== userId ||
+      !scope.branchIds.length
+    )
+      return null;
+    this.memberSavedViews.delete(viewId);
+    return { ...view, filters: { ...view.filters } };
   }
 
   async createLead(

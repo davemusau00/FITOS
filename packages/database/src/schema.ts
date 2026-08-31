@@ -488,6 +488,37 @@ export const memberSegments = pgTable(
   ]
 );
 
+export const memberSavedViews = pgTable(
+  "member_saved_views",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    filters: jsonb("filters")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_member_saved_views_tenant_user_name").on(
+      table.tenantId,
+      table.userId,
+      table.name
+    ),
+    index("idx_member_saved_views_tenant_user_updated").on(
+      table.tenantId,
+      table.userId,
+      table.updatedAt
+    )
+  ]
+);
+
 export const memberIdentities = pgTable(
   "member_identities",
   {

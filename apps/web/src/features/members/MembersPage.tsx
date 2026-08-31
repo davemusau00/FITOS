@@ -13,7 +13,7 @@ import {
   SearchBar,
   StatusBadge
 } from "@fitos/ui";
-import type { MemberListItem, MemberStatus } from "@fitos/contracts";
+import type { MemberListItem, MemberSavedViewFilters, MemberStatus } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
 import { can, useAuth } from "../../app/auth";
@@ -29,6 +29,9 @@ export function MembersPage() {
   const [activeSegment, setActiveSegment] = useState<string>("all");
   const [segmentName, setSegmentName] = useState("");
   const [segmentError, setSegmentError] = useState<unknown>(null);
+  const [viewName, setViewName] = useState("");
+  const [viewError, setViewError] = useState<unknown>(null);
+  const [activeView, setActiveView] = useState("all");
   const { activeBranchId, branches, setActiveBranch } = useBranch();
 
   const query = params.get("query") ?? "";
@@ -59,6 +62,10 @@ export function MembersPage() {
     queryKey: ["member-segments"],
     queryFn: api.memberSegments
   });
+  const memberSavedViews = useQuery({
+    queryKey: ["member-saved-views"],
+    queryFn: api.memberSavedViews
+  });
   const createSegmentMutation = useMutation({
     mutationFn: () =>
       api.createMemberSegment({
@@ -77,6 +84,26 @@ export function MembersPage() {
       setSegmentError(null);
     },
     onError: (error) => setSegmentError(error)
+  });
+  const createViewMutation = useMutation({
+    mutationFn: () => {
+      const filters: MemberSavedViewFilters = {
+        ...(query ? { query } : {}),
+        ...(status || activeSegment === "active" || activeSegment === "inactive"
+          ? { status: (status || activeSegment) as MemberStatus }
+          : {}),
+        ...(activeBranchId ? { branchId: activeBranchId } : {}),
+        ...(tagId ? { tagId } : {})
+      };
+      return api.createMemberSavedView({ name: viewName.trim(), filters });
+    },
+    onSuccess: (view) => {
+      void queryClient.invalidateQueries({ queryKey: ["member-saved-views"] });
+      setViewName("");
+      setActiveView(view.id);
+      setViewError(null);
+    },
+    onError: (error) => setViewError(error)
   });
 
   const allMembers = members.data?.data ?? [];
@@ -182,7 +209,9 @@ export function MembersPage() {
 
       <ErrorNotice error={members.error} onRetry={() => void members.refetch()} />
       <ErrorNotice error={memberTags.error} onRetry={() => void memberTags.refetch()} />
-      <ErrorNotice error={memberSegments.error ?? segmentError} />
+      <ErrorNotice
+        error={memberSegments.error ?? memberSavedViews.error ?? segmentError ?? viewError}
+      />
 
       {/* KPI Stats Row */}
       <div className="kpi-grid">
@@ -297,6 +326,35 @@ export function MembersPage() {
             </option>
           ))}
         </select>
+        <select
+          aria-label="Use saved member view"
+          className="fitos-control"
+          onChange={(event) => {
+            const view = memberSavedViews.data?.find(
+              (item) => item.id === event.currentTarget.value
+            );
+            if (!view) return;
+            setActiveView(view.id);
+            setActiveSegment("all");
+            set("query", view.filters.query ?? "");
+            set("status", view.filters.status ?? "");
+            set("tagId", view.filters.tagId ?? "");
+            if (
+              view.filters.branchId &&
+              branches.some((branch) => branch.id === view.filters.branchId)
+            ) {
+              setActiveBranch(view.filters.branchId);
+            }
+          }}
+          value={activeView !== "all" ? activeView : ""}
+        >
+          <option value="">Saved views</option>
+          {memberSavedViews.data?.map((view) => (
+            <option key={view.id} value={view.id}>
+              {view.name}
+            </option>
+          ))}
+        </select>
         {can(auth, "member:update") ? (
           <div className="saved-segment-create">
             <input
@@ -315,6 +373,23 @@ export function MembersPage() {
               variant="secondary"
             >
               Save segment
+            </Button>
+            <input
+              aria-label="Name current member view"
+              className="fitos-control"
+              maxLength={120}
+              onChange={(event) => setViewName(event.currentTarget.value)}
+              placeholder="Save current view as…"
+              value={viewName}
+            />
+            <Button
+              disabled={!viewName.trim()}
+              loading={createViewMutation.isPending}
+              onClick={() => createViewMutation.mutate()}
+              size="small"
+              variant="secondary"
+            >
+              Save view
             </Button>
           </div>
         ) : null}
