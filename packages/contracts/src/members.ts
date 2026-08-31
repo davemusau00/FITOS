@@ -22,6 +22,19 @@ export interface UpdateMemberRequest {
   status?: MemberStatus;
 }
 
+export interface BulkMemberActionRequest {
+  memberIds: string[];
+  action: "set_status";
+  status: MemberStatus;
+}
+
+export interface BulkMemberActionResponse {
+  action: BulkMemberActionRequest["action"];
+  status: MemberStatus;
+  updated: MemberResponse[];
+  skippedMemberIds: string[];
+}
+
 export interface MemberResponse {
   id: string;
   tenantId: string;

@@ -480,6 +480,8 @@ Persist per user/tenant.
 
 Permission-safe bulk operations.
 
+**Partial implementation evidence (2026-09-01):** Members Directory now supports selecting visible members and applying a permission-gated bulk status change with duplicate-submit protection, canonical updated-member results, skipped inaccessible IDs, per-member audit events, and recoverable pending/error feedback. Broader bulk actions (tags, tasks, membership transitions, cross-page selection, and browser coverage) remain open.
+
 ---
 
 ## P1-026 — Global Tasks Domain
@@ -964,7 +966,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 83 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 84 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

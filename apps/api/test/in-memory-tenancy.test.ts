@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ScryptPasswordHasher, hashSessionToken } from "@fitos/auth";
-import type { CreateMemberRequest } from "@fitos/contracts";
+import type { CreateMemberRequest, RequestActor } from "@fitos/contracts";
 import { InMemoryFitosRepository } from "../src/repositories/in-memory-fitos.repository.js";
+import { CoreService } from "../src/modules/core/core.service.js";
 
 const memberInput = (branchId: string): CreateMemberRequest => ({
   contact: { firstName: "Amina", lastName: "Otieno", phone: "0712345678" },
@@ -124,6 +125,44 @@ describe("tenant isolation", () => {
     await expect(
       repository.deleteMemberSavedView(ownerScope, owner.user.id, view.id)
     ).resolves.toMatchObject({ id: view.id });
+  });
+
+  it("applies permission-scoped bulk member status actions and audits each update", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    const scope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const members = (await repository.searchMembers(scope, { limit: 2 })).data;
+    const actor: RequestActor = {
+      userId: owner.user.id,
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      branchIds: owner.branchIds,
+      permissions: owner.role.permissions,
+      roleKey: owner.role.key,
+      sessionId: "test-session"
+    };
+    const result = await new CoreService(repository).bulkMemberAction(actor, "bulk-request", {
+      memberIds: members.map((member) => member.id),
+      action: "set_status",
+      status: "inactive"
+    });
+    expect(result.updated).toHaveLength(members.length);
+    expect(result.skippedMemberIds).toEqual([]);
+    for (const member of members) {
+      await expect(repository.findMemberById(scope, member.id)).resolves.toMatchObject({
+        status: "inactive"
+      });
+      await expect(repository.listAuditEvents(scope, member.id)).resolves.toEqual(
+        expect.arrayContaining([expect.objectContaining({ action: "member.bulk_status_updated" })])
+      );
+    }
   });
 
   it("scopes inbox items to their user and persists read state", async () => {

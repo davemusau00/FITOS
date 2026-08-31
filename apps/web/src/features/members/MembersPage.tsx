@@ -13,7 +13,12 @@ import {
   SearchBar,
   StatusBadge
 } from "@fitos/ui";
-import type { MemberListItem, MemberSavedViewFilters, MemberStatus } from "@fitos/contracts";
+import type {
+  BulkMemberActionResponse,
+  MemberListItem,
+  MemberSavedViewFilters,
+  MemberStatus
+} from "@fitos/contracts";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
 import { can, useAuth } from "../../app/auth";
@@ -32,6 +37,9 @@ export function MembersPage() {
   const [viewName, setViewName] = useState("");
   const [viewError, setViewError] = useState<unknown>(null);
   const [activeView, setActiveView] = useState("all");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<MemberStatus>("active");
+  const [bulkResult, setBulkResult] = useState<BulkMemberActionResponse | null>(null);
   const { activeBranchId, branches, setActiveBranch } = useBranch();
 
   const query = params.get("query") ?? "";
@@ -105,6 +113,19 @@ export function MembersPage() {
     },
     onError: (error) => setViewError(error)
   });
+  const bulkMutation = useMutation({
+    mutationFn: () =>
+      api.bulkMemberAction({
+        memberIds: selectedMemberIds,
+        action: "set_status",
+        status: bulkStatus
+      }),
+    onSuccess: (result) => {
+      setSelectedMemberIds([]);
+      setBulkResult(result);
+      void queryClient.invalidateQueries({ queryKey: ["members"] });
+    }
+  });
 
   const allMembers = members.data?.data ?? [];
   const activeCount = allMembers.filter((m) => m.status === "active").length;
@@ -118,6 +139,26 @@ export function MembersPage() {
   };
 
   const memberColumns: DataTableColumn<MemberListItem>[] = [
+    {
+      id: "select",
+      header: "Select",
+      cell: (member) => (
+        <input
+          aria-label={`Select ${member.firstName} ${member.lastName ?? ""}`}
+          checked={selectedMemberIds.includes(member.id)}
+          onChange={(event) => {
+            event.stopPropagation();
+            setSelectedMemberIds((current) =>
+              event.currentTarget.checked
+                ? [...new Set([...current, member.id])]
+                : current.filter((id) => id !== member.id)
+            );
+          }}
+          onClick={(event) => event.stopPropagation()}
+          type="checkbox"
+        />
+      )
+    },
     {
       id: "member",
       header: "Member",
@@ -210,8 +251,52 @@ export function MembersPage() {
       <ErrorNotice error={members.error} onRetry={() => void members.refetch()} />
       <ErrorNotice error={memberTags.error} onRetry={() => void memberTags.refetch()} />
       <ErrorNotice
-        error={memberSegments.error ?? memberSavedViews.error ?? segmentError ?? viewError}
+        error={
+          members.error ??
+          memberSegments.error ??
+          memberSavedViews.error ??
+          segmentError ??
+          viewError ??
+          bulkMutation.error
+        }
+        onRetry={bulkMutation.error ? () => bulkMutation.mutate() : undefined}
       />
+      {bulkResult ? (
+        <div className="fitos-inline-success" role="status">
+          Updated {bulkResult.updated.length} member{bulkResult.updated.length === 1 ? "" : "s"}.
+          {bulkResult.skippedMemberIds.length
+            ? ` ${bulkResult.skippedMemberIds.length} selection${bulkResult.skippedMemberIds.length === 1 ? " was" : "s were"} unavailable and skipped.`
+            : ""}
+        </div>
+      ) : null}
+
+      {can(auth, "member:update") && selectedMemberIds.length ? (
+        <div className="bulk-action-bar" role="region" aria-label="Bulk member actions">
+          <strong>{selectedMemberIds.length} selected</strong>
+          <select
+            aria-label="Bulk member status"
+            className="fitos-control"
+            onChange={(event) => setBulkStatus(event.currentTarget.value as MemberStatus)}
+            value={bulkStatus}
+          >
+            <option value="active">Set active</option>
+            <option value="inactive">Set inactive</option>
+            <option value="suspended">Set suspended</option>
+            <option value="archived">Set archived</option>
+          </select>
+          <Button
+            loading={bulkMutation.isPending}
+            onClick={() => bulkMutation.mutate()}
+            size="small"
+            variant="primary"
+          >
+            Apply status
+          </Button>
+          <Button onClick={() => setSelectedMemberIds([])} size="small" variant="ghost">
+            Clear
+          </Button>
+        </div>
+      ) : null}
 
       {/* KPI Stats Row */}
       <div className="kpi-grid">

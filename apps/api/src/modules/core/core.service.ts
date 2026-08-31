@@ -38,6 +38,8 @@ import type {
   TenantSummary,
   UpdateBranchRequest,
   UpdateMemberRequest,
+  BulkMemberActionRequest,
+  BulkMemberActionResponse,
   UpdateLeadStageRequest,
   UpdateOrganizationRequest,
   UpdateUserProfileRequest,
@@ -297,6 +299,36 @@ export class CoreService {
       })
     );
     return updated;
+  }
+
+  async bulkMemberAction(
+    actor: RequestActor,
+    requestId: string,
+    input: BulkMemberActionRequest
+  ): Promise<BulkMemberActionResponse> {
+    const uniqueIds = [...new Set(input.memberIds)];
+    const updated: MemberResponse[] = [];
+    const skippedMemberIds: string[] = [];
+    for (const memberId of uniqueIds) {
+      const member = await this.repository.updateMember(scopeOf(actor), memberId, {
+        status: input.status
+      });
+      if (!member) {
+        skippedMemberIds.push(memberId);
+        continue;
+      }
+      updated.push(member);
+      await this.audit(actor, requestId, "member.bulk_status_updated", "member", member.id, null, {
+        status: member.status,
+        action: input.action
+      });
+    }
+    return {
+      action: input.action,
+      status: input.status,
+      updated,
+      skippedMemberIds
+    };
   }
 
   async listMemberTags(actor: RequestActor): Promise<MemberTagResponse[]> {

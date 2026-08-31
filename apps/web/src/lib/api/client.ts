@@ -26,6 +26,7 @@ import type {
   TenantSummary,
   UpdateBranchRequest,
   UpdateMemberRequest,
+  BulkMemberActionResponse,
   UpdateOrganizationRequest,
   ServiceResponse,
   CreateServiceRequest,
@@ -256,6 +257,16 @@ export const api = {
     }),
   updateMember: (id: string, payload: UpdateMemberRequest) =>
     request<MemberResponse>(`/members/${id}`, { method: "PATCH", body: json(payload) }),
+  bulkMemberAction: (payload: {
+    memberIds: string[];
+    action: "set_status";
+    status: import("@fitos/contracts").MemberStatus;
+  }) =>
+    request<BulkMemberActionResponse>("/members/bulk", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
   memberTags: () => request<MemberTagResponse[]>("/members/tags"),
   createMemberTag: (payload: CreateMemberTagRequest) =>
     request<MemberTagResponse>("/members/tags", {

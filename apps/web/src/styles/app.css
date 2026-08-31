@@ -2694,6 +2694,25 @@ body {
 .saved-segment-create .fitos-control {
   max-width: 13rem;
 }
+.bulk-action-bar {
+  align-items: center;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.8rem;
+}
+.bulk-action-bar .fitos-control {
+  max-width: 12rem;
+}
+.fitos-inline-success {
+  color: var(--status-success, #89b83f);
+  font-size: 0.86rem;
+  margin-bottom: 0.75rem;
+}
 .member-tag--plan {
   background: rgba(198, 255, 0, 0.12);
   border-color: rgba(198, 255, 0, 0.3);

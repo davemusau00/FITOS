@@ -20,6 +20,7 @@ import type {
   MemberListFilters,
   RequestActor,
   UpdateMemberRequest,
+  BulkMemberActionRequest,
   UpdateMemberTagRequest,
   UpdateMemberSegmentRequest,
   UpdateMemberSavedViewRequest
@@ -50,6 +51,17 @@ const updateMemberSchema = z
     status: z.enum(memberStatuses).optional()
   })
   .strict();
+const bulkMemberActionSchema = z
+  .object({
+    memberIds: z.array(z.string().uuid()).min(1).max(100),
+    action: z.literal("set_status"),
+    status: z.enum(memberStatuses)
+  })
+  .strict()
+  .refine((input) => new Set(input.memberIds).size === input.memberIds.length, {
+    message: "memberIds must be unique.",
+    path: ["memberIds"]
+  });
 const createMemberTagSchema = z
   .object({
     name: z.string().trim().min(1).max(80),
@@ -131,6 +143,25 @@ export class MembersController {
       body: input,
       status: 201,
       action: () => this.core.createMember(actor, requestId, input)
+    });
+  }
+
+  @Post("bulk")
+  @RequirePermission("member:update")
+  bulk(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Body() body: unknown
+  ) {
+    const input = bulkMemberActionSchema.parse(body) satisfies BulkMemberActionRequest;
+    return this.idempotency.execute({
+      actor,
+      operation: "member:bulk",
+      key: idempotencyKey,
+      body: input,
+      status: 200,
+      action: () => this.core.bulkMemberAction(actor, requestId, input)
     });
   }
 
