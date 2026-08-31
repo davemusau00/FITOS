@@ -496,7 +496,7 @@ Persist:
 
 Display in relevant records and Today.
 
-**Partial implementation evidence (2026-09-01):** Migration `0048_global_tasks` adds tenant-scoped tasks with branch, assignee, priority, status, due date, resource link, completion, and updated timestamps, and seeds the `task:read` / `task:manage` permission namespace. Permission-gated `/tasks` CRUD and completion endpoints return canonical resources, validate branch and assignee scope, use idempotency for creation, and audit lifecycle changes. The responsive `/app/tasks` queue supports creation, assignment, filtering, and completion with recoverable feedback. Today aggregation, comments, cross-domain deep links, and browser coverage remain open.
+**Partial implementation evidence (2026-09-01):** Migrations `0048_global_tasks` and `0049_task_comments` add tenant-scoped tasks with branch, assignee, priority, status, due date, resource link, completion, comments, and updated timestamps, and seed the `task:read` / `task:manage` permission namespace. Permission-gated `/tasks` CRUD, completion, and comment endpoints return canonical resources, validate branch and assignee scope, use idempotency for creation, and audit lifecycle changes. The responsive `/app/tasks` queue supports creation, assignment, filtering, completion, and expandable handoff comments with recoverable feedback. Server-side Today aggregation, richer cross-domain deep links, and browser coverage remain open.
 
 ---
 

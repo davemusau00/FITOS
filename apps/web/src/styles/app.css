@@ -2754,6 +2754,7 @@ body {
   align-items: flex-start;
   border-left: 3px solid var(--border-subtle);
   flex-direction: row;
+  flex-wrap: wrap;
   justify-content: space-between;
 }
 .task-list__item--urgent {
@@ -2764,6 +2765,42 @@ body {
 }
 .task-list__main {
   min-width: 0;
+}
+.task-list__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.task-comments {
+  border-top: 1px solid var(--border-subtle);
+  display: grid;
+  flex-basis: 100%;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+  padding-top: 0.65rem;
+}
+.task-comment {
+  background: var(--surface-2);
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.6rem;
+}
+.task-comment p {
+  margin: 0;
+}
+.task-comment span {
+  color: var(--text-muted);
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 0.2rem;
+}
+.task-comment-create {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+}
+.task-comment-create .fitos-control {
+  flex: 1;
 }
 .task-list__title-row {
   align-items: center;

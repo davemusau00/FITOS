@@ -204,6 +204,15 @@ describe("tenant isolation", () => {
       expect.objectContaining({ id: task.id, resourceId: member.id })
     ]);
     await expect(repository.findTaskById(otherScope, task.id)).resolves.toBeNull();
+    const comment = await repository.createTaskComment(
+      scope,
+      task.id,
+      { body: "Member needs a follow-up after the session." },
+      owner.user.id
+    );
+    expect(comment).toMatchObject({ taskId: task.id, authorUserId: owner.user.id });
+    await expect(repository.listTaskComments(scope, task.id)).resolves.toEqual([comment]);
+    await expect(repository.listTaskComments(otherScope, task.id)).resolves.toEqual([]);
     await expect(
       repository.updateTask(scope, task.id, { status: "in_progress" })
     ).resolves.toMatchObject({

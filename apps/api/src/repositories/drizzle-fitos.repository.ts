@@ -48,6 +48,7 @@ import {
   memberSegments,
   memberSavedViews,
   tasks,
+  taskComments,
   memberIdentities,
   memberSessions,
   membershipPlans,
@@ -123,6 +124,8 @@ import type {
   TaskListFilters,
   CreateTaskRequest,
   UpdateTaskRequest,
+  TaskCommentResponse,
+  CreateTaskCommentRequest,
   LeadListFilters,
   LeadConversionResponse,
   LeadNoteResponse,
@@ -1552,6 +1555,35 @@ export class DrizzleFitosRepository implements FitosRepository {
 
   async completeTask(scope: TenantScope, taskId: string): Promise<TaskResponse | null> {
     return this.updateTask(scope, taskId, { status: "completed" });
+  }
+
+  async listTaskComments(scope: TenantScope, taskId: string): Promise<TaskCommentResponse[]> {
+    if (!(await this.findTaskById(scope, taskId))) return [];
+    const rows = await this.db
+      .select()
+      .from(taskComments)
+      .where(and(eq(taskComments.tenantId, scope.tenantId), eq(taskComments.taskId, taskId)))
+      .orderBy(taskComments.createdAt);
+    return rows.map((comment) => this.taskCommentResponse(comment));
+  }
+
+  async createTaskComment(
+    scope: TenantScope,
+    taskId: string,
+    input: CreateTaskCommentRequest,
+    authorUserId: string
+  ): Promise<TaskCommentResponse | null> {
+    if (!(await this.findTaskById(scope, taskId))) return null;
+    const [comment] = await this.db
+      .insert(taskComments)
+      .values({
+        tenantId: scope.tenantId,
+        taskId,
+        authorUserId,
+        body: input.body.trim()
+      })
+      .returning();
+    return comment ? this.taskCommentResponse(comment) : null;
   }
 
   async createLead(
@@ -4526,6 +4558,16 @@ export class DrizzleFitosRepository implements FitosRepository {
       completedAt: task.completedAt?.toISOString() ?? null,
       createdAt: task.createdAt.toISOString(),
       updatedAt: task.updatedAt.toISOString()
+    };
+  }
+
+  private taskCommentResponse(comment: typeof taskComments.$inferSelect): TaskCommentResponse {
+    return {
+      id: comment.id,
+      taskId: comment.taskId,
+      authorUserId: comment.authorUserId,
+      body: comment.body,
+      createdAt: comment.createdAt.toISOString()
     };
   }
 

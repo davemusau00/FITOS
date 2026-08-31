@@ -23,6 +23,8 @@ import type {
   TaskListFilters,
   CreateTaskRequest,
   UpdateTaskRequest,
+  TaskCommentResponse,
+  CreateTaskCommentRequest,
   CreateLeadRequest,
   LeadListFilters,
   LeadConversionResponse,
@@ -170,6 +172,7 @@ type StoredMemberTagAssignment = {
 type StoredMemberSegment = MemberSegmentResponse;
 type StoredMemberSavedView = MemberSavedViewResponse;
 type StoredTask = TaskResponse;
+type StoredTaskComment = TaskCommentResponse & { tenantId: string };
 type StoredLeadNote = LeadNoteResponse & { tenantId: string; leadId: string };
 type StoredLeadTask = LeadTaskResponse & { tenantId: string; leadId: string };
 type StoredService = ServiceResponse;
@@ -233,6 +236,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly memberSegments = new Map<string, StoredMemberSegment>();
   private readonly memberSavedViews = new Map<string, StoredMemberSavedView>();
   private readonly tasks = new Map<string, StoredTask>();
+  private readonly taskComments = new Map<string, StoredTaskComment>();
   private readonly leads = new Map<string, StoredLead>();
   private readonly leadNotes = new Map<string, StoredLeadNote>();
   private readonly leadTasks = new Map<string, StoredLeadTask>();
@@ -2914,6 +2918,35 @@ export class InMemoryFitosRepository implements FitosRepository {
 
   async completeTask(scope: TenantScope, taskId: string): Promise<TaskResponse | null> {
     return this.updateTask(scope, taskId, { status: "completed" });
+  }
+
+  async listTaskComments(scope: TenantScope, taskId: string): Promise<TaskCommentResponse[]> {
+    if (!(await this.findTaskById(scope, taskId))) return [];
+    return [...this.taskComments.values()]
+      .filter((comment) => comment.tenantId === scope.tenantId && comment.taskId === taskId)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .map(({ tenantId: _tenantId, ...comment }) => ({ ...comment }));
+  }
+
+  async createTaskComment(
+    scope: TenantScope,
+    taskId: string,
+    input: CreateTaskCommentRequest,
+    authorUserId: string
+  ): Promise<TaskCommentResponse | null> {
+    const task = await this.findTaskById(scope, taskId);
+    if (!task) return null;
+    const comment: StoredTaskComment = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      taskId,
+      authorUserId,
+      body: input.body.trim(),
+      createdAt: now()
+    };
+    this.taskComments.set(comment.id, comment);
+    const { tenantId: _tenantId, ...response } = comment;
+    return response;
   }
 
   async createLead(

@@ -62,5 +62,17 @@ export interface TaskSummary {
   completed: number;
 }
 
+export interface TaskCommentResponse {
+  id: string;
+  taskId: string;
+  authorUserId: string | null;
+  body: string;
+  createdAt: string;
+}
+
+export interface CreateTaskCommentRequest {
+  body: string;
+}
+
 // Kept as a narrow alias for consumers that link task records from member workflows.
 export type TaskLinkedMemberStatus = MemberStatus;

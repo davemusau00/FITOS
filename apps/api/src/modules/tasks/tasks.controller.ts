@@ -3,6 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type {
   CreateTaskRequest,
+  CreateTaskCommentRequest,
   RequestActor,
   TaskListFilters,
   UpdateTaskRequest
@@ -39,6 +40,7 @@ const listTaskSchema = z
     limit: z.coerce.number().int().min(1).max(100).optional()
   })
   .passthrough();
+const taskCommentSchema = z.object({ body: z.string().trim().min(1).max(4000) }).strict();
 const uuid = z.string().uuid();
 
 @ApiTags("tasks")
@@ -53,6 +55,12 @@ export class TasksController {
   @RequirePermission("task:read")
   list(@Actor() actor: RequestActor, @Query() query: unknown) {
     return this.core.listTasks(actor, listTaskSchema.parse(query) satisfies TaskListFilters);
+  }
+
+  @Get(":taskId/comments")
+  @RequirePermission("task:read")
+  comments(@Actor() actor: RequestActor, @Param("taskId") taskId: string) {
+    return this.core.listTaskComments(actor, uuid.parse(taskId));
   }
 
   @Get(":taskId")
@@ -77,6 +85,26 @@ export class TasksController {
       body: input,
       status: 201,
       action: () => this.core.createTask(actor, requestId, input)
+    });
+  }
+
+  @Post(":taskId/comments")
+  @RequirePermission("task:manage")
+  addComment(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("taskId") taskId: string,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Body() body: unknown
+  ) {
+    const input = taskCommentSchema.parse(body) satisfies CreateTaskCommentRequest;
+    return this.idempotency.execute({
+      actor,
+      operation: "task-comment:create",
+      key: idempotencyKey,
+      body: input,
+      status: 201,
+      action: () => this.core.createTaskComment(actor, requestId, uuid.parse(taskId), input)
     });
   }
 

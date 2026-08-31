@@ -159,6 +159,15 @@ describeDatabase("Drizzle tenant isolation", () => {
       expect.arrayContaining([expect.objectContaining({ id: task.id, resourceId: member.id })])
     );
     await expect(repository.findTaskById(pilatesScope, task.id)).resolves.toBeNull();
+    const comment = await repository.createTaskComment(
+      gymScope,
+      task.id,
+      { body: "Member needs a follow-up after the session." },
+      gym.user.id
+    );
+    expect(comment).toMatchObject({ taskId: task.id, authorUserId: gym.user.id });
+    await expect(repository.listTaskComments(gymScope, task.id)).resolves.toEqual([comment]);
+    await expect(repository.listTaskComments(pilatesScope, task.id)).resolves.toEqual([]);
     await expect(
       repository.updateTask(gymScope, task.id, { status: "in_progress" })
     ).resolves.toMatchObject({

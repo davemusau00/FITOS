@@ -22,6 +22,8 @@ import type {
   TaskListFilters,
   CreateTaskRequest,
   UpdateTaskRequest,
+  TaskCommentResponse,
+  CreateTaskCommentRequest,
   CreateLeadRequest,
   LeadListFilters,
   LeadConversionResponse,
@@ -301,6 +303,13 @@ export interface FitosRepository {
     input: UpdateTaskRequest
   ): Promise<TaskResponse | null>;
   completeTask(scope: TenantScope, taskId: string): Promise<TaskResponse | null>;
+  listTaskComments(scope: TenantScope, taskId: string): Promise<TaskCommentResponse[]>;
+  createTaskComment(
+    scope: TenantScope,
+    taskId: string,
+    input: CreateTaskCommentRequest,
+    authorUserId: string
+  ): Promise<TaskCommentResponse | null>;
 
   createLead(
     scope: TenantScope,

@@ -114,7 +114,9 @@ import type {
   TaskResponse,
   TaskListFilters,
   CreateTaskRequest,
-  UpdateTaskRequest
+  UpdateTaskRequest,
+  TaskCommentResponse,
+  CreateTaskCommentRequest
 } from "@fitos/contracts";
 
 export class ApiClientError extends Error {
@@ -333,6 +335,13 @@ export const api = {
   updateTask: (id: string, payload: UpdateTaskRequest) =>
     request<TaskResponse>(`/tasks/${id}`, { method: "PATCH", body: json(payload) }),
   completeTask: (id: string) => request<TaskResponse>(`/tasks/${id}/complete`, { method: "POST" }),
+  taskComments: (id: string) => request<TaskCommentResponse[]>(`/tasks/${id}/comments`),
+  createTaskComment: (id: string, payload: CreateTaskCommentRequest) =>
+    request<TaskCommentResponse>(`/tasks/${id}/comments`, {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
   memberTimeline: (id: string) =>
     request<
       Array<{

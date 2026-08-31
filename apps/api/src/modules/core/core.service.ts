@@ -44,6 +44,8 @@ import type {
   TaskListFilters,
   CreateTaskRequest,
   UpdateTaskRequest,
+  TaskCommentResponse,
+  CreateTaskCommentRequest,
   UpdateLeadStageRequest,
   UpdateOrganizationRequest,
   UpdateUserProfileRequest,
@@ -406,6 +408,30 @@ export class CoreService {
       completedAt: task.completedAt
     });
     return task;
+  }
+
+  async listTaskComments(actor: RequestActor, taskId: string): Promise<TaskCommentResponse[]> {
+    await this.getTask(actor, taskId);
+    return this.repository.listTaskComments(scopeOf(actor), taskId);
+  }
+
+  async createTaskComment(
+    actor: RequestActor,
+    requestId: string,
+    taskId: string,
+    input: CreateTaskCommentRequest
+  ): Promise<TaskCommentResponse> {
+    const comment = await this.repository.createTaskComment(
+      scopeOf(actor),
+      taskId,
+      input,
+      actor.userId
+    );
+    if (!comment) throw new DomainError("RESOURCE_NOT_FOUND", "Task not found.", 404);
+    await this.audit(actor, requestId, "task.comment_added", "task", taskId, null, {
+      commentId: comment.id
+    });
+    return comment;
   }
 
   async listMemberTags(actor: RequestActor): Promise<MemberTagResponse[]> {

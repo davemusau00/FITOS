@@ -24,6 +24,8 @@ export function TasksPage() {
   const [dueAt, setDueAt] = useState("");
   const [assigneeUserId, setAssigneeUserId] = useState("");
   const [status, setStatus] = useState<TaskStatus | "all">("all");
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [commentBody, setCommentBody] = useState("");
 
   const tasks = useQuery({
     queryKey: ["tasks", activeBranchId, status],
@@ -61,6 +63,18 @@ export function TasksPage() {
     mutationFn: (taskId: string) => api.completeTask(taskId),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tasks"] })
   });
+  const comments = useQuery({
+    queryKey: ["task-comments", expandedTaskId],
+    queryFn: () => api.taskComments(expandedTaskId!),
+    enabled: Boolean(expandedTaskId) && can(auth, "task:read")
+  });
+  const addComment = useMutation({
+    mutationFn: () => api.createTaskComment(expandedTaskId!, { body: commentBody.trim() }),
+    onSuccess: () => {
+      setCommentBody("");
+      void queryClient.invalidateQueries({ queryKey: ["task-comments", expandedTaskId] });
+    }
+  });
 
   if (!can(auth, "task:read")) {
     return (
@@ -78,7 +92,16 @@ export function TasksPage() {
         title="Tasks"
         description="Keep cross-domain follow-ups visible, assigned, and recoverable from one queue."
       />
-      <ErrorNotice error={tasks.error ?? staff.error ?? create.error ?? complete.error} />
+      <ErrorNotice
+        error={
+          tasks.error ??
+          staff.error ??
+          create.error ??
+          complete.error ??
+          comments.error ??
+          addComment.error
+        }
+      />
       {can(auth, "task:manage") ? (
         <Card className="task-create-card">
           <div className="task-create-card__header">
@@ -201,17 +224,63 @@ export function TasksPage() {
                   <span>{task.assigneeUserId ? "Assigned" : "Unassigned"}</span>
                 </div>
               </div>
-              {can(auth, "task:manage") &&
-              task.status !== "completed" &&
-              task.status !== "cancelled" ? (
+              <div className="task-list__actions">
+                {can(auth, "task:manage") &&
+                task.status !== "completed" &&
+                task.status !== "cancelled" ? (
+                  <Button
+                    loading={complete.isPending && complete.variables === task.id}
+                    onClick={() => complete.mutate(task.id)}
+                    size="small"
+                    variant="secondary"
+                  >
+                    Complete
+                  </Button>
+                ) : null}
                 <Button
-                  loading={complete.isPending && complete.variables === task.id}
-                  onClick={() => complete.mutate(task.id)}
+                  onClick={() =>
+                    setExpandedTaskId((current) => (current === task.id ? null : task.id))
+                  }
                   size="small"
-                  variant="secondary"
+                  variant="ghost"
                 >
-                  Complete
+                  {expandedTaskId === task.id ? "Hide comments" : "Comments"}
                 </Button>
+              </div>
+              {expandedTaskId === task.id ? (
+                <div className="task-comments">
+                  {comments.isLoading ? <span className="muted">Loading comments…</span> : null}
+                  {comments.data?.map((comment) => (
+                    <div className="task-comment" key={comment.id}>
+                      <p>{comment.body}</p>
+                      <span>{formatDate(comment.createdAt)}</span>
+                    </div>
+                  ))}
+                  {!comments.isLoading && !comments.data?.length ? (
+                    <span className="muted">No comments yet.</span>
+                  ) : null}
+                  {can(auth, "task:manage") ? (
+                    <div className="task-comment-create">
+                      <input
+                        aria-label="Add task comment"
+                        className="fitos-control"
+                        maxLength={4000}
+                        onChange={(event) => setCommentBody(event.currentTarget.value)}
+                        placeholder="Add context or handoff note…"
+                        value={commentBody}
+                      />
+                      <Button
+                        disabled={!commentBody.trim()}
+                        loading={addComment.isPending}
+                        onClick={() => addComment.mutate()}
+                        size="small"
+                        variant="secondary"
+                      >
+                        Add comment
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
             </Card>
           ))}
