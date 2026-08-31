@@ -20,6 +20,9 @@ import type {
   MemberTagResponse,
   CreateMemberTagRequest,
   UpdateMemberTagRequest,
+  MemberSegmentResponse,
+  CreateMemberSegmentRequest,
+  UpdateMemberSegmentRequest,
   LeadListFilters,
   LeadConversionResponse,
   LeadNoteResponse,
@@ -405,6 +408,101 @@ export class CoreService {
       });
     }
     return { removed };
+  }
+
+  async listMemberSegments(actor: RequestActor): Promise<MemberSegmentResponse[]> {
+    return this.repository.listMemberSegments(scopeOf(actor));
+  }
+
+  async createMemberSegment(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateMemberSegmentRequest
+  ): Promise<MemberSegmentResponse> {
+    if (input.filters.branchId) this.assertBranchesAccessible(actor, [input.filters.branchId]);
+    let segment: MemberSegmentResponse;
+    try {
+      segment = await this.repository.createMemberSegment(scopeOf(actor), input, actor.userId);
+    } catch (error) {
+      if (error instanceof Error && /already exists|duplicate|unique/i.test(error.message)) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "A member segment with this name already exists.",
+          409
+        );
+      }
+      throw error;
+    }
+    await this.audit(
+      actor,
+      requestId,
+      "member_segment.created",
+      "member_segment",
+      segment.id,
+      null,
+      {
+        name: segment.name,
+        filters: segment.filters
+      }
+    );
+    return segment;
+  }
+
+  async updateMemberSegment(
+    actor: RequestActor,
+    requestId: string,
+    segmentId: string,
+    input: UpdateMemberSegmentRequest
+  ): Promise<MemberSegmentResponse> {
+    if (input.filters?.branchId) this.assertBranchesAccessible(actor, [input.filters.branchId]);
+    let segment: MemberSegmentResponse | null;
+    try {
+      segment = await this.repository.updateMemberSegment(scopeOf(actor), segmentId, input);
+    } catch (error) {
+      if (error instanceof Error && /already exists|duplicate|unique/i.test(error.message)) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "A member segment with this name already exists.",
+          409
+        );
+      }
+      throw error;
+    }
+    if (!segment) throw new DomainError("RESOURCE_NOT_FOUND", "Member segment not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "member_segment.updated",
+      "member_segment",
+      segment.id,
+      null,
+      {
+        changed: Object.keys(input),
+        filters: segment.filters
+      }
+    );
+    return segment;
+  }
+
+  async deleteMemberSegment(
+    actor: RequestActor,
+    requestId: string,
+    segmentId: string
+  ): Promise<MemberSegmentResponse> {
+    const segment = await this.repository.deleteMemberSegment(scopeOf(actor), segmentId);
+    if (!segment) throw new DomainError("RESOURCE_NOT_FOUND", "Member segment not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "member_segment.deleted",
+      "member_segment",
+      segment.id,
+      null,
+      {
+        name: segment.name
+      }
+    );
+    return segment;
   }
 
   async memberTimeline(actor: RequestActor, memberId: string): Promise<AuditEventResponse[]> {

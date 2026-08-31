@@ -13,6 +13,9 @@ import type {
   MemberTagResponse,
   CreateMemberTagRequest,
   UpdateMemberTagRequest,
+  MemberSegmentResponse,
+  CreateMemberSegmentRequest,
+  UpdateMemberSegmentRequest,
   CreateLeadRequest,
   LeadListFilters,
   LeadConversionResponse,
@@ -157,6 +160,7 @@ type StoredMemberTagAssignment = {
   assignedByUserId: string | null;
   createdAt: string;
 };
+type StoredMemberSegment = MemberSegmentResponse;
 type StoredLeadNote = LeadNoteResponse & { tenantId: string; leadId: string };
 type StoredLeadTask = LeadTaskResponse & { tenantId: string; leadId: string };
 type StoredService = ServiceResponse;
@@ -217,6 +221,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly members = new Map<string, StoredMember>();
   private readonly memberTags = new Map<string, StoredMemberTag>();
   private readonly memberTagAssignments = new Map<string, StoredMemberTagAssignment>();
+  private readonly memberSegments = new Map<string, StoredMemberSegment>();
   private readonly leads = new Map<string, StoredLead>();
   private readonly leadNotes = new Map<string, StoredLeadNote>();
   private readonly leadTasks = new Map<string, StoredLeadTask>();
@@ -2598,6 +2603,91 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (!assignment || assignment.tenantId !== scope.tenantId) return false;
     this.memberTagAssignments.delete(`${memberId}:${tagId}`);
     return true;
+  }
+
+  async listMemberSegments(scope: TenantScope): Promise<MemberSegmentResponse[]> {
+    if (!scope.branchIds.length) return [];
+    return [...this.memberSegments.values()]
+      .filter((segment) => segment.tenantId === scope.tenantId)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((segment) => ({ ...segment, filters: { ...segment.filters } }));
+  }
+
+  async createMemberSegment(
+    scope: TenantScope,
+    input: CreateMemberSegmentRequest,
+    actorUserId: string
+  ): Promise<MemberSegmentResponse> {
+    if (!scope.branchIds.length) throw new Error("Branch unavailable.");
+    if (input.filters.branchId && !scope.branchIds.includes(input.filters.branchId))
+      throw new Error("Branch unavailable.");
+    if (input.filters.tagId) {
+      const tag = this.memberTags.get(input.filters.tagId);
+      if (!tag || tag.tenantId !== scope.tenantId) throw new Error("Member tag unavailable.");
+    }
+    const name = input.name.trim();
+    if (
+      [...this.memberSegments.values()].some(
+        (segment) =>
+          segment.tenantId === scope.tenantId && segment.name.toLowerCase() === name.toLowerCase()
+      )
+    )
+      throw new Error("A member segment with this name already exists.");
+    const timestamp = now();
+    const segment: StoredMemberSegment = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      name,
+      description: input.description?.trim() || null,
+      filters: { ...input.filters },
+      createdByUserId: actorUserId,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.memberSegments.set(segment.id, segment);
+    return { ...segment, filters: { ...segment.filters } };
+  }
+
+  async updateMemberSegment(
+    scope: TenantScope,
+    segmentId: string,
+    input: UpdateMemberSegmentRequest
+  ): Promise<MemberSegmentResponse | null> {
+    const segment = this.memberSegments.get(segmentId);
+    if (!segment || segment.tenantId !== scope.tenantId || !scope.branchIds.length) return null;
+    if (input.filters?.branchId && !scope.branchIds.includes(input.filters.branchId))
+      throw new Error("Branch unavailable.");
+    if (input.filters?.tagId) {
+      const tag = this.memberTags.get(input.filters.tagId);
+      if (!tag || tag.tenantId !== scope.tenantId) throw new Error("Member tag unavailable.");
+    }
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (
+        [...this.memberSegments.values()].some(
+          (candidate) =>
+            candidate.id !== segmentId &&
+            candidate.tenantId === scope.tenantId &&
+            candidate.name.toLowerCase() === name.toLowerCase()
+        )
+      )
+        throw new Error("A member segment with this name already exists.");
+      segment.name = name;
+    }
+    if (input.description !== undefined) segment.description = input.description?.trim() || null;
+    if (input.filters !== undefined) segment.filters = { ...input.filters };
+    segment.updatedAt = now();
+    return { ...segment, filters: { ...segment.filters } };
+  }
+
+  async deleteMemberSegment(
+    scope: TenantScope,
+    segmentId: string
+  ): Promise<MemberSegmentResponse | null> {
+    const segment = this.memberSegments.get(segmentId);
+    if (!segment || segment.tenantId !== scope.tenantId || !scope.branchIds.length) return null;
+    this.memberSegments.delete(segmentId);
+    return { ...segment, filters: { ...segment.filters } };
   }
 
   async createLead(

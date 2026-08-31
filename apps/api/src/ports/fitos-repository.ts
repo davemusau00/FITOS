@@ -12,6 +12,9 @@ import type {
   MemberTagResponse,
   CreateMemberTagRequest,
   UpdateMemberTagRequest,
+  MemberSegmentResponse,
+  CreateMemberSegmentRequest,
+  UpdateMemberSegmentRequest,
   CreateLeadRequest,
   LeadListFilters,
   LeadConversionResponse,
@@ -249,6 +252,18 @@ export interface FitosRepository {
     actorUserId: string
   ): Promise<MemberTagResponse | null>;
   unassignMemberTag(scope: TenantScope, memberId: string, tagId: string): Promise<boolean>;
+  listMemberSegments(scope: TenantScope): Promise<MemberSegmentResponse[]>;
+  createMemberSegment(
+    scope: TenantScope,
+    input: CreateMemberSegmentRequest,
+    actorUserId: string
+  ): Promise<MemberSegmentResponse>;
+  updateMemberSegment(
+    scope: TenantScope,
+    segmentId: string,
+    input: UpdateMemberSegmentRequest
+  ): Promise<MemberSegmentResponse | null>;
+  deleteMemberSegment(scope: TenantScope, segmentId: string): Promise<MemberSegmentResponse | null>;
 
   createLead(
     scope: TenantScope,

@@ -464,6 +464,8 @@ Persist and expose CRUD.
 
 Support reusable filtered segment definitions.
 
+**Implementation evidence (2026-09-01):** Migration `0046_member_segments` persists tenant-scoped named segment definitions with validated status, branch, and member-tag filters. Permission-gated `/members/segments` endpoints support idempotent create plus update/delete and audit events; Members Directory loads the definitions, applies selected filters, and can save the current filter state as a segment. In-memory and PostgreSQL tenancy tests cover persistence, tenant isolation, filter validation, and reload-safe definitions. Per-user saved views, richer boolean criteria, and full browser coverage remain open.
+
 ---
 
 ## P1-024 — Saved Member Views
@@ -960,7 +962,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 79 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 81 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

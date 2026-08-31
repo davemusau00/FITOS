@@ -464,6 +464,30 @@ export const memberTagAssignments = pgTable(
   ]
 );
 
+export const memberSegments = pgTable(
+  "member_segments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    description: text("description"),
+    filters: jsonb("filters")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_member_segments_tenant_name").on(table.tenantId, table.name),
+    index("idx_member_segments_tenant_updated").on(table.tenantId, table.updatedAt)
+  ]
+);
+
 export const memberIdentities = pgTable(
   "member_identities",
   {

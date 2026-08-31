@@ -10,6 +10,9 @@ import type {
   MemberTagResponse,
   CreateMemberTagRequest,
   UpdateMemberTagRequest,
+  MemberSegmentResponse,
+  CreateMemberSegmentRequest,
+  UpdateMemberSegmentRequest,
   LeadListResponse,
   LeadNoteResponse,
   LeadResponse,
@@ -267,6 +270,20 @@ export const api = {
     request<MemberTagResponse>(`/members/${memberId}/tags/${tagId}`, { method: "POST" }),
   unassignMemberTag: (memberId: string, tagId: string) =>
     request<{ removed: boolean }>(`/members/${memberId}/tags/${tagId}`, { method: "DELETE" }),
+  memberSegments: () => request<MemberSegmentResponse[]>("/members/segments"),
+  createMemberSegment: (payload: CreateMemberSegmentRequest) =>
+    request<MemberSegmentResponse>("/members/segments", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateMemberSegment: (id: string, payload: UpdateMemberSegmentRequest) =>
+    request<MemberSegmentResponse>(`/members/segments/${id}`, {
+      method: "PATCH",
+      body: json(payload)
+    }),
+  deleteMemberSegment: (id: string) =>
+    request<MemberSegmentResponse>(`/members/segments/${id}`, { method: "DELETE" }),
   memberTimeline: (id: string) =>
     request<
       Array<{

@@ -45,6 +45,7 @@ import {
   members,
   memberTags,
   memberTagAssignments,
+  memberSegments,
   memberIdentities,
   memberSessions,
   membershipPlans,
@@ -108,6 +109,10 @@ import type {
   MemberTagResponse,
   CreateMemberTagRequest,
   UpdateMemberTagRequest,
+  MemberSegmentFilters,
+  MemberSegmentResponse,
+  CreateMemberSegmentRequest,
+  UpdateMemberSegmentRequest,
   LeadListFilters,
   LeadConversionResponse,
   LeadNoteResponse,
@@ -1260,6 +1265,89 @@ export class DrizzleFitosRepository implements FitosRepository {
       )
       .returning({ memberId: memberTagAssignments.memberId });
     return deleted.length > 0;
+  }
+
+  async listMemberSegments(scope: TenantScope): Promise<MemberSegmentResponse[]> {
+    if (!scope.branchIds.length) return [];
+    const rows = await this.db
+      .select()
+      .from(memberSegments)
+      .where(eq(memberSegments.tenantId, scope.tenantId))
+      .orderBy(memberSegments.name);
+    return rows.map((segment) => this.memberSegmentResponse(segment));
+  }
+
+  async createMemberSegment(
+    scope: TenantScope,
+    input: CreateMemberSegmentRequest,
+    actorUserId: string
+  ): Promise<MemberSegmentResponse> {
+    if (!scope.branchIds.length) throw new Error("Branch unavailable.");
+    if (input.filters.branchId && !scope.branchIds.includes(input.filters.branchId))
+      throw new Error("Branch unavailable.");
+    if (input.filters.tagId) {
+      const [tag] = await this.db
+        .select({ id: memberTags.id })
+        .from(memberTags)
+        .where(and(eq(memberTags.id, input.filters.tagId), eq(memberTags.tenantId, scope.tenantId)))
+        .limit(1);
+      if (!tag) throw new Error("Member tag unavailable.");
+    }
+    const [segment] = await this.db
+      .insert(memberSegments)
+      .values({
+        tenantId: scope.tenantId,
+        name: input.name.trim(),
+        description: input.description?.trim() || null,
+        filters: input.filters,
+        createdByUserId: actorUserId
+      })
+      .returning();
+    if (!segment) throw new Error("Unable to create member segment.");
+    return this.memberSegmentResponse(segment);
+  }
+
+  async updateMemberSegment(
+    scope: TenantScope,
+    segmentId: string,
+    input: UpdateMemberSegmentRequest
+  ): Promise<MemberSegmentResponse | null> {
+    if (!scope.branchIds.length) return null;
+    if (input.filters?.branchId && !scope.branchIds.includes(input.filters.branchId))
+      throw new Error("Branch unavailable.");
+    if (input.filters?.tagId) {
+      const [tag] = await this.db
+        .select({ id: memberTags.id })
+        .from(memberTags)
+        .where(and(eq(memberTags.id, input.filters.tagId), eq(memberTags.tenantId, scope.tenantId)))
+        .limit(1);
+      if (!tag) throw new Error("Member tag unavailable.");
+    }
+    const [segment] = await this.db
+      .update(memberSegments)
+      .set({
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.description !== undefined
+          ? { description: input.description?.trim() || null }
+          : {}),
+        ...(input.filters !== undefined ? { filters: input.filters } : {}),
+        updatedAt: new Date()
+      })
+      .where(and(eq(memberSegments.id, segmentId), eq(memberSegments.tenantId, scope.tenantId)))
+      .returning();
+    return segment ? this.memberSegmentResponse(segment) : null;
+  }
+
+  async deleteMemberSegment(
+    scope: TenantScope,
+    segmentId: string
+  ): Promise<MemberSegmentResponse | null> {
+    if (!scope.branchIds.length) return null;
+    const [segment] = await this.db
+      .delete(memberSegments)
+      .where(and(eq(memberSegments.id, segmentId), eq(memberSegments.tenantId, scope.tenantId)))
+      .returning();
+    return segment ? this.memberSegmentResponse(segment) : null;
   }
 
   async createLead(
@@ -4170,6 +4258,21 @@ export class DrizzleFitosRepository implements FitosRepository {
       color: tag.color,
       createdAt: tag.createdAt.toISOString(),
       updatedAt: tag.updatedAt.toISOString()
+    };
+  }
+
+  private memberSegmentResponse(
+    segment: typeof memberSegments.$inferSelect
+  ): MemberSegmentResponse {
+    return {
+      id: segment.id,
+      tenantId: segment.tenantId,
+      name: segment.name,
+      description: segment.description,
+      filters: (segment.filters ?? {}) as MemberSegmentFilters,
+      createdByUserId: segment.createdByUserId,
+      createdAt: segment.createdAt.toISOString(),
+      updatedAt: segment.updatedAt.toISOString()
     };
   }
 

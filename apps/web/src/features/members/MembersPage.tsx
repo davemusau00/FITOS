@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Card,
@@ -13,17 +13,22 @@ import {
   SearchBar,
   StatusBadge
 } from "@fitos/ui";
-import type { MemberListItem } from "@fitos/contracts";
+import type { MemberListItem, MemberStatus } from "@fitos/contracts";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
+import { can, useAuth } from "../../app/auth";
 import { useBranch } from "../../app/branch-context";
 import { PageLoading, ErrorNotice, formatDate } from "../shared";
 
 export function MembersPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const { auth } = useAuth();
   const [selectedQuickMember, setSelectedQuickMember] = useState<MemberListItem | null>(null);
   const [activeSegment, setActiveSegment] = useState<string>("all");
+  const [segmentName, setSegmentName] = useState("");
+  const [segmentError, setSegmentError] = useState<unknown>(null);
   const { activeBranchId, branches, setActiveBranch } = useBranch();
 
   const query = params.get("query") ?? "";
@@ -49,6 +54,29 @@ export function MembersPage() {
   const memberTags = useQuery({
     queryKey: ["member-tags"],
     queryFn: api.memberTags
+  });
+  const memberSegments = useQuery({
+    queryKey: ["member-segments"],
+    queryFn: api.memberSegments
+  });
+  const createSegmentMutation = useMutation({
+    mutationFn: () =>
+      api.createMemberSegment({
+        name: segmentName.trim(),
+        filters: {
+          ...(status || activeSegment === "active" || activeSegment === "inactive"
+            ? { status: (status || activeSegment) as MemberStatus }
+            : {}),
+          ...(tagId ? { tagId } : {})
+        }
+      }),
+    onSuccess: (segment) => {
+      void queryClient.invalidateQueries({ queryKey: ["member-segments"] });
+      setSegmentName("");
+      setActiveSegment(segment.id);
+      setSegmentError(null);
+    },
+    onError: (error) => setSegmentError(error)
   });
 
   const allMembers = members.data?.data ?? [];
@@ -154,6 +182,7 @@ export function MembersPage() {
 
       <ErrorNotice error={members.error} onRetry={() => void members.refetch()} />
       <ErrorNotice error={memberTags.error} onRetry={() => void memberTags.refetch()} />
+      <ErrorNotice error={memberSegments.error ?? segmentError} />
 
       {/* KPI Stats Row */}
       <div className="kpi-grid">
@@ -243,6 +272,52 @@ export function MembersPage() {
             </option>
           ))}
         </select>
+        <select
+          aria-label="Use saved member segment"
+          className="fitos-control"
+          onChange={(event) => {
+            const segment = memberSegments.data?.find(
+              (item) => item.id === event.currentTarget.value
+            );
+            if (!segment) return;
+            setActiveSegment(segment.id);
+            set("status", segment.filters.status ?? "");
+            set("tagId", segment.filters.tagId ?? "");
+          }}
+          value={
+            activeSegment !== "all" && activeSegment !== "active" && activeSegment !== "inactive"
+              ? activeSegment
+              : ""
+          }
+        >
+          <option value="">Saved segments</option>
+          {memberSegments.data?.map((segment) => (
+            <option key={segment.id} value={segment.id}>
+              {segment.name}
+            </option>
+          ))}
+        </select>
+        {can(auth, "member:update") ? (
+          <div className="saved-segment-create">
+            <input
+              aria-label="Name current member segment"
+              className="fitos-control"
+              maxLength={120}
+              onChange={(event) => setSegmentName(event.currentTarget.value)}
+              placeholder="Save current filters as…"
+              value={segmentName}
+            />
+            <Button
+              disabled={!segmentName.trim()}
+              loading={createSegmentMutation.isPending}
+              onClick={() => createSegmentMutation.mutate()}
+              size="small"
+              variant="secondary"
+            >
+              Save segment
+            </Button>
+          </div>
+        ) : null}
       </section>
 
       {members.isLoading ? (

@@ -15,10 +15,12 @@ import { z } from "zod";
 import type {
   CreateMemberRequest,
   CreateMemberTagRequest,
+  CreateMemberSegmentRequest,
   MemberListFilters,
   RequestActor,
   UpdateMemberRequest,
-  UpdateMemberTagRequest
+  UpdateMemberTagRequest,
+  UpdateMemberSegmentRequest
 } from "@fitos/contracts";
 import { RequirePermission } from "../../common/auth/permissions.decorator.js";
 import { Actor, RequestId } from "../../common/request-context/actor.decorator.js";
@@ -53,6 +55,21 @@ const createMemberTagSchema = z
   })
   .strict();
 const updateMemberTagSchema = createMemberTagSchema.partial();
+const memberSegmentFiltersSchema = z
+  .object({
+    status: z.enum(memberStatuses).optional(),
+    branchId: z.string().uuid().optional(),
+    tagId: z.string().uuid().optional()
+  })
+  .strict();
+const createMemberSegmentSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    description: z.string().trim().max(500).nullable().optional(),
+    filters: memberSegmentFiltersSchema
+  })
+  .strict();
+const updateMemberSegmentSchema = createMemberSegmentSchema.partial();
 const listQuerySchema = z
   .object({
     query: z.string().trim().max(160).optional(),
@@ -148,6 +165,57 @@ export class MembersController {
     @Param("tagId") tagId: string
   ) {
     return this.core.deleteMemberTag(actor, requestId, uuid.parse(tagId));
+  }
+
+  @Get("segments")
+  @RequirePermission("member:read")
+  listSegments(@Actor() actor: RequestActor) {
+    return this.core.listMemberSegments(actor);
+  }
+
+  @Post("segments")
+  @RequirePermission("member:update")
+  createSegment(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+    @Body() body: unknown
+  ) {
+    const input = createMemberSegmentSchema.parse(body) satisfies CreateMemberSegmentRequest;
+    return this.idempotency.execute({
+      actor,
+      operation: "member-segment:create",
+      key: idempotencyKey,
+      body: input,
+      status: 201,
+      action: () => this.core.createMemberSegment(actor, requestId, input)
+    });
+  }
+
+  @Patch("segments/:segmentId")
+  @RequirePermission("member:update")
+  updateSegment(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("segmentId") segmentId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.updateMemberSegment(
+      actor,
+      requestId,
+      uuid.parse(segmentId),
+      updateMemberSegmentSchema.parse(body) satisfies UpdateMemberSegmentRequest
+    );
+  }
+
+  @Delete("segments/:segmentId")
+  @RequirePermission("member:update")
+  deleteSegment(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("segmentId") segmentId: string
+  ) {
+    return this.core.deleteMemberSegment(actor, requestId, uuid.parse(segmentId));
   }
 
   @Get(":memberId/tags")

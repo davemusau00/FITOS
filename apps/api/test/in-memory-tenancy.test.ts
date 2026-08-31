@@ -43,6 +43,41 @@ describe("tenant isolation", () => {
     await expect(repository.listMemberTagsForMember(scope, member.id)).resolves.toEqual([]);
   });
 
+  it("persists reusable member segments with validated filters", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    const scope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const tag = await repository.createMemberTag(scope, { name: "Segment tag" });
+    const segment = await repository.createMemberSegment(
+      scope,
+      {
+        name: "Active tagged",
+        description: "Follow-up cohort",
+        filters: { status: "active", tagId: tag.id }
+      },
+      owner.user.id
+    );
+    await expect(repository.listMemberSegments(scope)).resolves.toEqual([segment]);
+    const updated = await repository.updateMemberSegment(scope, segment.id, {
+      description: "Updated cohort"
+    });
+    expect(updated).toMatchObject({
+      description: "Updated cohort",
+      filters: { status: "active", tagId: tag.id }
+    });
+    await expect(repository.deleteMemberSegment(scope, segment.id)).resolves.toMatchObject({
+      id: segment.id
+    });
+    await expect(repository.listMemberSegments(scope)).resolves.toEqual([]);
+  });
+
   it("scopes inbox items to their user and persists read state", async () => {
     const repository = new InMemoryFitosRepository();
     const item = await repository.createNotification({

@@ -2685,6 +2685,15 @@ body {
 .member-tags-editor .fitos-control {
   max-width: 11rem;
 }
+.saved-segment-create {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.saved-segment-create .fitos-control {
+  max-width: 13rem;
+}
 .member-tag--plan {
   background: rgba(198, 255, 0, 0.12);
   border-color: rgba(198, 255, 0, 0.3);

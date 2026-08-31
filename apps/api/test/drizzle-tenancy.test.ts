@@ -80,6 +80,35 @@ describeDatabase("Drizzle tenant isolation", () => {
     });
   });
 
+  it("persists reusable member segments and isolates definitions by tenant", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const segment = await repository.createMemberSegment(
+      gymScope,
+      {
+        name: `Active segment ${crypto.randomUUID().slice(0, 8)}`,
+        description: "Database segment",
+        filters: { status: "active" }
+      },
+      gym.user.id
+    );
+    expect(segment.filters).toEqual({ status: "active" });
+    await expect(repository.listMemberSegments(gymScope)).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: segment.id })])
+    );
+    await expect(repository.listMemberSegments(pilatesScope)).resolves.not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: segment.id })])
+    );
+    await expect(
+      repository.updateMemberSegment(gymScope, segment.id, {
+        description: "Updated database segment"
+      })
+    ).resolves.toMatchObject({ description: "Updated database segment" });
+    await expect(repository.deleteMemberSegment(gymScope, segment.id)).resolves.toMatchObject({
+      id: segment.id
+    });
+  });
+
   it("scopes CRM records and reuses a lead contact on conversion", async () => {
     const gymScope = scopeOf(gym);
     const pilatesScope = scopeOf(pilates);

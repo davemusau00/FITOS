@@ -85,6 +85,35 @@ export interface UpdateMemberTagRequest {
   color?: string | null;
 }
 
+export interface MemberSegmentFilters {
+  status?: MemberStatus;
+  branchId?: string;
+  tagId?: string;
+}
+
+export interface MemberSegmentResponse {
+  id: string;
+  tenantId: string;
+  name: string;
+  description: string | null;
+  filters: MemberSegmentFilters;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMemberSegmentRequest {
+  name: string;
+  description?: string | null;
+  filters: MemberSegmentFilters;
+}
+
+export interface UpdateMemberSegmentRequest {
+  name?: string;
+  description?: string | null;
+  filters?: MemberSegmentFilters;
+}
+
 export interface MemberTimelineItem {
   id: string;
   action: string;
