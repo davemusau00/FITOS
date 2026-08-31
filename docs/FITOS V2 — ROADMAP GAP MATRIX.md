@@ -522,6 +522,8 @@ Task/due-date based.
 
 Lead trial should create/link a real booking.
 
+**Partial implementation evidence (2026-09-01):** Converted leads can now select a future scheduled occurrence in the Leads detail workspace and call the idempotent `POST /leads/:id/trial-booking` workflow. The server enforces conversion and branch alignment, reuses booking capacity/entitlement rules, persists the booking, advances the lead to `trial_booked`, and records audit/event history. In-memory and PostgreSQL regression coverage verify the persisted booking and conversion prerequisite. Existing booking history, rescheduling, waitlist messaging, and browser acceptance remain open.
+
 ---
 
 ## P1-030 — Membership Hold
@@ -972,7 +974,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 88 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 14 files and 91 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

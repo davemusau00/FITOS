@@ -33,6 +33,8 @@ import type {
   LeadResponse,
   LeadTaskResponse,
   CreateLeadTaskRequest,
+  CreateLeadTrialBookingRequest,
+  LeadTrialBookingResponse,
   RequestActor,
   RoleResponse,
   StaffUserResponse,
@@ -839,6 +841,58 @@ export class CoreService {
     });
     await this.publish(eventOf(actor, "lead.converted", { leadId, memberId: result.member.id }));
     return result;
+  }
+
+  async bookLeadTrial(
+    actor: RequestActor,
+    requestId: string,
+    leadId: string,
+    input: CreateLeadTrialBookingRequest
+  ): Promise<LeadTrialBookingResponse> {
+    const lead = await this.getLead(actor, leadId);
+    if (!lead.convertedMemberId) {
+      throw new DomainError(
+        "VALIDATION_FAILED",
+        "Convert this lead to a member before booking a trial.",
+        409,
+        { memberId: ["Lead has not been converted to a member."] }
+      );
+    }
+    const occurrence = await this.getScheduleOccurrence(actor, input.occurrenceId);
+    if (lead.branchId && occurrence.branchId !== lead.branchId) {
+      throw new DomainError(
+        "BRANCH_ACCESS_DENIED",
+        "The trial must be booked at the lead's branch.",
+        409
+      );
+    }
+    const booking = await this.createBooking(actor, requestId, {
+      occurrenceId: occurrence.id,
+      memberId: lead.convertedMemberId,
+      source: "staff"
+    });
+    const updatedLead = await this.repository.updateLeadStage(
+      scopeOf(actor),
+      lead.id,
+      { stage: "trial_booked" },
+      actor.userId
+    );
+    if (!updatedLead) {
+      throw new DomainError("RESOURCE_NOT_FOUND", "Lead not found.", 404);
+    }
+    await this.audit(actor, requestId, "lead.trial_booked", "lead", lead.id, lead.branchId, {
+      occurrenceId: booking.occurrenceId,
+      bookingId: booking.id,
+      memberId: booking.memberId
+    });
+    await this.publish(
+      eventOf(actor, "lead.trial_booked", {
+        leadId: lead.id,
+        bookingId: booking.id,
+        memberId: booking.memberId
+      })
+    );
+    return { lead: updatedLead, booking };
   }
 
   async addLeadNote(

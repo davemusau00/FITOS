@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { normalizePhone } from "@fitos/shared";
 import { DrizzleFitosRepository } from "../src/repositories/drizzle-fitos.repository.js";
+import { CoreService } from "../src/modules/core/core.service.js";
 import { generateWeeklyOccurrences } from "../src/modules/schedule/recurrence.js";
 import type { LoginIdentity, TenantScope } from "../src/ports/fitos-repository.js";
 
@@ -954,5 +955,73 @@ describeDatabase("Drizzle tenant isolation", () => {
     await expect(repository.listAccountDeletionRequests(scopeOf(pilates))).resolves.not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: deletion.id })])
     );
+  });
+
+  it("persists converted-lead trial bookings and lead stage", async () => {
+    const gymScope = scopeOf(gym);
+    const branchId = gym.branchIds[0]!;
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const lead = await repository.createLead(
+      gymScope,
+      {
+        branchId,
+        contact: { firstName: "DB Trial", lastName: suffix },
+        interest: "Assessment"
+      },
+      null
+    );
+    const converted = await repository.convertLead(gymScope, lead.id, gym.user.id);
+    if (!converted) throw new Error("Lead conversion failed.");
+    const plan = await repository.createMembershipPlan(gymScope, {
+      branchId,
+      name: `DB Trial Plan ${suffix}`,
+      includedCredits: 1,
+      durationDays: 30
+    });
+    await repository.activateMembership(gymScope, {
+      memberId: converted.member.id,
+      planId: plan.id
+    });
+    const service = await repository.createService(gymScope, {
+      branchId,
+      name: `DB Trial Service ${suffix}`,
+      serviceType: "class",
+      durationMinutes: 30,
+      defaultCapacity: 4,
+      creditsRequired: 1
+    });
+    const startsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const occurrence = await repository.createScheduleOccurrence(gymScope, {
+      branchId,
+      serviceId: service.id,
+      startsAt: startsAt.toISOString(),
+      endsAt: new Date(startsAt.getTime() + 30 * 60 * 1000).toISOString(),
+      capacity: 4
+    });
+    const actor = {
+      userId: gym.user.id,
+      tenantId: gym.tenant.id,
+      tenantUserId: gym.tenantUserId,
+      branchIds: gym.branchIds,
+      permissions: [...gym.role.permissions],
+      roleKey: gym.role.key,
+      sessionId: `db-trial-${suffix}`
+    };
+
+    const result = await new CoreService(repository).bookLeadTrial(actor, `db-${suffix}`, lead.id, {
+      occurrenceId: occurrence.id
+    });
+
+    expect(result.lead.stage).toBe("trial_booked");
+    expect(result.booking).toMatchObject({
+      tenantId: gym.tenant.id,
+      occurrenceId: occurrence.id,
+      memberId: converted.member.id,
+      status: "confirmed"
+    });
+    await expect(repository.findBookingById(gymScope, result.booking.id)).resolves.toMatchObject({
+      id: result.booking.id,
+      memberId: converted.member.id
+    });
   });
 });

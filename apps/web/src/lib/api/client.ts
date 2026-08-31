@@ -21,6 +21,7 @@ import type {
   LeadResponse,
   LeadTaskResponse,
   LeadWorkloadResponse,
+  LeadTrialBookingResponse,
   CreateLeadTaskRequest,
   UpdateLeadStageRequest,
   StaffUserResponse,
@@ -371,6 +372,12 @@ export const api = {
       `/leads/${id}/convert`,
       { method: "POST", body: json({}) }
     ),
+  bookLeadTrial: (id: string, occurrenceId: string) =>
+    request<LeadTrialBookingResponse>(`/leads/${id}/trial-booking`, {
+      method: "POST",
+      body: json({ occurrenceId }),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
   leadNotes: (id: string) => request<LeadNoteResponse[]>(`/leads/${id}/notes`),
   addLeadNote: (id: string, body: string) =>
     request<LeadNoteResponse>(`/leads/${id}/notes`, {

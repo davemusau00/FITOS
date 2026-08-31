@@ -64,6 +64,7 @@ const listSchema = z
   })
   .passthrough();
 const workloadSchema = z.object({ branchId: z.string().uuid().optional() }).passthrough();
+const trialBookingSchema = z.object({ occurrenceId: z.string().uuid() }).strict();
 
 @ApiTags("leads")
 @Controller("leads")
@@ -134,6 +135,27 @@ export class LeadsController {
     @Param("leadId") leadId: string
   ) {
     return this.core.convertLead(actor, requestId, z.string().uuid().parse(leadId));
+  }
+
+  @Post(":leadId/trial-booking")
+  @RequirePermission("booking:create", "lead:update")
+  trialBooking(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Headers("idempotency-key") key: string | undefined,
+    @Param("leadId") leadId: string,
+    @Body() body: unknown
+  ) {
+    const input = trialBookingSchema.parse(body);
+    return this.idempotency.execute({
+      actor,
+      operation: "lead:trial-booking",
+      key,
+      body: { leadId, ...input },
+      status: 201,
+      action: () =>
+        this.core.bookLeadTrial(actor, requestId, z.string().uuid().parse(leadId), input)
+    });
   }
 
   @Get(":leadId/notes")

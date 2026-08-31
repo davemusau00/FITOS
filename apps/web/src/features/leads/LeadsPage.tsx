@@ -18,7 +18,7 @@ import { can, useAuth } from "../../app/auth";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
-import { PageLoading, ErrorNotice, formatDate, useToast } from "../shared";
+import { PageLoading, ErrorNotice, formatDate, formatDateTime, useToast } from "../shared";
 
 export const leadStages = [
   "new",
@@ -100,6 +100,7 @@ export function LeadsPage() {
   const [noteBody, setNoteBody] = useState("");
   const [taskBody, setTaskBody] = useState("");
   const [taskDueAt, setTaskDueAt] = useState("");
+  const [trialOccurrenceId, setTrialOccurrenceId] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [lostReasonLead, setLostReasonLead] = useState<{
     lead: LeadResponse;
@@ -170,6 +171,35 @@ export function LeadsPage() {
     queryKey: ["lead", selectedLead?.id ?? "", "tasks"],
     queryFn: () => api.leadTasks(selectedLead!.id),
     enabled: Boolean(selectedLead)
+  });
+  const trialOccurrences = useQuery({
+    queryKey: branchQueryKeys.list(
+      "lead-trial-occurrences",
+      selectedLead?.branchId ?? activeBranchId
+    ),
+    queryFn: () => {
+      const next = new URLSearchParams({
+        status: "scheduled",
+        startsAfter: new Date().toISOString(),
+        limit: "50"
+      });
+      const branchId = selectedLead?.branchId ?? activeBranchId;
+      if (branchId) next.set("branchId", branchId);
+      return api.scheduleOccurrences(next);
+    },
+    enabled: Boolean(selectedLead?.convertedMemberId && (selectedLead?.branchId ?? activeBranchId))
+  });
+  const bookTrial = useMutation({
+    mutationFn: () => api.bookLeadTrial(selectedLead!.id, trialOccurrenceId),
+    onSuccess: (result) => {
+      toastSuccess("Trial booking created");
+      setSelectedLead(result.lead);
+      setTrialOccurrenceId("");
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("leads") });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("bookings") });
+    },
+    onError: (cause) =>
+      toastError("Could not book trial", cause instanceof Error ? cause.message : undefined)
   });
   const addNote = useMutation({
     mutationFn: (body: string) => api.addLeadNote(selectedLead!.id, body),
@@ -670,6 +700,51 @@ export function LeadsPage() {
               </Link>
             )}
 
+            {/* Trial booking */}
+            {selectedLead.convertedMemberId ? (
+              <Card>
+                <h3 style={{ margin: "0 0 0.5rem" }}>Book a trial</h3>
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Select a scheduled session at this lead&apos;s branch. The member&apos;s normal
+                  entitlement rules still apply.
+                </p>
+                <div className="form-actions">
+                  <select
+                    aria-label="Trial session"
+                    className="fitos-control"
+                    onChange={(event) => setTrialOccurrenceId(event.target.value)}
+                    value={trialOccurrenceId}
+                  >
+                    <option value="">Choose a session</option>
+                    {(trialOccurrences.data?.data ?? []).map((occurrence) => (
+                      <option key={occurrence.id} value={occurrence.id}>
+                        {formatDateTime(occurrence.startsAt)} · {occurrence.capacity} spaces
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    disabled={!trialOccurrenceId}
+                    loading={bookTrial.isPending}
+                    onClick={() => bookTrial.mutate()}
+                    size="small"
+                    variant="primary"
+                  >
+                    Book trial
+                  </Button>
+                </div>
+                {trialOccurrences.data?.data.length === 0 ? (
+                  <p className="muted">No future sessions are available at this branch.</p>
+                ) : null}
+              </Card>
+            ) : (
+              <Card>
+                <h3 style={{ margin: "0 0 0.5rem" }}>Trial booking</h3>
+                <p className="muted" style={{ margin: 0 }}>
+                  Convert this lead to a member before scheduling a trial.
+                </p>
+              </Card>
+            )}
+
             {/* Notes */}
             <section>
               <h3>Notes</h3>
@@ -771,7 +846,16 @@ export function LeadsPage() {
               )}
             </section>
 
-            <ErrorNotice error={notes.error ?? tasks.error ?? addNote.error ?? addTask.error} />
+            <ErrorNotice
+              error={
+                notes.error ??
+                tasks.error ??
+                trialOccurrences.error ??
+                addNote.error ??
+                addTask.error ??
+                bookTrial.error
+              }
+            />
 
             <div className="form-actions" style={{ justifyContent: "flex-end" }}>
               <Button onClick={() => requestStageChange(selectedLead, "lost")} variant="ghost">

@@ -1,4 +1,5 @@
 import type { CursorPage } from "./common.js";
+import type { BookingResponse } from "./bookings.js";
 import type { ContactInput, MemberResponse } from "./members.js";
 
 export const LEAD_STAGES = [
@@ -111,4 +112,13 @@ export interface LeadConversionResponse {
   lead: LeadResponse;
   member: MemberResponse;
   alreadyConverted: boolean;
+}
+
+export interface CreateLeadTrialBookingRequest {
+  occurrenceId: string;
+}
+
+export interface LeadTrialBookingResponse {
+  lead: LeadResponse;
+  booking: BookingResponse;
 }
