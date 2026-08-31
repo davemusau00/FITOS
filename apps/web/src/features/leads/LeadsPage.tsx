@@ -189,6 +189,18 @@ export function LeadsPage() {
     },
     enabled: Boolean(selectedLead?.convertedMemberId && (selectedLead?.branchId ?? activeBranchId))
   });
+  const leadBookings = useQuery({
+    queryKey: branchQueryKeys.list(
+      "lead-bookings",
+      selectedLead?.branchId ?? activeBranchId,
+      selectedLead?.convertedMemberId ?? ""
+    ),
+    queryFn: () =>
+      api.bookings(
+        new URLSearchParams({ memberId: selectedLead!.convertedMemberId!, limit: "20" })
+      ),
+    enabled: Boolean(selectedLead?.convertedMemberId)
+  });
   const bookTrial = useMutation({
     mutationFn: () => api.bookLeadTrial(selectedLead!.id, trialOccurrenceId),
     onSuccess: (result) => {
@@ -745,6 +757,29 @@ export function LeadsPage() {
               </Card>
             )}
 
+            <Card>
+              <h3 style={{ margin: "0 0 0.5rem" }}>Booking history</h3>
+              {leadBookings.data?.data.length ? (
+                <ul className="timeline">
+                  {leadBookings.data.data.map((booking) => (
+                    <li key={booking.id}>
+                      <span />
+                      <div>
+                        <strong>
+                          {booking.serviceName ?? "Session"} · {booking.status}
+                        </strong>
+                        <p>Booked {formatDateTime(booking.bookedAt)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted" style={{ margin: 0 }}>
+                  No bookings recorded for this member yet.
+                </p>
+              )}
+            </Card>
+
             {/* Notes */}
             <section>
               <h3>Notes</h3>
@@ -851,6 +886,7 @@ export function LeadsPage() {
                 notes.error ??
                 tasks.error ??
                 trialOccurrences.error ??
+                leadBookings.error ??
                 addNote.error ??
                 addTask.error ??
                 bookTrial.error

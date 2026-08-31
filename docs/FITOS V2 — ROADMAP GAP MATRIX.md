@@ -522,7 +522,7 @@ Task/due-date based.
 
 Lead trial should create/link a real booking.
 
-**Partial implementation evidence (2026-09-01):** Converted leads can now select a future scheduled occurrence in the Leads detail workspace and call the idempotent `POST /leads/:id/trial-booking` workflow. The server enforces conversion and branch alignment, reuses booking capacity/entitlement rules, persists the booking, advances the lead to `trial_booked`, and records audit/event history. In-memory and PostgreSQL regression coverage verify the persisted booking and conversion prerequisite. Existing booking history, rescheduling, waitlist messaging, and browser acceptance remain open.
+**Partial implementation evidence (2026-09-01):** Converted leads can now select a future scheduled occurrence in the Leads detail workspace and call the idempotent `POST /leads/:id/trial-booking` workflow. The server enforces conversion and branch alignment, reuses booking capacity/entitlement rules, persists the booking, advances the lead to `trial_booked`, and records audit/event history. The drawer also reloads persisted member booking history from the bookings API. In-memory and PostgreSQL regression coverage verify the persisted booking and conversion prerequisite. Rescheduling, waitlist messaging, and browser acceptance remain open.
 
 ---
 
