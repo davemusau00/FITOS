@@ -33,4 +33,11 @@ export interface OpsAggregateResponse {
 export interface CoachAggregateResponse {
   overview: TodayOverviewResponse;
   sessions: ScheduleOccurrenceResponse[];
+  signals: {
+    confirmedBookings: number;
+    waitlistedBookings: number;
+    checkedIn: number;
+    attended: number;
+    pendingAttendance: number;
+  };
 }

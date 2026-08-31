@@ -436,6 +436,8 @@ Conversion:
 - notes;
 - completion.
 
+**Partial implementation evidence (2026-09-01):** Coach My Day now receives server-derived roster signals for assigned sessions: confirmed and waitlisted totals, checked-in and attended counts, and pending attendance work. The dashboard presents these signals with branch context and links each session to its roster workspace, where member names, booking status, and check-in/attendance actions are available. Session notes, permitted progress context, restrictions, and durable completion records remain open.
+
 ---
 
 ## P1-021 — Practice Workflow Completion

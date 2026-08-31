@@ -21,6 +21,13 @@ export function CoachDashboardPage() {
   });
   if (schedule.isLoading) return <PageLoading />;
   const sessions = schedule.data?.sessions ?? [];
+  const signals = schedule.data?.signals ?? {
+    confirmedBookings: 0,
+    waitlistedBookings: 0,
+    checkedIn: 0,
+    attended: 0,
+    pendingAttendance: 0
+  };
   return (
     <div className="workspace-dashboard workspace-dashboard--coach">
       <PageHeader
@@ -39,9 +46,19 @@ export function CoachDashboardPage() {
         />
         <StatCard
           icon="users"
-          label="Next action"
-          value={sessions.length ? "Open roster" : "No session"}
-          detail={sessions.length ? "Review arrival status and notes" : "Nothing assigned today"}
+          label="Confirmed roster"
+          value={signals.confirmedBookings}
+          detail={`${signals.checkedIn} checked in • ${signals.pendingAttendance} need attendance update`}
+          tone={signals.pendingAttendance ? "warning" : "success"}
+        />
+        <StatCard
+          icon="warning"
+          label="Waitlist"
+          value={signals.waitlistedBookings}
+          detail={
+            signals.waitlistedBookings ? "Coordinate openings with Ops" : "No waitlisted members"
+          }
+          tone={signals.waitlistedBookings ? "warning" : "neutral"}
         />
       </div>
       <Card>

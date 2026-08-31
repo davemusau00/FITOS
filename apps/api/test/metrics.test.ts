@@ -68,4 +68,27 @@ describe("Insights no-data behavior", () => {
     );
     expect(result.signals.actionQueue).toEqual(expect.any(Array));
   });
+
+  it("returns roster signals for the coach day aggregate", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const coach = await repository.findLoginIdentity("trainer@gym.fitos.test");
+    if (!coach) throw new Error("Seed coach identity missing.");
+    const result = await new InsightsController(repository).coachAggregate(
+      {
+        tenantId: coach.tenant.id,
+        tenantUserId: coach.tenantUserId,
+        userId: coach.user.id,
+        branchIds: coach.branchIds
+      },
+      { branchId: coach.branchIds[0] }
+    );
+    expect(result.signals).toEqual({
+      confirmedBookings: expect.any(Number),
+      waitlistedBookings: expect.any(Number),
+      checkedIn: expect.any(Number),
+      attended: expect.any(Number),
+      pendingAttendance: expect.any(Number)
+    });
+  });
 });

@@ -179,6 +179,47 @@ export class InsightsController {
         limit: 100
       })
     ]);
-    return { overview, sessions: sessions.data };
+    const rosterSignals = await Promise.all(
+      sessions.data.map(async (session) => {
+        const [bookings, attendance] = await Promise.all([
+          this.repository.listBookings(scope, { occurrenceId: session.id, limit: 100 }),
+          this.repository.listAttendanceRecords(scope, { occurrenceId: session.id, limit: 100 })
+        ]);
+        const confirmedBookings = bookings.data.filter((booking) => booking.status === "confirmed");
+        const waitlistedBookings = bookings.data.filter(
+          (booking) => booking.status === "waitlisted"
+        );
+        const completedAttendance = attendance.data.filter((record) =>
+          ["checked_in", "attended", "no_show", "late_cancel"].includes(record.status)
+        ).length;
+        return {
+          confirmedBookings: confirmedBookings.length,
+          waitlistedBookings: waitlistedBookings.length,
+          checkedIn: attendance.data.filter((record) => record.status === "checked_in").length,
+          attended: attendance.data.filter((record) => record.status === "attended").length,
+          pendingAttendance: Math.max(0, confirmedBookings.length - completedAttendance)
+        };
+      })
+    );
+    return {
+      overview,
+      sessions: sessions.data,
+      signals: rosterSignals.reduce(
+        (totals, current) => ({
+          confirmedBookings: totals.confirmedBookings + current.confirmedBookings,
+          waitlistedBookings: totals.waitlistedBookings + current.waitlistedBookings,
+          checkedIn: totals.checkedIn + current.checkedIn,
+          attended: totals.attended + current.attended,
+          pendingAttendance: totals.pendingAttendance + current.pendingAttendance
+        }),
+        {
+          confirmedBookings: 0,
+          waitlistedBookings: 0,
+          checkedIn: 0,
+          attended: 0,
+          pendingAttendance: 0
+        }
+      )
+    };
   }
 }
