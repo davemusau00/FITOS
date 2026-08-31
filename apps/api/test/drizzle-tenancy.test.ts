@@ -1063,7 +1063,7 @@ describeDatabase("Drizzle tenant isolation", () => {
       endsAt: new Date(startsAt.getTime() + 30 * 60 * 1000).toISOString(),
       capacity: 1
     });
-    await repository.createBooking(
+    const confirmed = await repository.createBooking(
       gymScope,
       { occurrenceId: occurrence.id, memberId: first.id, source: "staff" },
       gym.user.id,
@@ -1078,6 +1078,24 @@ describeDatabase("Drizzle tenant isolation", () => {
     );
     expect(waitlisted).toMatchObject({ status: "waitlisted", creditsDebited: 0 });
     expect(await repository.getCreditBalance(gymScope, second.id)).toBe(balanceBefore);
+    await new CoreService(repository).cancelBooking(
+      {
+        userId: gym.user.id,
+        tenantId: gym.tenant.id,
+        tenantUserId: gym.tenantUserId,
+        branchIds: gym.branchIds,
+        permissions: [...gym.role.permissions],
+        roleKey: gym.role.key,
+        sessionId: `db-waitlist-${suffix}`
+      },
+      `db-waitlist-${suffix}`,
+      confirmed.id,
+      "Opening a place"
+    );
+    await expect(repository.findBookingById(gymScope, waitlisted.id)).resolves.toMatchObject({
+      status: "confirmed",
+      creditsDebited: 1
+    });
     await expect(
       repository.cancelBooking(gymScope, waitlisted.id, "No longer interested")
     ).resolves.toMatchObject({ id: waitlisted.id, status: "cancelled" });

@@ -1470,6 +1470,9 @@ export class CoreService {
       }
     );
     await this.publish(eventOf(actor, "booking.cancelled", { bookingId: booking.id }));
+    if (existing.status === "confirmed") {
+      await this.autoPromoteWaitlist(actor, requestId, existing.occurrenceId);
+    }
     return booking;
   }
 
@@ -2551,6 +2554,55 @@ export class CoreService {
         "contact.phone": ["Enter an E.164 or Kenyan mobile number."]
       });
     return normalized;
+  }
+
+  private async autoPromoteWaitlist(
+    actor: RequestActor,
+    requestId: string,
+    occurrenceId: string
+  ): Promise<void> {
+    const candidates = await this.repository.listBookings(scopeOf(actor), {
+      occurrenceId,
+      status: "waitlisted",
+      limit: 100
+    });
+    const ordered = [...candidates.data].sort(
+      (left, right) =>
+        left.bookedAt.localeCompare(right.bookedAt) || left.id.localeCompare(right.id)
+    );
+    for (const candidate of ordered) {
+      try {
+        const promoted = await this.repository.promoteWaitlistedBooking(
+          scopeOf(actor),
+          candidate.id
+        );
+        if (!promoted) continue;
+        await this.audit(
+          actor,
+          requestId,
+          "booking.waitlist_auto_promoted",
+          "booking",
+          promoted.id,
+          promoted.branchId,
+          {
+            occurrenceId: promoted.occurrenceId,
+            memberId: promoted.memberId,
+            creditsDebited: promoted.creditsDebited
+          }
+        );
+        await this.publish(
+          eventOf(actor, "booking.waitlist_auto_promoted", { bookingId: promoted.id })
+        );
+        return;
+      } catch (error) {
+        // A member without eligible credits should not prevent the next person
+        // from being considered after a cancellation.
+        if (error instanceof Error && /credit|membership|waitlist|capacity/i.test(error.message)) {
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 
   private async audit(
