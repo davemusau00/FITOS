@@ -960,6 +960,46 @@ export class CoreService {
     return booking;
   }
 
+  async rescheduleBooking(
+    actor: RequestActor,
+    requestId: string,
+    bookingId: string,
+    targetOccurrenceId: string
+  ): Promise<BookingResponse> {
+    const existing = await this.getBooking(actor, bookingId);
+    if (existing.status === "cancelled") {
+      throw new DomainError("VALIDATION_FAILED", "Cancelled bookings cannot be rescheduled.", 409);
+    }
+    try {
+      const booking = await this.repository.rescheduleBooking(
+        scopeOf(actor),
+        bookingId,
+        targetOccurrenceId
+      );
+      if (!booking) throw new DomainError("RESOURCE_NOT_FOUND", "Booking not found.", 404);
+      await this.audit(
+        actor,
+        requestId,
+        "booking.rescheduled",
+        "booking",
+        booking.id,
+        booking.branchId,
+        { fromOccurrenceId: existing.occurrenceId, toOccurrenceId: targetOccurrenceId }
+      );
+      await this.publish(eventOf(actor, "booking.rescheduled", { bookingId: booking.id }));
+      return booking;
+    } catch (error) {
+      if (error instanceof DomainError) throw error;
+      if (
+        error instanceof Error &&
+        /full|already has|service|occurrence unavailable/i.test(error.message)
+      ) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 409);
+      }
+      throw error;
+    }
+  }
+
   async listMembershipPlans(
     actor: RequestActor,
     branchId?: string

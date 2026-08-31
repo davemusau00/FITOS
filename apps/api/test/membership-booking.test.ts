@@ -156,6 +156,25 @@ describe("Memberships and Booking Credits Integration", () => {
     const balanceAfterBooking = await repository.getCreditBalance(gymScope, member.id);
     expect(balanceAfterBooking).toBe(9);
 
+    const rescheduleTarget = await repository.createScheduleOccurrence(gymScope, {
+      branchId: gym.branchIds[0]!,
+      serviceId: service.id,
+      startsAt: new Date(Date.now() + 4 * 86400000).toISOString(),
+      endsAt: new Date(Date.now() + 4 * 86400000 + 3600000).toISOString(),
+      capacity: 10
+    });
+    const rescheduled = await repository.rescheduleBooking(
+      gymScope,
+      booking.id,
+      rescheduleTarget.id
+    );
+    expect(rescheduled).toMatchObject({
+      id: booking.id,
+      occurrenceId: rescheduleTarget.id,
+      creditsDebited: 1
+    });
+    expect(await repository.getCreditBalance(gymScope, member.id)).toBe(9);
+
     // 7. Cancellation and eligible restoration are one repository transaction.
     const cancelledBooking = await repository.cancelBooking(
       gymScope,

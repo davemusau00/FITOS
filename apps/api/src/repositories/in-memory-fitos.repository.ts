@@ -3247,6 +3247,53 @@ export class InMemoryFitosRepository implements FitosRepository {
     return { ...booking };
   }
 
+  async rescheduleBooking(
+    scope: TenantScope,
+    bookingId: string,
+    targetOccurrenceId: string
+  ): Promise<BookingResponse | null> {
+    const booking = this.bookings.get(bookingId);
+    const target = this.occurrences.get(targetOccurrenceId);
+    if (
+      !booking ||
+      booking.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(booking.branchId) ||
+      booking.status === "cancelled"
+    )
+      return null;
+    if (
+      !target ||
+      target.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(target.branchId) ||
+      target.status !== "scheduled"
+    )
+      throw new Error("Occurrence unavailable.");
+    const current = this.occurrences.get(booking.occurrenceId);
+    if (!current || current.serviceId !== target.serviceId)
+      throw new Error("Rescheduling must keep the same service.");
+    const duplicate = [...this.bookings.values()].some(
+      (candidate) =>
+        candidate.id !== booking.id &&
+        candidate.memberId === booking.memberId &&
+        candidate.occurrenceId === target.id &&
+        ["confirmed", "waitlisted"].includes(candidate.status)
+    );
+    if (duplicate) throw new Error("Member already has a booking for this occurrence.");
+    const confirmed = [...this.bookings.values()].filter(
+      (candidate) =>
+        candidate.id !== booking.id &&
+        candidate.tenantId === scope.tenantId &&
+        candidate.occurrenceId === target.id &&
+        candidate.status === "confirmed"
+    ).length;
+    if (confirmed >= (target.effectiveCapacity ?? target.capacity))
+      throw new Error("Occurrence is full.");
+    booking.occurrenceId = target.id;
+    booking.branchId = target.branchId;
+    booking.updatedAt = now();
+    return { ...booking };
+  }
+
   async listMembershipPlans(
     scope: TenantScope,
     branchId?: string

@@ -342,6 +342,11 @@ export interface FitosRepository {
     bookingId: string,
     reason: string
   ): Promise<BookingResponse | null>;
+  rescheduleBooking(
+    scope: TenantScope,
+    bookingId: string,
+    targetOccurrenceId: string
+  ): Promise<BookingResponse | null>;
 
   // Memberships & Credits
   listMembershipPlans(scope: TenantScope, branchId?: string): Promise<MembershipPlanResponse[]>;

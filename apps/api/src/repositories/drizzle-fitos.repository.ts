@@ -2280,6 +2280,93 @@ export class DrizzleFitosRepository implements FitosRepository {
     return booking ? this.bookingResponse(booking) : null;
   }
 
+  async rescheduleBooking(
+    scope: TenantScope,
+    bookingId: string,
+    targetOccurrenceId: string
+  ): Promise<BookingResponse | null> {
+    const booking = await this.db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM bookings
+        WHERE id = ${bookingId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [current] = await tx
+        .select()
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.id, bookingId),
+            eq(bookings.tenantId, scope.tenantId),
+            inArray(bookings.branchId, scope.branchIds)
+          )
+        )
+        .limit(1);
+      if (!current || current.status === "cancelled") return null;
+      await tx.execute(sql`
+        SELECT id FROM schedule_occurrences
+        WHERE id = ${targetOccurrenceId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [target] = await tx
+        .select()
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.id, targetOccurrenceId),
+            eq(scheduleOccurrences.tenantId, scope.tenantId),
+            inArray(scheduleOccurrences.branchId, scope.branchIds)
+          )
+        )
+        .limit(1);
+      if (!target || target.status !== "scheduled") throw new Error("Occurrence unavailable.");
+      const [source] = await tx
+        .select({ serviceId: scheduleOccurrences.serviceId })
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.id, current.occurrenceId),
+            eq(scheduleOccurrences.tenantId, scope.tenantId)
+          )
+        )
+        .limit(1);
+      if (!source || source.serviceId !== target.serviceId)
+        throw new Error("Rescheduling must keep the same service.");
+      const [duplicate] = await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.tenantId, scope.tenantId),
+            eq(bookings.memberId, current.memberId),
+            eq(bookings.occurrenceId, target.id),
+            inArray(bookings.status, ["confirmed", "waitlisted"]),
+            sql`${bookings.id} <> ${current.id}`
+          )
+        )
+        .limit(1);
+      if (duplicate) throw new Error("Member already has a booking for this occurrence.");
+      const [capacity] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.tenantId, scope.tenantId),
+            eq(bookings.occurrenceId, target.id),
+            eq(bookings.status, "confirmed")
+          )
+        );
+      if ((capacity?.count ?? 0) >= target.capacity) throw new Error("Occurrence is full.");
+      const [updated] = await tx
+        .update(bookings)
+        .set({ branchId: target.branchId, occurrenceId: target.id, updatedAt: new Date() })
+        .where(eq(bookings.id, current.id))
+        .returning();
+      return updated ?? null;
+    });
+    return booking ? this.bookingResponse(booking) : null;
+  }
+
   async listMembershipPlans(
     scope: TenantScope,
     branchId?: string

@@ -169,6 +169,17 @@ describeDatabase("Drizzle tenant isolation", () => {
       false
     );
 
+    const rescheduleTarget = await repository.createScheduleOccurrence(gymScope, {
+      branchId: gym.branchIds[0]!,
+      serviceId: service.id,
+      startsAt: new Date(startsAt.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      endsAt: new Date(startsAt.getTime() + 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+      capacity: 4
+    });
+    await expect(
+      repository.rescheduleBooking(gymScope, booking.id, rescheduleTarget.id)
+    ).resolves.toMatchObject({ occurrenceId: rescheduleTarget.id });
+
     expect(await repository.findServiceById(pilatesScope, service.id)).toBeNull();
     expect(await repository.updateService(pilatesScope, service.id, { name: "Denied" })).toBeNull();
     expect(await repository.findRoomById(pilatesScope, room.id)).toBeNull();

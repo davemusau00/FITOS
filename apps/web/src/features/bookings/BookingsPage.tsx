@@ -28,6 +28,9 @@ export function BookingsPage() {
   const [cancellingBooking, setCancellingBooking] = useState<BookingResponse | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelError, setCancelError] = useState<unknown>(null);
+  const [reschedulingBooking, setReschedulingBooking] = useState<BookingResponse | null>(null);
+  const [targetOccurrenceId, setTargetOccurrenceId] = useState("");
+  const [rescheduleError, setRescheduleError] = useState<unknown>(null);
   const { activeBranchId } = useBranch();
 
   const statusFilter = (params.get("status") as BookingStatus) || "";
@@ -72,6 +75,19 @@ export function BookingsPage() {
       setCancelReason("");
     },
     onError: (err) => setCancelError(err)
+  });
+
+  const rescheduleMutation = useMutation({
+    mutationFn: ({ id, target }: { id: string; target: string }) =>
+      api.rescheduleBooking(id, target),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("bookings") });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule") });
+      setReschedulingBooking(null);
+      setTargetOccurrenceId("");
+      setRescheduleError(null);
+    },
+    onError: (err) => setRescheduleError(err)
   });
 
   const setFilter = (name: string, value: string) => {
@@ -156,18 +172,35 @@ export function BookingsPage() {
       id: "actions",
       header: "",
       cell: (b) =>
-        b.status === "confirmed" && can(auth, "booking:cancel") ? (
-          <Button
-            onClick={() => {
-              setCancellingBooking(b);
-              setCancelReason("");
-              setCancelError(null);
-            }}
-            size="small"
-            variant="danger"
-          >
-            Cancel
-          </Button>
+        b.status === "confirmed" ? (
+          <div className="table-actions">
+            {can(auth, "booking:create") ? (
+              <Button
+                onClick={() => {
+                  setReschedulingBooking(b);
+                  setTargetOccurrenceId("");
+                  setRescheduleError(null);
+                }}
+                size="small"
+                variant="secondary"
+              >
+                Reschedule
+              </Button>
+            ) : null}
+            {can(auth, "booking:cancel") ? (
+              <Button
+                onClick={() => {
+                  setCancellingBooking(b);
+                  setCancelReason("");
+                  setCancelError(null);
+                }}
+                size="small"
+                variant="danger"
+              >
+                Cancel
+              </Button>
+            ) : null}
+          </div>
         ) : null
     }
   ];
@@ -252,18 +285,34 @@ export function BookingsPage() {
                   <StatusBadge status={booking.status} />
                   <span>{booking.source}</span>
                 </div>
-                {booking.status === "confirmed" && can(auth, "booking:cancel") ? (
-                  <Button
-                    onClick={() => {
-                      setCancellingBooking(booking);
-                      setCancelReason("");
-                      setCancelError(null);
-                    }}
-                    size="small"
-                    variant="danger"
-                  >
-                    Cancel booking
-                  </Button>
+                {booking.status === "confirmed" &&
+                (can(auth, "booking:create") || can(auth, "booking:cancel")) ? (
+                  <div className="table-actions">
+                    {can(auth, "booking:create") ? (
+                      <Button
+                        onClick={() => {
+                          setReschedulingBooking(booking);
+                          setTargetOccurrenceId("");
+                          setRescheduleError(null);
+                        }}
+                        size="small"
+                        variant="secondary"
+                      >
+                        Reschedule
+                      </Button>
+                    ) : null}
+                    <Button
+                      onClick={() => {
+                        setCancellingBooking(booking);
+                        setCancelReason("");
+                        setCancelError(null);
+                      }}
+                      size="small"
+                      variant="danger"
+                    >
+                      Cancel booking
+                    </Button>
+                  </div>
                 ) : null}
               </Card>
             );
@@ -319,6 +368,73 @@ export function BookingsPage() {
                 variant="danger"
               >
                 Confirm cancellation
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+      {reschedulingBooking ? (
+        <Modal
+          description="The booking keeps its current entitlement credit while moving to another occurrence of the same service."
+          isOpen={true}
+          onClose={() => setReschedulingBooking(null)}
+          title="Reschedule booking"
+        >
+          <form
+            className="form-stack"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (targetOccurrenceId) {
+                rescheduleMutation.mutate({
+                  id: reschedulingBooking.id,
+                  target: targetOccurrenceId
+                });
+              }
+            }}
+          >
+            <FormField
+              error={!targetOccurrenceId ? "Choose a target session" : undefined}
+              htmlFor="bookingRescheduleTarget"
+              label="New session"
+            >
+              <select
+                className="fitos-control"
+                id="bookingRescheduleTarget"
+                onChange={(event) => setTargetOccurrenceId(event.target.value)}
+                value={targetOccurrenceId}
+              >
+                <option value="">Select a future session</option>
+                {(occurrences.data?.data ?? [])
+                  .filter((occurrence) => {
+                    const current = occurrences.data?.data.find(
+                      (item) => item.id === reschedulingBooking.occurrenceId
+                    );
+                    return (
+                      occurrence.id !== reschedulingBooking.occurrenceId &&
+                      occurrence.status === "scheduled" &&
+                      new Date(occurrence.startsAt) > new Date() &&
+                      occurrence.serviceId === current?.serviceId
+                    );
+                  })
+                  .map((occurrence) => (
+                    <option key={occurrence.id} value={occurrence.id}>
+                      {formatDateTime(occurrence.startsAt)}
+                    </option>
+                  ))}
+              </select>
+            </FormField>
+            <ErrorNotice error={rescheduleError} />
+            <div className="form-actions">
+              <Button onClick={() => setReschedulingBooking(null)} variant="ghost">
+                Close
+              </Button>
+              <Button
+                disabled={!targetOccurrenceId}
+                loading={rescheduleMutation.isPending}
+                type="submit"
+                variant="primary"
+              >
+                Confirm reschedule
               </Button>
             </div>
           </form>

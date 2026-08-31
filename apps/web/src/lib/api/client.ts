@@ -387,6 +387,11 @@ export const api = {
       method: "POST",
       body: json({ reason })
     }),
+  rescheduleBooking: (id: string, targetOccurrenceId: string) =>
+    request<BookingResponse>(`/bookings/${id}/reschedule`, {
+      method: "POST",
+      body: json({ targetOccurrenceId })
+    }),
 
   // Memberships & Plans
   membershipPlans: (branchId?: string) =>
