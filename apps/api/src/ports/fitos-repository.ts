@@ -620,10 +620,18 @@ export interface FitosRepository {
     key: import("@fitos/contracts").SaaSPlan,
     input: Omit<import("@fitos/contracts").SaaSPlanDefinition, "key"> & { isActive?: boolean }
   ): Promise<import("@fitos/contracts").SaaSPlanDefinition | null>;
-  listPlatformFeatureFlagOverrides(): Promise<import("@fitos/contracts").FeatureFlagOverrideResponse[]>;
+  listPlatformFeatureFlagOverrides(): Promise<
+    import("@fitos/contracts").FeatureFlagOverrideResponse[]
+  >;
   createPlatformFeatureFlagOverride(
     input: Omit<import("@fitos/contracts").FeatureFlagOverrideResponse, "id" | "createdAt">
   ): Promise<import("@fitos/contracts").FeatureFlagOverrideResponse>;
+  listPlatformSupportNotes(
+    tenantId: string
+  ): Promise<import("@fitos/contracts").PlatformSupportNoteResponse[]>;
+  createPlatformSupportNote(
+    input: Omit<import("@fitos/contracts").PlatformSupportNoteResponse, "id" | "createdAt">
+  ): Promise<import("@fitos/contracts").PlatformSupportNoteResponse>;
   getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
   transitionTenantSubscriptionStatus(
     tenantId: string,

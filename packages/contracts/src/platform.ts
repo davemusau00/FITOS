@@ -175,6 +175,15 @@ export interface FeatureFlagOverrideResponse {
   createdAt: string;
 }
 
+export interface PlatformSupportNoteResponse {
+  id: string;
+  tenantId: string;
+  authorUserId: string | null;
+  category: "implementation" | "support" | "account" | "risk";
+  note: string;
+  createdAt: string;
+}
+
 export type FeatureMaturity = "stable" | "beta" | "internal";
 export interface FeatureDefinition {
   key: SaaSCapabilityKey;

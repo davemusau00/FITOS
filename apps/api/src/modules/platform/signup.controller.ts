@@ -792,4 +792,45 @@ export class PlatformController {
     });
     return created;
   }
+
+  @Get("tenants/:tenantId/support-notes")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  listSupportNotes(@Param("tenantId") tenantId: string) {
+    return this.repository.listPlatformSupportNotes(tenantId);
+  }
+
+  @Post("tenants/:tenantId/support-notes")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async createSupportNote(
+    @Param("tenantId") tenantId: string,
+    @Body() body: unknown,
+    @RequestId() requestId: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        category: z.enum(["implementation", "support", "account", "risk"]),
+        note: z.string().trim().min(1).max(5000)
+      })
+      .strict()
+      .parse(body);
+    const created = await this.repository.createPlatformSupportNote({
+      tenantId,
+      authorUserId: request.platformActor?.userId ?? null,
+      ...input
+    });
+    await this.repository.recordAudit({
+      tenantId,
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "platform.support_note_created",
+      resourceType: "platform_support_note",
+      resourceId: created.id,
+      beforeSummary: null,
+      afterSummary: { category: created.category, note: created.note },
+      requestId
+    });
+    return created;
+  }
 }

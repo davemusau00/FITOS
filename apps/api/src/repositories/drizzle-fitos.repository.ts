@@ -22,6 +22,7 @@ import {
   memberMemberships,
   notifications,
   platformFeatureFlagOverrides,
+  platformSupportNotes,
   platformPlanDefinitions,
   members,
   memberIdentities,
@@ -537,6 +538,37 @@ export class DrizzleFitosRepository implements FitosRepository {
       previousEnabled: row.previousEnabled,
       effectiveFrom: row.effectiveFrom?.toISOString() ?? null,
       effectiveUntil: row.effectiveUntil?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString()
+    };
+  }
+
+  async listPlatformSupportNotes(tenantId: string) {
+    const rows = await this.db
+      .select()
+      .from(platformSupportNotes)
+      .where(eq(platformSupportNotes.tenantId, tenantId))
+      .orderBy(desc(platformSupportNotes.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      authorUserId: row.authorUserId,
+      category: row.category as import("@fitos/contracts").PlatformSupportNoteResponse["category"],
+      note: row.note,
+      createdAt: row.createdAt.toISOString()
+    }));
+  }
+
+  async createPlatformSupportNote(
+    input: Omit<import("@fitos/contracts").PlatformSupportNoteResponse, "id" | "createdAt">
+  ) {
+    const [row] = await this.db.insert(platformSupportNotes).values(input).returning();
+    if (!row) throw new Error("Unable to create support note.");
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      authorUserId: row.authorUserId,
+      category: row.category as import("@fitos/contracts").PlatformSupportNoteResponse["category"],
+      note: row.note,
       createdAt: row.createdAt.toISOString()
     };
   }

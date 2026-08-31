@@ -148,7 +148,26 @@ export const platformFeatureFlagOverrides = pgTable(
     effectiveUntil: timestamp("effective_until", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
-  (table) => [index("idx_platform_flag_overrides_key_scope").on(table.key, table.scope, table.scopeValue)]
+  (table) => [
+    index("idx_platform_flag_overrides_key_scope").on(table.key, table.scope, table.scopeValue)
+  ]
+);
+
+export const platformSupportNotes = pgTable(
+  "platform_support_notes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    authorUserId: uuid("author_user_id").references(() => users.id, { onDelete: "set null" }),
+    category: varchar("category", { length: 30 }).notNull(),
+    note: text("note").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_platform_support_notes_tenant_created").on(table.tenantId, table.createdAt)
+  ]
 );
 
 export const platformAdminTokens = pgTable(
