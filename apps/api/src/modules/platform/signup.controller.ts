@@ -877,7 +877,7 @@ export class PlatformController {
 
     const at = new Date().toISOString();
     const revokedCount = input.revokeSessions
-      ? await this.repository.revokeAllUserSessions(input.subject.userId!, at)
+      ? await this.repository.revokeAllUserSessionsForTenant(input.subject.userId!, tenantId, at)
       : 0;
     const actions = [
       { type: input.actionType, detail: input.actionDetail, at },

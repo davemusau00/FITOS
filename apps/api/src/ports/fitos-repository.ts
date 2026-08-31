@@ -195,6 +195,7 @@ export interface FitosRepository {
   ): Promise<import("@fitos/contracts").SessionSummary[]>;
   revokeUserSession(userId: string, sessionId: string, at: string): Promise<boolean>;
   revokeAllUserSessions(userId: string, at: string): Promise<number>;
+  revokeAllUserSessionsForTenant(userId: string, tenantId: string, at: string): Promise<number>;
   updateUserProfile(
     userId: string,
     input: import("@fitos/contracts").UpdateUserProfileRequest

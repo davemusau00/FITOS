@@ -395,6 +395,21 @@ export class DrizzleFitosRepository implements FitosRepository {
     return result.length;
   }
 
+  async revokeAllUserSessionsForTenant(userId: string, tenantId: string, at: string) {
+    const result = await this.db
+      .update(sessions)
+      .set({ revokedAt: new Date(at) })
+      .where(
+        and(
+          eq(sessions.userId, userId),
+          isNull(sessions.revokedAt),
+          sql`${sessions.tenantUserId} IN (SELECT id FROM tenant_users WHERE tenant_id = ${tenantId})`
+        )
+      )
+      .returning({ id: sessions.id });
+    return result.length;
+  }
+
   async updateUserProfile(
     userId: string,
     input: import("@fitos/contracts").UpdateUserProfileRequest

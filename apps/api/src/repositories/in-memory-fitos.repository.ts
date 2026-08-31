@@ -2173,6 +2173,18 @@ export class InMemoryFitosRepository implements FitosRepository {
     return count;
   }
 
+  async revokeAllUserSessionsForTenant(userId: string, tenantId: string, at: string) {
+    let count = 0;
+    for (const session of this.sessions.values()) {
+      const membership = this.tenantUsers.get(session.tenantUserId);
+      if (session.userId === userId && membership?.tenantId === tenantId && !session.revokedAt) {
+        session.revokedAt = at;
+        count += 1;
+      }
+    }
+    return count;
+  }
+
   async updateUserProfile(
     userId: string,
     input: import("@fitos/contracts").UpdateUserProfileRequest
