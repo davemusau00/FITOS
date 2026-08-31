@@ -115,6 +115,20 @@ export class UsersController {
     return this.core.markNotificationRead(actor, uuid.parse(notificationId));
   }
 
+  @Get("me/system-notices")
+  getSystemNotices(@Actor() actor: RequestActor) {
+    return this.core.systemNotices(actor);
+  }
+
+  @Post("me/system-notices/:noticeId/acknowledge")
+  acknowledgeSystemNotice(
+    @Actor() actor: RequestActor,
+    @Param("noticeId") noticeId: string,
+    @RequestId() requestId: string
+  ) {
+    return this.core.acknowledgeSystemNotice(actor, requestId, uuid.parse(noticeId));
+  }
+
   @Get("me/export-requests")
   @RequirePermission("tenant:read")
   listExportRequests(@Actor() actor: RequestActor) {

@@ -216,6 +216,26 @@ export interface PlatformAccountRecoveryCaseResponse {
   updatedAt: string;
 }
 
+export type PlatformNoticeScope = "global" | "plan" | "tenant";
+
+export interface PlatformSystemNoticeResponse {
+  id: string;
+  scope: PlatformNoticeScope;
+  scopeValue: string | null;
+  title: string;
+  body: string;
+  startsAt: string;
+  expiresAt: string | null;
+  requiresAcknowledgement: boolean;
+  actorUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SystemNoticeViewResponse extends PlatformSystemNoticeResponse {
+  acknowledgedAt: string | null;
+}
+
 export type FeatureMaturity = "stable" | "beta" | "internal";
 export interface FeatureDefinition {
   key: SaaSCapabilityKey;

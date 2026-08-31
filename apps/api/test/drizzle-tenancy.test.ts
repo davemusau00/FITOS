@@ -673,6 +673,32 @@ describeDatabase("Drizzle tenant isolation", () => {
     ).resolves.not.toContainEqual(item);
   });
 
+  it("persists scheduled system notices and tenant acknowledgements", async () => {
+    const notice = await repository.createPlatformSystemNotice({
+      scope: "tenant",
+      scopeValue: gym.tenant.id,
+      title: "Integration maintenance notice",
+      body: "Please acknowledge this scheduled update.",
+      startsAt: new Date(Date.now() - 60_000).toISOString(),
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      requiresAcknowledgement: true,
+      actorUserId: gym.user.id
+    });
+    const visibleToGym = await repository.listSystemNoticesForTenant(gym.tenant.id, gym.user.id);
+    expect(visibleToGym.find((item) => item.id === notice.id)).toMatchObject({
+      id: notice.id,
+      acknowledgedAt: null
+    });
+    const visibleToPilates = await repository.listSystemNoticesForTenant(
+      pilates.tenant.id,
+      pilates.user.id
+    );
+    expect(visibleToPilates.some((item) => item.id === notice.id)).toBe(false);
+    await expect(
+      repository.acknowledgePlatformSystemNotice(gym.tenant.id, gym.user.id, notice.id)
+    ).resolves.toMatchObject({ id: notice.id, acknowledgedAt: expect.any(String) });
+  });
+
   it("persists account export requests and isolates them by tenant", async () => {
     const created = await repository.createAccountExportRequest(scopeOf(gym), gym.user.id);
     expect(created.status).toBe("requested");

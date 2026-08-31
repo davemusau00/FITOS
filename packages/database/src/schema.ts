@@ -194,6 +194,41 @@ export const platformAccountRecoveryCases = pgTable(
   ]
 );
 
+export const platformSystemNotices = pgTable(
+  "platform_system_notices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    scope: varchar("scope", { length: 20 }).notNull(),
+    scopeValue: varchar("scope_value", { length: 160 }),
+    title: varchar("title", { length: 180 }).notNull(),
+    body: text("body").notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    requiresAcknowledgement: boolean("requires_acknowledgement").notNull().default(false),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_platform_notices_scope_schedule").on(table.scope, table.scopeValue, table.startsAt),
+    index("idx_platform_notices_expiry").on(table.expiresAt)
+  ]
+);
+
+export const platformNoticeAcknowledgements = pgTable(
+  "platform_notice_acknowledgements",
+  {
+    noticeId: uuid("notice_id")
+      .notNull()
+      .references(() => platformSystemNotices.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [primaryKey({ columns: [table.noticeId, table.userId] })]
+);
+
 export const platformAdminTokens = pgTable(
   "platform_admin_tokens",
   {
@@ -1786,6 +1821,8 @@ export const schema = {
   users,
   platformAdminTokens,
   platformAccountRecoveryCases,
+  platformSystemNotices,
+  platformNoticeAcknowledgements,
   roles,
   permissions,
   rolePermissions,

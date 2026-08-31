@@ -11,9 +11,14 @@ export function NotificationInboxPage() {
   );
   const client = useQueryClient();
   const query = useQuery({ queryKey: ["notifications", "inbox"], queryFn: api.notificationInbox });
+  const notices = useQuery({ queryKey: ["system-notices"], queryFn: api.systemNotices });
   const read = useMutation({
     mutationFn: api.markNotificationRead,
     onSuccess: () => void client.invalidateQueries({ queryKey: ["notifications", "inbox"] })
+  });
+  const acknowledge = useMutation({
+    mutationFn: api.acknowledgeSystemNotice,
+    onSuccess: () => void client.invalidateQueries({ queryKey: ["system-notices"] })
   });
   const notifications = query.data ?? [];
   const unreadCount = notifications.filter((item) => !item.readAt).length;
@@ -34,6 +39,43 @@ export function NotificationInboxPage() {
       />
       <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
       <ErrorNotice error={read.error} onRetry={() => read.reset()} />
+      <ErrorNotice error={notices.error} onRetry={() => void notices.refetch()} />
+      {notices.data?.length ? (
+        <Card>
+          <div className="section-heading">
+            <div>
+              <h2>System notices</h2>
+              <p className="muted">Scheduled Platform updates relevant to this workspace.</p>
+            </div>
+          </div>
+          {notices.data.map((notice) => (
+            <article className="fitos-mobile-data-card" key={notice.id}>
+              <div>
+                <strong>{notice.title}</strong>
+                <p>{notice.body}</p>
+                <span className="fitos-mobile-data-card__meta">
+                  {new Date(notice.startsAt).toLocaleString()}
+                  {notice.expiresAt
+                    ? ` · Expires ${new Date(notice.expiresAt).toLocaleString()}`
+                    : ""}
+                </span>
+              </div>
+              {notice.requiresAcknowledgement ? (
+                <StatusBadge status={notice.acknowledgedAt ? "acknowledged" : "action required"} />
+              ) : null}
+              {notice.requiresAcknowledgement && !notice.acknowledgedAt ? (
+                <button
+                  className="fitos-button fitos-button--primary"
+                  disabled={acknowledge.isPending}
+                  onClick={() => acknowledge.mutate(notice.id)}
+                >
+                  Acknowledge
+                </button>
+              ) : null}
+            </article>
+          ))}
+        </Card>
+      ) : null}
       <div className="fitos-filter-row" role="group" aria-label="Notification categories">
         {(["all", "booking", "operations", "crm", "system"] as const).map((value) => (
           <button

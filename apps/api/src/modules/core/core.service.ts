@@ -1654,6 +1654,31 @@ export class CoreService {
     return updated;
   }
 
+  async systemNotices(actor: RequestActor) {
+    return this.repository.listSystemNoticesForTenant(actor.tenantId, actor.userId);
+  }
+
+  async acknowledgeSystemNotice(actor: RequestActor, requestId: string, noticeId: string) {
+    const updated = await this.repository.acknowledgePlatformSystemNotice(
+      actor.tenantId,
+      actor.userId,
+      noticeId
+    );
+    if (!updated) throw new NotFoundException("System notice not found or no longer active.");
+    if (updated.requiresAcknowledgement) {
+      await this.audit(
+        actor,
+        requestId,
+        "system_notice.acknowledged",
+        "platform_system_notice",
+        noticeId,
+        null,
+        { acknowledgedAt: updated.acknowledgedAt }
+      );
+    }
+    return updated;
+  }
+
   async createAccountExportRequest(actor: RequestActor, requestId: string) {
     const request = await this.repository.createAccountExportRequest(scopeOf(actor), actor.userId);
     await this.audit(

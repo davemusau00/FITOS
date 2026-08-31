@@ -51,6 +51,14 @@ export const platformNavigation: RouteMeta[] = [
     icon: "shield",
     workspace: "platform",
     branchMode: "none"
+  },
+  {
+    path: "/platform/notices",
+    label: "Notices",
+    group: "Governance",
+    icon: "warning",
+    workspace: "platform",
+    branchMode: "none"
   }
 ];
 

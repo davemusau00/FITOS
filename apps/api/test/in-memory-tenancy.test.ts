@@ -138,6 +138,36 @@ describe("tenant isolation", () => {
     await expect(repository.listPlatformAccountRecoveryCases("other-tenant")).resolves.toEqual([]);
   });
 
+  it("targets system notices by plan and persists user acknowledgement", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const gym = await repository.findLoginIdentity("owner@gym.fitos.test");
+    const pilates = await repository.findLoginIdentity("owner@pilates.fitos.test");
+    if (!gym || !pilates) throw new Error("Seed identities missing.");
+    const notice = await repository.createPlatformSystemNotice({
+      scope: "plan",
+      scopeValue: (await repository.getTenantSubscription(gym.tenant.id)).plan,
+      title: "Planned maintenance",
+      body: "The workspace will receive a routine update.",
+      startsAt: new Date(Date.now() - 60_000).toISOString(),
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      requiresAcknowledgement: true,
+      actorUserId: "platform-user"
+    });
+    await expect(
+      repository.listSystemNoticesForTenant(gym.tenant.id, gym.user.id)
+    ).resolves.toMatchObject([{ id: notice.id, acknowledgedAt: null }]);
+    await expect(
+      repository.listSystemNoticesForTenant(pilates.tenant.id, pilates.user.id)
+    ).resolves.toMatchObject([{ id: notice.id, acknowledgedAt: null }]);
+    const acknowledged = await repository.acknowledgePlatformSystemNotice(
+      gym.tenant.id,
+      gym.user.id,
+      notice.id
+    );
+    expect(acknowledged?.acknowledgedAt).toBeTruthy();
+  });
+
   it("persists staff notification preferences with safe defaults", async () => {
     const repository = new InMemoryFitosRepository();
     const defaults = await repository.getNotificationPreferences("user-1");

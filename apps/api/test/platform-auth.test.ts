@@ -251,6 +251,45 @@ describe("platform account recovery cases", () => {
   });
 });
 
+describe("platform system notices", () => {
+  it("validates scope and records an auditable scheduled notice", async () => {
+    const repository = new InMemoryFitosRepository();
+    const controller = new PlatformController(repository);
+    const request = { platformActor: { userId: "platform-user" } } as never;
+    await expect(
+      controller.createSystemNotice(
+        {
+          scope: "global",
+          scopeValue: "starter",
+          title: "Invalid scope",
+          body: "This should fail.",
+          startsAt: new Date().toISOString(),
+          requiresAcknowledgement: true
+        },
+        "notice-request",
+        request
+      )
+    ).rejects.toThrow("Global notices cannot include a scope value");
+    const created = await controller.createSystemNotice(
+      {
+        scope: "global",
+        scopeValue: null,
+        title: "Platform update",
+        body: "Acknowledge the planned workspace update.",
+        startsAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        requiresAcknowledgement: true
+      },
+      "notice-request",
+      request
+    );
+    expect(created.requiresAcknowledgement).toBe(true);
+    expect((await repository.listPlatformAuditEvents())[0]?.action).toBe(
+      "platform.system_notice_created"
+    );
+  });
+});
+
 describe("staff password and session lifecycle", () => {
   it("changes the password, preserves the current session, and revokes other sessions", async () => {
     const repository = new InMemoryFitosRepository();

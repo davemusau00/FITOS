@@ -23,6 +23,8 @@ import {
   notifications,
   platformFeatureFlagOverrides,
   platformAccountRecoveryCases,
+  platformSystemNotices,
+  platformNoticeAcknowledgements,
   platformSupportNotes,
   platformPlanDefinitions,
   members,
@@ -627,6 +629,95 @@ export class DrizzleFitosRepository implements FitosRepository {
       .returning();
     if (!row) throw new Error("Unable to create account recovery case.");
     return this.platformAccountRecoveryCaseResponse(row);
+  }
+
+  async listPlatformSystemNotices() {
+    const rows = await this.db
+      .select()
+      .from(platformSystemNotices)
+      .orderBy(desc(platformSystemNotices.createdAt));
+    return rows.map((row) => this.platformSystemNoticeResponse(row));
+  }
+
+  async createPlatformSystemNotice(
+    input: Omit<
+      import("@fitos/contracts").PlatformSystemNoticeResponse,
+      "id" | "createdAt" | "updatedAt"
+    >
+  ) {
+    const [row] = await this.db
+      .insert(platformSystemNotices)
+      .values({
+        scope: input.scope,
+        scopeValue: input.scopeValue,
+        title: input.title,
+        body: input.body,
+        startsAt: new Date(input.startsAt),
+        expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+        requiresAcknowledgement: input.requiresAcknowledgement,
+        actorUserId: input.actorUserId
+      })
+      .returning();
+    if (!row) throw new Error("Unable to create system notice.");
+    return this.platformSystemNoticeResponse(row);
+  }
+
+  async listSystemNoticesForTenant(tenantId: string, userId: string) {
+    const subscription = await this.db
+      .select({ plan: tenantSubscriptions.plan })
+      .from(tenantSubscriptions)
+      .where(eq(tenantSubscriptions.tenantId, tenantId))
+      .limit(1);
+    const plan = subscription[0]?.plan ?? null;
+    const targetScopes = [
+      eq(platformSystemNotices.scope, "global"),
+      and(eq(platformSystemNotices.scope, "tenant"), eq(platformSystemNotices.scopeValue, tenantId))
+    ];
+    if (plan) {
+      targetScopes.push(
+        and(eq(platformSystemNotices.scope, "plan"), eq(platformSystemNotices.scopeValue, plan))
+      );
+    }
+    const now = new Date();
+    const rows = await this.db
+      .select({
+        notice: platformSystemNotices,
+        acknowledgedAt: platformNoticeAcknowledgements.acknowledgedAt
+      })
+      .from(platformSystemNotices)
+      .leftJoin(
+        platformNoticeAcknowledgements,
+        and(
+          eq(platformNoticeAcknowledgements.noticeId, platformSystemNotices.id),
+          eq(platformNoticeAcknowledgements.userId, userId)
+        )
+      )
+      .where(
+        and(
+          lte(platformSystemNotices.startsAt, now),
+          or(isNull(platformSystemNotices.expiresAt), gt(platformSystemNotices.expiresAt, now)),
+          or(...targetScopes)
+        )
+      )
+      .orderBy(desc(platformSystemNotices.startsAt));
+    return rows.map((row) => ({
+      ...this.platformSystemNoticeResponse(row.notice),
+      acknowledgedAt: row.acknowledgedAt?.toISOString() ?? null
+    }));
+  }
+
+  async acknowledgePlatformSystemNotice(tenantId: string, userId: string, noticeId: string) {
+    const visible = await this.listSystemNoticesForTenant(tenantId, userId);
+    if (!visible.some((notice) => notice.id === noticeId)) return null;
+    await this.db
+      .insert(platformNoticeAcknowledgements)
+      .values({ noticeId, userId })
+      .onConflictDoNothing();
+    return (
+      (await this.listSystemNoticesForTenant(tenantId, userId)).find(
+        (notice) => notice.id === noticeId
+      ) ?? null
+    );
   }
 
   async createNotification(
@@ -3866,6 +3957,24 @@ export class DrizzleFitosRepository implements FitosRepository {
       sessionRevocation:
         row.sessionRevocation as import("@fitos/contracts").PlatformAccountRecoveryCaseResponse["sessionRevocation"],
       outcome: row.outcome as import("@fitos/contracts").PlatformRecoveryCaseOutcome,
+      actorUserId: row.actorUserId,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString()
+    };
+  }
+
+  private platformSystemNoticeResponse(
+    row: typeof platformSystemNotices.$inferSelect
+  ): import("@fitos/contracts").PlatformSystemNoticeResponse {
+    return {
+      id: row.id,
+      scope: row.scope as import("@fitos/contracts").PlatformNoticeScope,
+      scopeValue: row.scopeValue,
+      title: row.title,
+      body: row.body,
+      startsAt: row.startsAt.toISOString(),
+      expiresAt: row.expiresAt?.toISOString() ?? null,
+      requiresAcknowledgement: row.requiresAcknowledgement,
       actorUserId: row.actorUserId,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString()

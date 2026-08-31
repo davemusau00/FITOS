@@ -921,4 +921,73 @@ export class PlatformController {
     });
     return created;
   }
+
+  @Get("notices")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  listSystemNotices() {
+    return this.repository.listPlatformSystemNotices();
+  }
+
+  @Post("notices")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async createSystemNotice(
+    @Body() body: unknown,
+    @RequestId() requestId: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        scope: z.enum(["global", "plan", "tenant"]),
+        scopeValue: z.string().trim().min(1).max(160).nullable(),
+        title: z.string().trim().min(3).max(180),
+        body: z.string().trim().min(3).max(10000),
+        startsAt: z.string().datetime(),
+        expiresAt: z.string().datetime().nullable().optional(),
+        requiresAcknowledgement: z.boolean().default(false)
+      })
+      .strict()
+      .parse(body);
+    if (input.scope === "global" && input.scopeValue !== null)
+      throw new BadRequestException("Global notices cannot include a scope value.");
+    if (input.scope !== "global" && !input.scopeValue)
+      throw new BadRequestException("Plan and tenant notices require a scope value.");
+    if (input.scope === "plan" && !["starter", "pro", "business"].includes(input.scopeValue!))
+      throw new BadRequestException("Plan notices require a canonical plan key.");
+    if (input.scope === "tenant" && !z.string().uuid().safeParse(input.scopeValue).success)
+      throw new BadRequestException("Tenant notices require a valid tenant ID.");
+    const startsAt = new Date(input.startsAt);
+    const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
+    if (expiresAt && expiresAt <= startsAt)
+      throw new BadRequestException("expiresAt must be after startsAt.");
+    const created = await this.repository.createPlatformSystemNotice({
+      scope: input.scope,
+      scopeValue: input.scopeValue,
+      title: input.title,
+      body: input.body,
+      startsAt: startsAt.toISOString(),
+      expiresAt: expiresAt?.toISOString() ?? null,
+      requiresAcknowledgement: input.requiresAcknowledgement,
+      actorUserId: request.platformActor?.userId ?? null
+    });
+    await this.repository.recordAudit({
+      tenantId: "",
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "platform.system_notice_created",
+      resourceType: "platform_system_notice",
+      resourceId: created.id,
+      beforeSummary: null,
+      afterSummary: {
+        scope: created.scope,
+        scopeValue: created.scopeValue,
+        title: created.title,
+        startsAt: created.startsAt,
+        expiresAt: created.expiresAt,
+        requiresAcknowledgement: created.requiresAcknowledgement
+      },
+      requestId
+    });
+    return created;
+  }
 }

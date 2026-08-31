@@ -277,6 +277,11 @@ export class InMemoryFitosRepository implements FitosRepository {
     string,
     import("@fitos/contracts").PlatformAccountRecoveryCaseResponse
   >();
+  private readonly platformSystemNotices = new Map<
+    string,
+    import("@fitos/contracts").PlatformSystemNoticeResponse
+  >();
+  private readonly platformNoticeAcknowledgements = new Map<string, string>();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly memberPasswords = new Map<string, string>();
@@ -3854,6 +3859,56 @@ export class InMemoryFitosRepository implements FitosRepository {
     const item = { ...input, id: randomUUID(), createdAt: timestamp, updatedAt: timestamp };
     this.platformAccountRecoveryCases.set(item.id, item);
     return item;
+  }
+
+  async listPlatformSystemNotices() {
+    return [...this.platformSystemNotices.values()].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt)
+    );
+  }
+
+  async createPlatformSystemNotice(
+    input: Omit<
+      import("@fitos/contracts").PlatformSystemNoticeResponse,
+      "id" | "createdAt" | "updatedAt"
+    >
+  ) {
+    const timestamp = now();
+    const item = { ...input, id: randomUUID(), createdAt: timestamp, updatedAt: timestamp };
+    this.platformSystemNotices.set(item.id, item);
+    return item;
+  }
+
+  async listSystemNoticesForTenant(tenantId: string, userId: string) {
+    const subscription = await this.getTenantSubscription(tenantId).catch(() => null);
+    const timestamp = Date.now();
+    return [...this.platformSystemNotices.values()]
+      .filter((notice) => {
+        const startsAt = new Date(notice.startsAt).getTime();
+        const expiresAt = notice.expiresAt ? new Date(notice.expiresAt).getTime() : null;
+        const target =
+          notice.scope === "global" ||
+          (notice.scope === "plan" && notice.scopeValue === subscription?.plan) ||
+          (notice.scope === "tenant" && notice.scopeValue === tenantId);
+        return target && startsAt <= timestamp && (expiresAt === null || expiresAt > timestamp);
+      })
+      .sort((a, b) => b.startsAt.localeCompare(a.startsAt))
+      .map((notice) => ({
+        ...notice,
+        acknowledgedAt: this.platformNoticeAcknowledgements.get(`${notice.id}:${userId}`) ?? null
+      }));
+  }
+
+  async acknowledgePlatformSystemNotice(tenantId: string, userId: string, noticeId: string) {
+    const visible = await this.listSystemNoticesForTenant(tenantId, userId);
+    if (!visible.some((notice) => notice.id === noticeId)) return null;
+    const at = now();
+    this.platformNoticeAcknowledgements.set(`${noticeId}:${userId}`, at);
+    return (
+      (await this.listSystemNoticesForTenant(tenantId, userId)).find(
+        (notice) => notice.id === noticeId
+      ) ?? null
+    );
   }
 
   async createNotification(

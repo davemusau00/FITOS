@@ -54,6 +54,7 @@ import {
   PlatformTenantDetailPage,
   PlatformOverviewPage,
   PlatformAuditPage,
+  PlatformNoticesPage,
   OpsDashboardPage,
   CoachDashboardPage,
   SitesPage,
@@ -193,6 +194,7 @@ export function AppRouter() {
           <Route element={<PlatformTenantDetailPage />} path="tenants/:tenantId" />
           <Route element={<ImplementationInquiriesPage />} path="inquiries" />
           <Route element={<PlatformAuditPage />} path="audit" />
+          <Route element={<PlatformNoticesPage />} path="notices" />
           <Route element={<PlatformPlansPage />} path="plans" />
           <Route element={<PlatformFeatureFlagsPage />} path="feature-flags" />
           <Route element={<ImplementationInquiryDetailPage />} path="inquiries/:inquiryId" />

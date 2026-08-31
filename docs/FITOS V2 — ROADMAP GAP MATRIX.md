@@ -23,7 +23,7 @@ Required for roadmap completeness but can follow core operating workflows.
 **Area:** Engineering / Release  
 **Current state:** The CI workflow declares the full required verification chain, including Playwright, build, production configuration/image/smoke, dependency audit, and secret scan. A current green hosted run remains unverified in this checkout.
 
-**Implementation evidence (2026-08-31):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 68 tests; web tests, lint, and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
+**Implementation evidence (2026-08-31):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 71 tests; web tests, lint, and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
 
 ### Acceptance
 
@@ -377,6 +377,8 @@ Support:
 - schedule;
 - expiry;
 - acknowledgement.
+
+**Implementation evidence (2026-08-31):** Migration `0043_platform_system_notices` persists global, plan-scoped, and tenant-scoped notices with scheduled start/expiry windows, acknowledgement requirement, actor, and audit timestamps. Platform `/platform/notices` provides scoped authoring and history; authenticated staff receive only active notices matching their tenant and plan through `/users/me/system-notices`, with durable per-user acknowledgement. In-memory and PostgreSQL tests cover scope filtering, schedule visibility, acknowledgement persistence, and Platform validation.
 
 ---
 
@@ -944,7 +946,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 68 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 71 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

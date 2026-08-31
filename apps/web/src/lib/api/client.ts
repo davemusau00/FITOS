@@ -198,6 +198,13 @@ export const api = {
       `/users/me/notification-inbox/${notificationId}/read`,
       { method: "PATCH" }
     ),
+  systemNotices: () =>
+    request<import("@fitos/contracts").SystemNoticeViewResponse[]>("/users/me/system-notices"),
+  acknowledgeSystemNotice: (noticeId: string) =>
+    request<import("@fitos/contracts").SystemNoticeViewResponse>(
+      `/users/me/system-notices/${noticeId}/acknowledge`,
+      { method: "POST" }
+    ),
   accountExportRequests: () =>
     request<import("@fitos/contracts").AccountExportRequestResponse[]>("/users/me/export-requests"),
   requestAccountExport: () =>
@@ -724,6 +731,18 @@ export const api = {
       `/platform/tenants/${tenantId}/recovery-cases`,
       { method: "POST", body: json(payload) }
     ),
+  platformSystemNotices: () =>
+    request<import("@fitos/contracts").PlatformSystemNoticeResponse[]>("/platform/notices"),
+  createPlatformSystemNotice: (
+    payload: Omit<
+      import("@fitos/contracts").PlatformSystemNoticeResponse,
+      "id" | "createdAt" | "updatedAt" | "actorUserId"
+    >
+  ) =>
+    request<import("@fitos/contracts").PlatformSystemNoticeResponse>("/platform/notices", {
+      method: "POST",
+      body: json(payload)
+    }),
   decidePlatformDeletionRequest: (
     requestId: string,
     status: "reviewing" | "approved" | "rejected",

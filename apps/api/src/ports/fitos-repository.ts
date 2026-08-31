@@ -643,6 +643,22 @@ export interface FitosRepository {
       "id" | "createdAt" | "updatedAt"
     >
   ): Promise<import("@fitos/contracts").PlatformAccountRecoveryCaseResponse>;
+  listPlatformSystemNotices(): Promise<import("@fitos/contracts").PlatformSystemNoticeResponse[]>;
+  createPlatformSystemNotice(
+    input: Omit<
+      import("@fitos/contracts").PlatformSystemNoticeResponse,
+      "id" | "createdAt" | "updatedAt"
+    >
+  ): Promise<import("@fitos/contracts").PlatformSystemNoticeResponse>;
+  listSystemNoticesForTenant(
+    tenantId: string,
+    userId: string
+  ): Promise<import("@fitos/contracts").SystemNoticeViewResponse[]>;
+  acknowledgePlatformSystemNotice(
+    tenantId: string,
+    userId: string,
+    noticeId: string
+  ): Promise<import("@fitos/contracts").SystemNoticeViewResponse | null>;
   getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
   transitionTenantSubscriptionStatus(
     tenantId: string,

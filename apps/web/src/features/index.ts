@@ -41,6 +41,7 @@ export * from "./platform/PlatformTenantsPage";
 export * from "./platform/PlatformTenantDetailPage";
 export * from "./platform/PlatformOverviewPage";
 export * from "./platform/PlatformAuditPage";
+export * from "./platform/PlatformNoticesPage";
 export * from "./platform/PlatformLoginPage";
 export * from "./sites/SitesPage";
 export * from "./member-portal/MemberPortalPage";
