@@ -83,6 +83,18 @@ describe("tenant isolation", () => {
     ).toBe(true);
   });
 
+  it("keeps Platform support notes tenant-scoped", async () => {
+    const repository = new InMemoryFitosRepository();
+    const note = await repository.createPlatformSupportNote({
+      tenantId: "tenant-1",
+      authorUserId: "platform-user",
+      category: "support",
+      note: "Requested onboarding clarification."
+    });
+    await expect(repository.listPlatformSupportNotes("tenant-2")).resolves.toEqual([]);
+    await expect(repository.listPlatformSupportNotes("tenant-1")).resolves.toContainEqual(note);
+  });
+
   it("persists staff notification preferences with safe defaults", async () => {
     const repository = new InMemoryFitosRepository();
     const defaults = await repository.getNotificationPreferences("user-1");
