@@ -50,6 +50,12 @@ export function OverviewPage() {
     enabled: can(auth, "service:read")
   });
 
+  const tasks = useQuery({
+    queryKey: branchQueryKeys.list("tasks", activeBranchId, "overview"),
+    queryFn: () => api.tasks({ branchId: activeBranchId, status: "open", limit: 100 }),
+    enabled: Boolean(activeBranchId) && can(auth, "task:read")
+  });
+
   if (members.isLoading || branches.isLoading) return <PageLoading />;
 
   const totalMembers = today.data?.members.active ?? 0;
@@ -59,6 +65,7 @@ export function OverviewPage() {
   const totalStaff = staff.data?.length ?? 0;
   const totalBranches = branches.data?.length ?? 0;
   const totalLeads = today.data?.leads.newToday ?? 0;
+  const openTasks = tasks.data?.length ?? 0;
 
   const todayFormatted = new Intl.DateTimeFormat(undefined, {
     weekday: "long",
@@ -101,7 +108,8 @@ export function OverviewPage() {
           branches.error ??
           staff.error ??
           bookings.error ??
-          services.error
+          services.error ??
+          tasks.error
         }
       />
 
@@ -147,6 +155,14 @@ export function OverviewPage() {
           <strong className="stat-card__value">{totalBranches}</strong>
           <span className="stat-card__delta stat-card__delta--neutral">Operating units</span>
         </div>
+
+        {can(auth, "task:read") ? (
+          <Link className="stat-card stat-card--link" to="/app/tasks">
+            <span className="stat-card__label">Open Tasks</span>
+            <strong className="stat-card__value">{openTasks}</strong>
+            <span className="stat-card__delta stat-card__delta--neutral">Review follow-ups</span>
+          </Link>
+        ) : null}
       </section>
 
       {/* ── Dashboard Main Grid ── */}
