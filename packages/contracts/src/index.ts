@@ -21,6 +21,7 @@ export * from "./equipment.js";
 export * from "./inventory.js";
 export * from "./assessments.js";
 export * from "./therapy.js";
+export * from "./tasks.js";
 export * from "./public.js";
 export * from "./services.js";
 export * from "./today.js";

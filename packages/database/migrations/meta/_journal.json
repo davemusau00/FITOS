@@ -337,6 +337,13 @@
       "when": 1790448000000,
       "tag": "0047_member_saved_views",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1790534400000,
+      "tag": "0048_global_tasks",
+      "breakpoints": true
     }
   ]
 }

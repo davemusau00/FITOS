@@ -10,6 +10,8 @@ export const PERMISSION_KEYS = [
   "member:update",
   "member:deactivate",
   "member:export",
+  "task:read",
+  "task:manage",
   "lead:read",
   "lead:create",
   "lead:update",
@@ -86,6 +88,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]>
     "member:read",
     "member:create",
     "member:update",
+    "task:read",
+    "task:manage",
     "booking:read",
     "booking:create",
     "booking:update",
@@ -97,7 +101,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]>
     "payment:record",
     "schedule:read"
   ],
-  trainer: ["branch:read", "member:read", "schedule:read", "attendance:read"],
+  trainer: [
+    "branch:read",
+    "member:read",
+    "schedule:read",
+    "attendance:read",
+    "task:read",
+    "task:manage"
+  ],
   finance: [
     "branch:read",
     "payment:read",
@@ -106,6 +117,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]>
     "payment:refund",
     "payment:export",
     "report:finance",
-    "report:export"
+    "report:export",
+    "task:read",
+    "task:manage"
   ]
 };

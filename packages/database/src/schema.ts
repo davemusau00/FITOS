@@ -627,6 +627,40 @@ export const leadTasks = pgTable(
   (table) => [index("idx_lead_tasks_tenant_lead").on(table.tenantId, table.leadId)]
 );
 
+export const tasks = pgTable(
+  "tasks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
+    title: varchar("title", { length: 180 }).notNull(),
+    description: text("description"),
+    assigneeUserId: uuid("assignee_user_id").references(() => users.id, { onDelete: "set null" }),
+    priority: varchar("priority", { length: 20 }).notNull().default("normal"),
+    status: varchar("status", { length: 20 }).notNull().default("open"),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    resourceType: varchar("resource_type", { length: 80 }),
+    resourceId: uuid("resource_id"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_tasks_tenant_status_due").on(table.tenantId, table.status, table.dueAt),
+    index("idx_tasks_tenant_assignee_status").on(
+      table.tenantId,
+      table.assigneeUserId,
+      table.status
+    ),
+    index("idx_tasks_tenant_branch").on(table.tenantId, table.branchId)
+  ]
+);
+
 export const leadNotes = pgTable(
   "lead_notes",
   {

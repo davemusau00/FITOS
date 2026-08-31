@@ -43,6 +43,7 @@ import { InventoryController } from "./modules/inventory/inventory.controller.js
 import { AssessmentsController } from "./modules/assessments/assessments.controller.js";
 import { TherapyController } from "./modules/therapy/therapy.controller.js";
 import { SitesController } from "./modules/sites/sites.controller.js";
+import { TasksController } from "./modules/tasks/tasks.controller.js";
 import { CoreService } from "./modules/core/core.service.js";
 import { DeviceImportService } from "./modules/assessments/device-import.service.js";
 import { AutomationQueueService } from "./modules/automations/automation-queue.service.js";
@@ -100,7 +101,8 @@ const repositoryFactory = (): FitosRepository => {
     InventoryController,
     AssessmentsController,
     TherapyController,
-    SitesController
+    SitesController,
+    TasksController
   ],
   providers: [
     { provide: FitosRepositoryToken, useFactory: repositoryFactory },

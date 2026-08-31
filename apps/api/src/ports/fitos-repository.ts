@@ -18,6 +18,10 @@ import type {
   MemberSavedViewResponse,
   CreateMemberSavedViewRequest,
   UpdateMemberSavedViewRequest,
+  TaskResponse,
+  TaskListFilters,
+  CreateTaskRequest,
+  UpdateTaskRequest,
   CreateLeadRequest,
   LeadListFilters,
   LeadConversionResponse,
@@ -284,6 +288,19 @@ export interface FitosRepository {
     userId: string,
     viewId: string
   ): Promise<MemberSavedViewResponse | null>;
+  listTasks(scope: TenantScope, filters: TaskListFilters): Promise<TaskResponse[]>;
+  findTaskById(scope: TenantScope, taskId: string): Promise<TaskResponse | null>;
+  createTask(
+    scope: TenantScope,
+    input: CreateTaskRequest,
+    actorUserId: string
+  ): Promise<TaskResponse>;
+  updateTask(
+    scope: TenantScope,
+    taskId: string,
+    input: UpdateTaskRequest
+  ): Promise<TaskResponse | null>;
+  completeTask(scope: TenantScope, taskId: string): Promise<TaskResponse | null>;
 
   createLead(
     scope: TenantScope,

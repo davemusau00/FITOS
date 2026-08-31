@@ -165,6 +165,62 @@ describe("tenant isolation", () => {
     }
   });
 
+  it("persists cross-domain tasks with assignee, lifecycle, and tenant scope", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    const pilates = await repository.findLoginIdentity("owner@pilates.fitos.test");
+    if (!owner || !pilates) throw new Error("Seed identities missing.");
+    const scope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const otherScope = {
+      tenantId: pilates.tenant.id,
+      tenantUserId: pilates.tenantUserId,
+      userId: pilates.user.id,
+      branchIds: pilates.branchIds
+    };
+    const member = (await repository.searchMembers(scope, { limit: 1 })).data[0];
+    if (!member) throw new Error("Seed member missing.");
+    const task = await repository.createTask(
+      scope,
+      {
+        title: "Review member progress",
+        description: "Prepare the next coaching conversation.",
+        branchId: owner.branchIds[0],
+        assigneeUserId: owner.user.id,
+        priority: "urgent",
+        dueAt: new Date(Date.now() + 86_400_000).toISOString(),
+        resourceType: "member",
+        resourceId: member.id
+      },
+      owner.user.id
+    );
+    expect(task.status).toBe("open");
+    await expect(repository.listTasks(scope, { status: "open" })).resolves.toEqual([
+      expect.objectContaining({ id: task.id, resourceId: member.id })
+    ]);
+    await expect(repository.findTaskById(otherScope, task.id)).resolves.toBeNull();
+    await expect(
+      repository.updateTask(scope, task.id, { status: "in_progress" })
+    ).resolves.toMatchObject({
+      status: "in_progress"
+    });
+    await expect(repository.completeTask(scope, task.id)).resolves.toMatchObject({
+      status: "completed",
+      completedAt: expect.any(String)
+    });
+    await expect(
+      repository.createTask(scope, {
+        title: "Invalid assignee",
+        assigneeUserId: pilates.user.id
+      })
+    ).rejects.toThrow("Task assignee unavailable");
+  });
+
   it("scopes inbox items to their user and persists read state", async () => {
     const repository = new InMemoryFitosRepository();
     const item = await repository.createNotification({

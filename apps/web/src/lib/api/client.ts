@@ -110,7 +110,11 @@ import type {
   TherapyProtocolResponse,
   CreateTherapyProtocolRequest,
   TherapySessionResponse,
-  CreateTherapySessionRequest
+  CreateTherapySessionRequest,
+  TaskResponse,
+  TaskListFilters,
+  CreateTaskRequest,
+  UpdateTaskRequest
 } from "@fitos/contracts";
 
 export class ApiClientError extends Error {
@@ -312,6 +316,23 @@ export const api = {
     }),
   deleteMemberSavedView: (id: string) =>
     request<MemberSavedViewResponse>(`/members/views/${id}`, { method: "DELETE" }),
+  tasks: (filters: TaskListFilters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined) params.set(key, String(value));
+    });
+    return request<TaskResponse[]>(`/tasks?${params.toString()}`);
+  },
+  task: (id: string) => request<TaskResponse>(`/tasks/${id}`),
+  createTask: (payload: CreateTaskRequest) =>
+    request<TaskResponse>("/tasks", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateTask: (id: string, payload: UpdateTaskRequest) =>
+    request<TaskResponse>(`/tasks/${id}`, { method: "PATCH", body: json(payload) }),
+  completeTask: (id: string) => request<TaskResponse>(`/tasks/${id}/complete`, { method: "POST" }),
   memberTimeline: (id: string) =>
     request<
       Array<{

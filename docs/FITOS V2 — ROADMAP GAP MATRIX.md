@@ -496,6 +496,8 @@ Persist:
 
 Display in relevant records and Today.
 
+**Partial implementation evidence (2026-09-01):** Migration `0048_global_tasks` adds tenant-scoped tasks with branch, assignee, priority, status, due date, resource link, completion, and updated timestamps, and seeds the `task:read` / `task:manage` permission namespace. Permission-gated `/tasks` CRUD and completion endpoints return canonical resources, validate branch and assignee scope, use idempotency for creation, and audit lifecycle changes. The responsive `/app/tasks` queue supports creation, assignment, filtering, and completion with recoverable feedback. Today aggregation, comments, cross-domain deep links, and browser coverage remain open.
+
 ---
 
 ## P1-027 — CRM Assignee Workload
@@ -966,7 +968,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 84 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 86 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

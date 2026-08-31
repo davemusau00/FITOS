@@ -47,6 +47,7 @@ import {
   memberTagAssignments,
   memberSegments,
   memberSavedViews,
+  tasks,
   memberIdentities,
   memberSessions,
   membershipPlans,
@@ -118,6 +119,10 @@ import type {
   MemberSavedViewResponse,
   CreateMemberSavedViewRequest,
   UpdateMemberSavedViewRequest,
+  TaskResponse,
+  TaskListFilters,
+  CreateTaskRequest,
+  UpdateTaskRequest,
   LeadListFilters,
   LeadConversionResponse,
   LeadNoteResponse,
@@ -1435,6 +1440,118 @@ export class DrizzleFitosRepository implements FitosRepository {
       )
       .returning();
     return view ? this.memberSavedViewResponse(view) : null;
+  }
+
+  async listTasks(scope: TenantScope, filters: TaskListFilters): Promise<TaskResponse[]> {
+    if (!scope.branchIds.length) return [];
+    const conditions = [
+      eq(tasks.tenantId, scope.tenantId),
+      or(isNull(tasks.branchId), inArray(tasks.branchId, scope.branchIds))
+    ];
+    if (filters.status) conditions.push(eq(tasks.status, filters.status));
+    if (filters.assigneeUserId) conditions.push(eq(tasks.assigneeUserId, filters.assigneeUserId));
+    if (filters.branchId) conditions.push(eq(tasks.branchId, filters.branchId));
+    if (filters.dueBefore) conditions.push(lte(tasks.dueAt, new Date(filters.dueBefore)));
+    const rows = await this.db
+      .select()
+      .from(tasks)
+      .where(and(...conditions))
+      .orderBy(tasks.dueAt, desc(tasks.createdAt))
+      .limit(Math.min(Math.max(filters.limit ?? 100, 1), 100));
+    return rows.map((task) => this.taskResponse(task));
+  }
+
+  async findTaskById(scope: TenantScope, taskId: string): Promise<TaskResponse | null> {
+    if (!scope.branchIds.length) return null;
+    const [task] = await this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.id, taskId),
+          eq(tasks.tenantId, scope.tenantId),
+          or(isNull(tasks.branchId), inArray(tasks.branchId, scope.branchIds))
+        )
+      )
+      .limit(1);
+    return task ? this.taskResponse(task) : null;
+  }
+
+  async createTask(
+    scope: TenantScope,
+    input: CreateTaskRequest,
+    actorUserId: string
+  ): Promise<TaskResponse> {
+    if (!scope.branchIds.length) throw new Error("Branch unavailable.");
+    if (input.branchId && !scope.branchIds.includes(input.branchId))
+      throw new Error("Branch unavailable.");
+    if (input.assigneeUserId) await this.assertTaskAssignee(scope, input.assigneeUserId);
+    const [task] = await this.db
+      .insert(tasks)
+      .values({
+        tenantId: scope.tenantId,
+        branchId: input.branchId ?? null,
+        title: input.title.trim(),
+        description: input.description?.trim() || null,
+        assigneeUserId: input.assigneeUserId ?? null,
+        priority: input.priority ?? "normal",
+        status: "open",
+        dueAt: input.dueAt ? new Date(input.dueAt) : null,
+        resourceType: input.resourceType?.trim() || null,
+        resourceId: input.resourceId ?? null,
+        createdByUserId: actorUserId
+      })
+      .returning();
+    if (!task) throw new Error("Unable to create task.");
+    return this.taskResponse(task);
+  }
+
+  async updateTask(
+    scope: TenantScope,
+    taskId: string,
+    input: UpdateTaskRequest
+  ): Promise<TaskResponse | null> {
+    if (!scope.branchIds.length) return null;
+    if (
+      input.branchId !== undefined &&
+      input.branchId !== null &&
+      !scope.branchIds.includes(input.branchId)
+    )
+      throw new Error("Branch unavailable.");
+    if (input.assigneeUserId) await this.assertTaskAssignee(scope, input.assigneeUserId);
+    const completedAt = input.status === "completed" ? new Date() : input.status ? null : undefined;
+    const [task] = await this.db
+      .update(tasks)
+      .set({
+        ...(input.title !== undefined ? { title: input.title.trim() } : {}),
+        ...(input.description !== undefined
+          ? { description: input.description?.trim() || null }
+          : {}),
+        ...(input.branchId !== undefined ? { branchId: input.branchId } : {}),
+        ...(input.assigneeUserId !== undefined ? { assigneeUserId: input.assigneeUserId } : {}),
+        ...(input.priority !== undefined ? { priority: input.priority } : {}),
+        ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.dueAt !== undefined ? { dueAt: input.dueAt ? new Date(input.dueAt) : null } : {}),
+        ...(input.resourceType !== undefined
+          ? { resourceType: input.resourceType?.trim() || null }
+          : {}),
+        ...(input.resourceId !== undefined ? { resourceId: input.resourceId } : {}),
+        ...(completedAt !== undefined ? { completedAt } : {}),
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(tasks.id, taskId),
+          eq(tasks.tenantId, scope.tenantId),
+          or(isNull(tasks.branchId), inArray(tasks.branchId, scope.branchIds))
+        )
+      )
+      .returning();
+    return task ? this.taskResponse(task) : null;
+  }
+
+  async completeTask(scope: TenantScope, taskId: string): Promise<TaskResponse | null> {
+    return this.updateTask(scope, taskId, { status: "completed" });
   }
 
   async createLead(
@@ -4374,6 +4491,41 @@ export class DrizzleFitosRepository implements FitosRepository {
       filters: (view.filters ?? {}) as MemberSavedViewFilters,
       createdAt: view.createdAt.toISOString(),
       updatedAt: view.updatedAt.toISOString()
+    };
+  }
+
+  private async assertTaskAssignee(scope: TenantScope, userId: string): Promise<void> {
+    const [staff] = await this.db
+      .select({ id: tenantUsers.id })
+      .from(tenantUsers)
+      .where(
+        and(
+          eq(tenantUsers.tenantId, scope.tenantId),
+          eq(tenantUsers.userId, userId),
+          eq(tenantUsers.status, "active")
+        )
+      )
+      .limit(1);
+    if (!staff) throw new Error("Task assignee unavailable.");
+  }
+
+  private taskResponse(task: typeof tasks.$inferSelect): TaskResponse {
+    return {
+      id: task.id,
+      tenantId: task.tenantId,
+      branchId: task.branchId,
+      title: task.title,
+      description: task.description,
+      assigneeUserId: task.assigneeUserId,
+      priority: task.priority as TaskResponse["priority"],
+      status: task.status as TaskResponse["status"],
+      dueAt: task.dueAt?.toISOString() ?? null,
+      resourceType: task.resourceType,
+      resourceId: task.resourceId,
+      createdByUserId: task.createdByUserId,
+      completedAt: task.completedAt?.toISOString() ?? null,
+      createdAt: task.createdAt.toISOString(),
+      updatedAt: task.updatedAt.toISOString()
     };
   }
 

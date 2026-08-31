@@ -2713,6 +2713,101 @@ body {
   font-size: 0.86rem;
   margin-bottom: 0.75rem;
 }
+.task-create-card,
+.task-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.task-create-card {
+  margin-bottom: 1.25rem;
+}
+.task-create-card__header h2,
+.task-queue-header h2,
+.task-list__title-row h3 {
+  margin: 0;
+}
+.task-create-card__header p,
+.task-queue-header p,
+.task-list__item p {
+  margin: 0.25rem 0 0;
+}
+.task-create-card__grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.task-create-card__description {
+  grid-column: 1 / -1;
+}
+.task-queue-header {
+  align-items: end;
+  display: flex;
+  justify-content: space-between;
+  margin: 1.5rem 0 0.75rem;
+}
+.task-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.task-list__item {
+  align-items: flex-start;
+  border-left: 3px solid var(--border-subtle);
+  flex-direction: row;
+  justify-content: space-between;
+}
+.task-list__item--urgent {
+  border-left-color: var(--danger, #e97979);
+}
+.task-list__item--high {
+  border-left-color: var(--warning, #e3b341);
+}
+.task-list__main {
+  min-width: 0;
+}
+.task-list__title-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+.task-status {
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  padding: 0.18rem 0.45rem;
+  text-transform: capitalize;
+}
+.task-status--completed {
+  color: var(--status-success, #89b83f);
+}
+.task-list__meta {
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+@media (max-width: 800px) {
+  .task-create-card__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .task-create-card__grid {
+    grid-template-columns: 1fr;
+  }
+  .task-create-card__description {
+    grid-column: auto;
+  }
+  .task-queue-header,
+  .task-list__item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
 .member-tag--plan {
   background: rgba(198, 255, 0, 0.12);
   border-color: rgba(198, 255, 0, 0.3);

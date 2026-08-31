@@ -6,6 +6,7 @@ export * from "./coach/CoachDashboardPage";
 export * from "./members/MembersPage";
 export * from "./members/NewMemberPage";
 export * from "./members/MemberDetailPage";
+export * from "./tasks/TasksPage";
 export * from "./leads/LeadsPage";
 export * from "./leads/NewLeadPage";
 export * from "./services/ServicesPage";

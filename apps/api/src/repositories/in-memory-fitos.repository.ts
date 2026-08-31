@@ -19,6 +19,10 @@ import type {
   MemberSavedViewResponse,
   CreateMemberSavedViewRequest,
   UpdateMemberSavedViewRequest,
+  TaskResponse,
+  TaskListFilters,
+  CreateTaskRequest,
+  UpdateTaskRequest,
   CreateLeadRequest,
   LeadListFilters,
   LeadConversionResponse,
@@ -165,6 +169,7 @@ type StoredMemberTagAssignment = {
 };
 type StoredMemberSegment = MemberSegmentResponse;
 type StoredMemberSavedView = MemberSavedViewResponse;
+type StoredTask = TaskResponse;
 type StoredLeadNote = LeadNoteResponse & { tenantId: string; leadId: string };
 type StoredLeadTask = LeadTaskResponse & { tenantId: string; leadId: string };
 type StoredService = ServiceResponse;
@@ -227,6 +232,7 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly memberTagAssignments = new Map<string, StoredMemberTagAssignment>();
   private readonly memberSegments = new Map<string, StoredMemberSegment>();
   private readonly memberSavedViews = new Map<string, StoredMemberSavedView>();
+  private readonly tasks = new Map<string, StoredTask>();
   private readonly leads = new Map<string, StoredLead>();
   private readonly leadNotes = new Map<string, StoredLeadNote>();
   private readonly leadTasks = new Map<string, StoredLeadTask>();
@@ -2788,6 +2794,126 @@ export class InMemoryFitosRepository implements FitosRepository {
       return null;
     this.memberSavedViews.delete(viewId);
     return { ...view, filters: { ...view.filters } };
+  }
+
+  async listTasks(scope: TenantScope, filters: TaskListFilters): Promise<TaskResponse[]> {
+    if (!scope.branchIds.length) return [];
+    const dueBefore = filters.dueBefore ? new Date(filters.dueBefore).getTime() : null;
+    return [...this.tasks.values()]
+      .filter(
+        (task) =>
+          task.tenantId === scope.tenantId &&
+          (task.branchId === null || scope.branchIds.includes(task.branchId)) &&
+          (!filters.status || task.status === filters.status) &&
+          (!filters.assigneeUserId || task.assigneeUserId === filters.assigneeUserId) &&
+          (!filters.branchId ? true : task.branchId === filters.branchId) &&
+          (dueBefore === null || (task.dueAt ? new Date(task.dueAt).getTime() <= dueBefore : false))
+      )
+      .sort((a, b) => {
+        if (!a.dueAt && !b.dueAt) return b.createdAt.localeCompare(a.createdAt);
+        if (!a.dueAt) return 1;
+        if (!b.dueAt) return -1;
+        return a.dueAt.localeCompare(b.dueAt);
+      })
+      .slice(0, Math.min(Math.max(filters.limit ?? 100, 1), 100))
+      .map((task) => ({ ...task }));
+  }
+
+  async findTaskById(scope: TenantScope, taskId: string): Promise<TaskResponse | null> {
+    const task = this.tasks.get(taskId);
+    if (
+      !task ||
+      task.tenantId !== scope.tenantId ||
+      (task.branchId !== null && !scope.branchIds.includes(task.branchId))
+    )
+      return null;
+    return { ...task };
+  }
+
+  async createTask(
+    scope: TenantScope,
+    input: CreateTaskRequest,
+    actorUserId: string
+  ): Promise<TaskResponse> {
+    if (!scope.branchIds.length) throw new Error("Branch unavailable.");
+    if (input.branchId && !scope.branchIds.includes(input.branchId))
+      throw new Error("Branch unavailable.");
+    if (
+      input.assigneeUserId &&
+      ![...this.tenantUsers.values()].some(
+        (membership) =>
+          membership.tenantId === scope.tenantId &&
+          membership.userId === input.assigneeUserId &&
+          membership.status === "active"
+      )
+    )
+      throw new Error("Task assignee unavailable.");
+    const timestamp = now();
+    const task: StoredTask = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      branchId: input.branchId ?? null,
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      assigneeUserId: input.assigneeUserId ?? null,
+      priority: input.priority ?? "normal",
+      status: "open",
+      dueAt: input.dueAt ?? null,
+      resourceType: input.resourceType?.trim() || null,
+      resourceId: input.resourceId ?? null,
+      createdByUserId: actorUserId,
+      completedAt: null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.tasks.set(task.id, task);
+    return { ...task };
+  }
+
+  async updateTask(
+    scope: TenantScope,
+    taskId: string,
+    input: UpdateTaskRequest
+  ): Promise<TaskResponse | null> {
+    const task = this.tasks.get(taskId);
+    if (
+      !task ||
+      task.tenantId !== scope.tenantId ||
+      (task.branchId !== null && !scope.branchIds.includes(task.branchId))
+    )
+      return null;
+    if (
+      input.branchId !== undefined &&
+      input.branchId !== null &&
+      !scope.branchIds.includes(input.branchId)
+    )
+      throw new Error("Branch unavailable.");
+    if (
+      input.assigneeUserId &&
+      ![...this.tenantUsers.values()].some(
+        (membership) =>
+          membership.tenantId === scope.tenantId &&
+          membership.userId === input.assigneeUserId &&
+          membership.status === "active"
+      )
+    )
+      throw new Error("Task assignee unavailable.");
+    if (input.title !== undefined) task.title = input.title.trim();
+    if (input.description !== undefined) task.description = input.description?.trim() || null;
+    if (input.branchId !== undefined) task.branchId = input.branchId;
+    if (input.assigneeUserId !== undefined) task.assigneeUserId = input.assigneeUserId;
+    if (input.priority !== undefined) task.priority = input.priority;
+    if (input.status !== undefined) task.status = input.status;
+    if (input.dueAt !== undefined) task.dueAt = input.dueAt;
+    if (input.resourceType !== undefined) task.resourceType = input.resourceType?.trim() || null;
+    if (input.resourceId !== undefined) task.resourceId = input.resourceId;
+    task.completedAt = task.status === "completed" ? (task.completedAt ?? now()) : null;
+    task.updatedAt = now();
+    return { ...task };
+  }
+
+  async completeTask(scope: TenantScope, taskId: string): Promise<TaskResponse | null> {
+    return this.updateTask(scope, taskId, { status: "completed" });
   }
 
   async createLead(

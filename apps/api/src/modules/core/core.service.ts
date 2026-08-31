@@ -40,6 +40,10 @@ import type {
   UpdateMemberRequest,
   BulkMemberActionRequest,
   BulkMemberActionResponse,
+  TaskResponse,
+  TaskListFilters,
+  CreateTaskRequest,
+  UpdateTaskRequest,
   UpdateLeadStageRequest,
   UpdateOrganizationRequest,
   UpdateUserProfileRequest,
@@ -329,6 +333,79 @@ export class CoreService {
       updated,
       skippedMemberIds
     };
+  }
+
+  async listTasks(actor: RequestActor, filters: TaskListFilters): Promise<TaskResponse[]> {
+    return this.repository.listTasks(scopeOf(actor), filters);
+  }
+
+  async getTask(actor: RequestActor, taskId: string): Promise<TaskResponse> {
+    const task = await this.repository.findTaskById(scopeOf(actor), taskId);
+    if (!task) throw new DomainError("RESOURCE_NOT_FOUND", "Task not found.", 404);
+    return task;
+  }
+
+  async createTask(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateTaskRequest
+  ): Promise<TaskResponse> {
+    if (input.branchId) this.assertBranchesAccessible(actor, [input.branchId]);
+    let task: TaskResponse;
+    try {
+      task = await this.repository.createTask(scopeOf(actor), input, actor.userId);
+    } catch (error) {
+      if (error instanceof Error && /branch|assignee|unavailable/i.test(error.message)) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 400);
+      }
+      throw error;
+    }
+    await this.audit(actor, requestId, "task.created", "task", task.id, task.branchId, {
+      title: task.title,
+      status: task.status,
+      assigneeUserId: task.assigneeUserId,
+      resourceType: task.resourceType,
+      resourceId: task.resourceId
+    });
+    return task;
+  }
+
+  async updateTask(
+    actor: RequestActor,
+    requestId: string,
+    taskId: string,
+    input: UpdateTaskRequest
+  ): Promise<TaskResponse> {
+    if (input.branchId) this.assertBranchesAccessible(actor, [input.branchId]);
+    let task: TaskResponse | null;
+    try {
+      task = await this.repository.updateTask(scopeOf(actor), taskId, input);
+    } catch (error) {
+      if (error instanceof Error && /branch|assignee|unavailable/i.test(error.message)) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 400);
+      }
+      throw error;
+    }
+    if (!task) throw new DomainError("RESOURCE_NOT_FOUND", "Task not found.", 404);
+    await this.audit(actor, requestId, "task.updated", "task", task.id, task.branchId, {
+      changed: Object.keys(input),
+      status: task.status,
+      assigneeUserId: task.assigneeUserId
+    });
+    return task;
+  }
+
+  async completeTask(
+    actor: RequestActor,
+    requestId: string,
+    taskId: string
+  ): Promise<TaskResponse> {
+    const task = await this.repository.completeTask(scopeOf(actor), taskId);
+    if (!task) throw new DomainError("RESOURCE_NOT_FOUND", "Task not found.", 404);
+    await this.audit(actor, requestId, "task.completed", "task", task.id, task.branchId, {
+      completedAt: task.completedAt
+    });
+    return task;
   }
 
   async listMemberTags(actor: RequestActor): Promise<MemberTagResponse[]> {

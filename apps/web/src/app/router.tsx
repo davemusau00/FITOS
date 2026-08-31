@@ -58,6 +58,7 @@ import {
   OpsDashboardPage,
   CoachDashboardPage,
   SitesPage,
+  TasksPage,
   FeaturesPage,
   SolutionsPage,
   PricingPage,
@@ -145,6 +146,7 @@ export function AppRouter() {
 
           {/* People */}
           <Route element={<MembersPage />} path="members" />
+          <Route element={<TasksPage />} path="tasks" />
           <Route element={<NewMemberPage />} path="members/new" />
           <Route element={<MemberDetailPage />} path="members/:memberId" />
           <Route element={<LeadsPage />} path="leads" />

@@ -132,6 +132,50 @@ describeDatabase("Drizzle tenant isolation", () => {
     ).resolves.toMatchObject({ id: view.id });
   });
 
+  it("persists cross-domain tasks with assignee, lifecycle, and tenant scope", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const member = await repository.createMember(
+      gymScope,
+      { contact: { firstName: "Task Member" }, homeBranchId: gym.branchIds[0]! },
+      null
+    );
+    const task = await repository.createTask(
+      gymScope,
+      {
+        title: "Review member progress",
+        description: "Prepare the next coaching conversation.",
+        branchId: gym.branchIds[0],
+        assigneeUserId: gym.user.id,
+        priority: "urgent",
+        dueAt: new Date(Date.now() + 86_400_000).toISOString(),
+        resourceType: "member",
+        resourceId: member.id
+      },
+      gym.user.id
+    );
+    expect(task.status).toBe("open");
+    await expect(repository.listTasks(gymScope, { status: "open" })).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: task.id, resourceId: member.id })])
+    );
+    await expect(repository.findTaskById(pilatesScope, task.id)).resolves.toBeNull();
+    await expect(
+      repository.updateTask(gymScope, task.id, { status: "in_progress" })
+    ).resolves.toMatchObject({
+      status: "in_progress"
+    });
+    await expect(repository.completeTask(gymScope, task.id)).resolves.toMatchObject({
+      status: "completed",
+      completedAt: expect.any(String)
+    });
+    await expect(
+      repository.createTask(gymScope, {
+        title: "Invalid assignee",
+        assigneeUserId: pilates.user.id
+      })
+    ).rejects.toThrow("Task assignee unavailable");
+  });
+
   it("scopes CRM records and reuses a lead contact on conversion", async () => {
     const gymScope = scopeOf(gym);
     const pilatesScope = scopeOf(pilates);

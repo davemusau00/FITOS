@@ -75,6 +75,18 @@ export const commandNavigation: RouteMeta[] = [
     permission: "tenant:read"
   },
   {
+    path: "/app/tasks",
+    label: "Tasks",
+    title: "Task queue",
+    breadcrumb: ["Productivity", "Tasks"],
+    group: "Productivity",
+    icon: "check",
+    workspace: "command",
+    permission: "task:read",
+    branchMode: "optional",
+    mobileMode: "cards"
+  },
+  {
     path: "/platform/plans",
     label: "Plans",
     group: "Control plane",
