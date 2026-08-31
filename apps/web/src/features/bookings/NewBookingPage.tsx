@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Card, Icon, PageHeader, SearchBar } from "@fitos/ui";
+import { Alert, Button, Card, FormField, Icon, PageHeader, SearchBar } from "@fitos/ui";
 import type {
   CreateBookingRequest,
   MemberListItem,
   ScheduleOccurrenceResponse
 } from "@fitos/contracts";
+import { can, useAuth } from "../../app/auth";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
 import { useBranch } from "../../app/branch-context";
@@ -17,6 +18,7 @@ export function NewBookingPage() {
   const [urlParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { activeBranchId } = useBranch();
+  const { auth } = useAuth();
 
   const preselectedOccurrenceId = urlParams.get("occurrenceId") ?? "";
   const preselectedMemberId = urlParams.get("memberId") ?? "";
@@ -24,6 +26,7 @@ export function NewBookingPage() {
   const [memberSearch, setMemberSearch] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState(preselectedMemberId);
   const [selectedOccurrenceId, setSelectedOccurrenceId] = useState(preselectedOccurrenceId);
+  const [overrideReason, setOverrideReason] = useState("");
   const [submissionError, setSubmissionError] = useState<unknown>(null);
 
   const membersQuery = useQuery({
@@ -104,7 +107,10 @@ export function NewBookingPage() {
     bookMutation.mutate({
       memberId: selectedMemberId,
       occurrenceId: selectedOccurrenceId,
-      source: "staff"
+      source: "staff",
+      ...(can(auth, "booking:override") && overrideReason.trim()
+        ? { overrideReason: overrideReason.trim() }
+        : {})
     });
   };
 
@@ -302,6 +308,26 @@ export function NewBookingPage() {
             <Alert title="Session is at capacity" tone="danger">
               All {selectedOccurrence.capacity} spots have already been booked for this occurrence.
             </Alert>
+          ) : null}
+
+          {can(auth, "booking:override") ? (
+            <div className="booking-override-card">
+              <FormField
+                hint="Use only for an approved exception. The reason is retained with the booking and audit history."
+                htmlFor="booking-override-reason"
+                label="Entitlement override reason"
+                optional
+              >
+                <textarea
+                  className="fitos-control"
+                  id="booking-override-reason"
+                  onChange={(event) => setOverrideReason(event.target.value)}
+                  placeholder="Leave blank for normal entitlement validation"
+                  rows={3}
+                  value={overrideReason}
+                />
+              </FormField>
+            </div>
           ) : null}
 
           <ErrorNotice error={submissionError} />

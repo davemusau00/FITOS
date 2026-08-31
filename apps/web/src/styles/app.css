@@ -4959,6 +4959,17 @@ body {
   font-weight: 800;
   margin-top: 0;
 }
+.booking-override-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 6px);
+  margin: 1rem 0;
+  padding: 0.875rem 1rem;
+}
+.booking-override-card textarea {
+  min-height: 4.5rem;
+  width: 100%;
+}
 
 .summary-details-grid {
   display: grid;
