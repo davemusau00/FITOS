@@ -422,6 +422,8 @@ Conversion:
 - walk-in;
 - entitlement warnings.
 
+**Partial implementation evidence (2026-08-31):** Front Desk now offers a contextual member-to-booking link, labels facility arrivals as walk-ins with an explicit no-booking explanation, surfaces confirmed and waitlisted sessions in the member quick view, links waitlisted members to the filtered booking queue, and shows session capacity/resource warnings. The bookings API now accepts the canonical `waitlisted` filter instead of silently rejecting the UI control. Reschedule, waitlist promotion, and staff entitlement-override workflows remain open; this ticket is not marked complete.
+
 ---
 
 ## P1-020 — Coach My Day Completion

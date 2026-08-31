@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { Button, Card, Icon, StatusBadge } from "@fitos/ui";
 import type { MemberListItem } from "@fitos/contracts";
 import { useBranch } from "../../app/branch-context";
@@ -93,7 +94,7 @@ export function ReceptionPage() {
   const selectedTodayBookings = (sessionBookings.data?.data ?? []).filter(
     (booking) =>
       booking.memberId === selectedMemberId &&
-      booking.status === "confirmed" &&
+      (booking.status === "confirmed" || booking.status === "waitlisted") &&
       todayOccurrences.some((occurrence) => occurrence.id === booking.occurrenceId)
   );
 
@@ -259,6 +260,12 @@ export function ReceptionPage() {
                   "No contact recorded"}
               </p>
               <p>Member number: {selectedMember.data.memberNumber ?? "—"}</p>
+              <Link
+                className="fitos-button fitos-button--primary fitos-button--small"
+                to={`/app/bookings/new?memberId=${encodeURIComponent(selectedMemberId)}`}
+              >
+                Book a session
+              </Link>
               <p>
                 Credits:{" "}
                 {selectedCredits.isLoading ? "Loading…" : (selectedCredits.data?.balance ?? "—")}
@@ -273,8 +280,11 @@ export function ReceptionPage() {
                     onClick={() => checkInMutation.mutate(selectedMemberId)}
                     variant="secondary"
                   >
-                    {checkedIn.has(selectedMemberId) ? "Checked In" : "Facility Check-In"}
+                    {checkedIn.has(selectedMemberId) ? "Checked In" : "Walk-in check-in"}
                   </Button>
+                  <p className="muted">
+                    No confirmed session today. This records a facility arrival without a booking.
+                  </p>
                 </div>
               ) : (
                 selectedTodayBookings.map((booking) => {
@@ -295,14 +305,27 @@ export function ReceptionPage() {
                             })
                           : "Time unavailable"}
                       </span>
-                      <Button
-                        disabled={checkedIn.has(selectedMemberId)}
-                        loading={checkInMutation.isPending}
-                        onClick={() => checkInMutation.mutate(selectedMemberId)}
-                        variant="primary"
-                      >
-                        {checkedIn.has(selectedMemberId) ? "Checked In" : "Check Into Session"}
-                      </Button>
+                      <StatusBadge status={booking.status} />
+                      {booking.status === "waitlisted" ? (
+                        <>
+                          <p className="muted">Waitlisted — confirm a place before checking in.</p>
+                          <Link
+                            className="fitos-button fitos-button--secondary fitos-button--small"
+                            to="/app/bookings?status=waitlisted"
+                          >
+                            Review waitlist
+                          </Link>
+                        </>
+                      ) : (
+                        <Button
+                          disabled={checkedIn.has(selectedMemberId)}
+                          loading={checkInMutation.isPending}
+                          onClick={() => checkInMutation.mutate(selectedMemberId)}
+                          variant="primary"
+                        >
+                          {checkedIn.has(selectedMemberId) ? "Checked In" : "Check Into Session"}
+                        </Button>
+                      )}
                     </div>
                   );
                 })
@@ -382,6 +405,16 @@ export function ReceptionPage() {
                         );
                       })()}
                     </div>
+                    {occ.capacityAlert ? (
+                      <p className="reception-session-card__upcoming">
+                        Capacity alert: {occ.capacityAlert.shortage} over effective capacity
+                      </p>
+                    ) : null}
+                    {occ.resourceWarnings?.length ? (
+                      <p className="reception-session-card__upcoming">
+                        Resource check required before adding walk-ins
+                      </p>
+                    ) : null}
                     {isUpcoming && minutesUntilStart > 0 && (
                       <div className="reception-session-card__upcoming">
                         Starts in {minutesUntilStart} min

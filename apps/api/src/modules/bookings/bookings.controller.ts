@@ -20,7 +20,7 @@ const listSchema = z
   .object({
     occurrenceId: z.string().uuid().optional(),
     memberId: z.string().uuid().optional(),
-    status: z.enum(["confirmed", "cancelled"]).optional(),
+    status: z.enum(["confirmed", "waitlisted", "cancelled"]).optional(),
     cursor: z.string().min(1).max(512).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional()
   })
