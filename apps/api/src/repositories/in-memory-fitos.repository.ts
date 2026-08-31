@@ -10,6 +10,9 @@ import type {
   MemberListFilters,
   MemberListItem,
   MemberResponse,
+  MemberTagResponse,
+  CreateMemberTagRequest,
+  UpdateMemberTagRequest,
   CreateLeadRequest,
   LeadListFilters,
   LeadConversionResponse,
@@ -146,6 +149,14 @@ type StoredMemberSession = {
 type StoredContact = MemberResponse["contact"] & { tenantId: string };
 type StoredMember = Omit<MemberResponse, "contact"> & { contactId: string };
 type StoredLead = Omit<LeadResponse, "contact"> & { contactId: string };
+type StoredMemberTag = MemberTagResponse;
+type StoredMemberTagAssignment = {
+  tenantId: string;
+  memberId: string;
+  tagId: string;
+  assignedByUserId: string | null;
+  createdAt: string;
+};
 type StoredLeadNote = LeadNoteResponse & { tenantId: string; leadId: string };
 type StoredLeadTask = LeadTaskResponse & { tenantId: string; leadId: string };
 type StoredService = ServiceResponse;
@@ -204,6 +215,8 @@ export class InMemoryFitosRepository implements FitosRepository {
   private readonly memberSessions = new Map<string, StoredMemberSession>();
   private readonly contacts = new Map<string, StoredContact>();
   private readonly members = new Map<string, StoredMember>();
+  private readonly memberTags = new Map<string, StoredMemberTag>();
+  private readonly memberTagAssignments = new Map<string, StoredMemberTagAssignment>();
   private readonly leads = new Map<string, StoredLead>();
   private readonly leadNotes = new Map<string, StoredLeadNote>();
   private readonly leadTasks = new Map<string, StoredLeadTask>();
@@ -2447,6 +2460,134 @@ export class InMemoryFitosRepository implements FitosRepository {
     if (input.status !== undefined) member.status = input.status;
     member.updatedAt = now();
     return this.toMemberResponse(member, contact);
+  }
+
+  async listMemberTags(scope: TenantScope): Promise<MemberTagResponse[]> {
+    if (!scope.branchIds.length) return [];
+    return [...this.memberTags.values()]
+      .filter((tag) => tag.tenantId === scope.tenantId)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((tag) => ({ ...tag }));
+  }
+
+  async createMemberTag(
+    scope: TenantScope,
+    input: CreateMemberTagRequest
+  ): Promise<MemberTagResponse> {
+    if (!scope.branchIds.length) throw new Error("Branch unavailable.");
+    const name = input.name.trim();
+    if (
+      [...this.memberTags.values()].some(
+        (tag) => tag.tenantId === scope.tenantId && tag.name.toLowerCase() === name.toLowerCase()
+      )
+    )
+      throw new Error("A member tag with this name already exists.");
+    const timestamp = now();
+    const tag: StoredMemberTag = {
+      id: randomUUID(),
+      tenantId: scope.tenantId,
+      name,
+      color: input.color?.trim() || null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    this.memberTags.set(tag.id, tag);
+    return { ...tag };
+  }
+
+  async updateMemberTag(
+    scope: TenantScope,
+    tagId: string,
+    input: UpdateMemberTagRequest
+  ): Promise<MemberTagResponse | null> {
+    const tag = this.memberTags.get(tagId);
+    if (!tag || tag.tenantId !== scope.tenantId || !scope.branchIds.length) return null;
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (
+        [...this.memberTags.values()].some(
+          (candidate) =>
+            candidate.id !== tagId &&
+            candidate.tenantId === scope.tenantId &&
+            candidate.name.toLowerCase() === name.toLowerCase()
+        )
+      )
+        throw new Error("A member tag with this name already exists.");
+      tag.name = name;
+    }
+    if (input.color !== undefined) tag.color = input.color?.trim() || null;
+    tag.updatedAt = now();
+    return { ...tag };
+  }
+
+  async deleteMemberTag(scope: TenantScope, tagId: string): Promise<MemberTagResponse | null> {
+    const tag = this.memberTags.get(tagId);
+    if (!tag || tag.tenantId !== scope.tenantId || !scope.branchIds.length) return null;
+    this.memberTags.delete(tagId);
+    for (const [key, assignment] of this.memberTagAssignments) {
+      if (assignment.tagId === tagId) this.memberTagAssignments.delete(key);
+    }
+    return { ...tag };
+  }
+
+  async listMemberTagsForMember(
+    scope: TenantScope,
+    memberId: string
+  ): Promise<MemberTagResponse[]> {
+    const member = this.members.get(memberId);
+    if (
+      !member ||
+      member.tenantId !== scope.tenantId ||
+      (member.homeBranchId && !scope.branchIds.includes(member.homeBranchId))
+    )
+      return [];
+    const tagIds = new Set(
+      [...this.memberTagAssignments.values()]
+        .filter(
+          (assignment) => assignment.tenantId === scope.tenantId && assignment.memberId === memberId
+        )
+        .map((assignment) => assignment.tagId)
+    );
+    return [...this.memberTags.values()]
+      .filter((tag) => tag.tenantId === scope.tenantId && tagIds.has(tag.id))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((tag) => ({ ...tag }));
+  }
+
+  async assignMemberTag(
+    scope: TenantScope,
+    memberId: string,
+    tagId: string,
+    actorUserId: string
+  ): Promise<MemberTagResponse | null> {
+    const member = this.members.get(memberId);
+    const tag = this.memberTags.get(tagId);
+    if (
+      !member ||
+      !tag ||
+      member.tenantId !== scope.tenantId ||
+      tag.tenantId !== scope.tenantId ||
+      (member.homeBranchId && !scope.branchIds.includes(member.homeBranchId))
+    )
+      return null;
+    const key = `${memberId}:${tagId}`;
+    if (!this.memberTagAssignments.has(key)) {
+      this.memberTagAssignments.set(key, {
+        tenantId: scope.tenantId,
+        memberId,
+        tagId,
+        assignedByUserId: actorUserId,
+        createdAt: now()
+      });
+    }
+    return { ...tag };
+  }
+
+  async unassignMemberTag(scope: TenantScope, memberId: string, tagId: string): Promise<boolean> {
+    const assignment = this.memberTagAssignments.get(`${memberId}:${tagId}`);
+    if (!assignment || assignment.tenantId !== scope.tenantId) return false;
+    this.memberTagAssignments.delete(`${memberId}:${tagId}`);
+    return true;
   }
 
   async createLead(

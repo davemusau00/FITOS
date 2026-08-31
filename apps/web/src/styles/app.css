@@ -2653,6 +2653,7 @@ body {
   gap: 0.4rem;
 }
 .member-tag {
+  align-items: center;
   background: var(--surface-3);
   border: 1px solid var(--border-subtle);
   border-radius: 999px;
@@ -2661,6 +2662,28 @@ body {
   font-weight: 500;
   letter-spacing: 0.02em;
   padding: 0.15rem 0.6rem;
+}
+.member-tag__remove {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.9rem;
+  line-height: 1;
+  margin-left: 0.25rem;
+  padding: 0;
+}
+.member-tags-editor {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.member-tags-editor .fitos-control {
+  max-width: 11rem;
 }
 .member-tag--plan {
   background: rgba(198, 255, 0, 0.12);

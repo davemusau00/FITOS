@@ -51,6 +51,32 @@ describeDatabase("Drizzle tenant isolation", () => {
     ).rejects.toThrow();
   });
 
+  it("persists member tags and prevents cross-tenant assignments", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const member = await repository.createMember(
+      gymScope,
+      { contact: { firstName: "Tagged Member" }, homeBranchId: gym.branchIds[0]! },
+      null
+    );
+    const tag = await repository.createMemberTag(gymScope, {
+      name: `Priority ${crypto.randomUUID().slice(0, 8)}`,
+      color: "lime"
+    });
+    await expect(
+      repository.assignMemberTag(gymScope, member.id, tag.id, gym.user.id)
+    ).resolves.toEqual(tag);
+    await expect(repository.listMemberTagsForMember(gymScope, member.id)).resolves.toEqual([tag]);
+    await expect(repository.listMemberTagsForMember(pilatesScope, member.id)).resolves.toEqual([]);
+    await expect(
+      repository.assignMemberTag(pilatesScope, member.id, tag.id, pilates.user.id)
+    ).resolves.toBeNull();
+    await expect(repository.unassignMemberTag(gymScope, member.id, tag.id)).resolves.toBe(true);
+    await expect(repository.deleteMemberTag(gymScope, tag.id)).resolves.toMatchObject({
+      id: tag.id
+    });
+  });
+
   it("scopes CRM records and reuses a lead contact on conversion", async () => {
     const gymScope = scopeOf(gym);
     const pilatesScope = scopeOf(pilates);

@@ -640,17 +640,15 @@ Expected pipeline:
 Before broad feature expansion, prioritize:
 
 1. Restore Playwright CI.
-2. Repair Sites block contract mismatch.
-3. Enable editing of persisted Site pages.
-4. Fix Inventory Receive Lot.
-5. Replace fake notification bell behavior.
-6. Correct misleading global-search wording or implement true search.
-7. Implement true All Locations branch scope.
-8. Complete booking reschedule.
-9. Complete booking waitlist.
-10. Complete membership hold/resume/renew.
+2. Implement true All Locations branch scope.
+3. Expand notification producer coverage across operational domains.
+4. Complete Front Desk workflow semantics, including resource-aware reschedule and waitlist ordering/automation.
+5. Complete Coach and Practice specialist workflows with notes, restrictions, checklists, and durable completion.
+6. Complete member tags, reusable segments, saved views, and bulk actions.
+7. Complete CRM workload, follow-up, and trial-booking workflows.
+8. Complete public/member booking parity and member-safe reschedule.
 
-The Sites contract, persisted-page editing, Inventory Receive Lot foundations, persisted notification inbox, scoped feature-flag evaluation, Platform support notes, account-recovery cases, scoped system notices, guarded implementation inquiry conversion, and the Ops six-hour signal board are implemented and PostgreSQL-verified in the roadmap evidence ledger. They still require hosted/browser acceptance where noted; the next active product blockers are Playwright CI, notification producer coverage, all-location semantics, Front Desk/Coach/Practice completion, and broader account/workflow completion.
+The Sites contract, persisted-page editing, Inventory Receive Lot foundations, persisted notification inbox, scoped feature-flag evaluation, Platform support notes, account-recovery cases, scoped system notices, guarded implementation inquiry conversion, Ops six-hour signal board, booking reschedule/promotion, entitlement override capture, Coach roster signals, and member-tag persistence are implemented and PostgreSQL-verified in the roadmap evidence ledger. They still require hosted/browser acceptance where noted; the next active product blockers are Playwright CI, notification producer coverage, all-location semantics, specialist workflow completion, and broader member/CRM workflows.
 
 ---
 
@@ -711,6 +709,6 @@ If the system cannot keep the promise:
 
 # 42. EVIDENCE LEDGER
 
-Current verified slices include membership hold/resume/renewal, durable account export/plan-change/cancellation/deletion requests with Platform metadata and review decisions, shared recoverable query failures across Ops, Insights, Bookings, Members, Attendance, Memberships, Schedule, Services, Equipment, and Platform overview/directory, and stable-only SaaS pricing claims backed by the capability registry. Each slice has explicit roadmap evidence and local verification; hosted browser coverage remains separate. Queue schemas and API handoffs remain non-fulfillment until a worker consumer updates durable state.
+Current verified slices include membership hold/resume/renewal, durable account export/plan-change/cancellation/deletion requests with Platform metadata and review decisions, shared recoverable query failures across Ops, Insights, Bookings, Members, Attendance, Memberships, Schedule, Services, Equipment, and Platform overview/directory, stable-only SaaS pricing claims backed by the capability registry, booking reschedule and waitlist promotion, Coach roster signals, and tenant-scoped member tags with assignment CRUD. Each slice has explicit roadmap evidence and local verification; hosted browser coverage remains separate. Queue schemas and API handoffs remain non-fulfillment until a worker consumer updates durable state.
 
 For every gap-resolution change, update `docs/FITOS V2 — ROADMAP GAP MATRIX.md` with the verified scope and test evidence. Use `docs/FITOS V2 — DEFINITION OF DONE.md` as the completion gate. Local checks must be labeled as local; they do not substitute for hosted CI, Playwright, production-image, or deployment evidence.

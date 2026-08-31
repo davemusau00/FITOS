@@ -456,6 +456,8 @@ Conversion:
 
 Persist and expose CRUD.
 
+**Implementation evidence (2026-09-01):** Migration `0045_member_tags` adds tenant-scoped tag definitions and member assignments with cascading cleanup and uniqueness constraints. Shared contracts, in-memory and Drizzle repositories, and permission-gated `/members/tags` plus `/:memberId/tags` endpoints support create, update, delete, assign, unassign, and reload-safe reads with audit events. Member Detail replaces fabricated static labels with persisted tags and assignment/create/remove controls. In-memory and PostgreSQL tenancy tests cover CRUD and cross-tenant assignment isolation; the API suite passes 13 files / 79 tests. Full tag management browser coverage remains open.
+
 ---
 
 ## P1-023 — Member Segments
@@ -560,7 +562,7 @@ Add:
 - promote;
 - auto-promote.
 
-**Partial implementation evidence (2026-08-31):** Staff can promote a waitlisted booking when a scheduled occurrence has capacity and the member has an eligible active membership; the promotion debits credits atomically, returns the canonical booking, writes an audit event, and is exposed in the responsive bookings workspace with pending/error feedback. Reorder semantics, automatic promotion, and entitlement override remain open.
+**Partial implementation evidence (2026-08-31):** Staff can promote a waitlisted booking when a scheduled occurrence has capacity and the member has an eligible active membership; the promotion debits credits atomically, returns the canonical booking, writes an audit event, and is exposed in the responsive bookings workspace with pending/error feedback. Authorized staff can also capture a retained entitlement-override reason during New Booking. Reorder semantics, automatic promotion, resource-aware capacity, and member-safe waitlist controls remain open.
 
 ---
 
@@ -958,7 +960,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 77 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 79 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

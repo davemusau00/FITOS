@@ -7,6 +7,9 @@ import type {
   CursorPage,
   MemberListItem,
   MemberResponse,
+  MemberTagResponse,
+  CreateMemberTagRequest,
+  UpdateMemberTagRequest,
   LeadListResponse,
   LeadNoteResponse,
   LeadResponse,
@@ -247,6 +250,23 @@ export const api = {
     }),
   updateMember: (id: string, payload: UpdateMemberRequest) =>
     request<MemberResponse>(`/members/${id}`, { method: "PATCH", body: json(payload) }),
+  memberTags: () => request<MemberTagResponse[]>("/members/tags"),
+  createMemberTag: (payload: CreateMemberTagRequest) =>
+    request<MemberTagResponse>("/members/tags", {
+      method: "POST",
+      body: json(payload),
+      headers: { "Idempotency-Key": idempotency() }
+    }),
+  updateMemberTag: (id: string, payload: UpdateMemberTagRequest) =>
+    request<MemberTagResponse>(`/members/tags/${id}`, { method: "PATCH", body: json(payload) }),
+  deleteMemberTag: (id: string) =>
+    request<MemberTagResponse>(`/members/tags/${id}`, { method: "DELETE" }),
+  memberTagsForMember: (memberId: string) =>
+    request<MemberTagResponse[]>(`/members/${memberId}/tags`),
+  assignMemberTag: (memberId: string, tagId: string) =>
+    request<MemberTagResponse>(`/members/${memberId}/tags/${tagId}`, { method: "POST" }),
+  unassignMemberTag: (memberId: string, tagId: string) =>
+    request<{ removed: boolean }>(`/members/${memberId}/tags/${tagId}`, { method: "DELETE" }),
   memberTimeline: (id: string) =>
     request<
       Array<{

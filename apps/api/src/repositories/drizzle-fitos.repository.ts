@@ -29,6 +29,8 @@ import {
   platformSupportNotes,
   platformPlanDefinitions,
   members,
+  memberTags,
+  memberTagAssignments,
   memberIdentities,
   memberSessions,
   membershipPlans,
@@ -89,6 +91,9 @@ import type {
   MemberListFilters,
   MemberListItem,
   MemberResponse,
+  MemberTagResponse,
+  CreateMemberTagRequest,
+  UpdateMemberTagRequest,
   LeadListFilters,
   LeadConversionResponse,
   LeadNoteResponse,
@@ -1104,6 +1109,127 @@ export class DrizzleFitosRepository implements FitosRepository {
       return contact ? { member, contact } : null;
     });
     return result ? this.memberResponse(result.member, result.contact) : null;
+  }
+
+  async listMemberTags(scope: TenantScope): Promise<MemberTagResponse[]> {
+    if (!scope.branchIds.length) return [];
+    const rows = await this.db
+      .select()
+      .from(memberTags)
+      .where(eq(memberTags.tenantId, scope.tenantId))
+      .orderBy(memberTags.name);
+    return rows.map((tag) => this.memberTagResponse(tag));
+  }
+
+  async createMemberTag(
+    scope: TenantScope,
+    input: CreateMemberTagRequest
+  ): Promise<MemberTagResponse> {
+    if (!scope.branchIds.length) throw new Error("Branch unavailable.");
+    const [tag] = await this.db
+      .insert(memberTags)
+      .values({
+        tenantId: scope.tenantId,
+        name: input.name.trim(),
+        color: input.color?.trim() || null
+      })
+      .returning();
+    if (!tag) throw new Error("Unable to create member tag.");
+    return this.memberTagResponse(tag);
+  }
+
+  async updateMemberTag(
+    scope: TenantScope,
+    tagId: string,
+    input: UpdateMemberTagRequest
+  ): Promise<MemberTagResponse | null> {
+    if (!scope.branchIds.length) return null;
+    const [tag] = await this.db
+      .update(memberTags)
+      .set({
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.color !== undefined ? { color: input.color?.trim() || null } : {}),
+        updatedAt: new Date()
+      })
+      .where(and(eq(memberTags.id, tagId), eq(memberTags.tenantId, scope.tenantId)))
+      .returning();
+    return tag ? this.memberTagResponse(tag) : null;
+  }
+
+  async deleteMemberTag(scope: TenantScope, tagId: string): Promise<MemberTagResponse | null> {
+    if (!scope.branchIds.length) return null;
+    const [tag] = await this.db
+      .delete(memberTags)
+      .where(and(eq(memberTags.id, tagId), eq(memberTags.tenantId, scope.tenantId)))
+      .returning();
+    return tag ? this.memberTagResponse(tag) : null;
+  }
+
+  async listMemberTagsForMember(
+    scope: TenantScope,
+    memberId: string
+  ): Promise<MemberTagResponse[]> {
+    if (!scope.branchIds.length) return [];
+    const rows = await this.db
+      .select({ tag: memberTags })
+      .from(memberTagAssignments)
+      .innerJoin(memberTags, eq(memberTags.id, memberTagAssignments.tagId))
+      .innerJoin(members, eq(members.id, memberTagAssignments.memberId))
+      .where(
+        and(
+          eq(memberTagAssignments.tenantId, scope.tenantId),
+          eq(memberTagAssignments.memberId, memberId),
+          eq(members.tenantId, scope.tenantId),
+          or(isNull(members.homeBranchId), inArray(members.homeBranchId, scope.branchIds))
+        )
+      )
+      .orderBy(memberTags.name);
+    return rows.map(({ tag }) => this.memberTagResponse(tag));
+  }
+
+  async assignMemberTag(
+    scope: TenantScope,
+    memberId: string,
+    tagId: string,
+    actorUserId: string
+  ): Promise<MemberTagResponse | null> {
+    if (!scope.branchIds.length) return null;
+    const [member] = await this.db
+      .select({ id: members.id })
+      .from(members)
+      .where(
+        and(
+          eq(members.id, memberId),
+          eq(members.tenantId, scope.tenantId),
+          or(isNull(members.homeBranchId), inArray(members.homeBranchId, scope.branchIds))
+        )
+      )
+      .limit(1);
+    const [tag] = await this.db
+      .select()
+      .from(memberTags)
+      .where(and(eq(memberTags.id, tagId), eq(memberTags.tenantId, scope.tenantId)))
+      .limit(1);
+    if (!member || !tag) return null;
+    await this.db
+      .insert(memberTagAssignments)
+      .values({ tenantId: scope.tenantId, memberId, tagId, assignedByUserId: actorUserId })
+      .onConflictDoNothing({ target: [memberTagAssignments.memberId, memberTagAssignments.tagId] });
+    return this.memberTagResponse(tag);
+  }
+
+  async unassignMemberTag(scope: TenantScope, memberId: string, tagId: string): Promise<boolean> {
+    const deleted = await this.db
+      .delete(memberTagAssignments)
+      .where(
+        and(
+          eq(memberTagAssignments.tenantId, scope.tenantId),
+          eq(memberTagAssignments.memberId, memberId),
+          eq(memberTagAssignments.tagId, tagId)
+        )
+      )
+      .returning({ memberId: memberTagAssignments.memberId });
+    return deleted.length > 0;
   }
 
   async createLead(
@@ -4003,6 +4129,17 @@ export class DrizzleFitosRepository implements FitosRepository {
       email: contact.email,
       joinedAt: (member.joinedAt ?? member.createdAt).toISOString(),
       updatedAt: member.updatedAt.toISOString()
+    };
+  }
+
+  private memberTagResponse(tag: typeof memberTags.$inferSelect): MemberTagResponse {
+    return {
+      id: tag.id,
+      tenantId: tag.tenantId,
+      name: tag.name,
+      color: tag.color,
+      createdAt: tag.createdAt.toISOString(),
+      updatedAt: tag.updatedAt.toISOString()
     };
   }
 

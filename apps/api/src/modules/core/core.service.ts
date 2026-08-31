@@ -17,6 +17,9 @@ import type {
   MemberListFilters,
   MemberListItem,
   MemberResponse,
+  MemberTagResponse,
+  CreateMemberTagRequest,
+  UpdateMemberTagRequest,
   LeadListFilters,
   LeadConversionResponse,
   LeadNoteResponse,
@@ -288,6 +291,120 @@ export class CoreService {
       })
     );
     return updated;
+  }
+
+  async listMemberTags(actor: RequestActor): Promise<MemberTagResponse[]> {
+    return this.repository.listMemberTags(scopeOf(actor));
+  }
+
+  async listMemberTagsForMember(
+    actor: RequestActor,
+    memberId: string
+  ): Promise<MemberTagResponse[]> {
+    await this.getMember(actor, memberId);
+    return this.repository.listMemberTagsForMember(scopeOf(actor), memberId);
+  }
+
+  async createMemberTag(
+    actor: RequestActor,
+    requestId: string,
+    input: CreateMemberTagRequest
+  ): Promise<MemberTagResponse> {
+    let tag: MemberTagResponse;
+    try {
+      tag = await this.repository.createMemberTag(scopeOf(actor), input);
+    } catch (error) {
+      if (error instanceof Error && /already exists|duplicate|unique/i.test(error.message)) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "A member tag with this name already exists.",
+          409
+        );
+      }
+      throw error;
+    }
+    await this.audit(actor, requestId, "member_tag.created", "member_tag", tag.id, null, {
+      name: tag.name,
+      color: tag.color
+    });
+    return tag;
+  }
+
+  async updateMemberTag(
+    actor: RequestActor,
+    requestId: string,
+    tagId: string,
+    input: UpdateMemberTagRequest
+  ): Promise<MemberTagResponse> {
+    let tag: MemberTagResponse | null;
+    try {
+      tag = await this.repository.updateMemberTag(scopeOf(actor), tagId, input);
+    } catch (error) {
+      if (error instanceof Error && /already exists|duplicate|unique/i.test(error.message)) {
+        throw new DomainError(
+          "VALIDATION_FAILED",
+          "A member tag with this name already exists.",
+          409
+        );
+      }
+      throw error;
+    }
+    if (!tag) throw new DomainError("RESOURCE_NOT_FOUND", "Member tag not found.", 404);
+    await this.audit(actor, requestId, "member_tag.updated", "member_tag", tag.id, null, {
+      changed: Object.keys(input),
+      name: tag.name
+    });
+    return tag;
+  }
+
+  async deleteMemberTag(
+    actor: RequestActor,
+    requestId: string,
+    tagId: string
+  ): Promise<MemberTagResponse> {
+    const tag = await this.repository.deleteMemberTag(scopeOf(actor), tagId);
+    if (!tag) throw new DomainError("RESOURCE_NOT_FOUND", "Member tag not found.", 404);
+    await this.audit(actor, requestId, "member_tag.deleted", "member_tag", tag.id, null, {
+      name: tag.name
+    });
+    return tag;
+  }
+
+  async assignMemberTag(
+    actor: RequestActor,
+    requestId: string,
+    memberId: string,
+    tagId: string
+  ): Promise<MemberTagResponse> {
+    await this.getMember(actor, memberId);
+    const tag = await this.repository.assignMemberTag(
+      scopeOf(actor),
+      memberId,
+      tagId,
+      actor.userId
+    );
+    if (!tag) throw new DomainError("RESOURCE_NOT_FOUND", "Member or tag not found.", 404);
+    await this.audit(actor, requestId, "member.tag_assigned", "member", memberId, null, {
+      tagId: tag.id,
+      tagName: tag.name
+    });
+    return tag;
+  }
+
+  async unassignMemberTag(
+    actor: RequestActor,
+    requestId: string,
+    memberId: string,
+    tagId: string
+  ): Promise<{ removed: boolean }> {
+    await this.getMember(actor, memberId);
+    const removed = await this.repository.unassignMemberTag(scopeOf(actor), memberId, tagId);
+    if (removed) {
+      await this.audit(actor, requestId, "member.tag_unassigned", "member", memberId, null, {
+        tagId
+      });
+    }
+    return { removed };
   }
 
   async memberTimeline(actor: RequestActor, memberId: string): Promise<AuditEventResponse[]> {

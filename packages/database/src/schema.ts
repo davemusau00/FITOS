@@ -422,6 +422,48 @@ export const members = pgTable(
   ]
 );
 
+export const memberTags = pgTable(
+  "member_tags",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 80 }).notNull(),
+    color: varchar("color", { length: 30 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex("uq_member_tags_tenant_name").on(table.tenantId, table.name),
+    index("idx_member_tags_tenant_created").on(table.tenantId, table.createdAt)
+  ]
+);
+
+export const memberTagAssignments = pgTable(
+  "member_tag_assignments",
+  {
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => memberTags.id, { onDelete: "cascade" }),
+    assignedByUserId: uuid("assigned_by_user_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.memberId, table.tagId] }),
+    index("idx_member_tag_assignments_tenant_member").on(table.tenantId, table.memberId),
+    index("idx_member_tag_assignments_tenant_tag").on(table.tenantId, table.tagId)
+  ]
+);
+
 export const memberIdentities = pgTable(
   "member_identities",
   {

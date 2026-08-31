@@ -65,6 +65,25 @@ export interface MemberListFilters {
 
 export type MemberListResponse = CursorPage<MemberListItem>;
 
+export interface MemberTagResponse {
+  id: string;
+  tenantId: string;
+  name: string;
+  color: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMemberTagRequest {
+  name: string;
+  color?: string | null;
+}
+
+export interface UpdateMemberTagRequest {
+  name?: string;
+  color?: string | null;
+}
+
 export interface MemberTimelineItem {
   id: string;
   action: string;

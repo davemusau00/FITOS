@@ -60,8 +60,6 @@ function toMemberPayload(values: MemberFormValues) {
   };
 }
 
-const MEMBER_TAGS = ["High Value", "Personal Training", "Early Adopter", "At Risk", "VIP"];
-
 export function MemberDetailPage() {
   const { auth } = useAuth();
   const { memberId } = useParams();
@@ -71,6 +69,8 @@ export function MemberDetailPage() {
   const [isActivatingMembership, setIsActivatingMembership] = useState(false);
   const [isAdjustingCredits, setIsAdjustingCredits] = useState(false);
   const [noteInput, setNoteInput] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+  const [tagError, setTagError] = useState<unknown>(null);
 
   const branches = useQuery({ queryKey: ["branches"], queryFn: api.branches });
   const member = useQuery({
@@ -128,6 +128,16 @@ export function MemberDetailPage() {
     queryFn: api.services,
     enabled: Boolean(memberId) && can(auth, "booking:read")
   });
+  const availableTags = useQuery({
+    queryKey: ["member-tags"],
+    queryFn: api.memberTags,
+    enabled: can(auth, "member:read")
+  });
+  const assignedTags = useQuery({
+    queryKey: ["member", memberId ?? "", "tags"],
+    queryFn: () => api.memberTagsForMember(memberId!),
+    enabled: Boolean(memberId) && can(auth, "member:read")
+  });
 
   const activeMembership = memberships.data?.find((m) => m.status === "active");
   const pausedMembership = memberships.data?.find((m) => m.status === "paused");
@@ -159,6 +169,32 @@ export function MemberDetailPage() {
       void queryClient.invalidateQueries({ queryKey: ["member", memberId, "memberships"] });
       void queryClient.invalidateQueries({ queryKey: ["member", memberId, "credits"] });
     }
+  });
+  const assignTagMutation = useMutation({
+    mutationFn: (tagId: string) => api.assignMemberTag(memberId!, tagId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["member", memberId, "tags"] });
+      setTagError(null);
+    },
+    onError: (error) => setTagError(error)
+  });
+  const unassignTagMutation = useMutation({
+    mutationFn: (tagId: string) => api.unassignMemberTag(memberId!, tagId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["member", memberId, "tags"] });
+      setTagError(null);
+    },
+    onError: (error) => setTagError(error)
+  });
+  const createTagMutation = useMutation({
+    mutationFn: (name: string) => api.createMemberTag({ name }),
+    onSuccess: (tag) => {
+      void queryClient.invalidateQueries({ queryKey: ["member-tags"] });
+      setNewTagName("");
+      assignTagMutation.mutate(tag.id);
+      setTagError(null);
+    },
+    onError: (error) => setTagError(error)
   });
 
   const creditColumns: DataTableColumn<CreditLedgerEntryResponse>[] = [
@@ -327,12 +363,72 @@ export function MemberDetailPage() {
 
             {/* Tags */}
             <div className="member-tags">
-              {MEMBER_TAGS.slice(0, 2).map((tag) => (
-                <span className="member-tag" key={tag}>
-                  {tag}
-                </span>
-              ))}
+              {assignedTags.data?.length ? (
+                assignedTags.data.map((tag) => (
+                  <span
+                    className="member-tag"
+                    key={tag.id}
+                    style={tag.color ? { borderColor: tag.color, color: tag.color } : undefined}
+                  >
+                    {tag.name}
+                    {can(auth, "member:update") ? (
+                      <button
+                        aria-label={`Remove ${tag.name} tag`}
+                        className="member-tag__remove"
+                        onClick={() => unassignTagMutation.mutate(tag.id)}
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </span>
+                ))
+              ) : (
+                <span className="muted">No tags assigned</span>
+              )}
             </div>
+            {can(auth, "member:update") ? (
+              <div className="member-tags-editor">
+                <select
+                  aria-label="Assign member tag"
+                  className="fitos-control fitos-control--small"
+                  onChange={(event) => {
+                    if (event.target.value) assignTagMutation.mutate(event.target.value);
+                    event.currentTarget.value = "";
+                  }}
+                  value=""
+                >
+                  <option value="">Assign tag…</option>
+                  {(availableTags.data ?? [])
+                    .filter(
+                      (tag) => !(assignedTags.data ?? []).some((current) => current.id === tag.id)
+                    )
+                    .map((tag) => (
+                      <option key={tag.id} value={tag.id}>
+                        {tag.name}
+                      </option>
+                    ))}
+                </select>
+                <input
+                  aria-label="Create member tag"
+                  className="fitos-control fitos-control--small"
+                  maxLength={80}
+                  onChange={(event) => setNewTagName(event.target.value)}
+                  placeholder="New tag"
+                  value={newTagName}
+                />
+                <Button
+                  disabled={!newTagName.trim()}
+                  loading={createTagMutation.isPending}
+                  onClick={() => createTagMutation.mutate(newTagName.trim())}
+                  size="small"
+                  variant="secondary"
+                >
+                  Create
+                </Button>
+              </div>
+            ) : null}
+            {tagError ? <ErrorNotice error={tagError} /> : null}
           </div>
 
           {/* Lifetime KPI Stats */}

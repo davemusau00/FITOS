@@ -9,6 +9,35 @@ const memberInput = (branchId: string): CreateMemberRequest => ({
 });
 
 describe("tenant isolation", () => {
+  it("persists member tags, assignments, updates, and removal", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    const scope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const member = (await repository.searchMembers(scope, { limit: 1 })).data[0];
+    if (!member) throw new Error("Seed member missing.");
+    const tag = await repository.createMemberTag(scope, { name: "VIP", color: "lime" });
+    expect(await repository.listMemberTags(scope)).toContainEqual(tag);
+    await expect(
+      repository.assignMemberTag(scope, member.id, tag.id, owner.user.id)
+    ).resolves.toEqual(tag);
+    await expect(repository.listMemberTagsForMember(scope, member.id)).resolves.toEqual([tag]);
+    const updated = await repository.updateMemberTag(scope, tag.id, {
+      name: "Priority",
+      color: null
+    });
+    expect(updated).toMatchObject({ name: "Priority", color: null });
+    await expect(repository.unassignMemberTag(scope, member.id, tag.id)).resolves.toBe(true);
+    await expect(repository.deleteMemberTag(scope, tag.id)).resolves.toMatchObject({ id: tag.id });
+    await expect(repository.listMemberTagsForMember(scope, member.id)).resolves.toEqual([]);
+  });
+
   it("scopes inbox items to their user and persists read state", async () => {
     const repository = new InMemoryFitosRepository();
     const item = await repository.createNotification({
