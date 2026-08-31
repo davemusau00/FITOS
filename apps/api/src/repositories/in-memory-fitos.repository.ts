@@ -5848,7 +5848,26 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   async listFeatureFlags(_tenantId: string): Promise<FeatureFlagResponse[]> {
-    const capabilities = new Set((await this.getTenantSubscription(_tenantId)).capabilities);
+    const subscription = await this.getTenantSubscription(_tenantId);
+    const capabilities = new Set(subscription.capabilities);
+    const nowDate = new Date();
+    const applicable = [...this.platformFeatureFlagOverrides.values()]
+      .filter(
+        (override) =>
+          override.scope === "global" ||
+          (override.scope === "tenant" && override.scopeValue === _tenantId) ||
+          (override.scope === "plan" && override.scopeValue === subscription.plan)
+      )
+      .filter(
+        (override) =>
+          (!override.effectiveFrom || new Date(override.effectiveFrom) <= nowDate) &&
+          (!override.effectiveUntil || new Date(override.effectiveUntil) > nowDate)
+      )
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    for (const override of applicable) {
+      if (override.enabled) capabilities.add(override.key);
+      else capabilities.delete(override.key);
+    }
     return PLATFORM_FEATURE_REGISTRY.map((feature) => ({
       key: feature.key,
       enabled: capabilities.has(feature.key),

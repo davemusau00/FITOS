@@ -43,6 +43,30 @@ describe("tenant isolation", () => {
     await expect(repository.listPlatformPlanDefinitions()).resolves.toContainEqual(updated);
   });
 
+  it("applies active tenant feature overrides when evaluating flags", async () => {
+    const repository = new InMemoryFitosRepository();
+    const passwordHash = await new ScryptPasswordHasher().hash("ChangeMe123!");
+    await repository.seedDevelopmentData?.(passwordHash);
+    const identity = await repository.findLoginIdentity("owner@gym.fitos.test");
+    expect(identity).toBeTruthy();
+    const before = await repository.listFeatureFlags(identity!.tenant.id);
+    const target = before.find((flag) => flag.key === "feature.integrations");
+    expect(target?.enabled).toBe(false);
+    await repository.createPlatformFeatureFlagOverride({
+      key: "feature.integrations",
+      scope: "tenant",
+      scopeValue: identity!.tenant.id,
+      enabled: true,
+      reason: "Pilot inventory rollout",
+      actorUserId: null,
+      previousEnabled: false,
+      effectiveFrom: null,
+      effectiveUntil: null
+    });
+    const after = await repository.listFeatureFlags(identity!.tenant.id);
+    expect(after.find((flag) => flag.key === "feature.integrations")?.enabled).toBe(true);
+  });
+
   it("persists staff notification preferences with safe defaults", async () => {
     const repository = new InMemoryFitosRepository();
     const defaults = await repository.getNotificationPreferences("user-1");

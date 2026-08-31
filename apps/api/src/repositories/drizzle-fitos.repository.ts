@@ -5486,6 +5486,39 @@ export class DrizzleFitosRepository implements FitosRepository {
       .where(eq(tenantSubscriptions.tenantId, tenantId))
       .limit(1);
     const caps = new Set((subscription?.capabilitiesJson as string[] | null | undefined) ?? []);
+    const plan = subscription?.plan ?? "starter";
+    const now = new Date();
+    const overrides = await this.db
+      .select()
+      .from(platformFeatureFlagOverrides)
+      .where(
+        and(
+          or(
+            eq(platformFeatureFlagOverrides.scope, "global"),
+            and(
+              eq(platformFeatureFlagOverrides.scope, "tenant"),
+              eq(platformFeatureFlagOverrides.scopeValue, tenantId)
+            ),
+            and(
+              eq(platformFeatureFlagOverrides.scope, "plan"),
+              eq(platformFeatureFlagOverrides.scopeValue, plan)
+            )
+          ),
+          or(
+            isNull(platformFeatureFlagOverrides.effectiveFrom),
+            lte(platformFeatureFlagOverrides.effectiveFrom, now)
+          ),
+          or(
+            isNull(platformFeatureFlagOverrides.effectiveUntil),
+            gt(platformFeatureFlagOverrides.effectiveUntil, now)
+          )
+        )
+      )
+      .orderBy(platformFeatureFlagOverrides.createdAt);
+    for (const override of overrides) {
+      if (override.enabled) caps.add(override.key);
+      else caps.delete(override.key);
+    }
 
     return PLATFORM_FEATURE_REGISTRY.map((feature) => ({
       key: feature.key,
