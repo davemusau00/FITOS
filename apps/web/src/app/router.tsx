@@ -44,6 +44,7 @@ import {
   AccountSubscriptionPage,
   NotificationInboxPage,
   PlatformPlansPage,
+  PlatformFeatureFlagsPage,
   FitosLandingPage,
   ConfigureFitosPage,
   ImplementationInquiriesPage,
@@ -193,6 +194,7 @@ export function AppRouter() {
           <Route element={<ImplementationInquiriesPage />} path="inquiries" />
           <Route element={<PlatformAuditPage />} path="audit" />
           <Route element={<PlatformPlansPage />} path="plans" />
+          <Route element={<PlatformFeatureFlagsPage />} path="feature-flags" />
           <Route element={<ImplementationInquiryDetailPage />} path="inquiries/:inquiryId" />
         </Route>
       </Route>

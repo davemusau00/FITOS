@@ -30,6 +30,7 @@ export * from "./settings/AccountSettingsPage";
 export { default as AccountSubscriptionPage } from "./settings/AccountSubscriptionPage";
 export * from "./settings/NotificationInboxPage";
 export * from "./platform/PlatformPlansPage";
+export * from "./platform/PlatformFeatureFlagsPage";
 export * from "./onboarding/OnboardingPage";
 export * from "./public/TenantPublicPage";
 export * from "./public/FitosLandingPage";

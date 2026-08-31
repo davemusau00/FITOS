@@ -75,6 +75,14 @@ export const commandNavigation: RouteMeta[] = [
     branchMode: "none"
   },
   {
+    path: "/platform/feature-flags",
+    label: "Feature Flags",
+    group: "Control plane",
+    icon: "settings",
+    workspace: "platform",
+    branchMode: "none"
+  },
+  {
     path: "/app/schedule",
     label: "Schedule",
     group: "Operations",
