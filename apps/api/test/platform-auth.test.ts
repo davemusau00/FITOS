@@ -189,6 +189,34 @@ describe("saas plan catalog", () => {
   });
 });
 
+describe("scoped feature flag overrides", () => {
+  it("validates scope and records a reasoned override", async () => {
+    const repository = new InMemoryFitosRepository();
+    const controller = new PlatformController(repository);
+    const request = { platformActor: { userId: "platform-user" } } as never;
+    await expect(
+      controller.createFeatureFlagOverride(
+        { key: "feature.unknown", scope: "global", scopeValue: null, enabled: true, reason: "bad" },
+        "request-id",
+        request
+      )
+    ).rejects.toThrow("Unknown feature flag key");
+    const created = await controller.createFeatureFlagOverride(
+      {
+        key: "feature.sites",
+        scope: "tenant",
+        scopeValue: "tenant-1",
+        enabled: true,
+        reason: "Pilot rollout"
+      },
+      "request-id",
+      request
+    );
+    expect(created.scope).toBe("tenant");
+    expect((await repository.listPlatformFeatureFlagOverrides())[0]?.reason).toBe("Pilot rollout");
+  });
+});
+
 describe("staff password and session lifecycle", () => {
   it("changes the password, preserves the current session, and revokes other sessions", async () => {
     const repository = new InMemoryFitosRepository();
