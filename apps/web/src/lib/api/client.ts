@@ -392,6 +392,8 @@ export const api = {
       method: "POST",
       body: json({ targetOccurrenceId })
     }),
+  promoteWaitlistedBooking: (id: string) =>
+    request<BookingResponse>(`/bookings/${id}/promote`, { method: "POST" }),
 
   // Memberships & Plans
   membershipPlans: (branchId?: string) =>

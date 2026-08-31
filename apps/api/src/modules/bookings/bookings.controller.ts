@@ -97,4 +97,14 @@ export class BookingsController {
       rescheduleSchema.parse(body).targetOccurrenceId
     );
   }
+
+  @Post(":bookingId/promote")
+  @RequirePermission("booking:create")
+  promote(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("bookingId") bookingId: string
+  ) {
+    return this.core.promoteWaitlistedBooking(actor, requestId, z.string().uuid().parse(bookingId));
+  }
 }

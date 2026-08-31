@@ -422,7 +422,7 @@ Conversion:
 - walk-in;
 - entitlement warnings.
 
-**Partial implementation evidence (2026-08-31):** Front Desk now offers a contextual member-to-booking link, labels facility arrivals as walk-ins with an explicit no-booking explanation, surfaces confirmed and waitlisted sessions in the member quick view, links waitlisted members to the filtered booking queue, and shows session capacity/resource warnings. The bookings API now accepts the canonical `waitlisted` filter, and the tenant-scoped `POST /bookings/:bookingId/reschedule` operation validates target occurrence/service/branch/capacity, preserves the booking entitlement credit, audits the move, and is covered by in-memory and PostgreSQL tests. Waitlist promotion and staff entitlement-override UI remain open; this ticket is not marked complete.
+**Partial implementation evidence (2026-08-31):** Front Desk now offers a contextual member-to-booking link, labels facility arrivals as walk-ins with an explicit no-booking explanation, surfaces confirmed and waitlisted sessions in the member quick view, links waitlisted members to the filtered booking queue, and shows session capacity/resource warnings. The bookings API now accepts the canonical `waitlisted` filter. Tenant-scoped reschedule validates target occurrence/service/branch/capacity, preserves the booking entitlement credit, and audits the move; tenant-scoped waitlist promotion validates availability and eligible membership credits, debits only on confirmation, and audits the promotion. Both operations are covered by in-memory and PostgreSQL tests, and the responsive booking workspace exposes reschedule, promote, and cancellation actions with pending/error feedback. Staff entitlement-override UI remains open; this ticket is not marked complete.
 
 ---
 
@@ -544,6 +544,8 @@ Validate:
 - timing;
 - booking window.
 
+**Implementation evidence (2026-08-31):** Tenant-scoped reschedule is available through the booking API and responsive booking workspace. It validates a scheduled same-service target, branch scope, duplicate active booking, and capacity while preserving the existing entitlement debit; successful moves are audited. In-memory and PostgreSQL integration coverage passes. Resource-specific capacity and member-safe reschedule remain follow-on work.
+
 ---
 
 ## P1-034 — Staff Booking Waitlist Lifecycle
@@ -555,6 +557,8 @@ Add:
 - reorder;
 - promote;
 - auto-promote.
+
+**Partial implementation evidence (2026-08-31):** Staff can promote a waitlisted booking when a scheduled occurrence has capacity and the member has an eligible active membership; the promotion debits credits atomically, returns the canonical booking, writes an audit event, and is exposed in the responsive bookings workspace with pending/error feedback. Reorder semantics, automatic promotion, and entitlement override remain open.
 
 ---
 

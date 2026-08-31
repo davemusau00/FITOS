@@ -1000,6 +1000,38 @@ export class CoreService {
     }
   }
 
+  async promoteWaitlistedBooking(
+    actor: RequestActor,
+    requestId: string,
+    bookingId: string
+  ): Promise<BookingResponse> {
+    const existing = await this.getBooking(actor, bookingId);
+    if (existing.status !== "waitlisted") {
+      throw new DomainError("VALIDATION_FAILED", "Only waitlisted bookings can be promoted.", 409);
+    }
+    try {
+      const booking = await this.repository.promoteWaitlistedBooking(scopeOf(actor), bookingId);
+      if (!booking) throw new DomainError("RESOURCE_NOT_FOUND", "Booking not found.", 404);
+      await this.audit(
+        actor,
+        requestId,
+        "booking.waitlist_promoted",
+        "booking",
+        booking.id,
+        booking.branchId,
+        { occurrenceId: booking.occurrenceId, creditsDebited: booking.creditsDebited }
+      );
+      await this.publish(eventOf(actor, "booking.waitlist_promoted", { bookingId: booking.id }));
+      return booking;
+    } catch (error) {
+      if (error instanceof DomainError) throw error;
+      if (error instanceof Error && /full|credit|membership|occurrence/i.test(error.message)) {
+        throw new DomainError("VALIDATION_FAILED", error.message, 409);
+      }
+      throw error;
+    }
+  }
+
   async listMembershipPlans(
     actor: RequestActor,
     branchId?: string

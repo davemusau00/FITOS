@@ -31,6 +31,7 @@ export function BookingsPage() {
   const [reschedulingBooking, setReschedulingBooking] = useState<BookingResponse | null>(null);
   const [targetOccurrenceId, setTargetOccurrenceId] = useState("");
   const [rescheduleError, setRescheduleError] = useState<unknown>(null);
+  const [promoteError, setPromoteError] = useState<unknown>(null);
   const { activeBranchId } = useBranch();
 
   const statusFilter = (params.get("status") as BookingStatus) || "";
@@ -88,6 +89,16 @@ export function BookingsPage() {
       setRescheduleError(null);
     },
     onError: (err) => setRescheduleError(err)
+  });
+
+  const promoteMutation = useMutation({
+    mutationFn: (id: string) => api.promoteWaitlistedBooking(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("bookings") });
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("schedule") });
+      setPromoteError(null);
+    },
+    onError: (err) => setPromoteError(err)
   });
 
   const setFilter = (name: string, value: string) => {
@@ -172,9 +183,19 @@ export function BookingsPage() {
       id: "actions",
       header: "",
       cell: (b) =>
-        b.status === "confirmed" ? (
+        b.status === "confirmed" || b.status === "waitlisted" ? (
           <div className="table-actions">
-            {can(auth, "booking:create") ? (
+            {b.status === "waitlisted" && can(auth, "booking:create") ? (
+              <Button
+                loading={promoteMutation.isPending}
+                onClick={() => promoteMutation.mutate(b.id)}
+                size="small"
+                variant="primary"
+              >
+                Promote
+              </Button>
+            ) : null}
+            {b.status === "confirmed" && can(auth, "booking:create") ? (
               <Button
                 onClick={() => {
                   setReschedulingBooking(b);
@@ -187,7 +208,8 @@ export function BookingsPage() {
                 Reschedule
               </Button>
             ) : null}
-            {can(auth, "booking:cancel") ? (
+            {(b.status === "confirmed" || b.status === "waitlisted") &&
+            can(auth, "booking:cancel") ? (
               <Button
                 onClick={() => {
                   setCancellingBooking(b);
@@ -224,6 +246,7 @@ export function BookingsPage() {
       />
 
       <ErrorNotice error={bookingsQuery.error} onRetry={() => void bookingsQuery.refetch()} />
+      <ErrorNotice error={promoteError} />
 
       <section className="filter-row">
         <SearchBar
@@ -285,10 +308,20 @@ export function BookingsPage() {
                   <StatusBadge status={booking.status} />
                   <span>{booking.source}</span>
                 </div>
-                {booking.status === "confirmed" &&
+                {(booking.status === "confirmed" || booking.status === "waitlisted") &&
                 (can(auth, "booking:create") || can(auth, "booking:cancel")) ? (
                   <div className="table-actions">
-                    {can(auth, "booking:create") ? (
+                    {booking.status === "waitlisted" && can(auth, "booking:create") ? (
+                      <Button
+                        loading={promoteMutation.isPending}
+                        onClick={() => promoteMutation.mutate(booking.id)}
+                        size="small"
+                        variant="primary"
+                      >
+                        Promote
+                      </Button>
+                    ) : null}
+                    {booking.status === "confirmed" && can(auth, "booking:create") ? (
                       <Button
                         onClick={() => {
                           setReschedulingBooking(booking);
@@ -301,17 +334,20 @@ export function BookingsPage() {
                         Reschedule
                       </Button>
                     ) : null}
-                    <Button
-                      onClick={() => {
-                        setCancellingBooking(booking);
-                        setCancelReason("");
-                        setCancelError(null);
-                      }}
-                      size="small"
-                      variant="danger"
-                    >
-                      Cancel booking
-                    </Button>
+                    {(booking.status === "confirmed" || booking.status === "waitlisted") &&
+                    can(auth, "booking:cancel") ? (
+                      <Button
+                        onClick={() => {
+                          setCancellingBooking(booking);
+                          setCancelReason("");
+                          setCancelError(null);
+                        }}
+                        size="small"
+                        variant="danger"
+                      >
+                        Cancel booking
+                      </Button>
+                    ) : null}
                   </div>
                 ) : null}
               </Card>

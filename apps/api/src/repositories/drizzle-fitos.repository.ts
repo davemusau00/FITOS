@@ -2367,6 +2367,133 @@ export class DrizzleFitosRepository implements FitosRepository {
     return booking ? this.bookingResponse(booking) : null;
   }
 
+  async promoteWaitlistedBooking(
+    scope: TenantScope,
+    bookingId: string
+  ): Promise<BookingResponse | null> {
+    const booking = await this.db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM bookings
+        WHERE id = ${bookingId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [current] = await tx
+        .select()
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.id, bookingId),
+            eq(bookings.tenantId, scope.tenantId),
+            inArray(bookings.branchId, scope.branchIds),
+            eq(bookings.status, "waitlisted")
+          )
+        )
+        .limit(1);
+      if (!current) return null;
+      await tx.execute(sql`
+        SELECT id FROM schedule_occurrences
+        WHERE id = ${current.occurrenceId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const [occurrence] = await tx
+        .select()
+        .from(scheduleOccurrences)
+        .where(
+          and(
+            eq(scheduleOccurrences.id, current.occurrenceId),
+            eq(scheduleOccurrences.tenantId, scope.tenantId)
+          )
+        )
+        .limit(1);
+      if (!occurrence || occurrence.status !== "scheduled")
+        throw new Error("Occurrence unavailable.");
+      const [capacity] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.tenantId, scope.tenantId),
+            eq(bookings.occurrenceId, occurrence.id),
+            eq(bookings.status, "confirmed")
+          )
+        );
+      if ((capacity?.count ?? 0) >= occurrence.capacity) throw new Error("Occurrence is full.");
+      const [service] = await tx
+        .select()
+        .from(services)
+        .where(and(eq(services.id, occurrence.serviceId), eq(services.tenantId, scope.tenantId)))
+        .limit(1);
+      if (!service) throw new Error("Booking service unavailable.");
+      let creditMembership: typeof memberMemberships.$inferSelect | null = null;
+      if (service.creditsRequired > 0) {
+        const candidates = await tx
+          .select()
+          .from(memberMemberships)
+          .where(
+            and(
+              eq(memberMemberships.tenantId, scope.tenantId),
+              eq(memberMemberships.memberId, current.memberId),
+              eq(memberMemberships.status, "active"),
+              lte(memberMemberships.startsAt, occurrence.startsAt),
+              or(
+                isNull(memberMemberships.endsAt),
+                gt(memberMemberships.endsAt, occurrence.startsAt)
+              )
+            )
+          )
+          .orderBy(memberMemberships.endsAt, memberMemberships.createdAt);
+        for (const candidate of candidates) {
+          const snapshot = candidate.planSnapshot as MembershipPlanResponse;
+          if (snapshot.branchId && snapshot.branchId !== occurrence.branchId) continue;
+          if (
+            snapshot.includedServiceIds?.length &&
+            !snapshot.includedServiceIds.includes(occurrence.serviceId)
+          )
+            continue;
+          const [balance] = await tx
+            .select({ total: sql<number>`coalesce(sum(${creditLedger.delta}), 0)::int` })
+            .from(creditLedger)
+            .where(
+              and(
+                eq(creditLedger.tenantId, scope.tenantId),
+                eq(creditLedger.membershipId, candidate.id)
+              )
+            );
+          if ((balance?.total ?? 0) >= service.creditsRequired) {
+            creditMembership = candidate;
+            break;
+          }
+        }
+        if (!creditMembership)
+          throw new Error("Insufficient credits to promote this waitlisted booking.");
+      }
+      const [updated] = await tx
+        .update(bookings)
+        .set({
+          status: "confirmed",
+          creditMembershipId: creditMembership?.id ?? null,
+          creditsDebited: creditMembership ? service.creditsRequired : 0,
+          updatedAt: new Date()
+        })
+        .where(eq(bookings.id, current.id))
+        .returning();
+      if (!updated) throw new Error("Unable to promote waitlisted booking.");
+      if (creditMembership && service.creditsRequired > 0) {
+        await tx.insert(creditLedger).values({
+          tenantId: scope.tenantId,
+          membershipId: creditMembership.id,
+          memberId: current.memberId,
+          delta: -service.creditsRequired,
+          reason: "booking",
+          bookingId: current.id,
+          note: `Waitlist promotion credit deduction (${service.creditsRequired})`
+        });
+      }
+      return updated;
+    });
+    return booking ? this.bookingResponse(booking) : null;
+  }
+
   async listMembershipPlans(
     scope: TenantScope,
     branchId?: string

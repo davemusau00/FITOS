@@ -3294,6 +3294,75 @@ export class InMemoryFitosRepository implements FitosRepository {
     return { ...booking };
   }
 
+  async promoteWaitlistedBooking(
+    scope: TenantScope,
+    bookingId: string
+  ): Promise<BookingResponse | null> {
+    const booking = this.bookings.get(bookingId);
+    if (
+      !booking ||
+      booking.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(booking.branchId) ||
+      booking.status !== "waitlisted"
+    )
+      return null;
+    const occurrence = this.occurrences.get(booking.occurrenceId);
+    if (!occurrence || occurrence.status !== "scheduled")
+      throw new Error("Occurrence unavailable.");
+    const confirmed = [...this.bookings.values()].filter(
+      (candidate) =>
+        candidate.tenantId === scope.tenantId &&
+        candidate.occurrenceId === occurrence.id &&
+        candidate.status === "confirmed"
+    ).length;
+    if (confirmed >= (occurrence.effectiveCapacity ?? occurrence.capacity))
+      throw new Error("Occurrence is full.");
+    const service = this.services.get(occurrence.serviceId);
+    if (!service) throw new Error("Booking service unavailable.");
+    const memberships = [...this.memberMemberships.values()]
+      .filter(
+        (membership) =>
+          membership.tenantId === scope.tenantId &&
+          membership.memberId === booking.memberId &&
+          membership.status === "active" &&
+          membership.startsAt <= occurrence.startsAt &&
+          (!membership.endsAt || membership.endsAt > occurrence.startsAt) &&
+          (!membership.planSnapshot.branchId ||
+            membership.planSnapshot.branchId === occurrence.branchId) &&
+          (!membership.planSnapshot.includedServiceIds?.length ||
+            membership.planSnapshot.includedServiceIds.includes(occurrence.serviceId))
+      )
+      .sort((a, b) => (a.endsAt ?? "9999").localeCompare(b.endsAt ?? "9999"));
+    const creditMembership = memberships.find((membership) => {
+      const balance = [...this.creditLedger.values()]
+        .filter((entry) => entry.membershipId === membership.id)
+        .reduce((total, entry) => total + entry.delta, 0);
+      return balance >= service.creditsRequired;
+    });
+    if (service.creditsRequired > 0 && !creditMembership)
+      throw new Error("Insufficient credits to promote this waitlisted booking.");
+    const timestamp = now();
+    booking.status = "confirmed";
+    booking.creditMembershipId = creditMembership?.id ?? null;
+    booking.creditsDebited = creditMembership ? service.creditsRequired : 0;
+    booking.updatedAt = timestamp;
+    if (creditMembership && service.creditsRequired > 0) {
+      const ledgerId = randomUUID();
+      this.creditLedger.set(ledgerId, {
+        id: ledgerId,
+        tenantId: scope.tenantId,
+        membershipId: creditMembership.id,
+        memberId: booking.memberId,
+        delta: -service.creditsRequired,
+        reason: "booking",
+        bookingId: booking.id,
+        note: `Waitlist promotion credit deduction (${service.creditsRequired})`,
+        createdAt: timestamp
+      });
+    }
+    return { ...booking };
+  }
+
   async listMembershipPlans(
     scope: TenantScope,
     branchId?: string
