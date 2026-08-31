@@ -693,6 +693,18 @@ export const api = {
     request<import("@fitos/contracts").AccountDeletionRequestResponse[]>(
       "/platform/deletion-requests"
     ),
+  platformSupportNotes: (tenantId: string) =>
+    request<import("@fitos/contracts").PlatformSupportNoteResponse[]>(
+      `/platform/tenants/${tenantId}/support-notes`
+    ),
+  createPlatformSupportNote: (
+    tenantId: string,
+    payload: Pick<import("@fitos/contracts").PlatformSupportNoteResponse, "category" | "note">
+  ) =>
+    request<import("@fitos/contracts").PlatformSupportNoteResponse>(
+      `/platform/tenants/${tenantId}/support-notes`,
+      { method: "POST", body: json(payload) }
+    ),
   decidePlatformDeletionRequest: (
     requestId: string,
     status: "reviewing" | "approved" | "rejected",

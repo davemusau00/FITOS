@@ -39,6 +39,10 @@ export function PlatformTenantDetailPage() {
   const [reason, setReason] = useState("");
   const [capabilityReason, setCapabilityReason] = useState("");
   const [pendingCapabilities, setPendingCapabilities] = useState<SaaSCapabilityKey[] | null>(null);
+  const [supportCategory, setSupportCategory] = useState<
+    "implementation" | "support" | "account" | "risk"
+  >("support");
+  const [supportNote, setSupportNote] = useState("");
   const tenant = useQuery({
     queryKey: ["platform", "tenant", tenantId],
     queryFn: () => api.platformTenant(tenantId),
@@ -46,6 +50,11 @@ export function PlatformTenantDetailPage() {
   });
   const features = useQuery({ queryKey: ["platform", "features"], queryFn: api.platformFeatures });
   const audit = useQuery({ queryKey: ["platform", "audit"], queryFn: api.platformAudit });
+  const notes = useQuery({
+    queryKey: ["platform", "support-notes", tenantId],
+    queryFn: () => api.platformSupportNotes(tenantId),
+    enabled: Boolean(tenantId)
+  });
   const refresh = () => {
     void cache.invalidateQueries({ queryKey: ["platform", "tenant", tenantId] });
     void cache.invalidateQueries({ queryKey: ["platform", "tenants"] });
@@ -76,6 +85,19 @@ export function PlatformTenantDetailPage() {
     },
     onError: (cause) =>
       toast.error(cause instanceof Error ? cause.message : "Unable to update capabilities.")
+  });
+  const addNote = useMutation({
+    mutationFn: () =>
+      api.createPlatformSupportNote(tenantId, {
+        category: supportCategory,
+        note: supportNote.trim()
+      }),
+    onSuccess: () => {
+      setSupportNote("");
+      void notes.refetch();
+      toast.success("Support note saved.");
+    },
+    onError: (cause) => toast.error(cause instanceof Error ? cause.message : "Unable to save note.")
   });
   if (tenant.isLoading) return <PageLoading />;
   if (tenant.error || !tenant.data)
@@ -117,7 +139,8 @@ export function PlatformTenantDetailPage() {
           { id: "summary", label: "Summary" },
           { id: "lifecycle", label: "Lifecycle" },
           { id: "access", label: "Plan & access" },
-          { id: "activity", label: "Activity", count: events.length }
+          { id: "activity", label: "Activity", count: events.length },
+          { id: "support", label: "Support notes", count: notes.data?.length ?? 0 }
         ]}
       />
       {tab === "summary" ? (
@@ -244,6 +267,60 @@ export function PlatformTenantDetailPage() {
                 Save lifecycle
               </Button>
             </form>
+          </Card>
+        </div>
+      ) : null}
+      {tab === "support" ? (
+        <div className="platform-detail-grid">
+          <Card>
+            <h2>Add support note</h2>
+            <form
+              className="form-stack"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (supportNote.trim().length) addNote.mutate();
+              }}
+            >
+              <FormField htmlFor="support-category" label="Category">
+                <Select
+                  id="support-category"
+                  value={supportCategory}
+                  onChange={(event) =>
+                    setSupportCategory(event.target.value as typeof supportCategory)
+                  }
+                >
+                  {["implementation", "support", "account", "risk"].map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField htmlFor="support-note" label="Note">
+                <textarea
+                  id="support-note"
+                  className="fitos-control"
+                  value={supportNote}
+                  onChange={(event) => setSupportNote(event.target.value)}
+                />
+              </FormField>
+              <Button type="submit" disabled={addNote.isPending}>
+                Save note
+              </Button>
+            </form>
+          </Card>
+          <Card>
+            <h2>Recent notes</h2>
+            <ErrorNotice error={notes.error} onRetry={() => void notes.refetch()} />
+            {notes.data?.length ? (
+              notes.data.map((note) => (
+                <div className="fitos-mobile-data-card" key={note.id}>
+                  <strong>{note.category}</strong>
+                  <span>{note.note}</span>
+                  <small>{formatDateTime(note.createdAt)}</small>
+                </div>
+              ))
+            ) : (
+              <p className="muted">No support notes recorded.</p>
+            )}
           </Card>
         </div>
       ) : null}
