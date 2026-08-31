@@ -640,6 +640,20 @@ describeDatabase("Drizzle tenant isolation", () => {
     await repository.updatePlatformPlanDefinition("starter", { ...starter!, isActive: true });
   });
 
+  it("persists Platform support notes and isolates tenants", async () => {
+    const note = await repository.createPlatformSupportNote({
+      tenantId: gym.tenant.id,
+      authorUserId: gym.user.id,
+      category: "support",
+      note: "PostgreSQL support note integration check."
+    });
+    expect(note.tenantId).toBe(gym.tenant.id);
+    await expect(repository.listPlatformSupportNotes(gym.tenant.id)).resolves.toContainEqual(note);
+    await expect(
+      repository.listPlatformSupportNotes(pilates.tenant.id)
+    ).resolves.not.toContainEqual(note);
+  });
+
   it("persists account export requests and isolates them by tenant", async () => {
     const created = await repository.createAccountExportRequest(scopeOf(gym), gym.user.id);
     expect(created.status).toBe("requested");
