@@ -51,20 +51,20 @@ describe("tenant isolation", () => {
     expect(identity).toBeTruthy();
     const before = await repository.listFeatureFlags(identity!.tenant.id);
     const target = before.find((flag) => flag.key === "feature.integrations");
-    expect(target?.enabled).toBe(false);
+    expect(target?.enabled).toBe(true);
     await repository.createPlatformFeatureFlagOverride({
       key: "feature.integrations",
       scope: "tenant",
       scopeValue: identity!.tenant.id,
-      enabled: true,
-      reason: "Pilot inventory rollout",
+      enabled: false,
+      reason: "Pause integrations for pilot",
       actorUserId: null,
       previousEnabled: false,
       effectiveFrom: null,
       effectiveUntil: null
     });
     const after = await repository.listFeatureFlags(identity!.tenant.id);
-    expect(after.find((flag) => flag.key === "feature.integrations")?.enabled).toBe(true);
+    expect(after.find((flag) => flag.key === "feature.integrations")?.enabled).toBe(false);
   });
 
   it("persists staff notification preferences with safe defaults", async () => {
