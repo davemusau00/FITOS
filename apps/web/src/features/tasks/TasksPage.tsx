@@ -37,7 +37,7 @@ export function TasksPage() {
   const staff = useQuery({
     queryKey: ["staff", "task-assignees"],
     queryFn: api.staff,
-    enabled: can(auth, "task:manage")
+    enabled: can(auth, "task:manage") && can(auth, "staff:read")
   });
   const create = useMutation({
     mutationFn: () =>
