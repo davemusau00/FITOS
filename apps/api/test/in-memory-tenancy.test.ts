@@ -168,6 +168,32 @@ describe("tenant isolation", () => {
     expect(acknowledged?.acknowledgedAt).toBeTruthy();
   });
 
+  it("requires approved inquiry state and records conversion handoff", async () => {
+    const repository = new InMemoryFitosRepository();
+    const inquiry = await repository.saveImplementationInquiry(
+      {
+        contactName: "Implementation Owner",
+        businessName: "Handoff Fitness",
+        email: "handoff@example.test",
+        payload: { locations: [{ name: "Main Branch" }], services: [{ name: "Training" }] }
+      },
+      true
+    );
+    await expect(
+      repository.convertImplementationInquiry(inquiry.id, "tenant-1")
+    ).resolves.toBeNull();
+    await repository.updateImplementationInquiryStatus(inquiry.id, "approved");
+    const event = await repository.recordImplementationInquiryEvent({
+      inquiryId: inquiry.id,
+      actorUserId: "platform-user",
+      eventType: "conversion_handoff",
+      details: { mode: "existing", targetTenantId: "tenant-1" }
+    });
+    const converted = await repository.convertImplementationInquiry(inquiry.id, "tenant-1");
+    expect(converted).toMatchObject({ status: "converted", convertedTenantId: "tenant-1" });
+    expect(await repository.listImplementationInquiryEvents(inquiry.id)).toContainEqual(event);
+  });
+
   it("persists staff notification preferences with safe defaults", async () => {
     const repository = new InMemoryFitosRepository();
     const defaults = await repository.getNotificationPreferences("user-1");

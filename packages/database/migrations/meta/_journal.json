@@ -309,6 +309,13 @@
       "when": 1790102400000,
       "tag": "0043_platform_system_notices",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1790188800000,
+      "tag": "0044_implementation_inquiry_resume_tokens",
+      "breakpoints": true
     }
   ]
 }

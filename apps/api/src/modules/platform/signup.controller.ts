@@ -25,7 +25,7 @@ import type {
 } from "@fitos/contracts";
 import { PLATFORM_FEATURE_REGISTRY, canTransitionTenantStatus } from "@fitos/contracts";
 import { createHash } from "node:crypto";
-import { ScryptPasswordHasher, createOpaqueSessionToken } from "@fitos/auth";
+import { ScryptPasswordHasher, createOpaqueSessionToken, hashSessionToken } from "@fitos/auth";
 import { Public } from "../../common/auth/public.decorator.js";
 import { AuthMode } from "../../common/auth/auth-mode.decorator.js";
 import { Actor } from "../../common/request-context/actor.decorator.js";
@@ -681,7 +681,7 @@ export class PlatformController {
   @Patch("implementation-inquiries/:id/status")
   @AuthMode("platform")
   @RequirePlatformAdmin()
-  updateInquiry(@Param("id") id: string, @Body() body: unknown) {
+  async updateInquiry(@Param("id") id: string, @Body() body: unknown) {
     const input = z
       .object({
         status: z.enum([
@@ -696,7 +696,150 @@ export class PlatformController {
       })
       .strict()
       .parse(body);
+    if (input.status === "converted") {
+      throw new BadRequestException(
+        "Approved inquiries must use the guarded conversion workflow before they can be marked converted."
+      );
+    }
     return this.repository.updateImplementationInquiryStatus(id, input.status);
+  }
+
+  @Post("implementation-inquiries/:id/convert")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async convertInquiry(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @RequestId() requestId: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        mode: z.enum(["new", "existing"]),
+        tenantId: z.string().uuid().nullable().optional(),
+        ownerPassword: z.string().min(12).max(200).optional(),
+        reason: z.string().trim().min(3).max(500)
+      })
+      .strict()
+      .parse(body);
+    const inquiry = await this.repository.getImplementationInquiry(id);
+    if (!inquiry) throw new NotFoundException("Implementation inquiry not found.");
+    if (inquiry.status !== "approved") {
+      throw new BadRequestException("Only approved inquiries can be converted.");
+    }
+    const manifest = await this.repository.buildTenantSeedManifest(id);
+    if (
+      !manifest ||
+      manifest.schemaVersion !== 1 ||
+      manifest.sourceInquiryId !== id ||
+      !manifest.business ||
+      !Array.isArray(manifest.branches) ||
+      !Array.isArray(manifest.services) ||
+      !Array.isArray(manifest.team)
+    ) {
+      throw new BadRequestException(
+        "The inquiry seed manifest is incomplete and cannot be handed off."
+      );
+    }
+
+    let tenantId: string;
+    if (input.mode === "existing") {
+      if (!input.tenantId) throw new BadRequestException("An existing tenant is required.");
+      const tenant = (await this.repository.listPlatformTenantControls()).find(
+        (record) => record.tenant.id === input.tenantId
+      );
+      if (!tenant) throw new NotFoundException("Existing tenant not found.");
+      tenantId = input.tenantId;
+    } else {
+      if (!input.ownerPassword) {
+        throw new BadRequestException("An initial owner password is required for a new tenant.");
+      }
+      if (!inquiry.email || !inquiry.contactName || !inquiry.businessName) {
+        throw new BadRequestException(
+          "Business name, contact name, and email are required to create a tenant."
+        );
+      }
+      const business = manifest.business;
+      const firstBranch =
+        manifest.branches[0] && typeof manifest.branches[0] === "object"
+          ? (manifest.branches[0] as Record<string, unknown>)
+          : {};
+      const gymName = String(business.businessName ?? inquiry.businessName).trim();
+      const slugBase = gymName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+      const signupInput: SaaSTenantSignupRequest = {
+        gymName,
+        slug: `${slugBase || "fitos-tenant"}-${id.slice(0, 8)}`.slice(0, 100),
+        businessType: String(business.businessType ?? inquiry.businessType ?? "gym"),
+        country: String(business.country ?? inquiry.country ?? "Kenya"),
+        timezone: "Africa/Nairobi",
+        currency: "KES",
+        branchName: String(firstBranch.name ?? firstBranch.branchName ?? "Main Branch"),
+        branchAddress: firstBranch.address ? String(firstBranch.address) : undefined,
+        ownerName: inquiry.contactName,
+        ownerEmail: inquiry.email,
+        ownerPhone: inquiry.phone,
+        password: input.ownerPassword
+      };
+      const passwordHash = await hasher.hash(signupInput.password);
+      const created = await this.repository.signupTenant(signupInput, passwordHash);
+      tenantId = created.tenantId;
+      if (created.token) {
+        await this.repository.revokeSession(
+          hashSessionToken(created.token),
+          new Date().toISOString()
+        );
+      }
+    }
+
+    const actorUserId = request.platformActor?.userId ?? null;
+    const handoff = await this.repository.recordImplementationInquiryEvent({
+      inquiryId: id,
+      actorUserId,
+      eventType: "conversion_handoff",
+      details: {
+        mode: input.mode,
+        targetTenantId: tenantId,
+        reason: input.reason,
+        manifestSchemaVersion: manifest.schemaVersion,
+        counts: {
+          branches: manifest.branches.length,
+          services: manifest.services.length,
+          team: manifest.team.length,
+          equipment: manifest.equipment.length,
+          assessments: manifest.assessments.length,
+          therapy: manifest.therapy.length,
+          inventory: manifest.inventory.length
+        }
+      }
+    });
+    const converted = await this.repository.convertImplementationInquiry(id, tenantId);
+    if (!converted)
+      throw new BadRequestException("The inquiry changed before conversion completed.");
+    await this.repository.recordAudit({
+      tenantId,
+      actorUserId,
+      action: "platform.implementation_inquiry_converted",
+      resourceType: "implementation_inquiry",
+      resourceId: id,
+      beforeSummary: { status: inquiry.status },
+      afterSummary: {
+        status: converted.status,
+        convertedTenantId: tenantId,
+        mode: input.mode,
+        handoffEventId: handoff.id,
+        reason: input.reason
+      },
+      requestId
+    });
+    return {
+      inquiry: converted,
+      tenantId,
+      mode: input.mode,
+      handoffEventId: handoff.id
+    };
   }
 
   @Get("implementation-inquiries/:id/seed-manifest")

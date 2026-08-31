@@ -15,6 +15,7 @@ import {
   idempotencyKeys,
   implementationInquiries,
   implementationInquiryPayloads,
+  implementationInquiryEvents,
   leadEvents,
   leadNotes,
   leadTasks,
@@ -5824,6 +5825,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       businessType: inquiry.businessType ?? undefined,
       payload: input.payload,
       status: inquiry.status as any,
+      convertedTenantId: inquiry.convertedTenantId,
       schemaVersion: 1,
       submittedAt: inquiry.submittedAt?.toISOString() ?? null,
       createdAt: inquiry.createdAt.toISOString(),
@@ -5868,6 +5870,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       businessType: inquiry.businessType ?? undefined,
       payload: (payload?.payloadJson as Record<string, unknown>) ?? {},
       status: inquiry.status as any,
+      convertedTenantId: inquiry.convertedTenantId,
       schemaVersion: payload?.schemaVersion ?? 1,
       submittedAt: inquiry.submittedAt?.toISOString() ?? null,
       createdAt: inquiry.createdAt.toISOString(),
@@ -6047,6 +6050,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       businessType: inquiry.businessType ?? undefined,
       payload: (payload?.payloadJson as Record<string, unknown>) ?? {},
       status: inquiry.status as any,
+      convertedTenantId: inquiry.convertedTenantId,
       schemaVersion: payload?.schemaVersion ?? 1,
       submittedAt: inquiry.submittedAt?.toISOString() ?? null,
       createdAt: inquiry.createdAt.toISOString(),
@@ -6095,6 +6099,64 @@ export class DrizzleFitosRepository implements FitosRepository {
       website: payload.website ?? {},
       customRequirements: payload.customRequirements ?? []
     };
+  }
+
+  async recordImplementationInquiryEvent(input: {
+    inquiryId: string;
+    actorUserId: string | null;
+    eventType: string;
+    details: Record<string, unknown>;
+  }): Promise<import("@fitos/contracts").ImplementationInquiryEventResponse> {
+    const [row] = await this.db
+      .insert(implementationInquiryEvents)
+      .values({
+        inquiryId: input.inquiryId,
+        actorUserId: input.actorUserId,
+        eventType: input.eventType,
+        detailsJson: input.details
+      })
+      .returning();
+    if (!row) throw new Error("Unable to record implementation inquiry event.");
+    return {
+      id: row.id,
+      inquiryId: row.inquiryId,
+      actorUserId: row.actorUserId,
+      eventType: row.eventType,
+      details: (row.detailsJson as Record<string, unknown>) ?? {},
+      createdAt: row.createdAt.toISOString()
+    };
+  }
+
+  async listImplementationInquiryEvents(
+    inquiryId: string
+  ): Promise<import("@fitos/contracts").ImplementationInquiryEventResponse[]> {
+    const rows = await this.db
+      .select()
+      .from(implementationInquiryEvents)
+      .where(eq(implementationInquiryEvents.inquiryId, inquiryId))
+      .orderBy(desc(implementationInquiryEvents.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      inquiryId: row.inquiryId,
+      actorUserId: row.actorUserId,
+      eventType: row.eventType,
+      details: (row.detailsJson as Record<string, unknown>) ?? {},
+      createdAt: row.createdAt.toISOString()
+    }));
+  }
+
+  async convertImplementationInquiry(
+    id: string,
+    tenantId: string
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null> {
+    const [row] = await this.db
+      .update(implementationInquiries)
+      .set({ status: "converted", convertedTenantId: tenantId, updatedAt: new Date() })
+      .where(
+        and(eq(implementationInquiries.id, id), eq(implementationInquiries.status, "approved"))
+      )
+      .returning();
+    return row ? this.getImplementationInquiry(row.id) : null;
   }
 
   // ─── Equipment & Resource Scheduling ─────────────────────────────────────────

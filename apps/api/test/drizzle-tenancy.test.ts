@@ -699,6 +699,40 @@ describeDatabase("Drizzle tenant isolation", () => {
     ).resolves.toMatchObject({ id: notice.id, acknowledgedAt: expect.any(String) });
   });
 
+  it("persists approved implementation inquiry conversion and handoff events", async () => {
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const inquiry = await repository.saveImplementationInquiry(
+      {
+        contactName: `DB Handoff ${suffix}`,
+        businessName: `DB Handoff Gym ${suffix}`,
+        email: `handoff-${suffix}@example.test`,
+        payload: { locations: [{ name: "Main Branch" }], services: [{ name: "Training" }] }
+      },
+      true
+    );
+    await expect(
+      repository.convertImplementationInquiry(inquiry.id, gym.tenant.id)
+    ).resolves.toBeNull();
+    await repository.updateImplementationInquiryStatus(inquiry.id, "approved");
+    const handoff = await repository.recordImplementationInquiryEvent({
+      inquiryId: inquiry.id,
+      actorUserId: gym.user.id,
+      eventType: "conversion_handoff",
+      details: { mode: "existing", targetTenantId: gym.tenant.id }
+    });
+    const converted = await repository.convertImplementationInquiry(inquiry.id, gym.tenant.id);
+    expect(converted).toMatchObject({ status: "converted", convertedTenantId: gym.tenant.id });
+    expect(await repository.getImplementationInquiry(inquiry.id)).toMatchObject({
+      status: "converted",
+      convertedTenantId: gym.tenant.id
+    });
+    expect(await repository.listImplementationInquiryEvents(inquiry.id)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: handoff.id, eventType: "conversion_handoff" })
+      ])
+    );
+  });
+
   it("persists account export requests and isolates them by tenant", async () => {
     const created = await repository.createAccountExportRequest(scopeOf(gym), gym.user.id);
     expect(created.status).toBe("requested");

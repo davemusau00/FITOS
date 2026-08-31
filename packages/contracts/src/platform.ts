@@ -282,8 +282,25 @@ export interface ImplementationInquiryResponse extends ImplementationInquiryDraf
   submittedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  convertedTenantId?: string | null;
   /** Raw resume token — only returned on first save. Store locally to reconstruct the resume URL. */
   resumeToken?: string;
+}
+
+export type ImplementationInquiryConversionMode = "new" | "existing";
+export interface ImplementationInquiryEventResponse {
+  id: string;
+  inquiryId: string;
+  actorUserId: string | null;
+  eventType: string;
+  details: Record<string, unknown>;
+  createdAt: string;
+}
+export interface ImplementationInquiryConversionResponse {
+  inquiry: ImplementationInquiryResponse;
+  tenantId: string;
+  mode: ImplementationInquiryConversionMode;
+  handoffEventId: string;
 }
 export interface TenantSeedManifest {
   schemaVersion: 1;

@@ -796,6 +796,19 @@ export const api = {
       `/platform/implementation-inquiries/${id}/status`,
       { method: "PATCH", body: json({ status }) }
     ),
+  convertImplementationInquiry: (
+    id: string,
+    payload: {
+      mode: "new" | "existing";
+      tenantId?: string | null;
+      ownerPassword?: string;
+      reason: string;
+    }
+  ) =>
+    request<import("@fitos/contracts").ImplementationInquiryConversionResponse>(
+      `/platform/implementation-inquiries/${id}/convert`,
+      { method: "POST", body: json(payload) }
+    ),
   implementationSeedManifest: (id: string) =>
     request<TenantSeedManifest | null>(`/platform/implementation-inquiries/${id}/seed-manifest`),
   sitePages: () => request<SitePageResponse[]>("/sites/pages"),

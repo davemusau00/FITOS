@@ -701,6 +701,19 @@ export interface FitosRepository {
   buildTenantSeedManifest(
     id: string
   ): Promise<import("@fitos/contracts").TenantSeedManifest | null>;
+  recordImplementationInquiryEvent(input: {
+    inquiryId: string;
+    actorUserId: string | null;
+    eventType: string;
+    details: Record<string, unknown>;
+  }): Promise<import("@fitos/contracts").ImplementationInquiryEventResponse>;
+  listImplementationInquiryEvents(
+    inquiryId: string
+  ): Promise<import("@fitos/contracts").ImplementationInquiryEventResponse[]>;
+  convertImplementationInquiry(
+    id: string,
+    tenantId: string
+  ): Promise<import("@fitos/contracts").ImplementationInquiryResponse | null>;
   resolvePlatformAdminByTokenHash(
     tokenHash: string
   ): Promise<{ userId: string; displayName: string; email: string | null } | null>;

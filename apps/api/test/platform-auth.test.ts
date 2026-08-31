@@ -290,6 +290,73 @@ describe("platform system notices", () => {
   });
 });
 
+describe("implementation inquiry conversion", () => {
+  it("requires guarded conversion and records a tenant handoff audit", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    const controller = new PlatformController(repository);
+    const inquiry = await repository.saveImplementationInquiry(
+      {
+        contactName: "Platform Handoff",
+        businessName: "Platform Handoff Gym",
+        email: "platform-handoff@example.test",
+        payload: { locations: [{ name: "Main" }], services: [{ name: "Coaching" }] }
+      },
+      true
+    );
+    await controller.updateInquiry(inquiry.id, { status: "approved" });
+    await expect(controller.updateInquiry(inquiry.id, { status: "converted" })).rejects.toThrow(
+      /guarded conversion/i
+    );
+    const result = await controller.convertInquiry(
+      inquiry.id,
+      { mode: "existing", tenantId: owner.tenant.id, reason: "Approved implementation handoff" },
+      "handoff-request",
+      { platformActor: { userId: "platform-user" } } as never
+    );
+    expect(result).toMatchObject({ tenantId: owner.tenant.id, mode: "existing" });
+    expect(result.inquiry).toMatchObject({
+      status: "converted",
+      convertedTenantId: owner.tenant.id
+    });
+    expect((await repository.listPlatformAuditEvents())[0]?.action).toBe(
+      "platform.implementation_inquiry_converted"
+    );
+  });
+
+  it("creates a new tenant from a complete approved brief", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const controller = new PlatformController(repository);
+    const email = `new-handoff-${crypto.randomUUID().slice(0, 8)}@example.test`;
+    const inquiry = await repository.saveImplementationInquiry(
+      {
+        contactName: "New Tenant Owner",
+        businessName: "New Handoff Studio",
+        email,
+        country: "Kenya",
+        businessType: "studio",
+        payload: { locations: [{ name: "Westlands" }], services: [{ name: "Recovery" }] }
+      },
+      true
+    );
+    await controller.updateInquiry(inquiry.id, { status: "approved" });
+    const result = await controller.convertInquiry(
+      inquiry.id,
+      { mode: "new", ownerPassword: "HandoffOwner123!", reason: "Ready for onboarding" },
+      "new-handoff-request",
+      { platformActor: { userId: "platform-user" } } as never
+    );
+    expect(result.mode).toBe("new");
+    expect(await repository.findLoginIdentity(email)).toMatchObject({
+      tenant: { id: result.tenantId, name: "New Handoff Studio" }
+    });
+    expect(result.inquiry.convertedTenantId).toBe(result.tenantId);
+  });
+});
+
 describe("staff password and session lifecycle", () => {
   it("changes the password, preserves the current session, and revokes other sessions", async () => {
     const repository = new InMemoryFitosRepository();

@@ -1686,6 +1686,25 @@ export const implementationInquiryPayloads = pgTable("implementation_inquiry_pay
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
+export const implementationInquiryEvents = pgTable(
+  "implementation_inquiry_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    inquiryId: uuid("inquiry_id")
+      .notNull()
+      .references(() => implementationInquiries.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    eventType: varchar("event_type", { length: 80 }).notNull(),
+    detailsJson: jsonb("details_json")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_implementation_inquiry_events_inquiry").on(table.inquiryId, table.createdAt)
+  ]
+);
+
 // ─── Automation Engine ────────────────────────────────────────────────────────
 export const automationRules = pgTable(
   "automation_rules",
@@ -1817,6 +1836,7 @@ export const schema = {
   sitePages,
   implementationInquiries,
   implementationInquiryPayloads,
+  implementationInquiryEvents,
   branches,
   users,
   platformAdminTokens,

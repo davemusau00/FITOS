@@ -290,6 +290,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     string,
     import("@fitos/contracts").ImplementationInquiryResponse
   >();
+  private readonly implementationInquiryEvents = new Map<
+    string,
+    import("@fitos/contracts").ImplementationInquiryEventResponse
+  >();
   private readonly sitePages = new Map<string, import("@fitos/contracts").SitePageResponse>();
   private readonly equipmentAllocations = new Map<
     string,
@@ -6021,6 +6025,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       payload: input.payload,
       status: submit ? "submitted" : "draft",
       schemaVersion: 1,
+      convertedTenantId: existing?.convertedTenantId ?? null,
       submittedAt: submit ? ts : null,
       createdAt: existing?.createdAt ?? ts,
       updatedAt: ts
@@ -6085,6 +6090,43 @@ export class InMemoryFitosRepository implements FitosRepository {
       website: objectValue("website"),
       customRequirements: arrayValue("customRequirements")
     };
+  }
+
+  async recordImplementationInquiryEvent(input: {
+    inquiryId: string;
+    actorUserId: string | null;
+    eventType: string;
+    details: Record<string, unknown>;
+  }) {
+    const event: import("@fitos/contracts").ImplementationInquiryEventResponse = {
+      id: randomUUID(),
+      inquiryId: input.inquiryId,
+      actorUserId: input.actorUserId,
+      eventType: input.eventType,
+      details: input.details,
+      createdAt: now()
+    };
+    this.implementationInquiryEvents.set(event.id, event);
+    return event;
+  }
+
+  async listImplementationInquiryEvents(inquiryId: string) {
+    return [...this.implementationInquiryEvents.values()]
+      .filter((event) => event.inquiryId === inquiryId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async convertImplementationInquiry(id: string, tenantId: string) {
+    const item = this.implementationInquiries.get(id);
+    if (!item || item.status !== "approved") return null;
+    const updated = {
+      ...item,
+      status: "converted" as const,
+      convertedTenantId: tenantId,
+      updatedAt: now()
+    };
+    this.implementationInquiries.set(id, updated);
+    return updated;
   }
 
   async listSitePages(scope: TenantScope): Promise<import("@fitos/contracts").SitePageResponse[]> {

@@ -188,6 +188,15 @@ export function ImplementationInquiryDetailPage() {
     queryFn: () => api.implementationSeedManifest(inquiryId),
     enabled: Boolean(inquiryId)
   });
+  const platformTenants = useQuery({
+    queryKey: ["platform", "tenants"],
+    queryFn: () => api.platformTenants(),
+    enabled: inquiry.data?.status === "approved"
+  });
+  const [conversionMode, setConversionMode] = useState<"new" | "existing">("new");
+  const [existingTenantId, setExistingTenantId] = useState("");
+  const [ownerPassword, setOwnerPassword] = useState("");
+  const [conversionReason, setConversionReason] = useState("");
   const status = useMutation({
     mutationFn: (next: ImplementationInquiryStatus) =>
       api.updateImplementationInquiryStatus(inquiryId, next),
@@ -199,6 +208,25 @@ export function ImplementationInquiryDetailPage() {
     },
     onError: (cause) =>
       toast.error(cause instanceof Error ? cause.message : "Unable to update inquiry.")
+  });
+  const conversion = useMutation({
+    mutationFn: () =>
+      api.convertImplementationInquiry(inquiryId, {
+        mode: conversionMode,
+        tenantId: conversionMode === "existing" ? existingTenantId : undefined,
+        ownerPassword: conversionMode === "new" ? ownerPassword : undefined,
+        reason: conversionReason
+      }),
+    onSuccess: (result) => {
+      void cache.invalidateQueries({ queryKey: ["platform", "inquiry", inquiryId] });
+      void cache.invalidateQueries({ queryKey: ["platform", "inquiries"] });
+      void cache.invalidateQueries({ queryKey: ["platform", "overview"] });
+      void cache.invalidateQueries({ queryKey: ["platform", "tenants"] });
+      setTab("history");
+      toast.success(`Inquiry converted to ${result.tenantId}.`);
+    },
+    onError: (cause) =>
+      toast.error(cause instanceof Error ? cause.message : "Unable to convert inquiry.")
   });
   if (inquiry.isLoading) return <PageLoading />;
   if (!inquiry.data)
@@ -220,7 +248,7 @@ export function ImplementationInquiryDetailPage() {
             { status: "needs_clarification", label: "Needs clarification", variant: "secondary" }
           ]
         : item.status === "approved"
-          ? [{ status: "converted", label: "Mark converted", variant: "primary" }]
+          ? []
           : [];
   return (
     <WorkspacePage density="record">
@@ -264,6 +292,7 @@ export function ImplementationInquiryDetailPage() {
         items={[
           { id: "discovery", label: "Discovery" },
           { id: "seed", label: "Seed preview" },
+          ...(item.status === "approved" ? [{ id: "conversion", label: "Convert" }] : []),
           { id: "history", label: "Submission" }
         ]}
       />
@@ -301,6 +330,82 @@ export function ImplementationInquiryDetailPage() {
           )}
         </Card>
       ) : null}
+      {tab === "conversion" && item.status === "approved" ? (
+        <Card>
+          <h2>Guarded tenant handoff</h2>
+          <p className="muted">
+            Validate the reviewed seed manifest, then create a new tenant or attach this inquiry to
+            an existing tenant. The inquiry is marked converted only after the handoff is recorded.
+          </p>
+          <div className="fitos-form-grid">
+            <label>
+              Conversion target
+              <select
+                value={conversionMode}
+                onChange={(event) => setConversionMode(event.target.value as "new" | "existing")}
+              >
+                <option value="new">Create new tenant</option>
+                <option value="existing">Attach existing tenant</option>
+              </select>
+            </label>
+            {conversionMode === "existing" ? (
+              <label>
+                Existing tenant
+                <select
+                  value={existingTenantId}
+                  onChange={(event) => setExistingTenantId(event.target.value)}
+                >
+                  <option value="">Select a tenant</option>
+                  {(platformTenants.data ?? []).map((tenant) => (
+                    <option key={tenant.tenant.id} value={tenant.tenant.id}>
+                      {tenant.tenant.name} · {tenant.tenant.slug}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <label>
+                Initial owner password
+                <input
+                  minLength={12}
+                  onChange={(event) => setOwnerPassword(event.target.value)}
+                  type="password"
+                  value={ownerPassword}
+                />
+                <span className="muted">
+                  At least 12 characters. The generated session is revoked after handoff.
+                </span>
+              </label>
+            )}
+            <label>
+              Handoff reason
+              <textarea
+                minLength={3}
+                onChange={(event) => setConversionReason(event.target.value)}
+                placeholder="Record why this approved brief is being converted."
+                rows={3}
+                value={conversionReason}
+              />
+            </label>
+          </div>
+          {manifest.data ? (
+            <p className="muted">
+              Manifest v{manifest.data.schemaVersion}: {manifest.data.branches.length} branch(es),{" "}
+              {manifest.data.services.length} service(s), {manifest.data.team.length} team
+              member(s).
+            </p>
+          ) : null}
+          <div className="platform-action-strip">
+            <Button
+              loading={conversion.isPending}
+              onClick={() => conversion.mutate()}
+              variant="primary"
+            >
+              Confirm reviewed handoff
+            </Button>
+          </div>
+        </Card>
+      ) : null}
       {tab === "history" ? (
         <div className="platform-detail-grid">
           <Card>
@@ -317,9 +422,12 @@ export function ImplementationInquiryDetailPage() {
           </Card>
           <Card>
             <Alert title="Conversion guard" tone="info">
-              This brief never creates or changes a tenant automatically. Conversion remains a
-              reviewed Platform action.
+              Conversion is a reviewed Platform action. A handoff event and audit record are
+              persisted before the inquiry lifecycle reaches converted.
             </Alert>
+            {item.convertedTenantId ? (
+              <p className="muted">Converted tenant: {item.convertedTenantId}</p>
+            ) : null}
           </Card>
         </div>
       ) : null}
