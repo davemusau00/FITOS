@@ -506,11 +506,15 @@ Display in relevant records and Today.
 
 Real assignment and workload data.
 
+**Partial implementation evidence (2026-09-01):** Branch-aware `GET /leads/workload` now aggregates persisted lead ownership, open lead tasks, overdue lead follow-ups, and overdue task work by assignee, with tenant isolation and inaccessible-branch handling. Leads workspace displays live workload cards and overdue task pressure, resolving the fabricated-summary gap. Assignment editing, broader task links, and browser coverage remain open.
+
 ---
 
 ## P1-028 — CRM Overdue Follow-Ups
 
 Task/due-date based.
+
+**Implementation evidence (2026-09-01):** The workload aggregate derives overdue follow-ups from non-terminal leads with persisted `nextFollowUpAt` and overdue open lead tasks from the lead-task store, scoped by tenant and active branch. Leads summary and assignee cards surface the resulting counts with warning states; persistence and PostgreSQL tenancy coverage pass.
 
 ---
 
@@ -968,7 +972,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 86 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 88 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

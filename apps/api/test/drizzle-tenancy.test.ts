@@ -185,6 +185,41 @@ describeDatabase("Drizzle tenant isolation", () => {
     ).rejects.toThrow("Task assignee unavailable");
   });
 
+  it("aggregates CRM assignee workload and overdue follow-ups by tenant and branch", async () => {
+    const gymScope = scopeOf(gym);
+    const pilatesScope = scopeOf(pilates);
+    const lead = await repository.createLead(
+      gymScope,
+      {
+        contact: { firstName: "Overdue Database Lead", email: "overdue-db@example.test" },
+        branchId: gym.branchIds[0]!,
+        ownerUserId: gym.user.id,
+        nextFollowUpAt: new Date(Date.now() - 86_400_000).toISOString()
+      },
+      null
+    );
+    await repository.createLeadTask(gymScope, lead.id, {
+      body: "Call overdue database lead",
+      dueAt: new Date(Date.now() - 3_600_000).toISOString(),
+      assigneeUserId: gym.user.id
+    });
+    const workload = await repository.getLeadWorkload(gymScope, gym.branchIds[0]);
+    expect(workload.branchId).toBe(gym.branchIds[0]);
+    expect(workload.overdueFollowUps).toBeGreaterThanOrEqual(1);
+    expect(workload.overdueTasks).toBeGreaterThanOrEqual(1);
+    const ownerItem = workload.items.find((item) => item.ownerUserId === gym.user.id);
+    expect(ownerItem).toBeTruthy();
+    expect(ownerItem!.overdueFollowUps).toBeGreaterThanOrEqual(1);
+    expect(ownerItem!.overdueTasks).toBeGreaterThanOrEqual(1);
+    await expect(
+      repository.getLeadWorkload(pilatesScope, pilates.branchIds[0])
+    ).resolves.toMatchObject({
+      totalLeads: 0,
+      overdueFollowUps: 0,
+      overdueTasks: 0
+    });
+  });
+
   it("scopes CRM records and reuses a lead contact on conversion", async () => {
     const gymScope = scopeOf(gym);
     const pilatesScope = scopeOf(pilates);

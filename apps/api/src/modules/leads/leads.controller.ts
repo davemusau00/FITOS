@@ -63,6 +63,7 @@ const listSchema = z
     limit: z.coerce.number().int().min(1).max(100).optional()
   })
   .passthrough();
+const workloadSchema = z.object({ branchId: z.string().uuid().optional() }).passthrough();
 
 @ApiTags("leads")
 @Controller("leads")
@@ -76,6 +77,12 @@ export class LeadsController {
   @RequirePermission("lead:read")
   list(@Actor() actor: RequestActor, @Query() query: unknown) {
     return this.core.listLeads(actor, listSchema.parse(query) satisfies LeadListFilters);
+  }
+
+  @Get("workload")
+  @RequirePermission("lead:read")
+  workload(@Actor() actor: RequestActor, @Query() query: unknown) {
+    return this.core.leadWorkload(actor, workloadSchema.parse(query).branchId);
   }
 
   @Post()

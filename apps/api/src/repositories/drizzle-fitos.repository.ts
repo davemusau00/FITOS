@@ -127,6 +127,7 @@ import type {
   TaskCommentResponse,
   CreateTaskCommentRequest,
   LeadListFilters,
+  LeadWorkloadResponse,
   LeadConversionResponse,
   LeadNoteResponse,
   LeadResponse,
@@ -1711,6 +1712,87 @@ export class DrizzleFitosRepository implements FitosRepository {
             ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id })
             : null
       }
+    };
+  }
+
+  async getLeadWorkload(scope: TenantScope, branchId?: string): Promise<LeadWorkloadResponse> {
+    if (branchId && !scope.branchIds.includes(branchId)) {
+      return {
+        branchId,
+        totalLeads: 0,
+        unassignedLeads: 0,
+        overdueFollowUps: 0,
+        overdueTasks: 0,
+        items: []
+      };
+    }
+    const leadConditions = [
+      eq(leads.tenantId, scope.tenantId),
+      or(isNull(leads.branchId), inArray(leads.branchId, scope.branchIds))
+    ];
+    if (branchId) leadConditions.push(eq(leads.branchId, branchId));
+    const visibleLeads = await this.db
+      .select()
+      .from(leads)
+      .where(and(...leadConditions));
+    const leadIds = visibleLeads.map((lead) => lead.id);
+    const leadTasksForScope = leadIds.length
+      ? await this.db
+          .select()
+          .from(leadTasks)
+          .where(and(eq(leadTasks.tenantId, scope.tenantId), inArray(leadTasks.leadId, leadIds)))
+      : [];
+    const itemMap = new Map<string, LeadWorkloadResponse["items"][number]>();
+    const itemFor = (ownerUserId: string | null) => {
+      const key = ownerUserId ?? "unassigned";
+      const existing = itemMap.get(key);
+      if (existing) return existing;
+      const item = {
+        ownerUserId,
+        leadCount: 0,
+        overdueFollowUps: 0,
+        openTasks: 0,
+        overdueTasks: 0
+      };
+      itemMap.set(key, item);
+      return item;
+    };
+    const nowMs = Date.now();
+    let overdueFollowUps = 0;
+    for (const lead of visibleLeads) {
+      const item = itemFor(lead.ownerUserId);
+      item.leadCount += 1;
+      if (
+        lead.nextFollowUpAt &&
+        lead.nextFollowUpAt.getTime() <= nowMs &&
+        lead.stage !== "joined" &&
+        lead.stage !== "lost"
+      ) {
+        item.overdueFollowUps += 1;
+        overdueFollowUps += 1;
+      }
+    }
+    let overdueTasks = 0;
+    for (const task of leadTasksForScope) {
+      if (task.completedAt) continue;
+      const item = itemFor(task.assigneeUserId);
+      item.openTasks += 1;
+      if (task.dueAt && task.dueAt.getTime() <= nowMs) {
+        item.overdueTasks += 1;
+        overdueTasks += 1;
+      }
+    }
+    return {
+      branchId: branchId ?? null,
+      totalLeads: visibleLeads.length,
+      unassignedLeads: visibleLeads.filter((lead) => !lead.ownerUserId).length,
+      overdueFollowUps,
+      overdueTasks,
+      items: [...itemMap.values()].sort(
+        (a, b) =>
+          b.overdueFollowUps + b.overdueTasks - (a.overdueFollowUps + a.overdueTasks) ||
+          b.leadCount - a.leadCount
+      )
     };
   }
 

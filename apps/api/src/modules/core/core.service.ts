@@ -27,6 +27,7 @@ import type {
   CreateMemberSavedViewRequest,
   UpdateMemberSavedViewRequest,
   LeadListFilters,
+  LeadWorkloadResponse,
   LeadConversionResponse,
   LeadNoteResponse,
   LeadResponse,
@@ -750,6 +751,11 @@ export class CoreService {
 
   async listLeads(actor: RequestActor, filters: LeadListFilters) {
     return this.repository.searchLeads(scopeOf(actor), filters);
+  }
+
+  async leadWorkload(actor: RequestActor, branchId?: string): Promise<LeadWorkloadResponse> {
+    if (branchId) this.assertBranchesAccessible(actor, [branchId]);
+    return this.repository.getLeadWorkload(scopeOf(actor), branchId);
   }
 
   async getLead(actor: RequestActor, leadId: string): Promise<LeadResponse> {

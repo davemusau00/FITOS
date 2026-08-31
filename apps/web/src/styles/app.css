@@ -4449,6 +4449,30 @@ body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 1rem 0;
 }
+.lead-workload-card {
+  margin-bottom: 1rem;
+}
+.lead-workload-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+.lead-workload-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.7rem;
+}
+.lead-workload-item span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.lead-workload-item__alert {
+  color: var(--warning, #e3b341) !important;
+  font-weight: 600;
+}
 
 .settings-back-link {
   margin-bottom: 1rem;

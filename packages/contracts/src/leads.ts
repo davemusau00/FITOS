@@ -46,6 +46,23 @@ export interface LeadListFilters {
 
 export type LeadListResponse = CursorPage<LeadResponse>;
 
+export interface LeadWorkloadItem {
+  ownerUserId: string | null;
+  leadCount: number;
+  overdueFollowUps: number;
+  openTasks: number;
+  overdueTasks: number;
+}
+
+export interface LeadWorkloadResponse {
+  branchId: string | null;
+  totalLeads: number;
+  unassignedLeads: number;
+  overdueFollowUps: number;
+  overdueTasks: number;
+  items: LeadWorkloadItem[];
+}
+
 export interface CreateLeadRequest {
   contact: ContactInput;
   branchId?: string | null;

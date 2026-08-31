@@ -32,6 +32,7 @@ import type {
   LeadTaskResponse,
   CreateLeadTaskRequest,
   UpdateLeadStageRequest,
+  LeadWorkloadResponse,
   PermissionKey,
   RoleResponse,
   StaffUserResponse,
@@ -318,6 +319,7 @@ export interface FitosRepository {
   ): Promise<LeadResponse>;
   findLeadById(scope: TenantScope, leadId: string): Promise<LeadResponse | null>;
   searchLeads(scope: TenantScope, filters: LeadListFilters): Promise<CursorPage<LeadResponse>>;
+  getLeadWorkload(scope: TenantScope, branchId?: string): Promise<LeadWorkloadResponse>;
   updateLeadStage(
     scope: TenantScope,
     leadId: string,

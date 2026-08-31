@@ -14,6 +14,7 @@ import {
   StatCard
 } from "@fitos/ui";
 import type { LeadResponse } from "@fitos/contracts";
+import { can, useAuth } from "../../app/auth";
 import { useBranch } from "../../app/branch-context";
 import { api } from "../../lib/api/client";
 import { branchQueryKeys } from "../../lib/query-keys";
@@ -93,6 +94,7 @@ export function LeadsPage() {
   const [params, setParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { activeBranchId } = useBranch();
+  const { auth } = useAuth();
   const { success: toastSuccess, error: toastError } = useToast();
   const [selectedLead, setSelectedLead] = useState<LeadResponse | null>(null);
   const [noteBody, setNoteBody] = useState("");
@@ -119,6 +121,16 @@ export function LeadsPage() {
   const leads = useQuery({
     queryKey: branchQueryKeys.list("leads", activeBranchId, requestParams.toString()),
     queryFn: () => api.leads(requestParams)
+  });
+  const workload = useQuery({
+    queryKey: branchQueryKeys.list("lead-workload", activeBranchId),
+    queryFn: () => api.leadWorkload(activeBranchId),
+    enabled: Boolean(activeBranchId)
+  });
+  const staff = useQuery({
+    queryKey: ["staff", "lead-workload"],
+    queryFn: api.staff,
+    enabled: can(auth, "staff:read")
   });
   const updateStage = useMutation({
     mutationFn: ({
@@ -319,7 +331,9 @@ export function LeadsPage() {
         }
       />
 
-      <ErrorNotice error={leads.error ?? updateStage.error ?? convert.error} />
+      <ErrorNotice
+        error={leads.error ?? workload.error ?? staff.error ?? updateStage.error ?? convert.error}
+      />
 
       <div className="leads-summary-grid">
         <StatCard
@@ -339,7 +353,42 @@ export function LeadsPage() {
           }
           tone={overdueFollowUps ? "warning" : "success"}
         />
+        <StatCard
+          icon="check"
+          label="Overdue task work"
+          value={workload.data?.overdueTasks ?? 0}
+          detail="Open follow-up tasks past due"
+          tone={workload.data?.overdueTasks ? "warning" : "success"}
+        />
       </div>
+
+      {workload.data?.items.length ? (
+        <Card className="lead-workload-card">
+          <div className="card-header">
+            <div>
+              <h2>Assignee workload</h2>
+              <p className="muted">Live ownership and overdue follow-up pressure.</p>
+            </div>
+          </div>
+          <div className="lead-workload-grid">
+            {workload.data.items.map((item) => {
+              const assignee = staff.data?.find((member) => member.user.id === item.ownerUserId);
+              return (
+                <div className="lead-workload-item" key={item.ownerUserId ?? "unassigned"}>
+                  <strong>{assignee?.user.displayName ?? "Unassigned"}</strong>
+                  <span>{item.leadCount} leads</span>
+                  <span>{item.openTasks} open tasks</span>
+                  {item.overdueFollowUps + item.overdueTasks ? (
+                    <span className="lead-workload-item__alert">
+                      {item.overdueFollowUps + item.overdueTasks} overdue
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ) : null}
 
       {/* Filters */}
       <section className="filter-row">

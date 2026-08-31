@@ -20,6 +20,7 @@ import type {
   LeadNoteResponse,
   LeadResponse,
   LeadTaskResponse,
+  LeadWorkloadResponse,
   CreateLeadTaskRequest,
   UpdateLeadStageRequest,
   StaffUserResponse,
@@ -352,6 +353,10 @@ export const api = {
       }>
     >(`/members/${id}/timeline`),
   leads: (params: URLSearchParams) => request<LeadListResponse>(`/leads?${params.toString()}`),
+  leadWorkload: (branchId?: string) =>
+    request<LeadWorkloadResponse>(
+      `/leads/workload${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`
+    ),
   lead: (id: string) => request<LeadResponse>(`/leads/${id}`),
   createLead: (payload: CreateLeadRequest) =>
     request<LeadResponse>("/leads", {

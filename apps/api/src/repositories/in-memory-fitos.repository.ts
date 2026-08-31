@@ -27,6 +27,7 @@ import type {
   CreateTaskCommentRequest,
   CreateLeadRequest,
   LeadListFilters,
+  LeadWorkloadResponse,
   LeadConversionResponse,
   LeadNoteResponse,
   LeadResponse,
@@ -3041,6 +3042,79 @@ export class InMemoryFitosRepository implements FitosRepository {
             ? encodeCursor({ createdAt: last.createdAt, id: last.id })
             : null
       }
+    };
+  }
+
+  async getLeadWorkload(scope: TenantScope, branchId?: string): Promise<LeadWorkloadResponse> {
+    if (branchId && !scope.branchIds.includes(branchId)) {
+      return {
+        branchId,
+        totalLeads: 0,
+        unassignedLeads: 0,
+        overdueFollowUps: 0,
+        overdueTasks: 0,
+        items: []
+      };
+    }
+    const visibleLeads = [...this.leads.values()].filter(
+      (lead) =>
+        lead.tenantId === scope.tenantId &&
+        (!lead.branchId || scope.branchIds.includes(lead.branchId)) &&
+        (!branchId || lead.branchId === branchId)
+    );
+    const leadIds = new Set(visibleLeads.map((lead) => lead.id));
+    const nowMs = Date.now();
+    const itemMap = new Map<string, LeadWorkloadResponse["items"][number]>();
+    const itemFor = (ownerUserId: string | null) => {
+      const key = ownerUserId ?? "unassigned";
+      const existing = itemMap.get(key);
+      if (existing) return existing;
+      const item = {
+        ownerUserId,
+        leadCount: 0,
+        overdueFollowUps: 0,
+        openTasks: 0,
+        overdueTasks: 0
+      };
+      itemMap.set(key, item);
+      return item;
+    };
+    let overdueFollowUps = 0;
+    for (const lead of visibleLeads) {
+      const item = itemFor(lead.ownerUserId);
+      item.leadCount += 1;
+      if (
+        lead.nextFollowUpAt &&
+        new Date(lead.nextFollowUpAt).getTime() <= nowMs &&
+        lead.stage !== "joined" &&
+        lead.stage !== "lost"
+      ) {
+        item.overdueFollowUps += 1;
+        overdueFollowUps += 1;
+      }
+    }
+    let overdueTasks = 0;
+    for (const task of this.leadTasks.values()) {
+      if (task.tenantId !== scope.tenantId || !leadIds.has(task.leadId) || task.completedAt)
+        continue;
+      const item = itemFor(task.assigneeUserId);
+      item.openTasks += 1;
+      if (task.dueAt && new Date(task.dueAt).getTime() <= nowMs) {
+        item.overdueTasks += 1;
+        overdueTasks += 1;
+      }
+    }
+    return {
+      branchId: branchId ?? null,
+      totalLeads: visibleLeads.length,
+      unassignedLeads: visibleLeads.filter((lead) => !lead.ownerUserId).length,
+      overdueFollowUps,
+      overdueTasks,
+      items: [...itemMap.values()].sort(
+        (a, b) =>
+          b.overdueFollowUps + b.overdueTasks - (a.overdueFollowUps + a.overdueTasks) ||
+          b.leadCount - a.leadCount
+      )
     };
   }
 

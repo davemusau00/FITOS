@@ -230,6 +230,64 @@ describe("tenant isolation", () => {
     ).rejects.toThrow("Task assignee unavailable");
   });
 
+  it("aggregates CRM assignee workload and overdue follow-ups by tenant and branch", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    const pilates = await repository.findLoginIdentity("owner@pilates.fitos.test");
+    if (!owner || !pilates) throw new Error("Seed identities missing.");
+    const scope = {
+      tenantId: owner.tenant.id,
+      tenantUserId: owner.tenantUserId,
+      userId: owner.user.id,
+      branchIds: owner.branchIds
+    };
+    const otherScope = {
+      tenantId: pilates.tenant.id,
+      tenantUserId: pilates.tenantUserId,
+      userId: pilates.user.id,
+      branchIds: pilates.branchIds
+    };
+    const lead = await repository.createLead(
+      scope,
+      {
+        contact: { firstName: "Overdue Lead", email: "overdue@example.test" },
+        branchId: owner.branchIds[0],
+        ownerUserId: owner.user.id,
+        nextFollowUpAt: new Date(Date.now() - 86_400_000).toISOString()
+      },
+      null
+    );
+    await repository.createLeadTask(scope, lead.id, {
+      body: "Call overdue lead",
+      dueAt: new Date(Date.now() - 3_600_000).toISOString(),
+      assigneeUserId: owner.user.id
+    });
+    const workload = await repository.getLeadWorkload(scope, owner.branchIds[0]);
+    expect(workload).toMatchObject({
+      branchId: owner.branchIds[0],
+      totalLeads: expect.any(Number),
+      overdueFollowUps: 1,
+      overdueTasks: 1
+    });
+    expect(workload.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ownerUserId: owner.user.id,
+          overdueFollowUps: 1,
+          overdueTasks: 1
+        })
+      ])
+    );
+    await expect(
+      repository.getLeadWorkload(otherScope, pilates.branchIds[0])
+    ).resolves.toMatchObject({
+      totalLeads: 0,
+      overdueFollowUps: 0,
+      overdueTasks: 0
+    });
+  });
+
   it("scopes inbox items to their user and persists read state", async () => {
     const repository = new InMemoryFitosRepository();
     const item = await repository.createNotification({
