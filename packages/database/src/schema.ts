@@ -170,6 +170,30 @@ export const platformSupportNotes = pgTable(
   ]
 );
 
+export const platformAccountRecoveryCases = pgTable(
+  "platform_account_recovery_cases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    subject: jsonb("subject").notNull(),
+    verificationMetadata: jsonb("verification_metadata").notNull(),
+    actions: jsonb("actions")
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    sessionRevocation: jsonb("session_revocation").notNull(),
+    outcome: varchar("outcome", { length: 20 }).notNull().default("pending"),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    index("idx_platform_recovery_cases_tenant_created").on(table.tenantId, table.createdAt),
+    index("idx_platform_recovery_cases_outcome").on(table.outcome)
+  ]
+);
+
 export const platformAdminTokens = pgTable(
   "platform_admin_tokens",
   {
@@ -1761,6 +1785,7 @@ export const schema = {
   branches,
   users,
   platformAdminTokens,
+  platformAccountRecoveryCases,
   roles,
   permissions,
   rolePermissions,

@@ -194,6 +194,7 @@ export interface FitosRepository {
     now: string
   ): Promise<import("@fitos/contracts").SessionSummary[]>;
   revokeUserSession(userId: string, sessionId: string, at: string): Promise<boolean>;
+  revokeAllUserSessions(userId: string, at: string): Promise<number>;
   updateUserProfile(
     userId: string,
     input: import("@fitos/contracts").UpdateUserProfileRequest
@@ -632,6 +633,15 @@ export interface FitosRepository {
   createPlatformSupportNote(
     input: Omit<import("@fitos/contracts").PlatformSupportNoteResponse, "id" | "createdAt">
   ): Promise<import("@fitos/contracts").PlatformSupportNoteResponse>;
+  listPlatformAccountRecoveryCases(
+    tenantId: string
+  ): Promise<import("@fitos/contracts").PlatformAccountRecoveryCaseResponse[]>;
+  createPlatformAccountRecoveryCase(
+    input: Omit<
+      import("@fitos/contracts").PlatformAccountRecoveryCaseResponse,
+      "id" | "createdAt" | "updatedAt"
+    >
+  ): Promise<import("@fitos/contracts").PlatformAccountRecoveryCaseResponse>;
   getTenantUsageQuotas(tenantId: string): Promise<UsageQuotaMetricsResponse>;
   transitionTenantSubscriptionStatus(
     tenantId: string,

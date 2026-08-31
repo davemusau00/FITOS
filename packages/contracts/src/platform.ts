@@ -184,6 +184,38 @@ export interface PlatformSupportNoteResponse {
   createdAt: string;
 }
 
+export type PlatformRecoveryCaseOutcome = "pending" | "resolved" | "denied";
+export type PlatformRecoveryActionType =
+  "verification" | "session_revocation" | "recovery_step" | "note";
+
+export interface PlatformRecoveryAction {
+  type: PlatformRecoveryActionType;
+  detail: string;
+  at: string;
+}
+
+export interface PlatformAccountRecoveryCaseResponse {
+  id: string;
+  tenantId: string;
+  subject: {
+    userId?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    displayName?: string | null;
+  };
+  verificationMetadata: Record<string, unknown>;
+  actions: PlatformRecoveryAction[];
+  sessionRevocation: {
+    requested: boolean;
+    revokedCount: number;
+    completedAt: string | null;
+  };
+  outcome: PlatformRecoveryCaseOutcome;
+  actorUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type FeatureMaturity = "stable" | "beta" | "internal";
 export interface FeatureDefinition {
   key: SaaSCapabilityKey;

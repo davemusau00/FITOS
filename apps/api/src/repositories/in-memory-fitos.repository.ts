@@ -273,6 +273,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     string,
     import("@fitos/contracts").PlatformSupportNoteResponse
   >();
+  private readonly platformAccountRecoveryCases = new Map<
+    string,
+    import("@fitos/contracts").PlatformAccountRecoveryCaseResponse
+  >();
   private readonly auditEvents: AuditEventResponse[] = [];
   private readonly idempotency = new Map<string, StoredIdempotency>();
   private readonly memberPasswords = new Map<string, string>();
@@ -2158,6 +2162,17 @@ export class InMemoryFitosRepository implements FitosRepository {
     return true;
   }
 
+  async revokeAllUserSessions(userId: string, at: string) {
+    let count = 0;
+    for (const session of this.sessions.values()) {
+      if (session.userId === userId && !session.revokedAt) {
+        session.revokedAt = at;
+        count += 1;
+      }
+    }
+    return count;
+  }
+
   async updateUserProfile(
     userId: string,
     input: import("@fitos/contracts").UpdateUserProfileRequest
@@ -3654,7 +3669,9 @@ export class InMemoryFitosRepository implements FitosRepository {
   }
 
   async listPlatformAuditEvents(): Promise<AuditEventResponse[]> {
-    return this.auditEvents.filter((event) => event.action.startsWith("tenant.")).slice(0, 200);
+    return this.auditEvents
+      .filter((event) => event.action.startsWith("tenant.") || event.action.startsWith("platform."))
+      .slice(0, 200);
   }
 
   async listPlatformAccountExportRequests() {
@@ -3807,6 +3824,24 @@ export class InMemoryFitosRepository implements FitosRepository {
     const note = { ...input, id: randomUUID(), createdAt: now() };
     this.platformSupportNotes.set(note.id, note);
     return note;
+  }
+
+  async listPlatformAccountRecoveryCases(tenantId: string) {
+    return [...this.platformAccountRecoveryCases.values()]
+      .filter((item) => item.tenantId === tenantId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async createPlatformAccountRecoveryCase(
+    input: Omit<
+      import("@fitos/contracts").PlatformAccountRecoveryCaseResponse,
+      "id" | "createdAt" | "updatedAt"
+    >
+  ) {
+    const timestamp = now();
+    const item = { ...input, id: randomUUID(), createdAt: timestamp, updatedAt: timestamp };
+    this.platformAccountRecoveryCases.set(item.id, item);
+    return item;
   }
 
   async createNotification(

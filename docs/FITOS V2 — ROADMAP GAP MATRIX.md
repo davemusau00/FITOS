@@ -23,7 +23,7 @@ Required for roadmap completeness but can follow core operating workflows.
 **Area:** Engineering / Release  
 **Current state:** The CI workflow declares the full required verification chain, including Playwright, build, production configuration/image/smoke, dependency audit, and secret scan. A current green hosted run remains unverified in this checkout.
 
-**Implementation evidence (2026-08-31):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 64 tests; web tests, lint, and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
+**Implementation evidence (2026-08-31):** `.github/workflows/ci.yml` runs formatting, lint, typecheck, migrations/seeding, unit/integration tests, Playwright, build, Compose/Prometheus validation, production image and smoke checks, dependency audit, and Gitleaks in one job, so failures prevent later stages from being reported as passing. With PostgreSQL configured and `RUN_DATABASE_TESTS=true`, the complete API suite passes 13 files and 68 tests; web tests, lint, and the production web build also pass locally. Hosted CI status, Playwright execution, and production-image stages are still required to close P0-001.
 
 ### Acceptance
 
@@ -360,6 +360,8 @@ Persist:
 - session revocation;
 - outcome;
 - actor.
+
+**Implementation evidence (2026-08-31):** Migration `0042_platform_account_recovery_cases`, shared recovery-case/action contracts, Drizzle/in-memory persistence, and authenticated Platform tenant recovery endpoints now retain subject identifiers, verification metadata, action history, session-revocation result, outcome, actor, and timestamps. Platform tenant detail includes a recovery workspace with JSON metadata validation, explicit action/outcome controls, optional revocation of all active staff sessions for a verified user, recoverable errors, and history. Recovery creation is recorded in the Platform audit projection; no impersonation or private operational-record access is introduced. In-memory controller coverage and PostgreSQL tenant-isolation coverage pass.
 
 ---
 
@@ -942,7 +944,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 13 files and 64 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 13 files and 68 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

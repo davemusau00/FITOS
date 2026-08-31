@@ -217,6 +217,40 @@ describe("scoped feature flag overrides", () => {
   });
 });
 
+describe("platform account recovery cases", () => {
+  it("records verification, revokes subject sessions, and audits the case", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.(await new ScryptPasswordHasher().hash("ChangeMe123!"));
+    const owner = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!owner) throw new Error("Seed identity missing.");
+    await repository.createSession({
+      userId: owner.user.id,
+      tenantUserId: owner.tenantUserId,
+      tokenHash: "recovery-controller-session",
+      expiresAt: new Date(Date.now() + 60_000).toISOString()
+    });
+    const controller = new PlatformController(repository);
+    const result = await controller.createAccountRecoveryCase(
+      owner.tenant.id,
+      {
+        subject: { userId: owner.user.id, email: owner.user.email },
+        verificationMetadata: { ticket: "SUP-RECOVERY", verifiedBy: "phone" },
+        actionType: "recovery_step",
+        actionDetail: "Issued a one-time recovery link after callback verification.",
+        revokeSessions: true,
+        outcome: "resolved"
+      },
+      "recovery-request",
+      { platformActor: { userId: "platform-user" } } as never
+    );
+    expect(result.sessionRevocation).toMatchObject({ requested: true, revokedCount: 1 });
+    expect(result.outcome).toBe("resolved");
+    expect((await repository.listPlatformAuditEvents())[0]?.action).toBe(
+      "platform.account_recovery_case_created"
+    );
+  });
+});
+
 describe("staff password and session lifecycle", () => {
   it("changes the password, preserves the current session, and revokes other sessions", async () => {
     const repository = new InMemoryFitosRepository();

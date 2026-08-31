@@ -654,6 +654,25 @@ describeDatabase("Drizzle tenant isolation", () => {
     ).resolves.not.toContainEqual(note);
   });
 
+  it("persists account recovery evidence and isolates cases by tenant", async () => {
+    const at = new Date().toISOString();
+    const item = await repository.createPlatformAccountRecoveryCase({
+      tenantId: gym.tenant.id,
+      subject: { userId: gym.user.id, email: gym.user.email },
+      verificationMetadata: { ticket: "DB-RECOVERY", verifiedBy: "phone" },
+      actions: [{ type: "verification", detail: "Verified integration subject.", at }],
+      sessionRevocation: { requested: false, revokedCount: 0, completedAt: null },
+      outcome: "pending",
+      actorUserId: gym.user.id
+    });
+    await expect(
+      repository.listPlatformAccountRecoveryCases(gym.tenant.id)
+    ).resolves.toContainEqual(item);
+    await expect(
+      repository.listPlatformAccountRecoveryCases(pilates.tenant.id)
+    ).resolves.not.toContainEqual(item);
+  });
+
   it("persists account export requests and isolates them by tenant", async () => {
     const created = await repository.createAccountExportRequest(scopeOf(gym), gym.user.id);
     expect(created.status).toBe("requested");

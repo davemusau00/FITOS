@@ -833,4 +833,92 @@ export class PlatformController {
     });
     return created;
   }
+
+  @Get("tenants/:tenantId/recovery-cases")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  listAccountRecoveryCases(@Param("tenantId") tenantId: string) {
+    return this.repository.listPlatformAccountRecoveryCases(tenantId);
+  }
+
+  @Post("tenants/:tenantId/recovery-cases")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async createAccountRecoveryCase(
+    @Param("tenantId") tenantId: string,
+    @Body() body: unknown,
+    @RequestId() requestId: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        subject: z
+          .object({
+            userId: z.string().uuid().nullable().optional(),
+            email: z.string().email().nullable().optional(),
+            phone: z.string().trim().min(3).max(40).nullable().optional(),
+            displayName: z.string().trim().max(160).nullable().optional()
+          })
+          .strict()
+          .refine(
+            (subject) => Boolean(subject.userId || subject.email || subject.phone),
+            "A user ID, email, or phone is required to identify the recovery subject."
+          ),
+        verificationMetadata: z.record(z.unknown()).default({}),
+        actionType: z.enum(["verification", "recovery_step", "note"]).default("verification"),
+        actionDetail: z.string().trim().min(3).max(1000),
+        revokeSessions: z.boolean().default(false),
+        outcome: z.enum(["pending", "resolved", "denied"]).default("pending")
+      })
+      .strict()
+      .parse(body);
+    if (input.revokeSessions && !input.subject.userId)
+      throw new BadRequestException("Session revocation requires the subject user ID.");
+
+    const at = new Date().toISOString();
+    const revokedCount = input.revokeSessions
+      ? await this.repository.revokeAllUserSessions(input.subject.userId!, at)
+      : 0;
+    const actions = [
+      { type: input.actionType, detail: input.actionDetail, at },
+      ...(input.revokeSessions
+        ? [
+            {
+              type: "session_revocation" as const,
+              detail: `Revoked ${revokedCount} active staff session(s).`,
+              at
+            }
+          ]
+        : [])
+    ];
+    const created = await this.repository.createPlatformAccountRecoveryCase({
+      tenantId,
+      subject: input.subject,
+      verificationMetadata: input.verificationMetadata,
+      actions,
+      sessionRevocation: {
+        requested: input.revokeSessions,
+        revokedCount,
+        completedAt: input.revokeSessions ? at : null
+      },
+      outcome: input.outcome,
+      actorUserId: request.platformActor?.userId ?? null
+    });
+    await this.repository.recordAudit({
+      tenantId,
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "platform.account_recovery_case_created",
+      resourceType: "platform_account_recovery_case",
+      resourceId: created.id,
+      beforeSummary: null,
+      afterSummary: {
+        subject: created.subject,
+        outcome: created.outcome,
+        sessionRevocation: created.sessionRevocation,
+        actionCount: created.actions.length
+      },
+      requestId
+    });
+    return created;
+  }
 }

@@ -22,6 +22,7 @@ import {
   memberMemberships,
   notifications,
   platformFeatureFlagOverrides,
+  platformAccountRecoveryCases,
   platformSupportNotes,
   platformPlanDefinitions,
   members,
@@ -385,6 +386,15 @@ export class DrizzleFitosRepository implements FitosRepository {
     return result.length > 0;
   }
 
+  async revokeAllUserSessions(userId: string, at: string) {
+    const result = await this.db
+      .update(sessions)
+      .set({ revokedAt: new Date(at) })
+      .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)))
+      .returning({ id: sessions.id });
+    return result.length;
+  }
+
   async updateUserProfile(
     userId: string,
     input: import("@fitos/contracts").UpdateUserProfileRequest
@@ -571,6 +581,37 @@ export class DrizzleFitosRepository implements FitosRepository {
       note: row.note,
       createdAt: row.createdAt.toISOString()
     };
+  }
+
+  async listPlatformAccountRecoveryCases(tenantId: string) {
+    const rows = await this.db
+      .select()
+      .from(platformAccountRecoveryCases)
+      .where(eq(platformAccountRecoveryCases.tenantId, tenantId))
+      .orderBy(desc(platformAccountRecoveryCases.createdAt));
+    return rows.map((row) => this.platformAccountRecoveryCaseResponse(row));
+  }
+
+  async createPlatformAccountRecoveryCase(
+    input: Omit<
+      import("@fitos/contracts").PlatformAccountRecoveryCaseResponse,
+      "id" | "createdAt" | "updatedAt"
+    >
+  ) {
+    const [row] = await this.db
+      .insert(platformAccountRecoveryCases)
+      .values({
+        tenantId: input.tenantId,
+        subject: input.subject,
+        verificationMetadata: input.verificationMetadata,
+        actions: input.actions,
+        sessionRevocation: input.sessionRevocation,
+        outcome: input.outcome,
+        actorUserId: input.actorUserId
+      })
+      .returning();
+    if (!row) throw new Error("Unable to create account recovery case.");
+    return this.platformAccountRecoveryCaseResponse(row);
   }
 
   async createNotification(
@@ -2728,7 +2769,9 @@ export class DrizzleFitosRepository implements FitosRepository {
     const rows = await this.db
       .select()
       .from(auditEvents)
-      .where(sql`${auditEvents.action} like 'tenant.%'`)
+      .where(
+        or(sql`${auditEvents.action} like 'tenant.%'`, sql`${auditEvents.action} like 'platform.%'`)
+      )
       .orderBy(desc(auditEvents.createdAt))
       .limit(200);
     return rows.map((event) => this.auditResponse(event));
@@ -3790,6 +3833,27 @@ export class DrizzleFitosRepository implements FitosRepository {
       createdByUserId: booking.createdByUserId,
       createdAt: booking.createdAt.toISOString(),
       updatedAt: booking.updatedAt.toISOString()
+    };
+  }
+
+  private platformAccountRecoveryCaseResponse(
+    row: typeof platformAccountRecoveryCases.$inferSelect
+  ): import("@fitos/contracts").PlatformAccountRecoveryCaseResponse {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      subject:
+        row.subject as import("@fitos/contracts").PlatformAccountRecoveryCaseResponse["subject"],
+      verificationMetadata:
+        row.verificationMetadata as import("@fitos/contracts").PlatformAccountRecoveryCaseResponse["verificationMetadata"],
+      actions:
+        row.actions as import("@fitos/contracts").PlatformAccountRecoveryCaseResponse["actions"],
+      sessionRevocation:
+        row.sessionRevocation as import("@fitos/contracts").PlatformAccountRecoveryCaseResponse["sessionRevocation"],
+      outcome: row.outcome as import("@fitos/contracts").PlatformRecoveryCaseOutcome,
+      actorUserId: row.actorUserId,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString()
     };
   }
 

@@ -705,6 +705,25 @@ export const api = {
       `/platform/tenants/${tenantId}/support-notes`,
       { method: "POST", body: json(payload) }
     ),
+  platformAccountRecoveryCases: (tenantId: string) =>
+    request<import("@fitos/contracts").PlatformAccountRecoveryCaseResponse[]>(
+      `/platform/tenants/${tenantId}/recovery-cases`
+    ),
+  createPlatformAccountRecoveryCase: (
+    tenantId: string,
+    payload: {
+      subject: import("@fitos/contracts").PlatformAccountRecoveryCaseResponse["subject"];
+      verificationMetadata: Record<string, unknown>;
+      actionType: "verification" | "recovery_step" | "note";
+      actionDetail: string;
+      revokeSessions: boolean;
+      outcome: import("@fitos/contracts").PlatformRecoveryCaseOutcome;
+    }
+  ) =>
+    request<import("@fitos/contracts").PlatformAccountRecoveryCaseResponse>(
+      `/platform/tenants/${tenantId}/recovery-cases`,
+      { method: "POST", body: json(payload) }
+    ),
   decidePlatformDeletionRequest: (
     requestId: string,
     status: "reviewing" | "approved" | "rejected",

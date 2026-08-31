@@ -43,6 +43,18 @@ export function PlatformTenantDetailPage() {
     "implementation" | "support" | "account" | "risk"
   >("support");
   const [supportNote, setSupportNote] = useState("");
+  const [recoveryUserId, setRecoveryUserId] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [recoveryVerification, setRecoveryVerification] = useState("{}");
+  const [recoveryAction, setRecoveryAction] = useState("");
+  const [recoveryActionType, setRecoveryActionType] = useState<
+    "verification" | "recovery_step" | "note"
+  >("verification");
+  const [recoveryRevokeSessions, setRecoveryRevokeSessions] = useState(false);
+  const [recoveryOutcome, setRecoveryOutcome] = useState<"pending" | "resolved" | "denied">(
+    "pending"
+  );
   const tenant = useQuery({
     queryKey: ["platform", "tenant", tenantId],
     queryFn: () => api.platformTenant(tenantId),
@@ -53,6 +65,11 @@ export function PlatformTenantDetailPage() {
   const notes = useQuery({
     queryKey: ["platform", "support-notes", tenantId],
     queryFn: () => api.platformSupportNotes(tenantId),
+    enabled: Boolean(tenantId)
+  });
+  const recoveryCases = useQuery({
+    queryKey: ["platform", "recovery-cases", tenantId],
+    queryFn: () => api.platformAccountRecoveryCases(tenantId),
     enabled: Boolean(tenantId)
   });
   const refresh = () => {
@@ -99,6 +116,38 @@ export function PlatformTenantDetailPage() {
     },
     onError: (cause) => toast.error(cause instanceof Error ? cause.message : "Unable to save note.")
   });
+  const addRecoveryCase = useMutation({
+    mutationFn: () => {
+      let verificationMetadata: Record<string, unknown>;
+      try {
+        verificationMetadata = JSON.parse(recoveryVerification) as Record<string, unknown>;
+      } catch {
+        throw new Error("Verification metadata must be valid JSON.");
+      }
+      return api.createPlatformAccountRecoveryCase(tenantId, {
+        subject: {
+          userId: recoveryUserId.trim() || null,
+          email: recoveryEmail.trim() || null,
+          phone: recoveryPhone.trim() || null
+        },
+        verificationMetadata,
+        actionType: recoveryActionType,
+        actionDetail: recoveryAction.trim(),
+        revokeSessions: recoveryRevokeSessions,
+        outcome: recoveryOutcome
+      });
+    },
+    onSuccess: () => {
+      setRecoveryAction("");
+      setRecoveryVerification("{}");
+      setRecoveryRevokeSessions(false);
+      void recoveryCases.refetch();
+      void cache.invalidateQueries({ queryKey: ["platform", "audit"] });
+      toast.success("Account recovery case recorded.");
+    },
+    onError: (cause) =>
+      toast.error(cause instanceof Error ? cause.message : "Unable to record recovery case.")
+  });
   if (tenant.isLoading) return <PageLoading />;
   if (tenant.error || !tenant.data)
     return <ErrorNotice error={tenant.error ?? new Error("Tenant control record not found.")} />;
@@ -140,7 +189,8 @@ export function PlatformTenantDetailPage() {
           { id: "lifecycle", label: "Lifecycle" },
           { id: "access", label: "Plan & access" },
           { id: "activity", label: "Activity", count: events.length },
-          { id: "support", label: "Support notes", count: notes.data?.length ?? 0 }
+          { id: "support", label: "Support notes", count: notes.data?.length ?? 0 },
+          { id: "recovery", label: "Account recovery", count: recoveryCases.data?.length ?? 0 }
         ]}
       />
       {tab === "summary" ? (
@@ -320,6 +370,140 @@ export function PlatformTenantDetailPage() {
               ))
             ) : (
               <p className="muted">No support notes recorded.</p>
+            )}
+          </Card>
+        </div>
+      ) : null}
+      {tab === "recovery" ? (
+        <div className="platform-detail-grid">
+          <Card>
+            <h2>Record recovery action</h2>
+            <p className="muted">
+              Verify the subject through approved metadata before issuing a recovery step. Every
+              case is retained in the Platform audit trail; private operational records remain
+              inaccessible.
+            </p>
+            <form
+              className="form-stack"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (recoveryAction.trim().length >= 3) addRecoveryCase.mutate();
+              }}
+            >
+              <FormField htmlFor="recovery-user-id" label="Subject user ID">
+                <Input
+                  id="recovery-user-id"
+                  placeholder="Required when revoking sessions"
+                  value={recoveryUserId}
+                  onChange={(event) => setRecoveryUserId(event.target.value)}
+                />
+              </FormField>
+              <div className="form-grid-2">
+                <FormField htmlFor="recovery-email" label="Subject email">
+                  <Input
+                    id="recovery-email"
+                    type="email"
+                    value={recoveryEmail}
+                    onChange={(event) => setRecoveryEmail(event.target.value)}
+                  />
+                </FormField>
+                <FormField htmlFor="recovery-phone" label="Subject phone">
+                  <Input
+                    id="recovery-phone"
+                    value={recoveryPhone}
+                    onChange={(event) => setRecoveryPhone(event.target.value)}
+                  />
+                </FormField>
+              </div>
+              <FormField
+                htmlFor="recovery-verification"
+                label="Verification metadata (JSON)"
+                hint='Example: {"ticket":"SUP-123","verifiedBy":"phone"}'
+              >
+                <textarea
+                  id="recovery-verification"
+                  className="fitos-control"
+                  rows={3}
+                  value={recoveryVerification}
+                  onChange={(event) => setRecoveryVerification(event.target.value)}
+                />
+              </FormField>
+              <FormField htmlFor="recovery-action-type" label="Action type">
+                <Select
+                  id="recovery-action-type"
+                  value={recoveryActionType}
+                  onChange={(event) =>
+                    setRecoveryActionType(event.target.value as typeof recoveryActionType)
+                  }
+                >
+                  <option value="verification">Verification</option>
+                  <option value="recovery_step">Recovery step</option>
+                  <option value="note">Internal note</option>
+                </Select>
+              </FormField>
+              <FormField htmlFor="recovery-action" label="Action detail">
+                <textarea
+                  id="recovery-action"
+                  className="fitos-control"
+                  rows={3}
+                  required
+                  minLength={3}
+                  value={recoveryAction}
+                  onChange={(event) => setRecoveryAction(event.target.value)}
+                />
+              </FormField>
+              <label className="fitos-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={recoveryRevokeSessions}
+                  onChange={(event) => setRecoveryRevokeSessions(event.target.checked)}
+                />
+                Revoke all active staff sessions for this user
+              </label>
+              <FormField htmlFor="recovery-outcome" label="Outcome">
+                <Select
+                  id="recovery-outcome"
+                  value={recoveryOutcome}
+                  onChange={(event) =>
+                    setRecoveryOutcome(event.target.value as typeof recoveryOutcome)
+                  }
+                >
+                  <option value="pending">Pending</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="denied">Denied</option>
+                </Select>
+              </FormField>
+              <Button
+                type="submit"
+                loading={addRecoveryCase.isPending}
+                disabled={recoveryAction.trim().length < 3}
+              >
+                Record recovery case
+              </Button>
+            </form>
+          </Card>
+          <Card>
+            <h2>Recovery history</h2>
+            <ErrorNotice error={recoveryCases.error} onRetry={() => void recoveryCases.refetch()} />
+            {recoveryCases.data?.length ? (
+              recoveryCases.data.map((item) => (
+                <div className="fitos-mobile-data-card" key={item.id}>
+                  <strong>
+                    {item.outcome} ·{" "}
+                    {item.subject.email ?? item.subject.phone ?? item.subject.userId}
+                  </strong>
+                  <span>{item.actions[item.actions.length - 1]?.detail ?? "No action detail"}</span>
+                  <small>
+                    {item.sessionRevocation.requested
+                      ? `Sessions revoked: ${item.sessionRevocation.revokedCount}`
+                      : "Sessions unchanged"}
+                    {" · "}
+                    {formatDateTime(item.createdAt)}
+                  </small>
+                </div>
+              ))
+            ) : (
+              <p className="muted">No account recovery cases recorded.</p>
             )}
           </Card>
         </div>

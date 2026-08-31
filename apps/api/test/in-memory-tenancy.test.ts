@@ -95,6 +95,49 @@ describe("tenant isolation", () => {
     await expect(repository.listPlatformSupportNotes("tenant-1")).resolves.toContainEqual(note);
   });
 
+  it("persists recovery case evidence and revokes the subject sessions", async () => {
+    const repository = new InMemoryFitosRepository();
+    const passwordHash = await new ScryptPasswordHasher().hash("ChangeMe123!");
+    await repository.seedDevelopmentData?.(passwordHash);
+    const identity = await repository.findLoginIdentity("owner@gym.fitos.test");
+    expect(identity).toBeTruthy();
+    if (!identity) throw new Error("Seed identity missing.");
+    const session = await repository.createSession({
+      userId: identity.user.id,
+      tenantUserId: identity.tenantUserId,
+      tokenHash: "recovery-test-session",
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      userAgentSummary: "recovery test"
+    });
+    expect(session).toBeTruthy();
+    await expect(
+      repository.revokeAllUserSessions(identity.user.id, new Date().toISOString())
+    ).resolves.toBe(1);
+    const item = await repository.createPlatformAccountRecoveryCase({
+      tenantId: identity.tenant.id,
+      subject: { userId: identity.user.id, email: identity.user.email },
+      verificationMetadata: { ticket: "SUP-123", verifiedBy: "phone" },
+      actions: [
+        {
+          type: "verification",
+          detail: "Verified callback metadata.",
+          at: new Date().toISOString()
+        }
+      ],
+      sessionRevocation: {
+        requested: true,
+        revokedCount: 1,
+        completedAt: new Date().toISOString()
+      },
+      outcome: "resolved",
+      actorUserId: "platform-user"
+    });
+    await expect(
+      repository.listPlatformAccountRecoveryCases(identity.tenant.id)
+    ).resolves.toContainEqual(item);
+    await expect(repository.listPlatformAccountRecoveryCases("other-tenant")).resolves.toEqual([]);
+  });
+
   it("persists staff notification preferences with safe defaults", async () => {
     const repository = new InMemoryFitosRepository();
     const defaults = await repository.getNotificationPreferences("user-1");
