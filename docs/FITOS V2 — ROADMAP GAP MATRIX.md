@@ -344,6 +344,8 @@ Persist author, tenant, note, category and date.
 
 No impersonation requirement.
 
+**Implementation evidence (2026-08-31):** Migration `0041_platform_support_notes`, shared `PlatformSupportNoteResponse`, Drizzle/in-memory persistence, and authenticated Platform tenant-scoped `GET/POST /platform/tenants/:tenantId/support-notes` now persist author, tenant, category, note, and timestamp; creation records a Platform audit event. No impersonation or private operational-record access is introduced.
+
 ---
 
 ## P1-015 — Platform Account Recovery Cases
