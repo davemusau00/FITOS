@@ -5502,6 +5502,10 @@ export class DrizzleFitosRepository implements FitosRepository {
             and(
               eq(platformFeatureFlagOverrides.scope, "plan"),
               eq(platformFeatureFlagOverrides.scopeValue, plan)
+            ),
+            and(
+              eq(platformFeatureFlagOverrides.scope, "pilot"),
+              sql`${tenantId} = ANY(string_to_array(${platformFeatureFlagOverrides.scopeValue}, ','))`
             )
           ),
           or(

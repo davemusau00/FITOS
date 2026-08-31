@@ -5856,7 +5856,12 @@ export class InMemoryFitosRepository implements FitosRepository {
         (override) =>
           override.scope === "global" ||
           (override.scope === "tenant" && override.scopeValue === _tenantId) ||
-          (override.scope === "plan" && override.scopeValue === subscription.plan)
+          (override.scope === "plan" && override.scopeValue === subscription.plan) ||
+          (override.scope === "pilot" &&
+            override.scopeValue
+              ?.split(",")
+              .map((value) => value.trim())
+              .includes(_tenantId))
       )
       .filter(
         (override) =>

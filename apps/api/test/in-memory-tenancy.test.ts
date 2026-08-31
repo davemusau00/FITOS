@@ -65,6 +65,22 @@ describe("tenant isolation", () => {
     });
     const after = await repository.listFeatureFlags(identity!.tenant.id);
     expect(after.find((flag) => flag.key === "feature.integrations")?.enabled).toBe(false);
+    await repository.createPlatformFeatureFlagOverride({
+      key: "feature.sites",
+      scope: "pilot",
+      scopeValue: `other-tenant, ${identity!.tenant.id}`,
+      enabled: true,
+      reason: "Sites pilot cohort",
+      actorUserId: null,
+      previousEnabled: false,
+      effectiveFrom: null,
+      effectiveUntil: null
+    });
+    expect(
+      (await repository.listFeatureFlags(identity!.tenant.id)).find(
+        (flag) => flag.key === "feature.sites"
+      )?.enabled
+    ).toBe(true);
   });
 
   it("persists staff notification preferences with safe defaults", async () => {
