@@ -32,6 +32,8 @@ export interface CreateBookingRequest {
   occurrenceId: string;
   memberId: string;
   source?: BookingSource;
+  /** When true, create a waitlisted booking if the occurrence is full. */
+  waitlist?: boolean;
   /** Required when an authorized staff member bypasses insufficient entitlement. */
   overrideReason?: string;
 }

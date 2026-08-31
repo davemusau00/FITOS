@@ -1024,4 +1024,62 @@ describeDatabase("Drizzle tenant isolation", () => {
       memberId: converted.member.id
     });
   });
+
+  it("persists staff waitlist join and leave without consuming credits", async () => {
+    const gymScope = scopeOf(gym);
+    const branchId = gym.branchIds[0]!;
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const plan = await repository.createMembershipPlan(gymScope, {
+      branchId,
+      name: `DB Staff Waitlist Plan ${suffix}`,
+      includedCredits: 2,
+      durationDays: 30
+    });
+    const first = await repository.createMember(
+      gymScope,
+      { contact: { firstName: "DB Waitlist First", lastName: suffix }, homeBranchId: branchId },
+      null
+    );
+    const second = await repository.createMember(
+      gymScope,
+      { contact: { firstName: "DB Waitlist Second", lastName: suffix }, homeBranchId: branchId },
+      null
+    );
+    await repository.activateMembership(gymScope, { memberId: first.id, planId: plan.id });
+    await repository.activateMembership(gymScope, { memberId: second.id, planId: plan.id });
+    const service = await repository.createService(gymScope, {
+      branchId,
+      name: `DB Staff Waitlist Service ${suffix}`,
+      serviceType: "class",
+      durationMinutes: 30,
+      defaultCapacity: 1,
+      creditsRequired: 1
+    });
+    const startsAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    const occurrence = await repository.createScheduleOccurrence(gymScope, {
+      branchId,
+      serviceId: service.id,
+      startsAt: startsAt.toISOString(),
+      endsAt: new Date(startsAt.getTime() + 30 * 60 * 1000).toISOString(),
+      capacity: 1
+    });
+    await repository.createBooking(
+      gymScope,
+      { occurrenceId: occurrence.id, memberId: first.id, source: "staff" },
+      gym.user.id,
+      false
+    );
+    const balanceBefore = await repository.getCreditBalance(gymScope, second.id);
+    const waitlisted = await repository.createBooking(
+      gymScope,
+      { occurrenceId: occurrence.id, memberId: second.id, source: "staff", waitlist: true },
+      gym.user.id,
+      false
+    );
+    expect(waitlisted).toMatchObject({ status: "waitlisted", creditsDebited: 0 });
+    expect(await repository.getCreditBalance(gymScope, second.id)).toBe(balanceBefore);
+    await expect(
+      repository.cancelBooking(gymScope, waitlisted.id, "No longer interested")
+    ).resolves.toMatchObject({ id: waitlisted.id, status: "cancelled" });
+  });
 });

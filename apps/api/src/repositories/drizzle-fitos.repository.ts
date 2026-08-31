@@ -2615,7 +2615,9 @@ export class DrizzleFitosRepository implements FitosRepository {
       }
 
       const confirmedCount = capacity?.count ?? 0;
-      const waitlisted = input.source === "member_portal" && confirmedCount >= effectiveCapacity;
+      const waitlisted =
+        (input.source === "member_portal" || Boolean(input.waitlist)) &&
+        confirmedCount >= effectiveCapacity;
       if (confirmedCount >= effectiveCapacity && !waitlisted) {
         throw new Error(
           `Occurrence is full. Available equipment constrains capacity to ${effectiveCapacity}.`
@@ -2680,7 +2682,7 @@ export class DrizzleFitosRepository implements FitosRepository {
           memberId: member.id,
           status: waitlisted ? "waitlisted" : "confirmed",
           source: input.source ?? "staff",
-          creditMembershipId: creditMembership?.id ?? null,
+          creditMembershipId: waitlisted ? null : (creditMembership?.id ?? null),
           creditsDebited: waitlisted ? 0 : creditMembership ? service.creditsRequired : 0,
           entitlementOverrideReason:
             service.creditsRequired > 0 && !creditMembership

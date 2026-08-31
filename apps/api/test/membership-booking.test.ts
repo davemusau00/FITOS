@@ -315,4 +315,76 @@ describe("Memberships and Booking Credits Integration", () => {
     expect(await repository.listMembershipPlans(noBranchScope)).toEqual([]);
     expect(await repository.findMembershipPlanById(noBranchScope, plan.id)).toBeNull();
   });
+
+  it("allows staff to join and leave a full-session waitlist without debiting credits", async () => {
+    const repository = new InMemoryFitosRepository();
+    await repository.seedDevelopmentData?.("hash");
+    const gym = await repository.findLoginIdentity("owner@gym.fitos.test");
+    if (!gym) throw new Error("Seed identity missing.");
+    const scope = {
+      tenantId: gym.tenant.id,
+      tenantUserId: gym.tenantUserId,
+      userId: gym.user.id,
+      branchIds: gym.branchIds
+    };
+    const plan = await repository.createMembershipPlan(scope, {
+      branchId: gym.branchIds[0],
+      name: "Staff waitlist plan",
+      includedCredits: 2,
+      durationDays: 30
+    });
+    const first = await repository.createMember(
+      scope,
+      { contact: { firstName: "First" }, homeBranchId: gym.branchIds[0]! },
+      null
+    );
+    const second = await repository.createMember(
+      scope,
+      { contact: { firstName: "Second" }, homeBranchId: gym.branchIds[0]! },
+      null
+    );
+    await repository.activateMembership(scope, { memberId: first.id, planId: plan.id });
+    await repository.activateMembership(scope, { memberId: second.id, planId: plan.id });
+    const service = await repository.createService(scope, {
+      branchId: gym.branchIds[0],
+      name: "Staff waitlist class",
+      serviceType: "class",
+      durationMinutes: 30,
+      defaultCapacity: 1,
+      creditsRequired: 1
+    });
+    const startsAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const occurrence = await repository.createScheduleOccurrence(scope, {
+      branchId: gym.branchIds[0]!,
+      serviceId: service.id,
+      startsAt: startsAt.toISOString(),
+      endsAt: new Date(startsAt.getTime() + 30 * 60 * 1000).toISOString(),
+      capacity: 1
+    });
+    await repository.createBooking(
+      scope,
+      { occurrenceId: occurrence.id, memberId: first.id, source: "staff" },
+      gym.user.id,
+      false
+    );
+    const before = await repository.getCreditBalance(scope, second.id);
+    const waitlisted = await repository.createBooking(
+      scope,
+      { occurrenceId: occurrence.id, memberId: second.id, source: "staff", waitlist: true },
+      gym.user.id,
+      false
+    );
+    expect(waitlisted).toMatchObject({ status: "waitlisted", creditsDebited: 0 });
+    expect(await repository.getCreditBalance(scope, second.id)).toBe(before);
+    await expect(
+      repository.createBooking(
+        scope,
+        { occurrenceId: occurrence.id, memberId: second.id, source: "staff", waitlist: true },
+        gym.user.id,
+        false
+      )
+    ).rejects.toThrow(/already has a booking/i);
+    const left = await repository.cancelBooking(scope, waitlisted.id, "No longer interested");
+    expect(left).toMatchObject({ status: "cancelled", creditsDebited: 0 });
+  });
 });

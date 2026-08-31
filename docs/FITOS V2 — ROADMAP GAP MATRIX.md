@@ -576,7 +576,7 @@ Add:
 - promote;
 - auto-promote.
 
-**Partial implementation evidence (2026-08-31):** Staff can promote a waitlisted booking when a scheduled occurrence has capacity and the member has an eligible active membership; the promotion debits credits atomically, returns the canonical booking, writes an audit event, and is exposed in the responsive bookings workspace with pending/error feedback. Authorized staff can also capture a retained entitlement-override reason during New Booking. Reorder semantics, automatic promotion, resource-aware capacity, and member-safe waitlist controls remain open.
+**Partial implementation evidence (2026-09-01):** Staff can now select a full session in New Booking and submit an explicit waitlist intent. The canonical booking contract and both repositories persist a `waitlisted` booking without debiting credits, reject duplicate active bookings, and allow the existing cancellation operation to serve as the leave path. Staff can also promote a waitlisted booking when a scheduled occurrence has capacity and the member has an eligible active membership; the promotion debits credits atomically, returns the canonical booking, writes an audit event, and is exposed in the responsive bookings workspace with pending/error feedback. Authorized staff can capture a retained entitlement-override reason during New Booking. Reorder semantics, automatic promotion, resource-aware capacity, and browser coverage remain open.
 
 ---
 
@@ -974,7 +974,7 @@ As of 2026-08-28, the following gates are verified in this checkout:
 
 - Full workspace typecheck passes across contracts, shared, auth, UI, database, API, worker, and web.
 - Full repository lint and Prettier checks pass.
-- PostgreSQL-backed API suite passes 14 files and 91 tests with `RUN_DATABASE_TESTS=true`.
+- PostgreSQL-backed API suite passes 14 files and 93 tests with `RUN_DATABASE_TESTS=true`.
 - Web tests pass 4 files and 10 tests; the production Vite build passes.
 - Sites persistence, inventory lot receipt, branch-scoped queries, local date filtering, and account lifecycle request persistence have direct regression coverage.
 

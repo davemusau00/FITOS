@@ -12,6 +12,7 @@ const createSchema = z
     occurrenceId: z.string().uuid(),
     memberId: z.string().uuid(),
     source: z.enum(["staff", "public", "member_portal"]).optional(),
+    waitlist: z.boolean().optional(),
     overrideReason: z.string().trim().min(1).max(255).optional()
   })
   .strict();

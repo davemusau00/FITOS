@@ -3671,10 +3671,24 @@ export class InMemoryFitosRepository implements FitosRepository {
         booking.occurrenceId === occurrence.id &&
         booking.status === "confirmed"
     );
+    const existingBooking = [...this.bookings.values()].find(
+      (booking) =>
+        booking.tenantId === scope.tenantId &&
+        booking.occurrenceId === occurrence.id &&
+        booking.memberId === input.memberId &&
+        (booking.status === "confirmed" || booking.status === "waitlisted")
+    );
+    if (existingBooking) throw new Error("Member already has a booking for this occurrence.");
     const service = this.services.get(occurrence.serviceId);
     if (!service || service.tenantId !== scope.tenantId) throw new Error("Service unavailable.");
 
-    if (activeBookings.length >= (occurrence.effectiveCapacity ?? occurrence.capacity)) {
+    const waitlisted =
+      Boolean(input.waitlist) &&
+      activeBookings.length >= (occurrence.effectiveCapacity ?? occurrence.capacity);
+    if (
+      activeBookings.length >= (occurrence.effectiveCapacity ?? occurrence.capacity) &&
+      !waitlisted
+    ) {
       throw new Error("Occurrence is full.");
     }
     const creditsRequired = service.creditsRequired;
@@ -3696,7 +3710,7 @@ export class InMemoryFitosRepository implements FitosRepository {
         .reduce((total, entry) => total + entry.delta, 0);
       return balance >= creditsRequired;
     });
-    if (creditsRequired > 0 && !creditMembership && !allowEntitlementOverride) {
+    if (!waitlisted && creditsRequired > 0 && !creditMembership && !allowEntitlementOverride) {
       throw new Error("Insufficient credits for this service.");
     }
     const timestamp = now();
@@ -3706,13 +3720,13 @@ export class InMemoryFitosRepository implements FitosRepository {
       branchId: occurrence.branchId,
       occurrenceId: occurrence.id,
       memberId: input.memberId,
-      status: "confirmed",
+      status: waitlisted ? "waitlisted" : "confirmed",
       source: input.source ?? "staff",
       bookedAt: timestamp,
       cancelledAt: null,
       cancellationReason: null,
-      creditMembershipId: creditMembership?.id ?? null,
-      creditsDebited: creditMembership ? creditsRequired : 0,
+      creditMembershipId: waitlisted ? null : (creditMembership?.id ?? null),
+      creditsDebited: waitlisted ? 0 : creditMembership ? creditsRequired : 0,
       entitlementOverrideReason:
         creditsRequired > 0 && !creditMembership ? (input.overrideReason ?? null) : null,
       lateCancelled: false,
@@ -3721,7 +3735,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       updatedAt: timestamp
     };
     this.bookings.set(booking.id, booking);
-    if (creditMembership && creditsRequired > 0) {
+    if (!waitlisted && creditMembership && creditsRequired > 0) {
       const entry: StoredCreditLedgerEntry = {
         id: randomUUID(),
         tenantId: scope.tenantId,

@@ -108,6 +108,7 @@ export function NewBookingPage() {
       memberId: selectedMemberId,
       occurrenceId: selectedOccurrenceId,
       source: "staff",
+      ...(isOccFull ? { waitlist: true } : {}),
       ...(can(auth, "booking:override") && overrideReason.trim()
         ? { overrideReason: overrideReason.trim() }
         : {})
@@ -230,9 +231,9 @@ export function NewBookingPage() {
 
                   return (
                     <li
-                      className={`clickable-list-item ${full ? "is-disabled" : ""}`}
+                      className="clickable-list-item"
                       key={occ.id}
-                      onClick={() => !full && setSelectedOccurrenceId(occ.id)}
+                      onClick={() => setSelectedOccurrenceId(occ.id)}
                     >
                       <div>
                         <strong>{srv?.name ?? "Session"}</strong>
@@ -244,11 +245,9 @@ export function NewBookingPage() {
                         <span className={`fitos-badge fitos-badge--${full ? "danger" : "success"}`}>
                           {booked}/{capacity} booked
                         </span>
-                        {!full ? (
-                          <Button size="small" variant="secondary">
-                            Select
-                          </Button>
-                        ) : null}
+                        <Button size="small" variant="secondary">
+                          {full ? "Waitlist" : "Select"}
+                        </Button>
                       </div>
                     </li>
                   );
@@ -305,8 +304,9 @@ export function NewBookingPage() {
           </div>
 
           {isOccFull ? (
-            <Alert title="Session is at capacity" tone="danger">
-              All {selectedOccurrence.capacity} spots have already been booked for this occurrence.
+            <Alert title="Session is at capacity" tone="warning">
+              All {selectedOccurrence.capacity} spots are booked. You can join the staff-managed
+              waitlist without using an entitlement credit.
             </Alert>
           ) : null}
 
@@ -333,13 +333,8 @@ export function NewBookingPage() {
           <ErrorNotice error={submissionError} />
 
           <div className="form-actions" style={{ marginTop: "1.5rem" }}>
-            <Button
-              disabled={isOccFull}
-              fullWidth
-              loading={bookMutation.isPending}
-              onClick={handleBook}
-            >
-              Confirm and create booking
+            <Button fullWidth loading={bookMutation.isPending} onClick={handleBook}>
+              {isOccFull ? "Join waitlist" : "Confirm and create booking"}
             </Button>
           </div>
         </Card>
