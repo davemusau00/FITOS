@@ -721,4 +721,75 @@ export class PlatformController {
   featureFlags(@Actor() actor: RequestActor) {
     return this.repository.listFeatureFlags(actor.tenantId);
   }
+
+  @Get("feature-flag-overrides")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  listFeatureFlagOverrides() {
+    return this.repository.listPlatformFeatureFlagOverrides();
+  }
+
+  @Post("feature-flag-overrides")
+  @AuthMode("platform")
+  @RequirePlatformAdmin()
+  async createFeatureFlagOverride(
+    @Body() body: unknown,
+    @RequestId() requestId: string,
+    @Req() request: FitosRequest
+  ) {
+    const input = z
+      .object({
+        key: z.string(),
+        scope: z.enum(["global", "plan", "tenant", "pilot"]),
+        scopeValue: z.string().trim().min(1).max(160).nullable(),
+        enabled: z.boolean(),
+        reason: z.string().trim().min(3).max(500),
+        previousEnabled: z.boolean().nullable().optional(),
+        effectiveFrom: z.string().datetime().nullable().optional(),
+        effectiveUntil: z.string().datetime().nullable().optional()
+      })
+      .strict()
+      .parse(body);
+    const definition = PLATFORM_FEATURE_REGISTRY.find((feature) => feature.key === input.key);
+    if (!definition) throw new BadRequestException("Unknown feature flag key.");
+    if (input.scope === "global" && input.scopeValue !== null)
+      throw new BadRequestException("Global overrides cannot include a scope value.");
+    if (input.scope !== "global" && !input.scopeValue)
+      throw new BadRequestException("This override scope requires a scope value.");
+    const effectiveFrom = input.effectiveFrom ? new Date(input.effectiveFrom) : null;
+    const effectiveUntil = input.effectiveUntil ? new Date(input.effectiveUntil) : null;
+    if (effectiveFrom && effectiveUntil && effectiveUntil <= effectiveFrom)
+      throw new BadRequestException("effectiveUntil must be after effectiveFrom.");
+    const created = await this.repository.createPlatformFeatureFlagOverride({
+      key: definition.key,
+      scope: input.scope,
+      scopeValue: input.scopeValue,
+      enabled: input.enabled,
+      reason: input.reason,
+      actorUserId: request.platformActor?.userId ?? null,
+      previousEnabled: input.previousEnabled ?? null,
+      effectiveFrom: effectiveFrom?.toISOString() ?? null,
+      effectiveUntil: effectiveUntil?.toISOString() ?? null
+    });
+    await this.repository.recordAudit({
+      tenantId: "",
+      actorUserId: request.platformActor?.userId ?? null,
+      action: "platform.feature_flag_override_created",
+      resourceType: "platform_feature_flag_override",
+      resourceId: created.id,
+      beforeSummary: {
+        enabled: created.previousEnabled,
+        scope: created.scope,
+        scopeValue: created.scopeValue
+      },
+      afterSummary: {
+        enabled: created.enabled,
+        scope: created.scope,
+        scopeValue: created.scopeValue,
+        reason: created.reason
+      },
+      requestId
+    });
+    return created;
+  }
 }

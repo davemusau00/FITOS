@@ -591,6 +591,17 @@ export const api = {
     request<import("@fitos/contracts").PlatformOverview>("/platform/overview"),
   platformFeatures: () =>
     request<import("@fitos/contracts").FeatureDefinition[]>("/platform/features"),
+  platformFeatureFlagOverrides: () =>
+    request<import("@fitos/contracts").FeatureFlagOverrideResponse[]>(
+      "/platform/feature-flag-overrides"
+    ),
+  createPlatformFeatureFlagOverride: (
+    payload: Omit<import("@fitos/contracts").FeatureFlagOverrideResponse, "id" | "createdAt">
+  ) =>
+    request<import("@fitos/contracts").FeatureFlagOverrideResponse>(
+      "/platform/feature-flag-overrides",
+      { method: "POST", body: json(payload) }
+    ),
   platformPlans: () => request<import("@fitos/contracts").SaaSPlanDefinition[]>("/platform/plans"),
   updatePlatformPlan: (
     key: import("@fitos/contracts").SaaSPlan,
