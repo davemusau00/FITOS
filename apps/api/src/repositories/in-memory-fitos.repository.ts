@@ -3964,6 +3964,7 @@ export class InMemoryFitosRepository implements FitosRepository {
         createdAt: timestamp
       });
     }
+    this.compactWaitlist(scope, occurrence.id);
     return { ...booking };
   }
 
