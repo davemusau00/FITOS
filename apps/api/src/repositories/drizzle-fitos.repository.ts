@@ -3026,13 +3026,53 @@ export class DrizzleFitosRepository implements FitosRepository {
             eq(bookings.status, "confirmed")
           )
         );
-      if ((capacity?.count ?? 0) >= occurrence.capacity) throw new Error("Occurrence is full.");
       const [service] = await tx
         .select()
         .from(services)
         .where(and(eq(services.id, occurrence.serviceId), eq(services.tenantId, scope.tenantId)))
         .limit(1);
       if (!service) throw new Error("Booking service unavailable.");
+
+      // Promotion must use the same effective capacity as booking creation.
+      // Equipment availability can reduce the number of safe places below the
+      // schedule's nominal capacity.
+      let effectiveCapacity = occurrence.capacity;
+      const requirements = await tx
+        .select()
+        .from(serviceEquipmentRequirements)
+        .where(
+          and(
+            eq(serviceEquipmentRequirements.tenantId, scope.tenantId),
+            eq(serviceEquipmentRequirements.serviceId, service.id)
+          )
+        );
+      for (const requirement of requirements) {
+        const assets = await tx
+          .select({ id: equipmentAssets.id })
+          .from(equipmentAssets)
+          .where(
+            and(
+              eq(equipmentAssets.tenantId, scope.tenantId),
+              eq(equipmentAssets.poolId, requirement.poolId),
+              eq(equipmentAssets.branchId, occurrence.branchId),
+              or(
+                eq(equipmentAssets.status, "available"),
+                eq(equipmentAssets.status, "operational")
+              )
+            )
+          );
+        if (requirement.quantityRequired > 0) {
+          effectiveCapacity = Math.min(
+            effectiveCapacity,
+            Math.floor(assets.length / requirement.quantityRequired)
+          );
+        }
+      }
+      if ((capacity?.count ?? 0) >= effectiveCapacity) {
+        throw new Error(
+          `Occurrence is full. Available equipment constrains capacity to ${effectiveCapacity}.`
+        );
+      }
       let creditMembership: typeof memberMemberships.$inferSelect | null = null;
       if (service.creditsRequired > 0) {
         const candidates = await tx

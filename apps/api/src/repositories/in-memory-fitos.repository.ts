@@ -3648,6 +3648,21 @@ export class InMemoryFitosRepository implements FitosRepository {
     return this.occurrenceResponse(occurrence);
   }
 
+  private effectiveCapacityForOccurrence(occurrence: StoredOccurrence): number {
+    const requirements = this.serviceEquipmentRequirements.get(occurrence.serviceId) ?? [];
+    return requirements.reduce((capacity, requirement) => {
+      if (requirement.quantityRequired <= 0) return capacity;
+      const available = [...this.equipmentAssets.values()].filter(
+        (asset) =>
+          asset.tenantId === occurrence.tenantId &&
+          asset.poolId === requirement.poolId &&
+          asset.branchId === occurrence.branchId &&
+          (asset.status === "available" || asset.status === "operational")
+      ).length;
+      return Math.min(capacity, Math.floor(available / requirement.quantityRequired));
+    }, occurrence.effectiveCapacity ?? occurrence.capacity);
+  }
+
   async createBooking(
     scope: TenantScope,
     input: CreateBookingRequest,
@@ -3682,12 +3697,10 @@ export class InMemoryFitosRepository implements FitosRepository {
     const service = this.services.get(occurrence.serviceId);
     if (!service || service.tenantId !== scope.tenantId) throw new Error("Service unavailable.");
 
-    const waitlisted =
-      Boolean(input.waitlist) &&
-      activeBookings.length >= (occurrence.effectiveCapacity ?? occurrence.capacity);
+    const effectiveCapacity = this.effectiveCapacityForOccurrence(occurrence);
+    const waitlisted = Boolean(input.waitlist) && activeBookings.length >= effectiveCapacity;
     if (
-      activeBookings.length >= (occurrence.effectiveCapacity ?? occurrence.capacity) &&
-      !waitlisted
+      activeBookings.length >= effectiveCapacity && !waitlisted
     ) {
       throw new Error("Occurrence is full.");
     }
@@ -3889,7 +3902,7 @@ export class InMemoryFitosRepository implements FitosRepository {
         candidate.occurrenceId === target.id &&
         candidate.status === "confirmed"
     ).length;
-    if (confirmed >= (target.effectiveCapacity ?? target.capacity))
+    if (confirmed >= this.effectiveCapacityForOccurrence(target))
       throw new Error("Occurrence is full.");
     booking.occurrenceId = target.id;
     booking.branchId = target.branchId;
@@ -3918,7 +3931,7 @@ export class InMemoryFitosRepository implements FitosRepository {
         candidate.occurrenceId === occurrence.id &&
         candidate.status === "confirmed"
     ).length;
-    if (confirmed >= (occurrence.effectiveCapacity ?? occurrence.capacity))
+    if (confirmed >= this.effectiveCapacityForOccurrence(occurrence))
       throw new Error("Occurrence is full.");
     const service = this.services.get(occurrence.serviceId);
     if (!service) throw new Error("Booking service unavailable.");
@@ -5638,7 +5651,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       ).length;
       status =
         confirmedBookings + pendingReservations <
-        (occurrence.effectiveCapacity ?? occurrence.capacity)
+        this.effectiveCapacityForOccurrence(occurrence)
           ? "confirmed"
           : "waitlisted";
     }
@@ -5870,6 +5883,7 @@ export class InMemoryFitosRepository implements FitosRepository {
           const confirmed = [...this.bookings.values()].filter(
             (booking) => booking.occurrenceId === occurrence.id && booking.status === "confirmed"
           ).length;
+          const effectiveCapacity = this.effectiveCapacityForOccurrence(occurrence);
           const eligibility = serviceExcluded
             ? {
                 canBook: false,
@@ -5888,7 +5902,7 @@ export class InMemoryFitosRepository implements FitosRepository {
                     reasonCode: "ALREADY_BOOKED" as const,
                     message: "You are already booked into this session."
                   }
-                : confirmed >= (occurrence.effectiveCapacity ?? occurrence.capacity)
+                : confirmed >= effectiveCapacity
                   ? {
                       canBook: true,
                       reasonCode: "WAITLIST_ONLY" as const,
@@ -5973,7 +5987,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       throw new Error("Your membership does not include this service.");
     }
 
-    const waitlisted = activeBookings.length >= (occ.effectiveCapacity ?? occ.capacity);
+    const waitlisted = activeBookings.length >= this.effectiveCapacityForOccurrence(occ);
 
     const bookingId = randomUUID();
     const ts = now();
