@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Inject, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Inject, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type { BookingListFilters, CreateBookingRequest, RequestActor } from "@fitos/contracts";
@@ -18,6 +18,9 @@ const createSchema = z
   .strict();
 const cancellationSchema = z.object({ reason: z.string().trim().min(1).max(255) }).strict();
 const rescheduleSchema = z.object({ targetOccurrenceId: z.string().uuid() }).strict();
+const waitlistPositionSchema = z
+  .object({ position: z.coerce.number().int().min(1).max(10_000) })
+  .strict();
 const listSchema = z
   .object({
     occurrenceId: z.string().uuid().optional(),
@@ -107,5 +110,21 @@ export class BookingsController {
     @Param("bookingId") bookingId: string
   ) {
     return this.core.promoteWaitlistedBooking(actor, requestId, z.string().uuid().parse(bookingId));
+  }
+
+  @Patch(":bookingId/waitlist-position")
+  @RequirePermission("booking:update")
+  reorder(
+    @Actor() actor: RequestActor,
+    @RequestId() requestId: string,
+    @Param("bookingId") bookingId: string,
+    @Body() body: unknown
+  ) {
+    return this.core.reorderWaitlistedBooking(
+      actor,
+      requestId,
+      z.string().uuid().parse(bookingId),
+      waitlistPositionSchema.parse(body)
+    );
   }
 }

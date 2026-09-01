@@ -906,6 +906,7 @@ export const bookings = pgTable(
       .references(() => members.id, { onDelete: "restrict" }),
     status: varchar("status", { length: 30 }).notNull().default("confirmed"),
     source: varchar("source", { length: 30 }).notNull().default("staff"),
+    waitlistPosition: integer("waitlist_position"),
     bookedAt: timestamp("booked_at", { withTimezone: true }).notNull().defaultNow(),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancellationReason: varchar("cancellation_reason", { length: 255 }),
@@ -925,6 +926,11 @@ export const bookings = pgTable(
       table.tenantId,
       table.occurrenceId,
       table.status
+    ),
+    index("idx_bookings_waitlist_order").on(
+      table.tenantId,
+      table.occurrenceId,
+      table.waitlistPosition
     ),
     index("idx_bookings_tenant_member_booked").on(table.tenantId, table.memberId, table.bookedAt)
   ]

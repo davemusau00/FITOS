@@ -3714,6 +3714,15 @@ export class InMemoryFitosRepository implements FitosRepository {
       throw new Error("Insufficient credits for this service.");
     }
     const timestamp = now();
+    const waitlistPosition = waitlisted
+      ? 1 +
+        [...this.bookings.values()].filter(
+          (booking) =>
+            booking.tenantId === scope.tenantId &&
+            booking.occurrenceId === occurrence.id &&
+            booking.status === "waitlisted"
+        ).length
+      : null;
     const booking: StoredBooking = {
       id: randomUUID(),
       tenantId: scope.tenantId,
@@ -3722,13 +3731,16 @@ export class InMemoryFitosRepository implements FitosRepository {
       memberId: input.memberId,
       status: waitlisted ? "waitlisted" : "confirmed",
       source: input.source ?? "staff",
+      waitlistPosition,
       bookedAt: timestamp,
       cancelledAt: null,
       cancellationReason: null,
       creditMembershipId: waitlisted ? null : (creditMembership?.id ?? null),
       creditsDebited: waitlisted ? 0 : creditMembership ? creditsRequired : 0,
       entitlementOverrideReason:
-        creditsRequired > 0 && !creditMembership ? (input.overrideReason ?? null) : null,
+        !waitlisted && creditsRequired > 0 && !creditMembership
+          ? (input.overrideReason ?? null)
+          : null,
       lateCancelled: false,
       createdByUserId: actorUserId,
       createdAt: timestamp,
@@ -3807,7 +3819,9 @@ export class InMemoryFitosRepository implements FitosRepository {
     const lateCancelled = Date.now() >= cutoffAt;
     const restoreCredit =
       booking.creditsDebited > 0 && (!lateCancelled || service.restoreCreditOnLateCancel);
+    const wasWaitlisted = booking.status === "waitlisted";
     booking.status = "cancelled";
+    booking.waitlistPosition = null;
     booking.cancelledAt = now();
     booking.cancellationReason = reason;
     booking.lateCancelled = lateCancelled;
@@ -3832,6 +3846,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       };
       this.creditLedger.set(entry.id, entry);
     }
+    if (wasWaitlisted) this.compactWaitlist(scope, booking.occurrenceId);
     return { ...booking };
   }
 
@@ -3931,6 +3946,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       throw new Error("Insufficient credits to promote this waitlisted booking.");
     const timestamp = now();
     booking.status = "confirmed";
+    booking.waitlistPosition = null;
     booking.creditMembershipId = creditMembership?.id ?? null;
     booking.creditsDebited = creditMembership ? service.creditsRequired : 0;
     booking.updatedAt = timestamp;
@@ -3948,6 +3964,46 @@ export class InMemoryFitosRepository implements FitosRepository {
         createdAt: timestamp
       });
     }
+    return { ...booking };
+  }
+
+  async reorderWaitlistedBooking(
+    scope: TenantScope,
+    bookingId: string,
+    position: number
+  ): Promise<BookingResponse | null> {
+    const booking = this.bookings.get(bookingId);
+    if (
+      !booking ||
+      booking.tenantId !== scope.tenantId ||
+      !scope.branchIds.includes(booking.branchId) ||
+      booking.status !== "waitlisted"
+    )
+      return null;
+    const queue = [...this.bookings.values()]
+      .filter(
+        (candidate) =>
+          candidate.tenantId === scope.tenantId &&
+          candidate.branchId === booking.branchId &&
+          candidate.occurrenceId === booking.occurrenceId &&
+          candidate.status === "waitlisted"
+      )
+      .sort(
+        (left, right) =>
+          (left.waitlistPosition ?? Number.MAX_SAFE_INTEGER) -
+            (right.waitlistPosition ?? Number.MAX_SAFE_INTEGER) ||
+          left.bookedAt.localeCompare(right.bookedAt) ||
+          left.id.localeCompare(right.id)
+      );
+    const currentIndex = queue.findIndex((candidate) => candidate.id === booking.id);
+    if (currentIndex < 0) return null;
+    const nextIndex = Math.min(Math.max(Math.trunc(position) - 1, 0), queue.length - 1);
+    queue.splice(currentIndex, 1);
+    queue.splice(nextIndex, 0, booking);
+    queue.forEach((candidate, index) => {
+      candidate.waitlistPosition = index + 1;
+      candidate.updatedAt = now();
+    });
     return { ...booking };
   }
 
@@ -5920,6 +5976,15 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     const bookingId = randomUUID();
     const ts = now();
+    const waitlistPosition = waitlisted
+      ? 1 +
+        [...this.bookings.values()].filter(
+          (booking) =>
+            booking.tenantId === member.tenantId &&
+            booking.occurrenceId === occ.id &&
+            booking.status === "waitlisted"
+        ).length
+      : null;
     const booking: StoredBooking = {
       id: bookingId,
       tenantId: member.tenantId,
@@ -5928,6 +5993,7 @@ export class InMemoryFitosRepository implements FitosRepository {
       memberId: member.id,
       status: waitlisted ? "waitlisted" : "confirmed",
       source: "member_portal",
+      waitlistPosition,
       bookedAt: ts,
       cancelledAt: null,
       cancellationReason: null,
@@ -5979,7 +6045,9 @@ export class InMemoryFitosRepository implements FitosRepository {
         ? new Date(occurrence.startsAt).getTime() - service.cancellationCutoffMinutes * 60_000
         : Number.POSITIVE_INFINITY;
     const lateCancelled = booking.status === "confirmed" && Date.now() >= cutoffAt;
+    const wasWaitlisted = booking.status === "waitlisted";
     booking.status = "cancelled";
+    booking.waitlistPosition = null;
     booking.cancelledAt = ts;
     booking.cancellationReason = reason || "Member self-cancelled";
     booking.lateCancelled = lateCancelled;
@@ -6003,7 +6071,39 @@ export class InMemoryFitosRepository implements FitosRepository {
       };
       this.creditLedger.set(refundEntry.id, refundEntry);
     }
+    if (wasWaitlisted) {
+      this.compactWaitlist(
+        {
+          tenantId: booking.tenantId,
+          tenantUserId: memberId,
+          userId: memberId,
+          branchIds: [booking.branchId]
+        },
+        booking.occurrenceId
+      );
+    }
     return booking;
+  }
+
+  private compactWaitlist(scope: TenantScope, occurrenceId: string): void {
+    const queue = [...this.bookings.values()]
+      .filter(
+        (candidate) =>
+          candidate.tenantId === scope.tenantId &&
+          scope.branchIds.includes(candidate.branchId) &&
+          candidate.occurrenceId === occurrenceId &&
+          candidate.status === "waitlisted"
+      )
+      .sort(
+        (left, right) =>
+          (left.waitlistPosition ?? Number.MAX_SAFE_INTEGER) -
+            (right.waitlistPosition ?? Number.MAX_SAFE_INTEGER) ||
+          left.bookedAt.localeCompare(right.bookedAt) ||
+          left.id.localeCompare(right.id)
+      );
+    queue.forEach((candidate, index) => {
+      candidate.waitlistPosition = index + 1;
+    });
   }
 
   // ───────────────────────────────────────────────────────────────────────────

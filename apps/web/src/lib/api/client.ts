@@ -501,6 +501,11 @@ export const api = {
     }),
   promoteWaitlistedBooking: (id: string) =>
     request<BookingResponse>(`/bookings/${id}/promote`, { method: "POST" }),
+  reorderWaitlistedBooking: (id: string, position: number) =>
+    request<BookingResponse>(`/bookings/${id}/waitlist-position`, {
+      method: "PATCH",
+      body: json({ position })
+    }),
 
   // Memberships & Plans
   membershipPlans: (branchId?: string) =>

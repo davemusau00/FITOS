@@ -1045,8 +1045,14 @@ describeDatabase("Drizzle tenant isolation", () => {
       { contact: { firstName: "DB Waitlist Second", lastName: suffix }, homeBranchId: branchId },
       null
     );
+    const third = await repository.createMember(
+      gymScope,
+      { contact: { firstName: "DB Waitlist Third", lastName: suffix }, homeBranchId: branchId },
+      null
+    );
     await repository.activateMembership(gymScope, { memberId: first.id, planId: plan.id });
     await repository.activateMembership(gymScope, { memberId: second.id, planId: plan.id });
+    await repository.activateMembership(gymScope, { memberId: third.id, planId: plan.id });
     const service = await repository.createService(gymScope, {
       branchId,
       name: `DB Staff Waitlist Service ${suffix}`,
@@ -1078,6 +1084,19 @@ describeDatabase("Drizzle tenant isolation", () => {
     );
     expect(waitlisted).toMatchObject({ status: "waitlisted", creditsDebited: 0 });
     expect(await repository.getCreditBalance(gymScope, second.id)).toBe(balanceBefore);
+    const thirdWaitlisted = await repository.createBooking(
+      gymScope,
+      { occurrenceId: occurrence.id, memberId: third.id, source: "staff", waitlist: true },
+      gym.user.id,
+      false
+    );
+    expect(thirdWaitlisted.waitlistPosition).toBe(2);
+    await expect(
+      repository.reorderWaitlistedBooking(gymScope, thirdWaitlisted.id, 1)
+    ).resolves.toMatchObject({ id: thirdWaitlisted.id, waitlistPosition: 1 });
+    await expect(repository.findBookingById(gymScope, waitlisted.id)).resolves.toMatchObject({
+      waitlistPosition: 2
+    });
     await new CoreService(repository).cancelBooking(
       {
         userId: gym.user.id,
@@ -1092,10 +1111,18 @@ describeDatabase("Drizzle tenant isolation", () => {
       confirmed.id,
       "Opening a place"
     );
-    await expect(repository.findBookingById(gymScope, waitlisted.id)).resolves.toMatchObject({
+    await expect(repository.findBookingById(gymScope, thirdWaitlisted.id)).resolves.toMatchObject({
       status: "confirmed",
-      creditsDebited: 1
+      creditsDebited: 1,
+      waitlistPosition: null
     });
+    await expect(repository.findBookingById(gymScope, waitlisted.id)).resolves.toMatchObject({
+      status: "waitlisted",
+      waitlistPosition: 1
+    });
+    await expect(
+      repository.cancelBooking(gymScope, thirdWaitlisted.id, "No longer interested")
+    ).resolves.toMatchObject({ id: thirdWaitlisted.id, status: "cancelled" });
     await expect(
       repository.cancelBooking(gymScope, waitlisted.id, "No longer interested")
     ).resolves.toMatchObject({ id: waitlisted.id, status: "cancelled" });

@@ -430,6 +430,11 @@ export interface FitosRepository {
     targetOccurrenceId: string
   ): Promise<BookingResponse | null>;
   promoteWaitlistedBooking(scope: TenantScope, bookingId: string): Promise<BookingResponse | null>;
+  reorderWaitlistedBooking(
+    scope: TenantScope,
+    bookingId: string,
+    position: number
+  ): Promise<BookingResponse | null>;
 
   // Memberships & Credits
   listMembershipPlans(scope: TenantScope, branchId?: string): Promise<MembershipPlanResponse[]>;

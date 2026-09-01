@@ -100,6 +100,14 @@ export function BookingsPage() {
     },
     onError: (err) => setPromoteError(err)
   });
+  const reorderMutation = useMutation({
+    mutationFn: ({ id, position }: { id: string; position: number }) =>
+      api.reorderWaitlistedBooking(id, position),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("bookings") });
+    },
+    onError: (err) => setPromoteError(err)
+  });
 
   const setFilter = (name: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -166,6 +174,9 @@ export function BookingsPage() {
       cell: (b) => (
         <div>
           <StatusBadge status={b.status} />
+          {b.status === "waitlisted" && b.waitlistPosition ? (
+            <span className="fitos-data-table__muted">Queue #{b.waitlistPosition}</span>
+          ) : null}
           {b.cancellationReason ? (
             <span className="fitos-data-table__muted fitos-data-table__muted--block">
               {b.cancellationReason}
@@ -194,6 +205,37 @@ export function BookingsPage() {
               >
                 Promote
               </Button>
+            ) : null}
+            {b.status === "waitlisted" && can(auth, "booking:update") ? (
+              <>
+                <Button
+                  disabled={(b.waitlistPosition ?? 1) <= 1}
+                  loading={reorderMutation.isPending}
+                  onClick={() =>
+                    reorderMutation.mutate({
+                      id: b.id,
+                      position: Math.max(1, (b.waitlistPosition ?? 1) - 1)
+                    })
+                  }
+                  size="small"
+                  variant="ghost"
+                >
+                  Move up
+                </Button>
+                <Button
+                  loading={reorderMutation.isPending}
+                  onClick={() =>
+                    reorderMutation.mutate({
+                      id: b.id,
+                      position: (b.waitlistPosition ?? 1) + 1
+                    })
+                  }
+                  size="small"
+                  variant="ghost"
+                >
+                  Move down
+                </Button>
+              </>
             ) : null}
             {b.status === "confirmed" && can(auth, "booking:create") ? (
               <Button
@@ -306,6 +348,9 @@ export function BookingsPage() {
                 </div>
                 <div className="fitos-mobile-data-card__meta">
                   <StatusBadge status={booking.status} />
+                  {booking.status === "waitlisted" && booking.waitlistPosition ? (
+                    <span>Queue #{booking.waitlistPosition}</span>
+                  ) : null}
                   <span>{booking.source}</span>
                 </div>
                 {(booking.status === "confirmed" || booking.status === "waitlisted") &&
@@ -320,6 +365,37 @@ export function BookingsPage() {
                       >
                         Promote
                       </Button>
+                    ) : null}
+                    {booking.status === "waitlisted" && can(auth, "booking:update") ? (
+                      <>
+                        <Button
+                          disabled={(booking.waitlistPosition ?? 1) <= 1}
+                          loading={reorderMutation.isPending}
+                          onClick={() =>
+                            reorderMutation.mutate({
+                              id: booking.id,
+                              position: Math.max(1, (booking.waitlistPosition ?? 1) - 1)
+                            })
+                          }
+                          size="small"
+                          variant="ghost"
+                        >
+                          Move up
+                        </Button>
+                        <Button
+                          loading={reorderMutation.isPending}
+                          onClick={() =>
+                            reorderMutation.mutate({
+                              id: booking.id,
+                              position: (booking.waitlistPosition ?? 1) + 1
+                            })
+                          }
+                          size="small"
+                          variant="ghost"
+                        >
+                          Move down
+                        </Button>
+                      </>
                     ) : null}
                     {booking.status === "confirmed" && can(auth, "booking:create") ? (
                       <Button

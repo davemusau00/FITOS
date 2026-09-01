@@ -351,6 +351,13 @@
       "when": 1790620800000,
       "tag": "0049_task_comments",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1790707200000,
+      "tag": "0050_booking_waitlist_positions",
+      "breakpoints": true
     }
   ]
 }

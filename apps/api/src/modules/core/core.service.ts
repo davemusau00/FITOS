@@ -50,6 +50,7 @@ import type {
   TaskCommentResponse,
   CreateTaskCommentRequest,
   UpdateLeadStageRequest,
+  ReorderWaitlistedBookingRequest,
   UpdateOrganizationRequest,
   UpdateUserProfileRequest,
   CreateRoomRequest,
@@ -1548,6 +1549,39 @@ export class CoreService {
     }
   }
 
+  async reorderWaitlistedBooking(
+    actor: RequestActor,
+    requestId: string,
+    bookingId: string,
+    input: ReorderWaitlistedBookingRequest
+  ): Promise<BookingResponse> {
+    const existing = await this.getBooking(actor, bookingId);
+    if (existing.status !== "waitlisted") {
+      throw new DomainError("VALIDATION_FAILED", "Only waitlisted bookings can be reordered.", 409);
+    }
+    const booking = await this.repository.reorderWaitlistedBooking(
+      scopeOf(actor),
+      bookingId,
+      input.position
+    );
+    if (!booking) throw new DomainError("RESOURCE_NOT_FOUND", "Booking not found.", 404);
+    await this.audit(
+      actor,
+      requestId,
+      "booking.waitlist_reordered",
+      "booking",
+      booking.id,
+      booking.branchId,
+      {
+        occurrenceId: booking.occurrenceId,
+        previousPosition: existing.waitlistPosition,
+        position: booking.waitlistPosition
+      }
+    );
+    await this.publish(eventOf(actor, "booking.waitlist_reordered", { bookingId: booking.id }));
+    return booking;
+  }
+
   async listMembershipPlans(
     actor: RequestActor,
     branchId?: string
@@ -2568,7 +2602,10 @@ export class CoreService {
     });
     const ordered = [...candidates.data].sort(
       (left, right) =>
-        left.bookedAt.localeCompare(right.bookedAt) || left.id.localeCompare(right.id)
+        (left.waitlistPosition ?? Number.MAX_SAFE_INTEGER) -
+          (right.waitlistPosition ?? Number.MAX_SAFE_INTEGER) ||
+        left.bookedAt.localeCompare(right.bookedAt) ||
+        left.id.localeCompare(right.id)
     );
     for (const candidate of ordered) {
       try {

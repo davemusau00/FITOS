@@ -14,6 +14,8 @@ export interface BookingResponse {
   memberId: string;
   status: BookingStatus;
   source: BookingSource;
+  /** One-based queue position for active waitlisted bookings. */
+  waitlistPosition?: number | null;
   bookedAt: string;
   cancelledAt: string | null;
   cancellationReason: string | null;
@@ -36,6 +38,10 @@ export interface CreateBookingRequest {
   waitlist?: boolean;
   /** Required when an authorized staff member bypasses insufficient entitlement. */
   overrideReason?: string;
+}
+
+export interface ReorderWaitlistedBookingRequest {
+  position: number;
 }
 
 export interface CancelBookingRequest {

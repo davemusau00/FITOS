@@ -343,8 +343,14 @@ describe("Memberships and Booking Credits Integration", () => {
       { contact: { firstName: "Second" }, homeBranchId: gym.branchIds[0]! },
       null
     );
+    const third = await repository.createMember(
+      scope,
+      { contact: { firstName: "Third" }, homeBranchId: gym.branchIds[0]! },
+      null
+    );
     await repository.activateMembership(scope, { memberId: first.id, planId: plan.id });
     await repository.activateMembership(scope, { memberId: second.id, planId: plan.id });
+    await repository.activateMembership(scope, { memberId: third.id, planId: plan.id });
     const service = await repository.createService(scope, {
       branchId: gym.branchIds[0],
       name: "Staff waitlist class",
@@ -376,6 +382,22 @@ describe("Memberships and Booking Credits Integration", () => {
     );
     expect(waitlisted).toMatchObject({ status: "waitlisted", creditsDebited: 0 });
     expect(await repository.getCreditBalance(scope, second.id)).toBe(before);
+    const thirdWaitlisted = await repository.createBooking(
+      scope,
+      { occurrenceId: occurrence.id, memberId: third.id, source: "staff", waitlist: true },
+      gym.user.id,
+      false
+    );
+    expect(thirdWaitlisted.waitlistPosition).toBe(2);
+    await expect(
+      repository.reorderWaitlistedBooking(scope, thirdWaitlisted.id, 1)
+    ).resolves.toMatchObject({
+      id: thirdWaitlisted.id,
+      waitlistPosition: 1
+    });
+    await expect(repository.findBookingById(scope, waitlisted.id)).resolves.toMatchObject({
+      waitlistPosition: 2
+    });
     await expect(
       repository.createBooking(
         scope,
@@ -386,5 +408,8 @@ describe("Memberships and Booking Credits Integration", () => {
     ).rejects.toThrow(/already has a booking/i);
     const left = await repository.cancelBooking(scope, waitlisted.id, "No longer interested");
     expect(left).toMatchObject({ status: "cancelled", creditsDebited: 0 });
+    await expect(
+      repository.cancelBooking(scope, thirdWaitlisted.id, "No longer interested")
+    ).resolves.toMatchObject({ status: "cancelled" });
   });
 });

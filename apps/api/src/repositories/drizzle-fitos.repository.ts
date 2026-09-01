@@ -2623,6 +2623,20 @@ export class DrizzleFitosRepository implements FitosRepository {
           `Occurrence is full. Available equipment constrains capacity to ${effectiveCapacity}.`
         );
       }
+      let waitlistPosition: number | null = null;
+      if (waitlisted) {
+        const [tail] = await tx
+          .select({ max: sql<number>`coalesce(max(${bookings.waitlistPosition}), 0)::int` })
+          .from(bookings)
+          .where(
+            and(
+              eq(bookings.tenantId, scope.tenantId),
+              eq(bookings.occurrenceId, occurrence.id),
+              eq(bookings.status, "waitlisted")
+            )
+          );
+        waitlistPosition = Number(tail?.max ?? 0) + 1;
+      }
 
       let creditMembership: typeof memberMemberships.$inferSelect | null = null;
       if (service.creditsRequired > 0) {
@@ -2665,10 +2679,10 @@ export class DrizzleFitosRepository implements FitosRepository {
             break;
           }
         }
-        if (!creditMembership && !allowEntitlementOverride) {
+        if (!waitlisted && !creditMembership && !allowEntitlementOverride) {
           throw new Error("Insufficient credits for this service.");
         }
-        if (!creditMembership && !input.overrideReason?.trim()) {
+        if (!waitlisted && !creditMembership && !input.overrideReason?.trim()) {
           throw new Error("An entitlement override reason is required.");
         }
       }
@@ -2682,10 +2696,11 @@ export class DrizzleFitosRepository implements FitosRepository {
           memberId: member.id,
           status: waitlisted ? "waitlisted" : "confirmed",
           source: input.source ?? "staff",
+          waitlistPosition,
           creditMembershipId: waitlisted ? null : (creditMembership?.id ?? null),
           creditsDebited: waitlisted ? 0 : creditMembership ? service.creditsRequired : 0,
           entitlementOverrideReason:
-            service.creditsRequired > 0 && !creditMembership
+            !waitlisted && service.creditsRequired > 0 && !creditMembership
               ? (input.overrideReason?.trim() ?? null)
               : null,
           createdByUserId: actorUserId
@@ -2803,6 +2818,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         .update(bookings)
         .set({
           status: "cancelled",
+          waitlistPosition: null,
           cancelledAt,
           cancellationReason: reason,
           lateCancelled,
@@ -2837,6 +2853,35 @@ export class DrizzleFitosRepository implements FitosRepository {
             bookingId: cancelled.id,
             note: `Booking cancellation credit restoration (${cancelled.creditsDebited})`
           });
+        }
+      }
+      if (current.status === "waitlisted") {
+        const remaining = await tx
+          .select({
+            id: bookings.id,
+            waitlistPosition: bookings.waitlistPosition,
+            bookedAt: bookings.bookedAt
+          })
+          .from(bookings)
+          .where(
+            and(
+              eq(bookings.tenantId, scope.tenantId),
+              eq(bookings.occurrenceId, current.occurrenceId),
+              eq(bookings.status, "waitlisted")
+            )
+          );
+        remaining.sort(
+          (left, right) =>
+            (left.waitlistPosition ?? Number.MAX_SAFE_INTEGER) -
+              (right.waitlistPosition ?? Number.MAX_SAFE_INTEGER) ||
+            left.bookedAt.getTime() - right.bookedAt.getTime() ||
+            left.id.localeCompare(right.id)
+        );
+        for (const [index, candidate] of remaining.entries()) {
+          await tx
+            .update(bookings)
+            .set({ waitlistPosition: index + 1 })
+            .where(eq(bookings.id, candidate.id));
         }
       }
       return cancelled;
@@ -3035,6 +3080,7 @@ export class DrizzleFitosRepository implements FitosRepository {
         .update(bookings)
         .set({
           status: "confirmed",
+          waitlistPosition: null,
           creditMembershipId: creditMembership?.id ?? null,
           creditsDebited: creditMembership ? service.creditsRequired : 0,
           updatedAt: new Date()
@@ -3052,6 +3098,97 @@ export class DrizzleFitosRepository implements FitosRepository {
           bookingId: current.id,
           note: `Waitlist promotion credit deduction (${service.creditsRequired})`
         });
+      }
+      const remaining = await tx
+        .select({
+          id: bookings.id,
+          waitlistPosition: bookings.waitlistPosition,
+          bookedAt: bookings.bookedAt
+        })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.tenantId, scope.tenantId),
+            eq(bookings.occurrenceId, current.occurrenceId),
+            eq(bookings.status, "waitlisted")
+          )
+        );
+      remaining.sort(
+        (left, right) =>
+          (left.waitlistPosition ?? Number.MAX_SAFE_INTEGER) -
+            (right.waitlistPosition ?? Number.MAX_SAFE_INTEGER) ||
+          left.bookedAt.getTime() - right.bookedAt.getTime() ||
+          left.id.localeCompare(right.id)
+      );
+      for (const [index, candidate] of remaining.entries()) {
+        await tx
+          .update(bookings)
+          .set({ waitlistPosition: index + 1 })
+          .where(eq(bookings.id, candidate.id));
+      }
+      return updated;
+    });
+    return booking ? this.bookingResponse(booking) : null;
+  }
+
+  async reorderWaitlistedBooking(
+    scope: TenantScope,
+    bookingId: string,
+    position: number
+  ): Promise<BookingResponse | null> {
+    const booking = await this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.id, bookingId),
+            eq(bookings.tenantId, scope.tenantId),
+            inArray(bookings.branchId, scope.branchIds),
+            eq(bookings.status, "waitlisted")
+          )
+        )
+        .limit(1);
+      if (!current) return null;
+      await tx.execute(sql`
+        SELECT id FROM schedule_occurrences
+        WHERE id = ${current.occurrenceId} AND tenant_id = ${scope.tenantId}
+        FOR UPDATE
+      `);
+      const queue = await tx
+        .select({
+          id: bookings.id,
+          waitlistPosition: bookings.waitlistPosition,
+          bookedAt: bookings.bookedAt
+        })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.tenantId, scope.tenantId),
+            eq(bookings.occurrenceId, current.occurrenceId),
+            eq(bookings.status, "waitlisted")
+          )
+        );
+      queue.sort(
+        (left, right) =>
+          (left.waitlistPosition ?? Number.MAX_SAFE_INTEGER) -
+            (right.waitlistPosition ?? Number.MAX_SAFE_INTEGER) ||
+          left.bookedAt.getTime() - right.bookedAt.getTime() ||
+          left.id.localeCompare(right.id)
+      );
+      const currentIndex = queue.findIndex((candidate) => candidate.id === current.id);
+      if (currentIndex < 0) return null;
+      const nextIndex = Math.min(Math.max(Math.trunc(position) - 1, 0), queue.length - 1);
+      queue.splice(currentIndex, 1);
+      queue.splice(nextIndex, 0, current);
+      let updated: typeof bookings.$inferSelect | null = null;
+      for (const [index, candidate] of queue.entries()) {
+        const [row] = await tx
+          .update(bookings)
+          .set({ waitlistPosition: index + 1, updatedAt: new Date() })
+          .where(eq(bookings.id, candidate.id))
+          .returning();
+        if (candidate.id === current.id) updated = row ?? null;
       }
       return updated;
     });
@@ -4793,6 +4930,7 @@ export class DrizzleFitosRepository implements FitosRepository {
       memberId: booking.memberId,
       status: booking.status as BookingResponse["status"],
       source: booking.source as BookingResponse["source"],
+      waitlistPosition: booking.waitlistPosition,
       bookedAt: booking.bookedAt.toISOString(),
       cancelledAt: booking.cancelledAt?.toISOString() ?? null,
       cancellationReason: booking.cancellationReason,
