@@ -3055,10 +3055,7 @@ export class DrizzleFitosRepository implements FitosRepository {
               eq(equipmentAssets.tenantId, scope.tenantId),
               eq(equipmentAssets.poolId, requirement.poolId),
               eq(equipmentAssets.branchId, occurrence.branchId),
-              or(
-                eq(equipmentAssets.status, "available"),
-                eq(equipmentAssets.status, "operational")
-              )
+              or(eq(equipmentAssets.status, "available"), eq(equipmentAssets.status, "operational"))
             )
           );
         if (requirement.quantityRequired > 0) {

@@ -3657,7 +3657,7 @@ export class InMemoryFitosRepository implements FitosRepository {
           asset.tenantId === occurrence.tenantId &&
           asset.poolId === requirement.poolId &&
           asset.branchId === occurrence.branchId &&
-          (asset.status === "available" || asset.status === "operational")
+          asset.status === "available"
       ).length;
       return Math.min(capacity, Math.floor(available / requirement.quantityRequired));
     }, occurrence.effectiveCapacity ?? occurrence.capacity);
@@ -3699,9 +3699,7 @@ export class InMemoryFitosRepository implements FitosRepository {
 
     const effectiveCapacity = this.effectiveCapacityForOccurrence(occurrence);
     const waitlisted = Boolean(input.waitlist) && activeBookings.length >= effectiveCapacity;
-    if (
-      activeBookings.length >= effectiveCapacity && !waitlisted
-    ) {
+    if (activeBookings.length >= effectiveCapacity && !waitlisted) {
       throw new Error("Occurrence is full.");
     }
     const creditsRequired = service.creditsRequired;
@@ -3931,8 +3929,14 @@ export class InMemoryFitosRepository implements FitosRepository {
         candidate.occurrenceId === occurrence.id &&
         candidate.status === "confirmed"
     ).length;
-    if (confirmed >= this.effectiveCapacityForOccurrence(occurrence))
-      throw new Error("Occurrence is full.");
+    const effectiveCapacity = this.effectiveCapacityForOccurrence(occurrence);
+    if (confirmed >= effectiveCapacity) {
+      throw new Error(
+        effectiveCapacity < occurrence.capacity
+          ? `Occurrence is full. Available equipment constrains capacity to ${effectiveCapacity}.`
+          : "Occurrence is full."
+      );
+    }
     const service = this.services.get(occurrence.serviceId);
     if (!service) throw new Error("Booking service unavailable.");
     const memberships = [...this.memberMemberships.values()]
@@ -5650,8 +5654,7 @@ export class InMemoryFitosRepository implements FitosRepository {
           r.occurrenceId === occurrence.id && (r.status === "requested" || r.status === "confirmed")
       ).length;
       status =
-        confirmedBookings + pendingReservations <
-        this.effectiveCapacityForOccurrence(occurrence)
+        confirmedBookings + pendingReservations < this.effectiveCapacityForOccurrence(occurrence)
           ? "confirmed"
           : "waitlisted";
     }
