@@ -590,6 +590,8 @@ Persistence exists. Finish product workflow.
 
 One authoritative attendance/arrival state model.
 
+**Partial implementation evidence (2026-09-01):** Reception now reads the branch- and local-day-scoped attendance records API and derives checked-in member and occurrence state from persisted `checked_in`/`attended` records. Walk-in check-in remains member-scoped, while booked-session check-in sends the occurrence ID so the attendance record is linked to the expected arrival. Successful mutations invalidate the shared attendance query root, so reloads and other reception views converge on server state instead of a page-local checked-in set. Full roster editing, no-show/follow-up actions, and browser coverage remain open.
+
 ---
 
 ## P1-037 — Equipment Pool Management UI

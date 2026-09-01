@@ -33,7 +33,19 @@ export function ReceptionPage() {
     queryFn: () => api.creditBalance(selectedMemberId!),
     enabled: Boolean(selectedMemberId)
   });
-  const [checkedIn, setCheckedIn] = useState<Set<string>>(new Set());
+
+  const attendance = useQuery({
+    queryKey: branchQueryKeys.list("attendance", activeBranchId, currentDate),
+    queryFn: () =>
+      api.attendanceRecords(
+        new URLSearchParams({
+          branchId: activeBranchId,
+          ...localDayBounds(currentDate),
+          limit: "100"
+        })
+      ),
+    enabled: Boolean(activeBranchId)
+  });
 
   const members = useQuery({
     queryKey: branchQueryKeys.list("members", activeBranchId, `reception:${searchQuery}`),
@@ -70,16 +82,34 @@ export function ReceptionPage() {
   });
 
   const checkInMutation = useMutation({
-    mutationFn: (memberId: string) => {
+    mutationFn: (input: { memberId: string; occurrenceId?: string | null }) => {
       if (!activeBranchId) throw new Error("No branch selected.");
-      return api.checkIn({ branchId: activeBranchId, memberId });
+      return api.checkIn({ branchId: activeBranchId, ...input });
     },
-    onSuccess: (_data, memberId) => {
-      setCheckedIn((prev) => new Set([...prev, memberId]));
+    onSuccess: () => {
       setSearchQuery("");
       void queryClient.invalidateQueries({ queryKey: branchQueryKeys.all("attendance") });
     }
   });
+
+  const persistedAttendance = attendance.data?.data ?? [];
+  const checkedInMemberIds = new Set(
+    persistedAttendance
+      .filter((record) => record.status === "checked_in" || record.status === "attended")
+      .map((record) => record.memberId)
+  );
+  const checkedInOccurrenceKeys = new Set(
+    persistedAttendance
+      .filter(
+        (record) =>
+          (record.status === "checked_in" || record.status === "attended") &&
+          Boolean(record.occurrenceId)
+      )
+      .map((record) => `${record.memberId}:${record.occurrenceId}`)
+  );
+  const isMemberCheckedIn = (memberId: string) => checkedInMemberIds.has(memberId);
+  const isOccurrenceCheckedIn = (memberId: string, occurrenceId: string) =>
+    checkedInOccurrenceKeys.has(`${memberId}:${occurrenceId}`);
 
   const todayOccurrences = occurrences.data?.data ?? [];
   const confirmedByOccurrence = new Map<string, number>();
@@ -155,7 +185,7 @@ export function ReceptionPage() {
               } else if (e.key === "Enter" && results.length) {
                 e.preventDefault();
                 const member = results[highlightedResult] ?? results[0];
-                if (member) checkInMutation.mutate(member.id);
+                if (member) checkInMutation.mutate({ memberId: member.id });
               }
             }}
           />
@@ -186,7 +216,7 @@ export function ReceptionPage() {
             <div className="reception-results__loading">Searching…</div>
           ) : members.data?.data.length ? (
             members.data.data.map((member: MemberListItem, index) => {
-              const justCheckedIn = checkedIn.has(member.id);
+              const justCheckedIn = isMemberCheckedIn(member.id);
               const displayName = `${member.firstName} ${member.lastName ?? ""}`.trim();
               const initials = `${member.firstName[0] ?? ""}${member.lastName?.[0] ?? ""}`;
               return (
@@ -215,7 +245,7 @@ export function ReceptionPage() {
                     ) : (
                       <Button
                         loading={checkInMutation.isPending}
-                        onClick={() => checkInMutation.mutate(member.id)}
+                        onClick={() => checkInMutation.mutate({ memberId: member.id })}
                         variant="primary"
                       >
                         Check In
@@ -275,12 +305,12 @@ export function ReceptionPage() {
                 <div>
                   <p className="muted">No confirmed booking found today.</p>
                   <Button
-                    disabled={checkedIn.has(selectedMemberId)}
+                    disabled={isMemberCheckedIn(selectedMemberId)}
                     loading={checkInMutation.isPending}
-                    onClick={() => checkInMutation.mutate(selectedMemberId)}
+                    onClick={() => checkInMutation.mutate({ memberId: selectedMemberId })}
                     variant="secondary"
                   >
-                    {checkedIn.has(selectedMemberId) ? "Checked In" : "Walk-in check-in"}
+                    {isMemberCheckedIn(selectedMemberId) ? "Checked In" : "Walk-in check-in"}
                   </Button>
                   <p className="muted">
                     No confirmed session today. This records a facility arrival without a booking.
@@ -318,12 +348,19 @@ export function ReceptionPage() {
                         </>
                       ) : (
                         <Button
-                          disabled={checkedIn.has(selectedMemberId)}
+                          disabled={isOccurrenceCheckedIn(selectedMemberId, booking.occurrenceId)}
                           loading={checkInMutation.isPending}
-                          onClick={() => checkInMutation.mutate(selectedMemberId)}
+                          onClick={() =>
+                            checkInMutation.mutate({
+                              memberId: selectedMemberId,
+                              occurrenceId: booking.occurrenceId
+                            })
+                          }
                           variant="primary"
                         >
-                          {checkedIn.has(selectedMemberId) ? "Checked In" : "Check Into Session"}
+                          {isOccurrenceCheckedIn(selectedMemberId, booking.occurrenceId)
+                            ? "Checked In"
+                            : "Check Into Session"}
                         </Button>
                       )}
                     </div>
